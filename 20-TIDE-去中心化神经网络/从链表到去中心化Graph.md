@@ -1,6 +1,5 @@
 # 从链表、星型到去中心化 Graph 神经网络
 
-迁移整理：2026-06-04
 
 > 这是 TIDE 线的早期架构动机材料，保留原始论证脉络；当前执行计划见 [[当前计划与Defense]]。
 
@@ -15,9 +14,9 @@
 - Transformer 没有任何稀疏性。
 - MoE 具有稀疏性，但 `all -> one -> all -> one` 通信模式会限制其更低的物理性能极限。
 
-![[attachments/llm-notes/从链表-Transformer-、星型-MoE-到去中心化Graph神经网络-01.png]]
+![[assets/images/从链表-Transformer-、星型-MoE-到去中心化Graph神经网络-01.png]]
 
-![[attachments/llm-notes/从链表-Transformer-、星型-MoE-到去中心化Graph神经网络-02.png]]
+![[assets/images/从链表-Transformer-、星型-MoE-到去中心化Graph神经网络-02.png]]
 
 自然想法是把拓扑变成去中心化 Graph，从而消除 All-to-One 通信瓶颈，接近榨干物理极限。
 
@@ -58,13 +57,13 @@ for token in input_tokens:
 
 这部分是早期实验记录，保留为历史参考。
 
-| ms/per token/step | | | | 56Core CPU | | | | 7*T4 GPU 15GB / [8.5B 8*V100 32GB] | | | |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Size | Node | Dim | Batch | 1 | 16 | 256 | 512 | 1 | 16 | 256 | 512 |
-| 1B | 7168/64 | 128 | Grad | 140 | 50 | 27 | 24 | 350 | 156 | 60 | 48 |
-| | | | NoGrad | 130 | 34 | 5 | 2.5 | 320 | 120 | 17 | 9 |
-| 8.5B | 57344/64 | 128 | Grad | 1350 | 543 | 234 | 136 | 3600 | 1200 | 273 | |
-| | | | NoGrad | 1000 | 375 | 54 | 29 | 3600 | 906 | 109 | 57 |
+| ms/per token/step |          |     |        | 56Core CPU |     |     |     | 7*T4 GPU 15GB / [8.5B 8*V100 32GB] |      |     |     |
+| ----------------- | -------- | --- | ------ | ---------- | --- | --- | --- | ---------------------------------- | ---- | --- | --- |
+| Size              | Node     | Dim | Batch  | 1          | 16  | 256 | 512 | 1                                  | 16   | 256 | 512 |
+| 1B                | 7168/64  | 128 | Grad   | 140        | 50  | 27  | 24  | 350                                | 156  | 60  | 48  |
+|                   |          |     | NoGrad | 130        | 34  | 5   | 2.5 | 320                                | 120  | 17  | 9   |
+| 8.5B              | 57344/64 | 128 | Grad   | 1350       | 543 | 234 | 136 | 3600                               | 1200 | 273 |     |
+|                   |          |     | NoGrad | 1000       | 375 | 54  | 29  | 3600                               | 906  | 109 | 57  |
 
 | ms/per token/step | | | | 56Core CPU | | | | 7*T4 GPU 15GB | | | |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -100,8 +99,3 @@ t = token_id * route_len_from_input_node_to_output_node + i
 ```
 
 每个节点（attention + ffn 块）处理信息时，应感知接收到的 graph 上游节点信号的时间戳。对 FFN 这较好处理；对 attention 或 linear attention 则要尤为小心。
-
-## 覆盖来源
-
-- `/home/zlong/llm/llm-notes/content/scratch/从链表(Transformer)、星型(MoE)到去中心化Graph神经网络.md`
-

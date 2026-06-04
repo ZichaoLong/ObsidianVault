@@ -1,9 +1,18 @@
+---
+type: plan
+status: active
+tags:
+  - control-feedback
+  - plan
+  - defense
+---
+
 # 控制反馈：当前计划与 Defense
 
-日期：2026-05-27  
-迁移整理：2026-06-04
+这页合并当前计划与当前 defense，避免在执行层重复维护两套相近表述。
 
-这页合并当前计划与当前 defense，避免在执行层重复维护两套相近表述。旧的分散 plan / defense 文档作为来源记录，不再作为主入口。
+> [!important] 执行边界
+> 当前阶段只推进两条可输命题：[[局部状态更新闭包]] 与 [[事件对象实验计划|事件对象 -> 可归因 -> 可纠偏]]。任务成功率、完整 test-time training、能力边界和基础模型接口都不是第一击。
 
 ## 当前不主张
 
@@ -19,20 +28,20 @@
 
 当前主张的是：
 
-- 长期理论动机是严肃的，包括计算复杂度、RAM/RASP vs write-once/append-only、test-time scaling、CoT 与时序依赖。
+- 长期理论动机是严肃的，包括计算复杂度、`RAM/RASP` vs `write-once/append-only`、test-time scaling、CoT 与时序依赖。
 - 现实系统没有消化掉全部问题。最强 LLM+Agent 虽已部分模拟 load/store，并吸收 reflection、planning、tool use、search 等机制族，但仍未说明哪一层是独立工作方式层。
 - 因而值得把问题压成两条可输命题：理论侧的 `局部状态更新闭包`，实验侧的 `事件对象 -> 可归因 -> 可纠偏`。
 
 ## 理论计划
 
-第一优先级是 `局部状态更新闭包`。当前不再继续扩展问题清单，而要尽快把它压到：
+第一优先级是 [[局部状态更新闭包]]。当前不再继续扩展问题清单，而要尽快把它压到：
 
 - 一个具体任务族
 - 状态空间 `S`
 - 局部原语集 `U`
 - 全局重解释算子 `G`
 
-这要求 task-first，而不是 definition-first。先在具体任务族上定义 `S/U/G`，再讨论是否能一般化。
+这要求 `task-first`，而不是 `definition-first`。先在具体任务族上定义 `S/U/G`，再讨论是否能一般化。
 
 第二优先级是在闭包问题有清晰实例后继续追问：
 
@@ -49,7 +58,7 @@
 - 这些事件是否被后续步骤稳定利用，而不只是日志标签或诊断展示。
 - 这种结构是否提升错误可归因性与局部纠偏能力。
 
-实验 protocol 详见 [[事件对象实验计划]]；Plan-v3 的 challenge/defense 详见 [[Bridge与Plan-v3-Challenge-Defense]]。
+实验 protocol 详见 [[事件对象实验计划]]；Plan-v3 的 challenge / defense 详见 [[Bridge与Plan-v3-Challenge-Defense]]。
 
 主指标：
 
@@ -120,12 +129,6 @@
 - 局部修复成本、控制步数、搜索成本或全局重解释频率没有可解释改善。
 - 所谓增量完全可被普通 scaffold / prompt / 工具协议解释。
 
-## 一句话
+## 结论
 
 当前 defense 不是“控制反馈已经成立”，而是：这条路线已被压成两个值得押、也能输掉的命题；如果它们站不住，就不应继续扩张叙事；如果它们站住，再由效率桥决定是否值得成为更大的工作方式路线。
-
-## 覆盖来源
-
-- `/home/zlong/llm/llm-notes/defense/控制反馈-当前Defense-2026-05-27.md`
-- `/home/zlong/llm/llm-notes/plan/控制反馈-当前计划-2026-05-27.md`
-- `/home/zlong/llm/llm-notes/status/控制反馈-当前总述-2026-05-27.md`

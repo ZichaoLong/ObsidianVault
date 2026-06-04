@@ -1,7 +1,6 @@
 # 控制反馈：Bridge 与 Plan-v3 Challenge / Defense
 
 日期：2026-05-26  
-迁移整理：2026-06-04
 
 这页保存 Plan-v3 与 bridge layer 的反方挑战、防守边界与当前结论。实验执行入口见 [[事件对象实验计划]]。
 
@@ -185,12 +184,3 @@ Plan-v3 守住的不是“更强能力”，而是：
 - 为什么这条线必须单独存在。
 - 为什么资格测试和控制反馈理论有强绑定。
 - 为什么它不是普通 protocol / tooling 改进的自然延伸。
-
-## 覆盖来源
-
-- `/home/zlong/llm/llm-notes/review/控制反馈-Plan-v3-Challenges-2026-05-26.md`
-- `/home/zlong/llm/llm-notes/review/控制反馈-Plan-v3-Defense-Challenges-2026-05-26.md`
-- `/home/zlong/llm/llm-notes/review/控制反馈-Plan-v3-Defense-Challenges-Bridge-2026-05-26.md`
-- `/home/zlong/llm/llm-notes/review/控制反馈-Bridge-Layer-Challenges-2026-05-26.md`
-- `/home/zlong/llm/llm-notes/defense/控制反馈-Plan-v3-Defense.md`
-

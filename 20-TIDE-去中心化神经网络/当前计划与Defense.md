@@ -1,6 +1,5 @@
 # TIDE：当前计划与 Defense
 
-迁移整理：2026-06-04
 
 ## 目标
 
@@ -64,9 +63,3 @@ TIDE 不只是 runtime 工程。它试图把这些东西统一成可验证的模
 ## 相关页面
 
 - [[从链表到去中心化Graph]]
-
-## 覆盖来源
-
-- `/home/zlong/llm/llm-notes/plan/tide-Plan.md`
-- `/home/zlong/llm/llm-notes/defense/tide-Defense.md`
-

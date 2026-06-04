@@ -1,8 +1,6 @@
 # 历史动机：AI 的时间 Scaling Law 理论佐证
 
-> 这是从 `llm-notes` 迁移的早期历史动机材料。它保留原始论证脉络，不代表当前收缩后的执行主线；当前结论见 [[../当前主线总览|当前主线总览]]。
-
-来源：`/home/zlong/llm/llm-notes/content/thesis/AI的时间 Scaling Law 的一些理论佐证.md`
+> 早期历史动机材料，保留原始论证脉络；当前结论见 [[../当前主线总览|当前主线总览]]。
 
 ---
 这篇文档的起点，是来自北京大学[王立威](http://www.liweiwang-pku.com/)老师的一次理论工作报告。报告内容介绍了如何基于电路复杂性理论，来理解纯[System1](https://clouddocs.huawei.com/wapp/public/f577d929-9414-47f4-b2d2-bca672e805d0)工作模式的限制，以及为何System1+CoT\[7\]（Chain of Thought）比直接输出答案更强大\[4\]。
@@ -54,9 +52,9 @@
 
 $\lor: or，\land: and, \lnot: not$
 
-![[attachments/llm-notes/AI的时间-Scaling-Law-的一些理论佐证-01.png]]
+![[assets/images/AI的时间-Scaling-Law-的一些理论佐证-01.png]]
 
-![[attachments/llm-notes/AI的时间-Scaling-Law-的一些理论佐证-02.png]]
+![[assets/images/AI的时间-Scaling-Law-的一些理论佐证-02.png]]
 
 
 

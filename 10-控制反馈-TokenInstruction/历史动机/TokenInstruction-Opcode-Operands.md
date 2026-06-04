@@ -1,8 +1,6 @@
 # 历史动机：Token[Instruction] = Opcode + Operands
 
-> 这是从 `llm-notes` 迁移的早期历史动机材料。它保留原始论证脉络，不代表当前收缩后的执行主线；当前结论见 [[../当前主线总览|当前主线总览]]。
-
-来源：`/home/zlong/llm/llm-notes/content/thesis/控制反馈：Token[Instruction]=Opcode+Operands.md`
+> 早期历史动机材料，保留原始论证脉络；当前结论见 [[../当前主线总览|当前主线总览]]。
 
 ---
 # 1. 总览
@@ -323,12 +321,12 @@ Token\[Instruction\]=Opcode+Operands
 
 其中，**原始的图灵机**\[6\-abefg\]主要用于纯理论研究，但在其中也包含了几个对后续实际计算机工程有启发的概念，**状态转移函数** &amp; **一个无限长读写带**：图灵机的工作过程就是，读写头根据自己的状态以及读到的读写带上的字符，由状态转移函数决定如何修改当前字符以及决定读写头在读写带上向左或向右移动。相关的变种，还有多带图灵机，也就是具有$k>1$个读写带及读写头数量的图灵机，称为$k$**\- 带图灵机**。
 
-![[attachments/llm-notes/控制反馈：Token-Instruction-=Opcode+Operands-01.png]]
+![[assets/images/控制反馈：Token-Instruction-=Opcode+Operands-01.png]]
 
 
 
 
-![[attachments/llm-notes/控制反馈：Token-Instruction-=Opcode+Operands-02.png]]
+![[assets/images/控制反馈：Token-Instruction-=Opcode+Operands-02.png]]
 
 
 

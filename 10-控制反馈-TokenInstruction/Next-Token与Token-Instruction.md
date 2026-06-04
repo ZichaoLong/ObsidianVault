@@ -1,7 +1,6 @@
 # Next Token 与 Token = Instruction
 
 日期：2026-05-27  
-迁移整理：2026-06-04
 
 这页固定 `Next Token`、`Token = Instruction`、NRAM/NTM/DNC 与当前控制反馈线的关系。
 
@@ -123,8 +122,3 @@ challenge 不同：
 ## 一句话
 
 `Next Token` 是基础 bet；`Token = Instruction` 是对 token 语义的推广；NRAM/NTM/DNC 说明显式 memory/addressing 机制可学，但没有替代当前路线必须回答的现实问题。
-
-## 覆盖来源
-
-- `/home/zlong/llm/llm-notes/status/控制反馈-NRAM与Next-Token关系-2026-05-27.md`
-

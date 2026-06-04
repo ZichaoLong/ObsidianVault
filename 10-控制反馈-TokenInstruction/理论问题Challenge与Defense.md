@@ -1,7 +1,6 @@
 # 控制反馈：理论问题 Challenge 与 Defense
 
 日期：2026-05-26  
-迁移整理：2026-06-04
 
 这页整理“理论问题与候选桥”这组文档中的反方挑战与 defense。它的作用是保护主线不发散，同时保留为什么押 [[局部状态更新闭包]] 的理由。
 
@@ -163,10 +162,3 @@ Defense：
 - `局部状态更新闭包` 是当前最值得保留的首要赌注。
 - 它必须 task-first 地收缩到 `S / U / G`。
 - Candidate C 与 Candidate B 仍重要，但分别更适合作为前置入口与后继强化。
-
-## 覆盖来源
-
-- `/home/zlong/llm/llm-notes/review/控制反馈-理论问题与候选桥-Challenges-2026-05-26.md`
-- `/home/zlong/llm/llm-notes/defense/控制反馈-理论问题与候选桥-Defense.md`
-- `/home/zlong/llm/llm-notes/plan/控制反馈-理论问题计划.md`
-
