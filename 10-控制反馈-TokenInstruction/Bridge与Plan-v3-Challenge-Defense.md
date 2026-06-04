@@ -1,8 +1,18 @@
+---
+type: challenge-defense
+status: active
+tags:
+  - control-feedback
+  - experiment
+  - challenge-defense
+---
+
 # 控制反馈：Bridge 与 Plan-v3 Challenge / Defense
 
-日期：2026-05-26  
-
 这页保存 Plan-v3 与 bridge layer 的反方挑战、防守边界与当前结论。实验执行入口见 [[事件对象实验计划]]。
+
+> [!summary] 防守边界
+> Plan-v3 只证明“是否值得继续作为独立实验切面推进”，不证明控制反馈理论成立，也不证明能力已经更强。
 
 ## Plan-v3 的总定位
 
