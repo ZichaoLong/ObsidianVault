@@ -21,3 +21,8 @@
 - `_migration/llm-notes-migration-manifest.md`
 - `_migration/llm-notes-migration-manifest.tsv`
 - `_migration/mhtml-image-report.md`
+
+## 当前迁移进度
+
+- 控制反馈当前主线第一批已整理：[[../10-控制反馈-TokenInstruction/当前主线总览|当前主线总览]]。
+- 已处理来源见：[[../40-原始材料索引/控制反馈-当前主线源覆盖|控制反馈：当前主线源覆盖]]。

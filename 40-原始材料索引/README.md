@@ -14,3 +14,7 @@
 完整自动生成清单见：
 
 - [[../_migration/llm-notes-migration-manifest|llm-notes 迁移清单]]
+
+已迁移来源覆盖：
+
+- [[控制反馈-当前主线源覆盖]]
