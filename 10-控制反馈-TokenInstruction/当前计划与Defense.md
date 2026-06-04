@@ -49,6 +49,8 @@
 - 这些事件是否被后续步骤稳定利用，而不只是日志标签或诊断展示。
 - 这种结构是否提升错误可归因性与局部纠偏能力。
 
+实验 protocol 详见 [[事件对象实验计划]]；Plan-v3 的 challenge/defense 详见 [[Bridge与Plan-v3-Challenge-Defense]]。
+
 主指标：
 
 - 控制动作级错误可归因率。
@@ -127,4 +129,3 @@
 - `/home/zlong/llm/llm-notes/defense/控制反馈-当前Defense-2026-05-27.md`
 - `/home/zlong/llm/llm-notes/plan/控制反馈-当前计划-2026-05-27.md`
 - `/home/zlong/llm/llm-notes/status/控制反馈-当前总述-2026-05-27.md`
-
