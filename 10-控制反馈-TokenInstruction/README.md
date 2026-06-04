@@ -42,6 +42,7 @@ tags:
 - [[历史动机/AI的System1-System2|AI 的 System1 + System2]]
 - [[历史动机/AI的时间ScalingLaw理论佐证|AI 的时间 Scaling Law 理论佐证]]
 - [[历史动机/TokenInstruction-Opcode-Operands|Token[Instruction] = Opcode + Operands]]
+- [[历史动机/Load-Store练级路|Load/Store 练级路]]
 
 ## 阅读顺序
 
