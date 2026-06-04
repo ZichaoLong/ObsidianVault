@@ -14,7 +14,7 @@ tags:
 - [[20-TIDE-去中心化神经网络/README|TIDE / 去中心化神经网络]]
 
 > [!summary] 当前工作方式
-> 旧笔记已经收敛到本 Vault 内维护；后续直接在这里推进内容整理、challenge / defense 和研究计划。
+> 研究材料已经收敛到本 Vault 内维护；后续直接在这里推进内容整理、challenge / defense 和研究计划。
 
 ## 当前重点
 

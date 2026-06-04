@@ -386,7 +386,7 @@ Token[Instruction]=Opcode+Operands
 
 因此，如果承认或相信地址获取问题的不平凡性，特别是可能的不可判定性---例如数学证明问题、项目目标分解问题，都算广义的地址获取问题---那应当让System1动态输出反馈信源的地址，这就是我们所强调的**自带递归性**的“**自主性要求**”的间接证据。
 
-这方面的更具体阐述，原始写作中指向[旧外部文档](https://clouddocs.huawei.com/wapp/doc/ba1805df-7ae8-4bea-a092-c08a182b818c)。
+这方面的更具体阐述，原始写作中指向[外部文档](https://clouddocs.huawei.com/wapp/doc/ba1805df-7ae8-4bea-a092-c08a182b818c)。
 
 ### 3.3. 其他展开的思考
 
@@ -438,7 +438,7 @@ Token[Instruction]=Opcode+Operands
 
 `能否设计神经网络，以及如何构造训练数据，借助什么算法，使System1掌握Load/Store指令？`
 
-这些问题在原始写作中另有[旧外部文档](https://clouddocs.huawei.com/wapp/share/d9669789-9d2c-411d-8ec3-8fe313720b91)承接；当前执行版见 [[10-控制反馈-TokenInstruction/当前计划与Defense|当前计划与 Defense]]。
+这些问题在原始写作中另有[外部文档](https://clouddocs.huawei.com/wapp/share/d9669789-9d2c-411d-8ec3-8fe313720b91)承接；当前执行版见 [[10-控制反馈-TokenInstruction/当前计划与Defense|当前计划与 Defense]]。
 
 ## 参考文档
 
