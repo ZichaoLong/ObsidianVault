@@ -1,3 +1,11 @@
+---
+type: index
+status: active
+tags:
+  - control-feedback
+  - token-instruction
+---
+
 # 控制反馈 / Token = Instruction
 
 本目录用于整理控制反馈线的当前主线、历史动机、理论命题、实验命题、challenge 与 defense。
@@ -6,6 +14,9 @@
 
 1. 理论命题：局部状态更新闭包。
 2. 实验命题：事件对象 -> 可归因 -> 可纠偏。
+
+> [!summary] 当前边界
+> 这条线不直接主张 `workspace + load/store` 已经优于最强 LLM+Agent；当前只验证它是否形成独立、可归因、可纠偏的工作方式候选层。
 
 需要保留但不直接扩张执行计划的问题，放入问题地图与 challenge / defense 链中。
 

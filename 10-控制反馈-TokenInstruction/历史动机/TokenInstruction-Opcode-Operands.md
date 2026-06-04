@@ -11,7 +11,7 @@ tags:
 # 历史动机：Token[Instruction] = Opcode + Operands
 
 > [!note] 历史定位
-> 这篇是 `Token = Instruction` 早期完整论证草稿，包含许多后来被 challenge 收缩的表述；当前执行立场见 [[../当前主线总览|当前主线总览]]，问题展开见 [[../问题展开地图|问题展开地图]]。
+> 这篇是 `Token = Instruction` 早期完整论证草稿，包含许多后来被 challenge 收缩的表述；当前执行立场见 [[10-控制反馈-TokenInstruction/当前主线总览|当前主线总览]]，问题展开见 [[10-控制反馈-TokenInstruction/问题展开地图|问题展开地图]]。
 
 ## 1. 总览
 
