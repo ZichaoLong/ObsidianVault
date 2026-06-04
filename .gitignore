@@ -1,5 +1,6 @@
 # Obsidian local UI state and cache.
 .obsidian/workspace.json
+.obsidian/workspace-mobile.json
 .obsidian/cache/
 
 # Obsidian Git creates this helper locally for authentication.
