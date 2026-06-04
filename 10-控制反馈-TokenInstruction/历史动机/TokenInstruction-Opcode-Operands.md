@@ -33,7 +33,7 @@ tags:
 
 2. 其次，抛出我们认为最重要的一个理论联系，这一联系提供了桥梁，让我们可以从计算理论、计算机工程实践的角度，更清晰地定义、回答上述第1、2个问题，并得到第3个“怎么做”问题的线索。有必要在此给出概要：
 
-受到计算机体系结构领域中的指令、指令集概念的启发，我们认为AI [System1+System2](https://clouddocs.huawei.com/wapp/doc/f577d929-9414-47f4-b2d2-bca672e805d0) 的交互媒介，即Token，不止可以是数据（或单词），同时也可以是指令(Instruction)，包含操作码(Opcode)和操作数(Operands)两部分，
+受到计算机体系结构领域中的指令、指令集概念的启发，我们认为 AI [[10-控制反馈-TokenInstruction/历史动机/AI的System1-System2|System1 + System2]] 的交互媒介，即Token，不止可以是数据（或单词），同时也可以是指令(Instruction)，包含操作码(Opcode)和操作数(Operands)两部分，
 
 Token[Instruction]=Opcode+Operands
 
@@ -50,7 +50,7 @@ Token[Instruction]=Opcode+Operands
 
 有了更正式的定义后，第2个“必要性”的问题，我们将给出从理论中找到的对照和佐证。
 
-对于第3个问题，更具体的，要如何改造System1/System2来适配，让AI具备快速自主控制反馈信源的能力？多模态、空间智能、强化学习、Transformer、Mamba对这个能力有何作用？这些问题我们将在[下一篇文档](https://clouddocs.huawei.com/wapp/doc/d9669789-9d2c-411d-8ec3-8fe313720b91)中进行稍详细的讨论，并给出一些具体的实践提议。
+对于第3个问题，更具体地说，要如何改造System1/System2来适配，让AI具备快速自主控制反馈信源的能力？多模态、空间智能、强化学习、Transformer、Mamba对这个能力有何作用？这些问题在原始写作中指向[一篇后续外部文档](https://clouddocs.huawei.com/wapp/doc/d9669789-9d2c-411d-8ec3-8fe313720b91)，当前收缩后的执行版本见 [[10-控制反馈-TokenInstruction/当前计划与Defense|当前计划与 Defense]]。
 
 ## 2. 控制 & 反馈：人类 vs. AI
 
@@ -386,7 +386,7 @@ Token[Instruction]=Opcode+Operands
 
 因此，如果承认或相信地址获取问题的不平凡性，特别是可能的不可判定性---例如数学证明问题、项目目标分解问题，都算广义的地址获取问题---那应当让System1动态输出反馈信源的地址，这就是我们所强调的**自带递归性**的“**自主性要求**”的间接证据。
 
-这方面的更具体阐述，[[见此文档](https://clouddocs.huawei.com/wapp/doc/ba1805df-7ae8-4bea-a092-c08a182b818c)]。
+这方面的更具体阐述，原始写作中指向[旧外部文档](https://clouddocs.huawei.com/wapp/doc/ba1805df-7ae8-4bea-a092-c08a182b818c)。
 
 ### 3.3. 其他展开的思考
 
@@ -438,7 +438,7 @@ Token[Instruction]=Opcode+Operands
 
 `能否设计神经网络，以及如何构造训练数据，借助什么算法，使System1掌握Load/Store指令？`
 
-我们对这些问题的观点和建议，放在[[见此文档](https://clouddocs.huawei.com/wapp/share/d9669789-9d2c-411d-8ec3-8fe313720b91)]。
+这些问题在原始写作中另有[旧外部文档](https://clouddocs.huawei.com/wapp/share/d9669789-9d2c-411d-8ec3-8fe313720b91)承接；当前执行版见 [[10-控制反馈-TokenInstruction/当前计划与Defense|当前计划与 Defense]]。
 
 ## 参考文档
 

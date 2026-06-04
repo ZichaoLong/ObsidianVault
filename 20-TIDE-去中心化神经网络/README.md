@@ -17,7 +17,7 @@ TIDE 是 `Token Inference Decentralized Engine`。当前目标表述：
 - [[当前计划与Defense]]
 - [[从链表到去中心化Graph]]
 
-## 后续需要补齐的主题
+## 主题地图
 
 - 目标与约束。
 - 内外时钟。
