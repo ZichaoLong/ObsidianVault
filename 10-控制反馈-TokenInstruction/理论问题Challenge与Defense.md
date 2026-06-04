@@ -1,8 +1,18 @@
+---
+type: challenge-defense
+status: active
+tags:
+  - control-feedback
+  - theory
+  - challenge-defense
+---
+
 # 控制反馈：理论问题 Challenge 与 Defense
 
-日期：2026-05-26  
-
 这页整理“理论问题与候选桥”这组文档中的反方挑战与 defense。它的作用是保护主线不发散，同时保留为什么押 [[局部状态更新闭包]] 的理由。
+
+> [!summary] 防守边界
+> 理论问题变多不等于发散，但必须明确 `primary bet / secondary support / downstream consequence`。当前首要赌注仍是 [[局部状态更新闭包]]。
 
 ## 核心 Challenge
 

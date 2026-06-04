@@ -1,8 +1,18 @@
+---
+type: concept
+status: active
+tags:
+  - control-feedback
+  - next-token
+  - token-instruction
+---
+
 # Next Token 与 Token = Instruction
 
-日期：2026-05-27  
-
 这页固定 `Next Token`、`Token = Instruction`、NRAM/NTM/DNC 与当前控制反馈线的关系。
+
+> [!summary] 核心判断
+> `Next Token` 是基础 bet；`Token = Instruction` 是对 token 语义的推广；NRAM/NTM/DNC 说明显式 memory/addressing 机制可学，但没有回答当前强 LLM+Agent 已部分模拟 `load/store` 后还剩什么独立增量。
 
 ## Next Token 是基础 bet
 
@@ -119,6 +129,6 @@ challenge 不同：
 - 当前要动：token 语义、显式状态语义、局部状态更新机制。
 - 后续再动：test-time parameter update、更一般的局部通信网络、更远的训练范式变化。
 
-## 一句话
+## 结论
 
 `Next Token` 是基础 bet；`Token = Instruction` 是对 token 语义的推广；NRAM/NTM/DNC 说明显式 memory/addressing 机制可学，但没有替代当前路线必须回答的现实问题。
