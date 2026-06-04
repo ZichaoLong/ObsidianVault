@@ -1,5 +1,13 @@
-# TIDE：当前计划与 Defense
+---
+type: plan
+status: active
+tags:
+  - tide
+  - decentralized-nn
+  - plan
+---
 
+# TIDE：当前计划与 Defense
 
 ## 目标
 
@@ -9,14 +17,17 @@
 - 可分区执行。
 - 支持稀疏化。
 
+> [!summary] 执行判断
+> 先做可训练、可验证的 `dense local updates`，再抽出图语义与 memory 语义，最后逐步引入稀疏、路由和异步执行。
+
 ## 推进顺序
 
-1. dense local updates
-2. block sparse active subgraph
-3. batch 维度 selective activity
-4. sequence / memory 维度 selective activity
-5. soft routing
-6. hard routing
+1. `dense local updates`
+2. `block sparse active subgraph`
+3. batch 维度 `selective activity`
+4. sequence / memory 维度 `selective activity`
+5. `soft routing`
+6. `hard routing`
 7. 异步与去中心化执行
 
 关键点是：真正的稀疏化要后置。否则无法判断失败来自架构本身，还是来自离散路由不可训。

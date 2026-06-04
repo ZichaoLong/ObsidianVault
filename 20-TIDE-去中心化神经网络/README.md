@@ -1,8 +1,14 @@
+---
+type: index
+status: active
+tags:
+  - tide
+  - decentralized-nn
+---
+
 # TIDE / 去中心化神经网络
 
-本目录用于整理 TIDE 线：Token Inference Decentralized Engine。
-
-当前目标表述：
+TIDE 是 `Token Inference Decentralized Engine`。当前目标表述：
 
 > 构建一种前向隐藏态只做有界度局部通信的自回归神经动力系统，并逐步证明它能稳定训练、可分区执行、支持稀疏化。
 
