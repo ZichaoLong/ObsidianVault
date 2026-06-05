@@ -16,7 +16,7 @@ tags:
 
 当前实验侧的最小问题不是“整体任务成功率是否更高”，而是：
 
-> `workspace + load/store + 显式状态语义` 是否能把 `address/read/write/commit` 变成稳定运行时[[#控制反馈：事件对象实验计划|事件对象]]，并据此提升错误可归因性与局部纠偏能力。
+> `workspace + load/store + 显式状态语义` 是否能把 `address/read/write/commit` 变成稳定运行时事件对象，并据此提升错误可归因性与局部纠偏能力。
 
 第一阶段应固定为：
 
@@ -35,7 +35,7 @@ tags:
 
 这页是实验侧主入口，对应当前最小实验命题：
 
-> `workspace + load/store + 显式状态语义` 是否能把 `address/read/write/commit` 统一成稳定运行时[[#控制反馈：事件对象实验计划|事件对象]]，并被后续步骤稳定利用，从而提升错误可归因性与局部纠偏能力。
+> `workspace + load/store + 显式状态语义` 是否能把 `address/read/write/commit` 统一成稳定运行时事件对象，并被后续步骤稳定利用，从而提升错误可归因性与局部纠偏能力。
 
 > [!summary] 第一阶段目标
 > 先验证事件对象、回放、归因、局部纠偏是否成立；任务成功率和 test-time efficiency 暂时只作为观察指标。
