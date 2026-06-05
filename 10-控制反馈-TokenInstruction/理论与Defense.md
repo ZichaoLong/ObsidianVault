@@ -428,7 +428,7 @@ ui : S -> S
 
 ## 控制反馈：理论问题 Challenge 与 Defense
 
-这里整理“理论问题与候选桥”这组文档中的反方挑战与 defense，核心作用是继续收缩为什么押 [[10-控制反馈-TokenInstruction/理论与Defense#局部状态更新闭包|局部状态更新闭包]]。
+这里整理“理论问题与候选桥”这组文档中的反方挑战与 defense，核心作用是继续收缩为什么押 `局部状态更新闭包`。
 
 > [!summary] 防守边界
 > 理论问题变多不等于发散，但必须明确 `primary bet / secondary support / downstream consequence`。当前首要赌注仍是 [[10-控制反馈-TokenInstruction/理论与Defense#局部状态更新闭包|局部状态更新闭包]]。
