@@ -1,2 +1,8 @@
-# Obsidian configuration is device-local.
-.obsidian/
+# Obsidian configuration is device-local by default.
+.obsidian/*
+
+# Sync the Auto Heading plugin and its visual-numbering config.
+!.obsidian/plugins/
+.obsidian/plugins/*
+!.obsidian/plugins/auto-heading/
+!.obsidian/plugins/auto-heading/**
