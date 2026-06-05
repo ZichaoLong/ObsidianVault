@@ -12,7 +12,18 @@ tags:
 > [!summary] 使用原则
 > 技术笔记只作为背景支撑链接，不直接混入控制反馈或 TIDE 的主张页。
 
-## 主题池
+## 已有笔记
+
+- [[30-技术笔记/Transformer-and-Beyond|Transformer and Beyond]]
+- [[30-技术笔记/ai-diffusion|Diffusion Process in AI]]
+
+## 零散原始笔记
+
+- [[30-技术笔记/scratch/notes|notes]]
+- [[30-技术笔记/scratch/draft|draft]]
+- [[30-技术笔记/scratch/杂谈|杂谈]]
+
+## 后续主题池
 
 - Transformer / GPT / RNN / Linear Attention / Mamba / RWKV
 - 信息论基础
