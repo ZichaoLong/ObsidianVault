@@ -20,33 +20,25 @@ tags:
 
 需要保留但不直接扩张执行计划的问题，放入问题地图与 challenge / defense 链中。
 
-## 当前主线
+## 主题页
 
-- [[当前主线总览]]
-- [[当前计划与Defense]]
-- [[Next-Token与Token-Instruction]]
-- [[双命题与Primary-Bet层级]]
-- [[理论桥梁与候选命题]]
-- [[局部状态更新闭包]]
-- [[理论问题Challenge与Defense]]
-- [[事件对象实验计划]]
-- [[Bridge与Plan-v3-Challenge-Defense]]
-- [[确定性层-智能层-状态层次]]
-- [[问题展开地图]]
-- [[对标机制谱系]]
-- [[最小不可替代增量与全局解释算子]]
+- [[10-控制反馈-TokenInstruction/主线-计划-问题地图|主线、计划与问题地图]]
+- [[10-控制反馈-TokenInstruction/理论与Defense|理论与 Defense]]
+- [[10-控制反馈-TokenInstruction/实验与机制Defense|实验、机制与 Defense]]
+- [[10-控制反馈-TokenInstruction/历史动机|历史动机]]
 
-## 历史动机
+## 关键章节直达
 
-- [[历史动机/写在前面|写在前面]]
-- [[历史动机/AI的System1-System2|AI 的 System1 + System2]]
-- [[历史动机/AI的时间ScalingLaw理论佐证|AI 的时间 Scaling Law 理论佐证]]
-- [[历史动机/TokenInstruction-Opcode-Operands|Token[Instruction] = Opcode + Operands]]
-- [[历史动机/Load-Store练级路|Load/Store 练级路]]
+- [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前主线总览|当前主线总览]]
+- [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前计划与 Defense|当前计划与 Defense]]
+- [[10-控制反馈-TokenInstruction/理论与Defense#局部状态更新闭包|局部状态更新闭包]]
+- [[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：事件对象实验计划|事件对象实验计划]]
+- [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：问题展开地图|问题展开地图]]
+- [[10-控制反馈-TokenInstruction/历史动机#历史动机：Token[Instruction] = Opcode + Operands|Token[Instruction] = Opcode + Operands]]
 
 ## 阅读顺序
 
-1. 先读 [[当前主线总览]]，把当前立场、双命题和限制看清楚。
-2. 再读 [[问题展开地图]]，恢复 challenge / defense 展开的完整问题空间。
-3. 若要进入理论侧，读 [[局部状态更新闭包]] 和 [[理论桥梁与候选命题]]。
-4. 若要进入实验侧，读 [[事件对象实验计划]] 和 [[Bridge与Plan-v3-Challenge-Defense]]。
+1. 先读 [[10-控制反馈-TokenInstruction/主线-计划-问题地图|主线、计划与问题地图]]，把当前立场、双命题和问题空间看清楚。
+2. 若要进入理论侧，读 [[10-控制反馈-TokenInstruction/理论与Defense|理论与 Defense]]。
+3. 若要进入实验侧，读 [[10-控制反馈-TokenInstruction/实验与机制Defense|实验、机制与 Defense]]。
+4. 若要回看出发点，读 [[10-控制反馈-TokenInstruction/历史动机|历史动机]]。
