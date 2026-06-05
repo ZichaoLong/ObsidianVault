@@ -11,6 +11,34 @@ tags:
 > [!summary] 本页定位
 > 本页集中保存 TIDE 线的目标、计划、防守边界，以及从 Transformer / MoE 链式和星型结构走向去中心化 Graph 神经网络的架构动机。
 
+## 一页版结论
+
+- TIDE 的核心目标是构建前向隐藏态只做有界度局部通信的自回归神经动力系统。
+- 稀疏性和局部通信是两个不同维度，不能在第一步同时硬化，否则失败原因不可诊断。
+- 当前工程顺序应是 `dense local updates -> block sparse active subgraph -> hard routing -> async updates`。
+- 内外时钟、节点接口、序列并行、batch 并行和节点并行必须作为架构一等公民。
+- PyTorch 适合先验证可训练性与接口形状；LibTorch / 自定义算子更适合作为后续性能实现路径。
+
+## 最小可验证 Demo
+
+第一版 demo 不应追求完整去中心化系统，而应验证：
+
+| 目标 | 最小要求 |
+| --- | --- |
+| 可训练 | loss 能稳定下降，并能在小数据上生成正常 token。 |
+| 局部通信 | 节点只访问有界邻居消息，不依赖全局 attention 汇聚。 |
+| 序列并行 | prefill / training 阶段节点内部能处理 token 序列，而不是退化成 RNN。 |
+| 时钟语义 | 明确 external step 与 internal tick，能描述 DAG 与有环图差异。 |
+| 可扩展接口 | 后续能引入节点稀疏、batch 稀疏、sequence/memory 稀疏。 |
+
+## 读者路径
+
+| 读者目标 | 建议阅读 |
+| --- | --- |
+| 快速理解目标 | [[#TIDE / 去中心化神经网络：概览]] |
+| 判断下一步怎么做 | [[#TIDE：当前计划与 Defense]] |
+| 理解架构动机 | [[#从链表、星型到去中心化 Graph 神经网络]] |
+
 ## 本页结构
 
 - [[#TIDE / 去中心化神经网络：概览]]
@@ -24,11 +52,6 @@ tags:
 TIDE 是 `Token Inference Decentralized Engine`。当前目标表述：
 
 > 构建一种前向隐藏态只做有界度局部通信的自回归神经动力系统，并逐步证明它能稳定训练、可分区执行、支持稀疏化。
-
-### 当前主题页
-
-- [[20-TIDE-去中心化神经网络/README#TIDE：当前计划与 Defense|当前计划与 Defense]]
-- [[20-TIDE-去中心化神经网络/README#从链表、星型到去中心化 Graph 神经网络|从链表到去中心化 Graph]]
 
 ### 主题地图
 
@@ -100,17 +123,18 @@ TIDE 不只是 runtime 工程。它试图把这些东西统一成可验证的模
 - 一个能强行区分 Transformer / Mamba / 图执行路线的任务。
 - 一个明确的稀疏化推进顺序。
 
+### 当前工程下一步
+
+1. 先实现 PyTorch 原型，验证节点接口、内外时钟、dense local updates 与训练闭环。
+2. 再把 graph runtime 与 node module 解耦，保证后续能替换为稀疏执行或 C++/LibTorch 实现。
+3. 再加入节点激活日志、message trace 和 memory trace，确保失败可诊断。
+4. 最后再推进节点稀疏、路由、异步更新和性能实现。
+
 ### 目前防御立场
 
 - 先承认：工程复杂度会吞没研究注意力。
 - 再坚持：架构接口必须先设计好，否则后续稀疏与分区都无法落地。
 - 最后聚焦：先做可验证的 dense local updates，再逐步引入稀疏与路由。
-
-### 相关页面
-
-- [[20-TIDE-去中心化神经网络/README#从链表、星型到去中心化 Graph 神经网络|从链表到去中心化 Graph]]
-
----
 
 ## 从链表、星型到去中心化 Graph 神经网络
 
@@ -167,7 +191,7 @@ for token in input_tokens:
     output_token = output(output_node)
 ```
 
-### 原始吞吐记录
+### 附录：原始吞吐记录
 
 这部分是早期实验记录，保留为历史参考。
 
