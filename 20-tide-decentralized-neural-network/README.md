@@ -146,7 +146,7 @@ TIDE 不只是 runtime 工程。它试图把这些东西统一成可验证的模
 - Transformer 没有任何稀疏性。
 - MoE 具有稀疏性，但 `all -> one -> all -> one` 通信模式会限制其更低的物理性能极限。
 
-![[assets/images/从链表-Transformer-、星型-MoE-到去中心化Graph神经网络-01.png|48%]] ![[assets/images/从链表-Transformer-、星型-MoE-到去中心化Graph神经网络-02.png|48%]]
+![[assets/images/linked-list-transformer-star-moe-decentralized-graph-nn-01.png|48%]] ![[assets/images/linked-list-transformer-star-moe-decentralized-graph-nn-02.png|48%]]
 
 自然想法是把拓扑变成去中心化 Graph，从而消除 All-to-One 通信瓶颈，接近榨干物理极限。
 

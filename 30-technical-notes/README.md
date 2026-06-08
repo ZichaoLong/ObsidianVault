@@ -14,14 +14,14 @@ tags:
 
 ## 已有笔记
 
-- [[30-技术笔记/Transformer-and-Beyond|Transformer and Beyond]]
-- [[30-技术笔记/ai-diffusion|Diffusion Process in AI]]
+- [[30-technical-notes/Transformer-and-Beyond|Transformer and Beyond]]
+- [[30-technical-notes/ai-diffusion|Diffusion Process in AI]]
 
 ## 零散原始笔记
 
-- [[30-技术笔记/scratch/notes|notes]]
-- [[30-技术笔记/scratch/draft|draft]]
-- [[30-技术笔记/scratch/杂谈|杂谈]]
+- [[30-technical-notes/scratch/notes|notes]]
+- [[30-technical-notes/scratch/draft|draft]]
+- [[30-technical-notes/scratch/miscellany|杂谈]]
 
 ## 后续主题池
 

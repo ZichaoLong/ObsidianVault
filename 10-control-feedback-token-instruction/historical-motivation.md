@@ -15,22 +15,22 @@ tags:
 
 | 历史动机中的说法 | 当前收缩后的对应位置 |
 | --- | --- |
-| AI 缺少快速、自主控制反馈信源 | [[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：事件对象实验计划|事件对象 -> 可归因 -> 可纠偏]] |
-| `Token[Instruction] = Opcode + Operands` | [[10-控制反馈-TokenInstruction/主线-计划-问题地图#Next Token 与 Token = Instruction|Next Token 与 Token = Instruction]] |
-| RASP / RAM / write-once 复杂度直觉 | [[10-控制反馈-TokenInstruction/理论与Defense#控制反馈：理论桥梁与候选命题|理论桥梁与候选命题]] |
-| `Load/Store` 作为基础动作 | [[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：最小不可替代增量与全局解释算子|最小不可替代增量与全局解释算子]] |
+| AI 缺少快速、自主控制反馈信源 | [[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：事件对象实验计划|事件对象 -> 可归因 -> 可纠偏]] |
+| `Token[Instruction] = Opcode + Operands` | [[10-control-feedback-token-instruction/mainline-plan-question-map#Next Token 与 Token = Instruction|Next Token 与 Token = Instruction]] |
+| RASP / RAM / write-once 复杂度直觉 | [[10-control-feedback-token-instruction/theory-and-defense#控制反馈：理论桥梁与候选命题|理论桥梁与候选命题]] |
+| `Load/Store` 作为基础动作 | [[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：最小不可替代增量与全局解释算子|最小不可替代增量与全局解释算子]] |
 
 > [!warning] 阅读边界
-> 本页保留历史论证语气，其中一些表述比当前主线更强。当前可执行立场以 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前主线总览|当前主线总览]] 为准。
+> 本页保留历史论证语气，其中一些表述比当前主线更强。当前可执行立场以 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前主线总览|当前主线总览]] 为准。
 
-如果你读到这里会自然追问“这套动机和今天最强 LLM+Agent 已吸收的机制到底差在哪”“后来还能压成什么最小可输命题”，继续看 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：问题展开地图|问题地图]]、[[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：对标机制谱系|对标机制谱系]] 和 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前计划与 Defense|当前计划与 Defense]]。
+如果你读到这里会自然追问“这套动机和今天最强 LLM+Agent 已吸收的机制到底差在哪”“后来还能压成什么最小可输命题”，继续看 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：问题展开地图|问题地图]]、[[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：对标机制谱系|对标机制谱系]] 和 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前计划与 Defense|当前计划与 Defense]]。
 
 ---
 
 ## 历史动机：写在前面
 
 > [!note] 历史定位
-> 这篇是控制反馈线的早期动机入口，保留原始论证语气；当前收缩后的研究主线见 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前主线总览|当前主线总览]]。
+> 这篇是控制反馈线的早期动机入口，保留原始论证语气；当前收缩后的研究主线见 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前主线总览|当前主线总览]]。
 
 基于生成式大模型的AI---以OpenAI的ChatGPT为起点---展现出了令人惊艳的智能。然而，它们又总是在一些看似简单但重要的任务上效果不尽如人意：
 
@@ -51,7 +51,7 @@ tags:
 ## 历史动机：AI 的 System1 + System2
 
 > [!note] 历史定位
-> 这篇使用 `System1 / System2` 分解来解释早期问题意识；当前研究已收缩为 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#双命题与 Primary Bet 层级|双命题结构]]。
+> 这篇使用 `System1 / System2` 分解来解释早期问题意识；当前研究已收缩为 [[10-control-feedback-token-instruction/mainline-plan-question-map#双命题与 Primary Bet 层级|双命题结构]]。
 
 基于生成式大语言模型的AI技术，我们建议解耦成两个部分来看，这种解耦的分析，可以帮助我们避免因整体技术的快速进展，而忽视局部技术的可能缺陷，进而，可以帮助我们在对整体技术的上限产生怀疑时，看到可能本质的突破点。
 
@@ -74,9 +74,9 @@ tags:
 ## 历史动机：AI 的时间 Scaling Law 理论佐证
 
 > [!note] 历史定位
-> 这篇记录早期从电路复杂性、CoT 与时间层次定理出发形成的动机。它是 [[10-控制反馈-TokenInstruction/理论与Defense#控制反馈：理论桥梁与候选命题|理论桥梁]] 的背景，不是当前最小可输命题的直接证明。
+> 这篇记录早期从电路复杂性、CoT 与时间层次定理出发形成的动机。它是 [[10-control-feedback-token-instruction/theory-and-defense#控制反馈：理论桥梁与候选命题|理论桥梁]] 的背景，不是当前最小可输命题的直接证明。
 
-这篇文档的起点，是来自北京大学[王立威](http://www.liweiwang-pku.com/)老师的一次理论工作报告。报告内容介绍了如何基于电路复杂性理论，来理解纯 [[10-控制反馈-TokenInstruction/历史动机#历史动机：AI 的 System1 + System2|System1]] 工作模式的限制，以及为何System1+CoT[7]（Chain of Thought）比直接输出答案更强大[4]。
+这篇文档的起点，是来自北京大学[王立威](http://www.liweiwang-pku.com/)老师的一次理论工作报告。报告内容介绍了如何基于电路复杂性理论，来理解纯 [[10-control-feedback-token-instruction/historical-motivation#历史动机：AI 的 System1 + System2|System1]] 工作模式的限制，以及为何System1+CoT[7]（Chain of Thought）比直接输出答案更强大[4]。
 
 ### 1. 电路复杂性理论视角：为何CoT可以提升System1能力？
 
@@ -125,7 +125,7 @@ tags:
 
 $\lor: or，\land: and, \lnot: not$
 
-![[assets/images/AI的时间-Scaling-Law-的一些理论佐证-01.png|42%]] ![[assets/images/AI的时间-Scaling-Law-的一些理论佐证-02.png|32%]]
+![[assets/images/ai-time-scaling-law-theoretical-evidence-01.png|42%]] ![[assets/images/ai-time-scaling-law-theoretical-evidence-02.png|32%]]
 
 
 
@@ -230,7 +230,7 @@ $\text{TIME}^{\text{exact}}(T(n))\subsetneq\text{TIME}^{\text{exact}}(c\cdot T(n
 ## 历史动机：Token[Instruction] = Opcode + Operands
 
 > [!note] 历史定位
-> 这篇是 `Token = Instruction` 早期完整论证草稿，包含许多后来被 challenge 收缩的表述；当前执行立场见 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前主线总览|当前主线总览]]，问题展开见 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：问题展开地图|问题展开地图]]。
+> 这篇是 `Token = Instruction` 早期完整论证草稿，包含许多后来被 challenge 收缩的表述；当前执行立场见 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前主线总览|当前主线总览]]，问题展开见 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：问题展开地图|问题展开地图]]。
 
 ### 1. 总览
 
@@ -248,11 +248,11 @@ $\text{TIME}^{\text{exact}}(T(n))\subsetneq\text{TIME}^{\text{exact}}(c\cdot T(n
 
 这篇文档，我们就要：
 
-1. 首先，通过对照、分析人类与AI解决问题的过程，基于来自人类智能与控制论的直觉，回答第1个“是什么”、第2个“必要性”的问题。我们还将穿插在文档中，澄清例如Sparse Attention、ReAct模式、编辑标签Token、外挂记忆等技术与自主控制反馈信源能力的关系；如果你更关心这些机制今天在现实系统里已经推进到什么程度，直接看 [[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：对标机制谱系|对标机制谱系]]。
+1. 首先，通过对照、分析人类与AI解决问题的过程，基于来自人类智能与控制论的直觉，回答第1个“是什么”、第2个“必要性”的问题。我们还将穿插在文档中，澄清例如Sparse Attention、ReAct模式、编辑标签Token、外挂记忆等技术与自主控制反馈信源能力的关系；如果你更关心这些机制今天在现实系统里已经推进到什么程度，直接看 [[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：对标机制谱系|对标机制谱系]]。
 
-2. 其次，抛出我们认为最重要的一个理论联系，这一联系提供了桥梁，让我们可以从计算理论、计算机工程实践的角度，更清晰地定义、回答上述第1、2个问题，并得到第3个“怎么做”问题的线索。有必要在此给出概要；它在当前文档结构里对应 [[10-控制反馈-TokenInstruction/理论与Defense#控制反馈：理论桥梁与候选命题|理论桥梁与候选命题]]：
+2. 其次，抛出我们认为最重要的一个理论联系，这一联系提供了桥梁，让我们可以从计算理论、计算机工程实践的角度，更清晰地定义、回答上述第1、2个问题，并得到第3个“怎么做”问题的线索。有必要在此给出概要；它在当前文档结构里对应 [[10-control-feedback-token-instruction/theory-and-defense#控制反馈：理论桥梁与候选命题|理论桥梁与候选命题]]：
 
-受到计算机体系结构领域中的指令、指令集概念的启发，我们认为 AI [[10-控制反馈-TokenInstruction/历史动机#历史动机：AI 的 System1 + System2|System1 + System2]] 的交互媒介，即Token，不止可以是数据（或单词），同时也可以是指令(Instruction)，包含操作码(Opcode)和操作数(Operands)两部分，
+受到计算机体系结构领域中的指令、指令集概念的启发，我们认为 AI [[10-control-feedback-token-instruction/historical-motivation#历史动机：AI 的 System1 + System2|System1 + System2]] 的交互媒介，即Token，不止可以是数据（或单词），同时也可以是指令(Instruction)，包含操作码(Opcode)和操作数(Operands)两部分，
 
 Token[Instruction]=Opcode+Operands
 
@@ -269,13 +269,13 @@ Token[Instruction]=Opcode+Operands
 
 如果接受这层直觉，接下来自然会分成三问：
 
-- 这套直觉在今天与最强 LLM+Agent 的区别还剩什么：[[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：对标机制谱系|对标机制谱系]]
-- 这套直觉后来被压成了哪些问题：[[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：问题展开地图|问题地图]]
+- 这套直觉在今天与最强 LLM+Agent 的区别还剩什么：[[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：对标机制谱系|对标机制谱系]]
+- 这套直觉后来被压成了哪些问题：[[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：问题展开地图|问题地图]]
 - 对后续研究者，当前最小可输命题是什么。
 
 有了更正式的定义后，第2个“必要性”的问题，我们将给出从理论中找到的对照和佐证。
 
-对于第3个问题，更具体地说，要如何改造System1/System2来适配，让AI具备快速自主控制反馈信源的能力？多模态、空间智能、强化学习、Transformer、Mamba对这个能力有何作用？这些问题在原始写作中指向[一篇后续外部文档](https://clouddocs.huawei.com/wapp/doc/d9669789-9d2c-411d-8ec3-8fe313720b91)；对后续研究者，当前收缩后的执行版本见 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前计划与 Defense|当前计划与 Defense]]。
+对于第3个问题，更具体地说，要如何改造System1/System2来适配，让AI具备快速自主控制反馈信源的能力？多模态、空间智能、强化学习、Transformer、Mamba对这个能力有何作用？这些问题在原始写作中指向[一篇后续外部文档](https://clouddocs.huawei.com/wapp/doc/d9669789-9d2c-411d-8ec3-8fe313720b91)；对后续研究者，当前收缩后的执行版本见 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前计划与 Defense|当前计划与 Defense]]。
 
 ### 2. 控制 & 反馈：人类 vs. AI
 
@@ -556,7 +556,7 @@ Token[Instruction]=Opcode+Operands
 
 其中，**原始的图灵机**[6-abefg]主要用于纯理论研究，但在其中也包含了几个对后续实际计算机工程有启发的概念，**状态转移函数** & **一个无限长读写带**：图灵机的工作过程就是，读写头根据自己的状态以及读到的读写带上的字符，由状态转移函数决定如何修改当前字符以及决定读写头在读写带上向左或向右移动。相关的变种，还有多带图灵机，也就是具有$k>1$个读写带及读写头数量的图灵机，称为$k$**- 带图灵机**。
 
-![[assets/images/控制反馈：Token-Instruction-=Opcode+Operands-01.png|48%]] ![[assets/images/控制反馈：Token-Instruction-=Opcode+Operands-02.png|48%]]
+![[assets/images/control-feedback-token-instruction-opcode-operands-01.png|48%]] ![[assets/images/control-feedback-token-instruction-opcode-operands-02.png|48%]]
 
 
 
@@ -658,7 +658,7 @@ Token[Instruction]=Opcode+Operands
 
 `能否设计神经网络，以及如何构造训练数据，借助什么算法，使System1掌握Load/Store指令？`
 
-这些问题在原始写作中另有[外部文档](https://clouddocs.huawei.com/wapp/share/d9669789-9d2c-411d-8ec3-8fe313720b91)承接；当前执行版见 [[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前计划与 Defense|当前计划与 Defense]]。
+这些问题在原始写作中另有[外部文档](https://clouddocs.huawei.com/wapp/share/d9669789-9d2c-411d-8ec3-8fe313720b91)承接；当前执行版见 [[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前计划与 Defense|当前计划与 Defense]]。
 
 ### 附录：参考文档
 
@@ -769,23 +769,23 @@ Token[Instruction]=Opcode+Operands
 ## 历史动机：Load/Store 练级路
 
 > [!note] 历史定位
-> 这页保存 `Load/Store` 早期图示材料。它用于说明从线性上下文访问走向显式工作空间寻址、图结构访问的直觉；当前收缩后的实验版本见 [[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：事件对象实验计划|事件对象实验计划]]。
+> 这页保存 `Load/Store` 早期图示材料。它用于说明从线性上下文访问走向显式工作空间寻址、图结构访问的直觉；当前收缩后的实验版本见 [[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：事件对象实验计划|事件对象实验计划]]。
 
 ### 线性上下文中的局部读取
 
-![[assets/images/Load_Store练级路-01.png]]
+![[assets/images/load-store-progression-01.png]]
 
 这张图对应一个早期直觉：如果上下文仍主要是线性 token 序列，那么 `Load` 的核心问题就是在长序列中定位一个局部片段，并把它作为后续控制步骤的反馈信号。
 
 ### 图结构工作空间
 
-![[assets/images/Load_Store练级路-02.png]]
+![[assets/images/load-store-progression-02.png]]
 
-这张图实际复用了 [[20-TIDE-去中心化神经网络/README|TIDE]] 的图结构直觉。放在这里，是为了说明当工作空间不是单一线性上下文，而是图结构、索引结构或分块状态时，`Load/Store` 的价值不只在于“能读写”，还在于能把搜索、定位、局部修补限制在更小的结构邻域中。
+这张图实际复用了 [[20-tide-decentralized-neural-network/README|TIDE]] 的图结构直觉。放在这里，是为了说明当工作空间不是单一线性上下文，而是图结构、索引结构或分块状态时，`Load/Store` 的价值不只在于“能读写”，还在于能把搜索、定位、局部修补限制在更小的结构邻域中。
 
 ### 与当前主线的关系
 
 这页只保留历史图示直觉。当前不直接主张 `Load/Store` 一定优于最强 LLM+Agent，而是先验证：
 
-- [[10-控制反馈-TokenInstruction/理论与Defense#局部状态更新闭包|局部状态更新闭包]] 是否存在。
-- [[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：事件对象实验计划|事件对象 -> 可归因 -> 可纠偏]] 是否能在现实系统中形成。
+- [[10-control-feedback-token-instruction/theory-and-defense#局部状态更新闭包|局部状态更新闭包]] 是否存在。
+- [[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：事件对象实验计划|事件对象 -> 可归因 -> 可纠偏]] 是否能在现实系统中形成。

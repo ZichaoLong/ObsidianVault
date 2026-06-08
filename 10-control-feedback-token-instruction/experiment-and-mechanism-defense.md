@@ -10,7 +10,7 @@ tags:
 
 # 控制反馈：实验、机制与 Defense
 
-先看 [[#一页版实验协议|一页版实验协议]] 和 [[#控制反馈：事件对象实验计划|事件对象实验计划]]。如果实验推进中需要追问对手是谁、[[10-控制反馈-TokenInstruction/主线-计划-问题地图#控制反馈：当前计划与 Defense|`U/G` 怎么理解]]、bridge 为什么会被 challenge，再继续看 [[#控制反馈：Bridge 与 Plan-v3 Challenge / Defense|Bridge 与 Plan-v3 Challenge / Defense]]。
+先看 [[#一页版实验协议|一页版实验协议]] 和 [[#控制反馈：事件对象实验计划|事件对象实验计划]]。如果实验推进中需要追问对手是谁、[[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前计划与 Defense|`U/G` 怎么理解]]、bridge 为什么会被 challenge，再继续看 [[#控制反馈：Bridge 与 Plan-v3 Challenge / Defense|Bridge 与 Plan-v3 Challenge / Defense]]。
 
 ## 一页版实验协议
 
@@ -260,7 +260,7 @@ tags:
 - 一份回放协议。
 - 一份失败判定模板。
 
-计划压力测试见 [[10-控制反馈-TokenInstruction/实验与机制Defense#控制反馈：Bridge 与 Plan-v3 Challenge / Defense|Bridge与Plan-v3-Challenge-Defense]]。
+计划压力测试见 [[10-control-feedback-token-instruction/experiment-and-mechanism-defense#控制反馈：Bridge 与 Plan-v3 Challenge / Defense|Bridge与Plan-v3-Challenge-Defense]]。
 
 ---
 
