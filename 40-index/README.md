@@ -13,10 +13,10 @@ tags:
 ## 控制反馈
 
 - [[10-control-feedback-token-instruction/README|控制反馈 / Token = Instruction]]
-- [[10-control-feedback-token-instruction/mainline-plan-question-map|主线、计划与问题地图]]
-- [[10-control-feedback-token-instruction/theory-and-defense|理论与 Defense]]
-- [[10-control-feedback-token-instruction/experiment-and-mechanism-defense|实验、机制与 Defense]]
 - [[10-control-feedback-token-instruction/historical-motivation|历史动机]]
+- [[10-control-feedback-token-instruction/current-mainline|当前主线]]
+- [[10-control-feedback-token-instruction/experiment-protocol|实验协议]]
+- [[10-control-feedback-token-instruction/theory-and-challenges|理论与挑战]]
 
 ## TIDE
 

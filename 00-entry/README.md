@@ -15,7 +15,7 @@ tags:
 
 直接进入：
 
-- 控制反馈：[[10-control-feedback-token-instruction/mainline-plan-question-map#控制反馈：当前主线总览|当前主线总览]]
+- 控制反馈：[[10-control-feedback-token-instruction/current-mainline|当前主线]]
 - TIDE：[[20-tide-decentralized-neural-network/README#TIDE / 去中心化神经网络：概览|概览]]
 
 其他入口：
