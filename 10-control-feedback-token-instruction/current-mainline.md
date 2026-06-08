@@ -130,6 +130,12 @@ A 分支的价值是把 instruction 训练问题压成一个较硬的问题：
 
 > 显式状态事件能否把 agent 的失败转化为可回放、可局部修复、可继续训练的数据飞轮？
 
+但 A 的低阶部分已经被现代 Agent 工程部分吸收。typed tool calling、schema、trace、logging、checkpoint 或 replay 已经在 frontier / provider-level / serious agent runtime 中成为常见方向。因此 A 不能把“工具调用结构化”当作主贡献。
+
+A 剩下的特殊点是：
+
+> typed tool traces 能否升级成 decision-active explicit state semantics，使事件不只是工具调用记录，而是可回放、可诊断、可局部修复、可构造反事实、可用于继续训练的状态转移对象。
+
 如果能，A 提供早期信心：
 
 - imitation learning 数据更干净。
@@ -156,6 +162,8 @@ A 只问：
 因此 A 的强对手不是普通 tools，而是 [[10-control-feedback-token-instruction/experiment-protocol#A 的强基线|强 typed tools 基线]]：
 
 > `standard tools + typed schema + trace id + logging + transaction`
+
+`tools vs typed tools` 应作为 [[10-control-feedback-token-instruction/experiment-protocol#总体设计|Stage 0 sanity check]]，用于校准任务和实现，而不是 A 的主贡献。
 
 如果 A 只赢弱工具，不赢这个强基线，不能说明独立增量。
 
@@ -212,7 +220,9 @@ A 与 B 是两个正交变量。
 | --- | --- |
 | A 成功，B 失败 | 更像 agent trace / schema engineering。 |
 | B 成功，A 失败 | 更像 active retrieval / memory system。 |
-| A、B 都成功但无交互 | 两个机制可分别吸收，统一原语未站住。 |
+| A、B 都成功，`Y11` 最大但无正交互 | 弱合流，工程组合有用，统一原语未站住。 |
+| `Y11` Pareto 非支配但主指标不最大 | Pareto 弱合流，可以继续工程推进。 |
+| `Y11` 被 `Y10` 或 `Y01` 支配 | A+B 组合失败，单分支仍可保留。 |
 | A+B 在强基线和 [成本账本](<experiment-protocol.md#成本账本>) 下形成 Pareto 优势 | 可以继续推进统一状态访问接口。 |
 
 ## Load Store 的降级位置
@@ -223,7 +233,7 @@ A 与 B 是两个正交变量。
 
 - A 在强 typed-tools/logging/transaction 基线上仍改善训练、回放、归因或纠偏。
 - B 在强 retrieval/indexing 基线上仍改善访问成本、长度泛化或局部修复范围。
-- A+B 的组合产生交互收益，而不是两个可独立吸收的小技巧。
+- A+B 的组合在预注册主指标上产生 `Interaction > delta`，而不是两个可独立吸收的小技巧。
 - 计入 [[10-control-feedback-token-instruction/experiment-protocol#Workspace 粒度消融|workspace 粒度]]、resolver、runtime/scaffold 成本后仍成立。
 
 这与计算机 ISA 类比更一致：没有人先验证明某个 ISA 最优，真正筛选来自训练、工程、成本、生态和任务分布压力。
@@ -238,7 +248,7 @@ A 与 B 是两个正交变量。
 
 - A 被强 typed tools 吸收，则显式状态语义不是独立抓手。
 - B 被强 retrieval/indexing 吸收，则局部状态访问不是独立抓手。
-- A+B 无交互，则 `Load/Store` 不是统一低层原语。
+- A+B 只有弱合流，则可继续工程推进，但 `Load/Store` 不是统一低层原语。
 - scaffold 成本吞掉收益，则薄界面是假象。
 - 轨迹不可训练，则 `Token = Instruction` 缺少数据飞轮。
 
@@ -259,26 +269,32 @@ A 与 B 是两个正交变量。
 - 明确 [[10-control-feedback-token-instruction/experiment-protocol#Workspace 粒度消融|workspace 粒度变量]]。
 - 建立 [[10-control-feedback-token-instruction/experiment-protocol#成本账本|scaffold 成本账本]]。
 
-第二阶段：先做 A 的训练可行性实验。
+第二阶段：做 Stage 0 sanity check。
+
+- 比较 freeform tools 与 typed tools。
+- 校准任务和实现。
+- 不把 typed tools 胜出当作主贡献。
+
+第三阶段：先做 A 的训练可行性实验。
 
 - 任务用 JSON / AST / ledger / dependency graph。
 - 比较强 typed tools 与显式状态事件。
 - 先看轨迹是否更适合 imitation、归因、纠偏和反事实训练。
 - 不把最终任务成功率作为唯一主指标。
 
-第三阶段：做 B 的局部访问实验。
+第四阶段：做 B 的局部访问实验。
 
 - 固定 resolver，比访问接口。
 - 固定访问接口，比 resolver。
 - 检验 address generation、局部读取成本、长度泛化、全局回退频率。
 
-第四阶段：做 A+B 2x2。
+第五阶段：做 A+B 2x2。
 
-- 检验是否有 [[10-control-feedback-token-instruction/experiment-protocol#A+B 交互指标|交互收益]]。
+- 检验是弱合流、Pareto 弱合流，还是 [[10-control-feedback-token-instruction/experiment-protocol#A+B 交互指标|强合流]]。
 - 预注册主指标和 Pareto 裁决规则。
 - 计入 setup、runtime、人工 schema、resolver 构造成本。
 
-第五阶段：进入半结构任务。
+第六阶段：进入半结构任务。
 
 - 长文档局部修订。
 - 代码仓局部修复。

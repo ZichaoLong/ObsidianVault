@@ -32,6 +32,24 @@ A/B 分支必须用 2x2 设计拆开。
 - B 的寻址、局部访问、长度泛化、成本贡献。
 - A+B 的交互贡献。
 
+实验推进应分三层。
+
+Stage 0：工具结构化 sanity check。
+
+- 比较 freeform tools 与 typed tools。
+- 作用是校准任务和实现，不是 A 分支主贡献。
+- 若 typed tools 都不能稳定优于 freeform tools，说明任务、prompt、工具定义或评估协议可能有问题。
+- 若 typed tools 胜出，只能说明任务捕捉到了现代 Agent 工程已知收益。
+
+Stage 1：A 分支核心对照。
+
+- 比较 `typed tools + trace/logging/transaction` 与 decision-active explicit state semantics。
+- 这里才检验 A 的剩余特殊点。
+
+Stage 2：A/B 2x2。
+
+- 检验 A、B 各自贡献，以及 A+B 是否形成弱合流或强合流。
+
 ## 预备层：协议中立轨迹
 
 所有任务先写成协议中立的 semantic transition，不能先写成 `Load/Store` 专家轨迹。
@@ -50,7 +68,8 @@ recover previous consistent state
 然后分别渲染到：
 
 - append-only answer。
-- standard tools。
+- freeform tools。
+- typed tools。
 - typed tools + trace id + logging + transaction。
 - explicit state semantics。
 - local state access。
@@ -106,6 +125,22 @@ rollback(tx_id)
 - logging。
 - transaction。
 - typed arguments。
+
+这不是为了否认 typed tools 的价值。相反，frontier / provider-level / serious agent runtime 已经在相当程度上采用 typed tool calling、schema、trace、logging、checkpoint 或 replay。A 不能再把“工具调用结构化”当作新贡献。
+
+Stage 0 可以验证 typed tools 相对 freeform tools 的收益，但那只是任务校准。A 剩下的特殊点是：
+
+> typed tool traces 能否升级成 decision-active explicit state semantics，也就是事件不只是工具调用记录，而是可回放、可诊断、可局部修复、可构造反事实、可用于继续训练的状态转移对象。
+
+这里要区分三层：
+
+- `semantic transition` 是协议中立的底层轨迹 IR，用于公平生成对照轨迹。
+- `address/read/write/verify/commit/rollback/diagnose` 是 A 的候选可见事件语言。
+- A 的真正研究对象是这些可见事件是否形成进入后续决策的显式状态语义。
+
+如果 strong typed tools baseline 也实现了同等显式状态语义，那它其实已经吸收 A。此时结论应降级为：
+
+> A 不是 TapeWalker 独有机制，而是优秀 Agent runtime 可能自然收敛到的状态事件层。
 
 A 必须回答：
 
@@ -382,22 +417,35 @@ Interaction = Y11 - Y10 - Y01 + Y00
 - `Y01` = 无 A、有 B。
 - `Y11` = 有 A、有 B。
 
+注意：
+
+- `Interaction` 只应用于预注册主收益指标。
+- 成本、恢复步数、错误率等越小越好的指标，应先转成收益指标再计算。
+- `Interaction <= 0` 不必然表示 A+B 互相干扰，也可能只是收益饱和。
+
 强合流：
 
 - `Y11` 显著优于 `Y10` 和 `Y01`。
-- 交互项为正，且超过预注册效应量阈值。
+- `Interaction > delta`，且超过预注册效应量阈值。
 - 在主要任务族和长度外推上都成立。
 - 计入成本账本后仍成立。
+- 可以继续讨论统一状态访问接口或候选低层原语。
 
 弱合流：
 
-- `Y11` 同时继承 A 的归因/训练优势和 B 的成本优势。
-- 没有明显超加性，但形成 Pareto 非支配点。
+- `Y11` 是主指标最大，但 `Interaction <= 0`。
+- 或 `Y11` 同时继承 A 的归因/训练优势和 B 的成本优势，但没有明显超加性。
 - 可作为工程路线继续推进，但不能强称统一低层原语已经站住。
+
+Pareto 弱合流：
+
+- `Y11` 不是单一主指标最大，但在多指标上非支配。
+- 例如成功率略低，但成本、恢复步数或全局回退显著更低。
+- 可以继续工程推进，但不能支撑强机制叙事。
 
 失败：
 
-- `Y11` 只是 A+B 的简单拼接。
+- `Y11` 被 `Y10` 或 `Y01` 支配。
 - `Y11` 被 strong typed tools 或 strong retrieval/indexing 追平。
 - `Y11` 的优势来自 setup/scaffold、meaningful address 或人工粒度设计。
 
