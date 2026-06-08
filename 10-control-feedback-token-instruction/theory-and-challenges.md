@@ -185,16 +185,17 @@ test-time 状态至少有三层：
 
 ### 攻击 1：A 的低阶部分已被 Agent 工程吸收
 
-现代 Agent + Tools 已经在很大程度上吸收了 A 的低阶收益，尤其是在 frontier / provider-level / serious agent runtime 中。
+现代 Agent + Tools 已经在很大程度上吸收了 A 的低阶收益，尤其是在 frontier / provider-level / serious agent runtime 中。详细证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A 弱版本的吸收]]。
 
-| 好处 | 当前 Agent + Tools 状态 | 边界 |
-| --- | --- | --- |
-| 稳定语法 / typed arguments | 大体已有 | JSON schema、strict tool use、MCP schema 已是主流方向，但不是所有实际系统都做到。 |
-| trace / logging | 大体已有 | tracing 能记录 tool calls、LLM generations、handoffs、guardrails 等。 |
-| 可监督轨迹 | 部分已有 | traces / eval datasets 可支持监督，但通常不是默认事件级状态监督。 |
-| 可回放状态变化 | 部分已有 | checkpoint / replay / time travel 依赖框架设计，且 replay 不自动等于 semantic replay。 |
-| 可构造反事实样本 | 较弱 | 可人工或程序构造，但通常不是一等机制。 |
-| 可训练纠偏策略 | 较弱到部分已有 | trace/eval 可帮助改 prompt、orchestration、工具选择；事件级错误到局部修复再继续训练尚未成为通用闭环。 |
+已被强工程基线部分吸收的内容包括：
+
+- typed action schema。
+- 稳定 tool call 生命周期。
+- trace / logging / call correlation。
+- replay-ready history / resume / fork。
+- 显式状态变更 / diff / commit-ish 事件。
+- approval / safety / guardrail 状态。
+- trace grading / eval loop。
 
 因此，A 不能再主张“第一次让工具调用结构化”。A 剩下的特殊点必须收缩为：
 
@@ -203,7 +204,7 @@ test-time 状态至少有三层：
 防守边界：
 
 - `tools vs typed tools` 只作为 Stage 0 sanity check。
-- A 的核心对照必须是 `typed tools + trace/logging/transaction` vs decision-active explicit state semantics。
+- A 的核心对照必须是 `typed tools + trace/logging/approval/checkpoint/replay/diff/transaction` vs decision-active explicit state semantics。
 - 如果强 typed tools baseline 实现了同等显式状态语义，A 已被 baseline 吸收。
 
 ### 攻击 2：A 只是 schema engineering

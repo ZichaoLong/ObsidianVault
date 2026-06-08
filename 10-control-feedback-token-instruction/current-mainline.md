@@ -26,7 +26,7 @@ tags:
 
 | 分支 | 研究对象 | 主要价值 | 强基线 |
 | --- | --- | --- | --- |
-| [A：显式状态语义](<experiment-protocol.md#A 分支：显式状态语义与训练可行性>) | instruction 事件是否成为稳定运行时对象 | 可训练、可回放、可归因、可局部修复、可继续训练 | typed tools + logging + trace id + transaction |
+| [A：显式状态语义](<experiment-protocol.md#A 分支：显式状态语义与训练可行性>) | instruction 事件是否成为稳定运行时对象 | 可训练、可回放、可归因、可局部修复、可继续训练 | typed tools + schema + call/trace id + approval + checkpoint/replay + diff/transaction |
 | [B：局部状态访问](<experiment-protocol.md#B 分支：局部状态访问与地址生成>) | 模型是否主动控制隐藏全局状态中的局部反馈信源 | 细粒度控制反馈、地址生成、访问成本、长度泛化 | BM25 / vector / SQL / LSP / learned retriever / resolver |
 
 二者合流时才接近完整主张：
@@ -130,7 +130,7 @@ A 分支的价值是把 instruction 训练问题压成一个较硬的问题：
 
 > 显式状态事件能否把 agent 的失败转化为可回放、可局部修复、可继续训练的数据飞轮？
 
-但 A 的低阶部分已经被现代 Agent 工程部分吸收。typed tool calling、schema、trace、logging、checkpoint 或 replay 已经在 frontier / provider-level / serious agent runtime 中成为常见方向。因此 A 不能把“工具调用结构化”当作主贡献。
+但 A 的低阶部分已经被现代 Agent 工程部分吸收。typed tool calling、schema、trace/call id、approval、checkpoint/replay、patch/diff、trace grading 或 eval loop 已经在 frontier / provider-level / serious agent runtime 中成为常见方向。因此 A 不能把“工具调用结构化”当作主贡献。证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A 弱版本的吸收]]。
 
 A 剩下的特殊点是：
 
@@ -161,7 +161,7 @@ A 只问：
 
 因此 A 的强对手不是普通 tools，而是 [[10-control-feedback-token-instruction/experiment-protocol#A 的强基线|强 typed tools 基线]]：
 
-> `standard tools + typed schema + trace id + logging + transaction`
+> `standard tools + typed schema + call/trace id + logging + approval + checkpoint/replay + patch/diff + transaction`
 
 `tools vs typed tools` 应作为 [[10-control-feedback-token-instruction/experiment-protocol#总体设计|Stage 0 sanity check]]，用于校准任务和实现，而不是 A 的主贡献。
 
@@ -231,7 +231,7 @@ A 与 B 是两个正交变量。
 
 它要重新上升，至少需要：
 
-- A 在强 typed-tools/logging/transaction 基线上仍改善训练、回放、归因或纠偏。
+- A 在强 typed-tools/runtime 基线上仍改善训练、回放、归因或纠偏。
 - B 在强 retrieval/indexing 基线上仍改善访问成本、长度泛化或局部修复范围。
 - A+B 的组合在预注册主指标上产生 `Interaction > delta`，而不是两个可独立吸收的小技巧。
 - 计入 [[10-control-feedback-token-instruction/experiment-protocol#Workspace 粒度消融|workspace 粒度]]、resolver、runtime/scaffold 成本后仍成立。

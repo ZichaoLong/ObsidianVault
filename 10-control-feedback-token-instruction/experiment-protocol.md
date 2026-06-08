@@ -43,7 +43,7 @@ Stage 0：工具结构化 sanity check。
 
 Stage 1：A 分支核心对照。
 
-- 比较 `typed tools + trace/logging/transaction` 与 decision-active explicit state semantics。
+- 比较 `typed tools + trace/logging/approval/checkpoint/replay/diff/transaction` 与 decision-active explicit state semantics。
 - 这里才检验 A 的剩余特殊点。
 
 Stage 2：A/B 2x2。
@@ -70,7 +70,7 @@ recover previous consistent state
 - append-only answer。
 - freeform tools。
 - typed tools。
-- typed tools + trace id + logging + transaction。
+- typed tools + trace id + logging + approval + checkpoint/replay + diff/transaction。
 - explicit state semantics。
 - local state access。
 - explicit state semantics + local state access。
@@ -121,12 +121,16 @@ rollback(tx_id)
 这个 baseline 已经有：
 
 - typed schema。
+- tool call lifecycle / call id。
 - trace id。
 - logging。
+- approval / guardrail。
+- checkpoint / replay / fork。
+- patch / diff。
 - transaction。
 - typed arguments。
 
-这不是为了否认 typed tools 的价值。相反，frontier / provider-level / serious agent runtime 已经在相当程度上采用 typed tool calling、schema、trace、logging、checkpoint 或 replay。A 不能再把“工具调用结构化”当作新贡献。
+这不是为了否认 typed tools 的价值。相反，frontier / provider-level / serious agent runtime 已经在相当程度上采用 typed tool calling、schema、trace/call id、approval、checkpoint/replay、patch/diff、trace grading 或 eval loop。A 不能再把“工具调用结构化”当作新贡献。证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A 弱版本的吸收]]。
 
 Stage 0 可以验证 typed tools 相对 freeform tools 的收益，但那只是任务校准。A 剩下的特殊点是：
 
