@@ -15,10 +15,10 @@ tags:
 
 | 历史动机中的说法 | 当前收缩后的对应位置 |
 | --- | --- |
-| AI 缺少快速、自主控制反馈信源 | [[10-control-feedback-token-instruction/current-mainline#B 分支：局部状态访问|B：局部状态访问]] |
-| `Token[Instruction] = Opcode + Operands` | [[10-control-feedback-token-instruction/current-mainline#Token = Instruction 的当前含义|Token = Instruction 的当前含义]] |
-| RASP / RAM / write-once 复杂度直觉 | [[10-control-feedback-token-instruction/theory-and-challenges#理论层级|理论层级]] |
-| `Load/Store` 作为基础动作 | [[10-control-feedback-token-instruction/current-mainline#Load Store 的降级位置|Load/Store 的降级位置]] |
+| AI 缺少快速、自主控制反馈信源 | [B：局部状态访问](<current-mainline.md#B 分支：局部状态访问>) |
+| `Token[Instruction] = Opcode + Operands` | [Token = Instruction 的当前含义](<current-mainline.md#Token = Instruction 的当前含义>) |
+| RASP / RAM / write-once 复杂度直觉 | [理论层级](<theory-and-challenges.md#理论层级>) |
+| `Load/Store` 作为基础动作 | [Load/Store 的降级位置](<current-mainline.md#Load Store 的降级位置>) |
 
 > [!warning] 阅读边界
 > 本页保留历史论证语气，其中一些表述比当前主线更强。当前可执行立场以 [[10-control-feedback-token-instruction/current-mainline|当前主线]] 为准。
@@ -163,7 +163,7 @@ $\lor: or，\land: and, \lnot: not$
 
 4. 图灵可识别但不可判定问题类 `RECOGNIZABLE / recursively enumerable`，如图灵停机问题、图灵机等价性判定、ZFC公理体系下的命题证真或证伪（哥德尔不完备性定理）。这类问题中，即使是描述极短的问题，也可能只有长解决方案（如费马大定理）甚至至今没有证真或证伪（如黎曼猜想）。
 
-对时间Scaling Law的一个更直接的佐证，是时间层次定理[1,2,8](Time Hierarchy Theorem)。与多数图灵不可判定问题的证明类似，时间层次定理的证明，通常也是借助对角线法，这都蕴含着这样一个根本直觉，即时间Scaling Law的背后是：
+对时间Scaling Law的一个更直接的佐证，是时间层次定理（Time Hierarchy Theorem）[1,2,8]。与多数图灵不可判定问题的证明类似，时间层次定理的证明，通常也是借助对角线法，这都蕴含着这样一个根本直觉，即时间Scaling Law的背后是：
 
 `问题数（例如对标不可数）远比解决方案数（例如对标可数）更丰富：通过对角线构造，我们总能找到一个新的、不属于现有资源能解决的问题。`
 

@@ -21,7 +21,7 @@ tags:
 
 A/B 分支必须用 2x2 设计拆开。
 
-| | 无显式状态语义 | 有显式状态语义 |
+| 局部访问 / 显式语义 | 无显式状态语义 | 有显式状态语义 |
 | --- | --- | --- |
 | 无局部访问 | typed tools 强基线 | A：显式状态语义 |
 | 有局部访问 | retrieval/index 强基线 | A+B：完整候选接口 |
@@ -197,7 +197,7 @@ B 的实验问题：
 
 如果模型仍可随时读取完整状态，只能算支持局部读取的 full-context system。
 
-### Selector / Resolver / Reader
+### Selector Resolver Reader
 
 B 必须拆开三个组件。
 

@@ -19,8 +19,8 @@ tags:
 | 层级 | 作用 | 当前位置 |
 | --- | --- | --- |
 | 信仰牵引 | 解释为什么 `Token = Instruction` 值得想 | 历史动机、RAM/RASP、write-once、time scaling |
-| 机制支撑 | 解释 A/B 为什么不是随意拆分 | instruction 可训练性、局部状态更新闭包、全局重解释 |
-| 裁决层 | 判断现实价值是否站住 | 强基线、成本账本、A+B 交互、任务迁移 |
+| 机制支撑 | 解释 A/B 为什么不是随意拆分 | [instruction 可训练性](<experiment-protocol.md#A 分支：显式状态语义与训练可行性>)、局部状态更新闭包、全局重解释 |
+| 裁决层 | 判断现实价值是否站住 | 强基线、[成本账本](<experiment-protocol.md#成本账本>)、[A+B 交互](<experiment-protocol.md#A+B 交互指标>)、任务迁移 |
 
 历史理论动机不能直接证明今天的 `Load/Store` 应成为一等公民，但保留了重要直觉：
 
@@ -232,7 +232,7 @@ B 可能退化成 retrieval、memory system 或 POMDP。
 防守边界：
 
 - 记录人工设计成本。
-- 做 cell 粒度消融。
+- 做 [[10-control-feedback-token-instruction/experiment-protocol#Workspace 粒度消融|cell 粒度消融]]。
 - 后续引入模型辅助或自动粒度生成。
 
 ### 攻击 6：scaffold 偷走全部困难
@@ -241,7 +241,7 @@ B 可能退化成 retrieval、memory system 或 POMDP。
 
 防守边界：
 
-- 计入 setup、runtime、人工成本。
+- 计入 [[10-control-feedback-token-instruction/experiment-protocol#成本账本|setup、runtime、人工成本]]。
 - 区分 model-only proposal quality、runtime-corrected success、rollback-assisted success。
 - 如果胜利来自 validator 自动拒错，不能说模型学会了状态管理。
 
@@ -261,7 +261,7 @@ A 和 B 可能都是有用小技巧，但组合没有统一原语意义。
 
 防守边界：
 
-- 预注册交互指标。
+- 预注册 [[10-control-feedback-token-instruction/experiment-protocol#A+B 交互指标|交互指标]]。
 - 若 `Y11` 没有超过 `Y10` 和 `Y01`，不能强称统一低层原语站住。
 - Pareto 非支配只能支持工程路线继续推进。
 

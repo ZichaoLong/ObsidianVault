@@ -26,8 +26,8 @@ tags:
 
 | 分支 | 研究对象 | 主要价值 | 强基线 |
 | --- | --- | --- | --- |
-| A：显式状态语义 | instruction 事件是否成为稳定运行时对象 | 可训练、可回放、可归因、可局部修复、可继续训练 | typed tools + logging + trace id + transaction |
-| B：局部状态访问 | 模型是否主动控制隐藏全局状态中的局部反馈信源 | 细粒度控制反馈、地址生成、访问成本、长度泛化 | BM25 / vector / SQL / LSP / learned retriever / resolver |
+| [A：显式状态语义](<experiment-protocol.md#A 分支：显式状态语义与训练可行性>) | instruction 事件是否成为稳定运行时对象 | 可训练、可回放、可归因、可局部修复、可继续训练 | typed tools + logging + trace id + transaction |
+| [B：局部状态访问](<experiment-protocol.md#B 分支：局部状态访问与地址生成>) | 模型是否主动控制隐藏全局状态中的局部反馈信源 | 细粒度控制反馈、地址生成、访问成本、长度泛化 | BM25 / vector / SQL / LSP / learned retriever / resolver |
 
 二者合流时才接近完整主张：
 
@@ -55,14 +55,14 @@ tags:
 - instruction token 若只靠低效探索或大规模强化学习，会立刻遭遇可行性攻击。
 - 因而必须先问：instruction 事件是否有稳定语义、可监督轨迹、可回放状态变化、可构造反事实样本、可训练纠偏策略。
 
-这就是 A 分支。
+这就是 [[10-control-feedback-token-instruction/experiment-protocol#A 分支：显式状态语义与训练可行性|A 分支]]。
 
 第二，反馈信源怎么自主选择？
 
 - 历史动机里说的“自主控制反馈信源”，更具体地说，是生成地址、选择观察对象、控制局部读写范围。
 - 它不是简单工具调用，而是模型是否能在隐藏的大状态中主动决定看哪里、改哪里、验证哪里。
 
-这就是 B 分支。
+这就是 [[10-control-feedback-token-instruction/experiment-protocol#B 分支：局部状态访问与地址生成|B 分支]]。
 
 因此，A 不是偏离历史动机的工程化妥协。它填补的是 `Token = Instruction` 最先会被攻击的训练裂缝：
 
@@ -153,7 +153,7 @@ A 只问：
 - 错误是否能定位到事件。
 - 纠偏是否能基于事件局部发生。
 
-因此 A 的强对手不是普通 tools，而是：
+因此 A 的强对手不是普通 tools，而是 [[10-control-feedback-token-instruction/experiment-protocol#A 的强基线|强 typed tools 基线]]：
 
 > `standard tools + typed schema + trace id + logging + transaction`
 
@@ -180,7 +180,7 @@ B 的关键不是工具支持局部读取，而是信息边界：
 - runtime 只返回受限 cell / chunk / object。
 - 任务推进依赖多轮局部访问。
 
-B 的强对手不是普通工具，而是强检索与索引系统：
+B 的强对手不是普通工具，而是 [[10-control-feedback-token-instruction/experiment-protocol#B 的强基线|强检索与索引系统]]：
 
 - BM25。
 - vector search。
@@ -195,7 +195,7 @@ B 的强对手不是普通工具，而是强检索与索引系统：
 
 A 与 B 是两个正交变量。
 
-| | 无显式状态语义 | 有显式状态语义 |
+| 局部访问 / 显式语义 | 无显式状态语义 | 有显式状态语义 |
 | --- | --- | --- |
 | 无局部访问 | typed tools 强基线 | A：显式状态语义 |
 | 有局部访问 | retrieval/index 强基线 | A+B：完整候选接口 |
@@ -213,7 +213,7 @@ A 与 B 是两个正交变量。
 | A 成功，B 失败 | 更像 agent trace / schema engineering。 |
 | B 成功，A 失败 | 更像 active retrieval / memory system。 |
 | A、B 都成功但无交互 | 两个机制可分别吸收，统一原语未站住。 |
-| A+B 在强基线和成本账本下形成 Pareto 优势 | 可以继续推进统一状态访问接口。 |
+| A+B 在强基线和 [成本账本](<experiment-protocol.md#成本账本>) 下形成 Pareto 优势 | 可以继续推进统一状态访问接口。 |
 
 ## Load Store 的降级位置
 
@@ -224,7 +224,7 @@ A 与 B 是两个正交变量。
 - A 在强 typed-tools/logging/transaction 基线上仍改善训练、回放、归因或纠偏。
 - B 在强 retrieval/indexing 基线上仍改善访问成本、长度泛化或局部修复范围。
 - A+B 的组合产生交互收益，而不是两个可独立吸收的小技巧。
-- 计入 workspace 构造、cell 切分、address schema、resolver、runtime/scaffold 成本后仍成立。
+- 计入 [[10-control-feedback-token-instruction/experiment-protocol#Workspace 粒度消融|workspace 粒度]]、resolver、runtime/scaffold 成本后仍成立。
 
 这与计算机 ISA 类比更一致：没有人先验证明某个 ISA 最优，真正筛选来自训练、工程、成本、生态和任务分布压力。
 
@@ -232,7 +232,7 @@ A 与 B 是两个正交变量。
 
 当前最小可输命题：
 
-> 在同等模型能力、同等信息预算、预先定义 A/B 阈值并计入 scaffold 成本的前提下，显式状态语义与局部状态访问分别、以及组合后，是否相对强 typed tools/logging/transaction 和强 retrieval/indexing 基线，在训练、归因、纠偏或成本曲线上形成不可被 baseline、resolver、workspace 粒度或 runtime 解释掉的增量？
+> 在同等模型能力、同等信息预算、预先定义 [[10-control-feedback-token-instruction/experiment-protocol#总体设计|A/B 阈值]] 并计入 [[10-control-feedback-token-instruction/experiment-protocol#成本账本|scaffold 成本]] 的前提下，显式状态语义与局部状态访问分别、以及组合后，是否相对强 typed tools/logging/transaction 和强 retrieval/indexing 基线，在训练、归因、纠偏或成本曲线上形成不可被 baseline、resolver、workspace 粒度或 runtime 解释掉的增量？
 
 它输掉时：
 
@@ -255,9 +255,9 @@ A 与 B 是两个正交变量。
 
 - 用协议中立的 semantic transition 写底层专家轨迹。
 - 明确 A/B 操作性阈值。
-- 明确 selector / resolver / reader 分解。
-- 明确 workspace 粒度变量。
-- 建立 scaffold 成本账本。
+- 明确 [[10-control-feedback-token-instruction/experiment-protocol#Selector Resolver Reader|selector / resolver / reader]] 分解。
+- 明确 [[10-control-feedback-token-instruction/experiment-protocol#Workspace 粒度消融|workspace 粒度变量]]。
+- 建立 [[10-control-feedback-token-instruction/experiment-protocol#成本账本|scaffold 成本账本]]。
 
 第二阶段：先做 A 的训练可行性实验。
 
@@ -274,7 +274,7 @@ A 与 B 是两个正交变量。
 
 第四阶段：做 A+B 2x2。
 
-- 检验是否有交互收益。
+- 检验是否有 [[10-control-feedback-token-instruction/experiment-protocol#A+B 交互指标|交互收益]]。
 - 预注册主指标和 Pareto 裁决规则。
 - 计入 setup、runtime、人工 schema、resolver 构造成本。
 
