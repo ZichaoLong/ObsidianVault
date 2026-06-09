@@ -1,7 +1,7 @@
 {
   "mode": "decoration",
   "scopeAll": true,
-  "scopeFrontmatter": true,
+  "scopeFrontmatter": false,
   "scopeSelected": false,
   "scopePaths": [],
   "autoBurnInDelay": 2000,
@@ -35,7 +35,7 @@
   "stripShowBreadcrumb": true,
   "stripUpdateMode": "scroll",
   "stripShowNavArrows": true,
-  "toolbarEnabled": true,
+  "toolbarEnabled": false,
   "toolbarShowPromote": true,
   "toolbarShowCopyLink": true,
   "toolbarShowFormat": true,
@@ -45,6 +45,6 @@
   "extractMode": "cut",
   "extractReplaceStyle": "embed",
   "extractLocation": "same",
-  "foldButtonsEnabled": true,
+  "foldButtonsEnabled": false,
   "enabled": true
 }
