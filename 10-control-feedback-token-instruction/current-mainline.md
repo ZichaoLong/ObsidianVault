@@ -130,7 +130,7 @@ A 分支的价值是把 instruction 训练问题压成一个较硬的问题：
 
 > 显式状态事件能否把 agent 的失败转化为可回放、可局部修复、可继续训练的数据飞轮？
 
-但 A 的低阶部分已经被现代 Agent 工程部分吸收。typed tool calling、schema、trace/call id、approval、checkpoint/replay、patch/diff、trace grading 或 eval loop 已经在 frontier / provider-level / serious agent runtime 中成为常见方向。因此 A 不能把“工具调用结构化”当作主贡献。证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A 弱版本的吸收]]。
+但 A 的低阶部分已经被现代 Agent 工程部分吸收。typed tool calling、schema、trace/call id、approval、checkpoint/replay、patch/diff、trace grading 或 eval loop 已经在 frontier / provider-level / serious agent runtime 中成为常见方向。因此 A 不能把“工具调用结构化”当作主贡献。证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]]。
 
 A 剩下的特殊点是：
 
@@ -198,6 +198,8 @@ B 的强对手不是普通工具，而是 [[10-control-feedback-token-instructio
 - 任务专用 resolver。
 
 如果 B 只证明“主动检索有用”，它应降格为 retrieval / memory system。
+
+B 的弱版本也已被现代 Agent 工程大量吸收，例如 search、index、local read/write、resource discovery、tool discovery、patch/diff 和 history；证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]]。
 
 ## A 与 B 的 2x2
 

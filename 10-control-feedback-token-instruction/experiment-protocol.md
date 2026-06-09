@@ -130,7 +130,7 @@ rollback(tx_id)
 - transaction。
 - typed arguments。
 
-这不是为了否认 typed tools 的价值。相反，frontier / provider-level / serious agent runtime 已经在相当程度上采用 typed tool calling、schema、trace/call id、approval、checkpoint/replay、patch/diff、trace grading 或 eval loop。A 不能再把“工具调用结构化”当作新贡献。证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A 弱版本的吸收]]。
+这不是为了否认 typed tools 的价值。相反，frontier / provider-level / serious agent runtime 已经在相当程度上采用 typed tool calling、schema、trace/call id、approval、checkpoint/replay、patch/diff、trace grading 或 eval loop。A 不能再把“工具调用结构化”当作新贡献。证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]]。
 
 Stage 0 可以验证 typed tools 相对 freeform tools 的收益，但那只是任务校准。A 剩下的特殊点是：
 
@@ -294,6 +294,8 @@ B 的强对手包括：
 - 任务专用 resolver。
 
 `retriever/index/resolver` 可以是 address resolver 的实现。B 不能假装替代这些系统。
+
+B 的强基线设计应参考 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]]，把 search、index、local read/write、resource discovery、tool discovery、patch/diff 和 checkpoint/replay 纳入 baseline，而不是纳入待证明的新机制。
 
 B 要证明的是：
 
