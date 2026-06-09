@@ -1,6 +1,10 @@
 # Obsidian configuration is device-local by default.
 .obsidian/*
 
+# Sync shared CSS snippets across desktop/mobile vaults.
+!.obsidian/snippets/
+!.obsidian/snippets/**
+
 # Sync the Auto Heading plugin and its visual-numbering config.
 !.obsidian/plugins/
 .obsidian/plugins/*
