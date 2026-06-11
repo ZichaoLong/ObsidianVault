@@ -12,7 +12,7 @@ tags:
 # 当前状态：D² / Phase 1
 
 > [!summary] 本页定位
-> 本页面向项目验收与方向同步，整理 Phase 1 已完成内容、主要结果、真实结论边界、风险和后续方向。未来候选场景见 [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]]。
+> 本页面向项目验收与方向同步，整理 Phase 1 已完成内容、主要结果、真实结论边界、风险和后续方向。未来候选场景见 [[future-scenarios|未来研究候选场景]]。
 
 ## 摘要
 
@@ -297,7 +297,7 @@ Phase 1 给出的结论不应是“原始大叙事已经成立”，而应是：
 
 > 系统能否自动生成、验证、索引并复用新的中间 lemma，并在 heldout theorem proving tasks 上降低 proof search cost 或提高 proof success？
 
-详见 [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]]。
+详见 [[future-lean-landscape|Lean 方向详尽调研]]。
 
 ### 方向二：Kernel 性能优化
 
@@ -316,7 +316,7 @@ Phase 1 给出的结论不应是“原始大叙事已经成立”，而应是：
 - autotune、compiler search、Agent+Skills、evolutionary coding agents 都是强对手。
 - 如果 memory 只复用同 shape，就是 cache，不是研究增量。
 
-详见 [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]]。
+详见 [[future-kernel-landscape|Kernel 性能优化工作谱系]]。
 
 ### 方向三：小模型系统化与数据价值
 
@@ -334,7 +334,7 @@ Phase 1 给出的结论不应是“原始大叙事已经成立”，而应是：
 
 > verified subproblem traces / local repair traces 是否比普通 CoT 或 raw agent trace 更适合蒸馏小模型？
 
-详见 [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]]。
+详见 [[future-small-model-landscape|小模型研究谱系调研]]。
 
 ## 验收口径建议
 

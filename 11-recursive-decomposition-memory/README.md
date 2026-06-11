@@ -10,7 +10,7 @@ tags:
 # 递归分解与 Memory
 
 > [!summary] 本页定位
-> 这条研究线与 [[10-control-feedback-token-instruction/README|控制反馈 / Token = Instruction]] 并列。控制反馈线从 RAM/RASP、指令集、Load/Store 出发；本线从递归分解、lambda 演算、函数组合、计划执行和 memory 出发，关注模型生成的中间对象能否成为可复用、可验证、可组合、可递归调用的子问题结构。
+> 这条研究线与 `控制反馈 / Token = Instruction` 并列。控制反馈线从 RAM/RASP、指令集、Load/Store 出发；本线从递归分解、lambda 演算、函数组合、计划执行和 memory 出发，关注模型生成的中间对象能否成为可复用、可验证、可组合、可递归调用的子问题结构。
 
 ## 文档结构
 
@@ -18,11 +18,11 @@ tags:
 
 | 类别 | 文档 | 内容 |
 | --- | --- | --- |
-| 当前 | [[11-recursive-decomposition-memory/current-status|当前状态：D² / Phase 1]] | 现状、结果、方法、证据强弱、实验协议、当前攻击面 |
-| 未来 | [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]] | Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划 |
-| 未来参考 | [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]] | Lean 生态、强基线、benchmark、剩余切口和实验建议 |
-| 未来参考 | [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]] | Kernel 方向的强基线、已有吸收、剩余切口和参考链接 |
-| 未来参考 | [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]] | 小模型的数据、蒸馏、后训练、领域专精、部署和系统角色 |
+| 当前 | [[current-status|当前状态：D² / Phase 1]] | 现状、结果、方法、证据强弱、实验协议、当前攻击面 |
+| 未来 | [[future-scenarios|未来研究候选场景]] | Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划 |
+| 未来参考 | [[future-lean-landscape|Lean 方向详尽调研]] | Lean 生态、强基线、benchmark、剩余切口和实验建议 |
+| 未来参考 | [[future-kernel-landscape|Kernel 性能优化工作谱系]] | Kernel 方向的强基线、已有吸收、剩余切口和参考链接 |
+| 未来参考 | [[future-small-model-landscape|小模型研究谱系调研]] | 小模型的数据、蒸馏、后训练、领域专精、部署和系统角色 |
 
 ## 一页版结论
 
@@ -42,7 +42,7 @@ Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive deco
 
 > 系统能否把解决过程中的局部中间对象变成可验证、可复用、可组合、可检索、可更新、可局部纠偏的 `verified subproblem memory`。
 
-当前最清楚的候选场景是 Lean / 形式化证明；Kernel 优化是工程价值更强但强基线压力也更大的场景；普通代码 / 算法任务适合作为 sanity check 或数据工厂，除非有强 verifier 和 family-heldout 设计。小模型不是同一层级的任务场景，而是横向实验载体和系统 worker 形态，见 [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]]。
+当前最清楚的候选场景是 Lean / 形式化证明；Kernel 优化是工程价值更强但强基线压力也更大的场景；普通代码 / 算法任务适合作为 sanity check 或数据工厂，除非有强 verifier 和 family-heldout 设计。小模型不是同一层级的任务场景，而是横向实验载体和系统 worker 形态，见 [[future-small-model-landscape|小模型研究谱系调研]]。
 
 ## 与控制反馈线的关系
 
@@ -83,8 +83,8 @@ Memory 暂时作为第二层机制：
 - 怎么用：给 arbiter、给后续相似任务、给继续训练。
 - 如何证明：通过 answer-only / trace-only / verified-memory / unverified-memory 对照。
 
-如果要把 memory 提升为真正主线，一个更硬的候选切口是 Lean verified lemma memory：利用 Lean proof checker 解决 verification，把问题收缩为“能否自动生成、证明、索引并复用新的中间 lemma”。详见 [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]] 和 [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]]。
+如果要把 memory 提升为真正主线，一个更硬的候选切口是 Lean verified lemma memory：利用 Lean proof checker 解决 verification，把问题收缩为“能否自动生成、证明、索引并复用新的中间 lemma”。详见 [[future-scenarios|未来研究候选场景]] 和 [[future-lean-landscape|Lean 方向详尽调研]]。
 
 如果不用 Lean，候选方向应优先选择程序验证、SMT / rewrite rule memory、算法合成等仍有局部验证对象的任务；普通代码修复更适合作为工程 sanity check。
 
-GPU / NPU kernel 优化是一个更工程化的非 Lean 分支：正确性和性能都可验证，但必须对标 autotune、compiler search、Agent+Skills 和 evolutionary coding agents。详见 [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]]。
+GPU / NPU kernel 优化是一个更工程化的非 Lean 分支：正确性和性能都可验证，但必须对标 autotune、compiler search、Agent+Skills 和 evolutionary coding agents。详见 [[future-kernel-landscape|Kernel 性能优化工作谱系]]。

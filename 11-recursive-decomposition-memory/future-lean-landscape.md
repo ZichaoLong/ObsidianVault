@@ -14,7 +14,7 @@ tags:
 # Lean 方向详尽调研
 
 > [!summary] 本页定位
-> 本页是 Lean / 形式化证明方向的专项调研。它服务于 [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]] 中的 `verified subproblem memory` 主张：能否让系统自动生成、验证、索引并复用新的中间 lemma / proof fragment / subproblem graph。
+> 本页是 Lean / 形式化证明方向的专项调研。它服务于 [[future-scenarios|未来研究候选场景]] 中的 `verified subproblem memory` 主张：能否让系统自动生成、验证、索引并复用新的中间 lemma / proof fragment / subproblem graph。
 
 调查时间：2026-06-11。
 
