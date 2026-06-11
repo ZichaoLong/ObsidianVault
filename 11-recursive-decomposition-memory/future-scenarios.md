@@ -91,6 +91,8 @@ verified_subproblem_memory:
 2. Kernel 优化适合承担“能否把递归分解 + memory 变成工程闭环和训练闭环”的问题。
 3. 普通代码 / 算法任务适合承担 sanity check、数据构造和方法预研，但不宜作为第一主线，除非引入强 verifier、强 family split 和明确的 reusable subproblem schema。
 
+小模型不是同一层级的任务场景，而是横向载体：它可以用于 Lean、Kernel、代码 / 算法、D² 数学推理中的 cheap worker、retriever、reranker、verifier helper、repair proposer 和 router。专项调研见 [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]]。
+
 ## 验证强度
 
 验证强度决定 memory 的可信度，也决定是否能做局部纠偏。
@@ -650,6 +652,90 @@ verified helper / invariant / rewrite / repair memory
 判定：
 
 > 如果收益只来自近邻样例或最终解检索，代码 / 算法方向不能支撑本线主张。
+
+## 横向场景：小模型作为实验载体和系统 worker
+
+专项调研见 [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]]。
+
+小模型研究本身已经非常强，主要路线包括：
+
+- data-centric pretraining / overtraining。
+- synthetic data 和高质量过滤。
+- teacher distillation。
+- SFT / DPO / RLVR / rejection sampling / test-time scaling。
+- code、math、tool calling 等领域专精。
+- 架构效率、量化、端侧部署。
+- SLM-default / LLM-fallback 的 agentic system。
+
+因此，本线不能把“小模型变强”写成递归分解 + memory 的直接证据。更合理的定位是：
+
+> 小模型是检验递归分解 + memory 是否具有数据效率、局部控制和系统成本优势的高性价比实验场。
+
+### 为什么小模型与本线相关
+
+小模型适合本线的原因：
+
+- 递归分解、D²、多 agent、local repair 往往需要多次调用，小模型能降低实验成本。
+- 小模型上下文理解和鲁棒性弱，更依赖 schema、verifier、typed memory 和明确局部任务边界。
+- 小模型容量有限，对训练数据质量更敏感；verified subproblem traces 可能比 raw agent logs 更适合训练。
+- 小模型适合承担系统里的局部角色，而不必直接做最终 solver。
+
+可承担角色：
+
+| 角色 | 小模型任务 |
+| --- | --- |
+| selector | 判断下一步展开哪个子问题 |
+| retriever | 根据 proof state / profile / code context 找 memory |
+| reranker | 判断 memory 是否有用 |
+| verifier helper | 做快速格式、schema、局部一致性检查 |
+| repair proposer | 基于 failure memory 提出局部修复 |
+| compressor | 把 trace 压缩成 memory item |
+| router | 决定是否升级到大模型 |
+
+### 小模型相关候选实验
+
+实验 A：小模型 D² 曲线。
+
+> structural diversity + entropy routing 的收益是否随模型规模变化？
+
+比较 1.5B / 3B / 7B / 14B / 32B 等模型上的 CoT、self-consistency、structural diversity、entropy routing、fixed arbitration。指标包括 accuracy、cost-normalized accuracy、all-wrong rate、at-least-one-correct rate、entropy calibration、token / latency cost。
+
+实验 B：small worker + large fallback。
+
+> 在 recursive subproblem system 中，哪些角色可以由小模型稳定承担？
+
+比较 all large model、all small model、small worker + verifier、small worker + large fallback、small worker + verified memory。指标包括 task success、fallback rate、local repair success、harmful memory rate、latency 和 cost。
+
+实验 C：verified traces 蒸馏小模型。
+
+> verified subproblem memory / local repair traces 是否比 raw agent traces 更适合训练小模型？
+
+比较 raw CoT、raw agent trace、verified subproblem trace、failure + repair trace、generated lemma / helper / schedule memory。指标包括 imitation loss、exact action accuracy、verifier pass rate、local repair success 和 heldout family transfer。
+
+实验 D：SLM-default / LLM-fallback memory agent。
+
+```text
+small model proposes next subproblem / memory / repair
+-> verifier checks
+-> if fail or uncertain, escalate to large model
+-> verified outcome writes memory
+```
+
+关键裁决：
+
+> 如果大部分局部步骤可由小模型完成，递归分解 + memory 线可自然对接小模型系统化部署；如果小模型频繁 fallback，或多次调用后成本不低，则应收缩为大模型 agent 的辅助模块。
+
+### 小模型方向的失败条件
+
+应承认失败的情况：
+
+- 小模型收益只来自 teacher distillation，无法证明机制增量。
+- 任务太窄，只能说明 domain specialization。
+- 成本账本显示小模型多次调用后并不便宜。
+- 小模型无法稳定使用 memory，harmful retrieval 上升。
+- 小模型 local repair 不如大模型 global retry。
+- verified trace 训练不优于普通 trace 或 teacher CoT。
+- 小模型 worker 需要频繁 fallback，系统复杂度吞掉收益。
 
 ## 跨场景数据飞轮
 

@@ -25,6 +25,7 @@ tags:
 - [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]]
 - [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]]
 - [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]]
+- [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]]
 
 ## TIDE
 

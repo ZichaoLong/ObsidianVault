@@ -22,6 +22,7 @@ tags:
 | 未来 | [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]] | Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划 |
 | 未来参考 | [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]] | Lean 生态、强基线、benchmark、剩余切口和实验建议 |
 | 未来参考 | [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]] | Kernel 方向的强基线、已有吸收、剩余切口和参考链接 |
+| 未来参考 | [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]] | 小模型的数据、蒸馏、后训练、领域专精、部署和系统角色 |
 
 ## 一页版结论
 
@@ -41,7 +42,7 @@ Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive deco
 
 > 系统能否把解决过程中的局部中间对象变成可验证、可复用、可组合、可检索、可更新、可局部纠偏的 `verified subproblem memory`。
 
-当前最清楚的候选场景是 Lean / 形式化证明；Kernel 优化是工程价值更强但强基线压力也更大的场景；普通代码 / 算法任务适合作为 sanity check 或数据工厂，除非有强 verifier 和 family-heldout 设计。
+当前最清楚的候选场景是 Lean / 形式化证明；Kernel 优化是工程价值更强但强基线压力也更大的场景；普通代码 / 算法任务适合作为 sanity check 或数据工厂，除非有强 verifier 和 family-heldout 设计。小模型不是同一层级的任务场景，而是横向实验载体和系统 worker 形态，见 [[11-recursive-decomposition-memory/future-small-model-landscape|小模型研究谱系调研]]。
 
 ## 与控制反馈线的关系
 
