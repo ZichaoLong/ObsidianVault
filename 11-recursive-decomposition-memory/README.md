@@ -62,6 +62,7 @@ Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive deco
 - Lean 形式化方向：[[11-recursive-decomposition-memory/lean-verified-lemma-memory-plan|Lean Verified Lemma Memory 计划]]
 - 非 Lean 备选：[[11-recursive-decomposition-memory/non-lean-verified-subproblem-memory|非 Lean Verified Subproblem Memory]]
 - Kernel 性能优化：[[11-recursive-decomposition-memory/kernel-optimization-verified-memory|Kernel Optimization Verified Memory]]
+- Kernel 工作谱系：[[11-recursive-decomposition-memory/kernel-performance-optimization-landscape-2026-06|Kernel 性能优化工作谱系调研]]
 - 方向横向比较：[[11-recursive-decomposition-memory/direction-comparison-lean-kernel-code|Lean / Kernel / Code 比较]]
 
 ## 当前建议

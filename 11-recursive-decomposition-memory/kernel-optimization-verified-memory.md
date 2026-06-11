@@ -19,6 +19,8 @@ GPU / NPU kernel 性能优化可以作为 `verified subproblem memory` 的工程
 
 这条线的优势是 correctness 和 performance 都可被验证；风险是它容易退化为 autotuning、template search 或 Agent+Skills。
 
+已有工作与强基线谱系见 [[11-recursive-decomposition-memory/kernel-performance-optimization-landscape-2026-06|Kernel 性能优化工作谱系调研]]。该调研的核心结论是：typed spec、correctness harness、compile-test-profile loop、autotune、multi-agent、RL / SFT、skills / memory 叙事都已有强吸收；本方向的可守切口应收缩为 verified optimization memory 在强基线上的可归因增量。
+
 ## 为什么符合候选范畴
 
 Kernel 优化天然具有局部子问题：
