@@ -12,6 +12,16 @@ tags:
 > [!summary] 本页定位
 > 这条研究线与 [[10-control-feedback-token-instruction/README|控制反馈 / Token = Instruction]] 并列。控制反馈线从 RAM/RASP、指令集、Load/Store 出发；本线从递归分解、lambda 演算、函数组合、计划执行和 memory 出发，关注模型生成的中间对象能否成为可复用、可验证、可组合、可递归调用的子问题结构。
 
+## 文档结构
+
+这条线现在按两大类维护：
+
+| 类别 | 文档 | 内容 |
+| --- | --- | --- |
+| 当前 | [[11-recursive-decomposition-memory/current-status|当前状态：D² / Phase 1]] | 现状、结果、方法、证据强弱、实验协议、当前攻击面 |
+| 未来 | [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]] | Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划 |
+| 未来参考 | [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]] | Kernel 方向的强基线、已有吸收、剩余切口和参考链接 |
+
 ## 一页版结论
 
 Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive decomposition`，而是：
@@ -25,6 +35,12 @@ Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive deco
 - `trace-aware arbitration`：高分歧样本把失败 traces 交给 arbiter 纠偏。
 
 递归分解和 memory 都是自然方向，但当前证据强度较弱，需要单独做消融。
+
+未来主线不应直接从 D² 跳到“memory 已证明有效”，而应把问题收缩为：
+
+> 系统能否把解决过程中的局部中间对象变成可验证、可复用、可组合、可检索、可更新、可局部纠偏的 `verified subproblem memory`。
+
+当前最清楚的候选场景是 Lean / 形式化证明；Kernel 优化是工程价值更强但强基线压力也更大的场景；普通代码 / 算法任务适合作为 sanity check 或数据工厂，除非有强 verifier 和 family-heldout 设计。
 
 ## 与控制反馈线的关系
 
@@ -53,18 +69,6 @@ Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive deco
 
 > 将问题表示为可递归展开的 typed subproblem graph，并只在高不确定子节点继续展开，是否比固定深度 plan-execute 或 flat multi-agent voting 有更好的 cost-quality Pareto。
 
-## 阅读路径
-
-- 当前收敛判断：[[11-recursive-decomposition-memory/current-mainline|当前主线]]
-- Phase 1 材料审视：[[11-recursive-decomposition-memory/phase1-review|Phase 1 审视]]
-- 实验怎么做：[[11-recursive-decomposition-memory/experiment-protocol|实验协议]]
-- 理论定位与攻击面：[[11-recursive-decomposition-memory/theory-and-challenges|理论与挑战]]
-- Lean 形式化方向：[[11-recursive-decomposition-memory/lean-verified-lemma-memory-plan|Lean Verified Lemma Memory 计划]]
-- 非 Lean 备选：[[11-recursive-decomposition-memory/non-lean-verified-subproblem-memory|非 Lean Verified Subproblem Memory]]
-- Kernel 性能优化：[[11-recursive-decomposition-memory/kernel-optimization-verified-memory|Kernel Optimization Verified Memory]]
-- Kernel 工作谱系：[[11-recursive-decomposition-memory/kernel-performance-optimization-landscape-2026-06|Kernel 性能优化工作谱系调研]]
-- 方向横向比较：[[11-recursive-decomposition-memory/direction-comparison-lean-kernel-code|Lean / Kernel / Code 比较]]
-
 ## 当前建议
 
 短期不要把研究线命名为“memory 已经证明有效”。更合适的主线是：
@@ -77,8 +81,8 @@ Memory 暂时作为第二层机制：
 - 怎么用：给 arbiter、给后续相似任务、给继续训练。
 - 如何证明：通过 answer-only / trace-only / verified-memory / unverified-memory 对照。
 
-如果要把 memory 提升为真正主线，一个更硬的候选切口是 [[11-recursive-decomposition-memory/lean-verified-lemma-memory-plan|Lean verified lemma memory]]：利用 Lean proof checker 解决 verification，把问题收缩为“能否自动生成、证明、索引并复用新的中间 lemma”。
+如果要把 memory 提升为真正主线，一个更硬的候选切口是 Lean verified lemma memory：利用 Lean proof checker 解决 verification，把问题收缩为“能否自动生成、证明、索引并复用新的中间 lemma”。详见 [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]]。
 
-如果不用 Lean，候选方向应优先选择程序验证、SMT / rewrite rule memory、算法合成等仍有局部验证对象的任务；普通代码修复更适合作为工程 sanity check。见 [[11-recursive-decomposition-memory/non-lean-verified-subproblem-memory|非 Lean 备选]]。
+如果不用 Lean，候选方向应优先选择程序验证、SMT / rewrite rule memory、算法合成等仍有局部验证对象的任务；普通代码修复更适合作为工程 sanity check。
 
-GPU / NPU kernel 优化是一个更工程化的非 Lean 分支：正确性和性能都可验证，但必须对标 autotune、compiler search、Agent+Skills 和 evolutionary coding agents。见 [[11-recursive-decomposition-memory/kernel-optimization-verified-memory|Kernel 性能优化方向]]。
+GPU / NPU kernel 优化是一个更工程化的非 Lean 分支：正确性和性能都可验证，但必须对标 autotune、compiler search、Agent+Skills 和 evolutionary coding agents。详见 [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]]。
