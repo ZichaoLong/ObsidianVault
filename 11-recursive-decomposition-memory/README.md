@@ -20,6 +20,7 @@ tags:
 | --- | --- | --- |
 | 当前 | [[11-recursive-decomposition-memory/current-status|当前状态：D² / Phase 1]] | 现状、结果、方法、证据强弱、实验协议、当前攻击面 |
 | 未来 | [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]] | Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划 |
+| 未来参考 | [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]] | Lean 生态、强基线、benchmark、剩余切口和实验建议 |
 | 未来参考 | [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]] | Kernel 方向的强基线、已有吸收、剩余切口和参考链接 |
 
 ## 一页版结论
@@ -81,7 +82,7 @@ Memory 暂时作为第二层机制：
 - 怎么用：给 arbiter、给后续相似任务、给继续训练。
 - 如何证明：通过 answer-only / trace-only / verified-memory / unverified-memory 对照。
 
-如果要把 memory 提升为真正主线，一个更硬的候选切口是 Lean verified lemma memory：利用 Lean proof checker 解决 verification，把问题收缩为“能否自动生成、证明、索引并复用新的中间 lemma”。详见 [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]]。
+如果要把 memory 提升为真正主线，一个更硬的候选切口是 Lean verified lemma memory：利用 Lean proof checker 解决 verification，把问题收缩为“能否自动生成、证明、索引并复用新的中间 lemma”。详见 [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]] 和 [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]]。
 
 如果不用 Lean，候选方向应优先选择程序验证、SMT / rewrite rule memory、算法合成等仍有局部验证对象的任务；普通代码修复更适合作为工程 sanity check。
 

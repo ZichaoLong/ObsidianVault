@@ -112,6 +112,8 @@ verified_subproblem_memory:
 
 ## 场景一：Lean Verified Lemma Memory
 
+专项调研见 [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]]。本节保留方向摘要。
+
 Lean 方向把 `verified subproblem memory` 收缩到一个更硬的问题：
 
 > 给定一批已形式化任务，系统能否从解决过程里提取出可复用的 verified lemma / subproblem，并在 heldout 任务中通过检索、实例化、组合这些 lemma，降低证明搜索成本或提高证明成功率？

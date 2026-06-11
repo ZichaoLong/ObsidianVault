@@ -23,6 +23,7 @@ tags:
 - [[11-recursive-decomposition-memory/README|递归分解与 Memory]]
 - [[11-recursive-decomposition-memory/current-status|当前状态：D² / Phase 1]]
 - [[11-recursive-decomposition-memory/future-scenarios|未来研究候选场景]]
+- [[11-recursive-decomposition-memory/future-lean-landscape|Lean 方向详尽调研]]
 - [[11-recursive-decomposition-memory/future-kernel-landscape|Kernel 性能优化工作谱系]]
 
 ## TIDE
