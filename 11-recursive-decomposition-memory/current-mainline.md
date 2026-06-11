@@ -90,6 +90,8 @@ Memory 当前不是最强证据点。材料里出现了：
 
 这是最接近“memory-augmented”的部分，但当前需要补实验。
 
+一个更硬的候选切口是 [[11-recursive-decomposition-memory/lean-verified-lemma-memory-plan|Lean verified lemma memory]]：如果以 Lean 为基础设施，verification 由 proof checker 解决，问题收缩为系统能否自动生成、证明、索引、复用新的中间 lemma，并在 heldout theorem proving tasks 上降低证明搜索成本或提高成功率。
+
 Memory 不能只存：
 
 - 最终答案。
@@ -178,4 +180,3 @@ Plan-execute 是这条线不可回避的强对手，就像 Agent+Tools 是控制
 - 递归分解已经优于所有 plan-execute。
 - lambda 演算路线已经得到实验验证。
 - 当前结果已经证明了可复用子问题函数或长期 memory。
-
