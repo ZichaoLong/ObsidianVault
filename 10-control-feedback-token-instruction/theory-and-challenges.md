@@ -63,6 +63,8 @@ tags:
 - Recursive Context Management：递归管理上下文。
 - Skill / Memory Accumulation：技能与经验沉淀。
 - Recursive Decomposition：递归分解与问题分解。
+- Recursive Self-Call / Prompt-as-Environment：把长上下文或任务状态外部化为可 inspect / decompose / recursively call 的环境，代表是 RLM。
+- Internal Recurrent / Latent Control Loop：把递归和局部闭环内化到模型隐状态，代表是 HRM / TRM。
 
 这些机制已经能部分模拟 `Load/Store`：
 
@@ -76,6 +78,12 @@ tags:
 因此当前问题不是“能不能模拟”，而是：
 
 > 这种模拟是否代价过高、轨迹过乱、错误边界过粗、训练信号过弱、局部纠偏不稳定？
+
+HRM / TRM 和 RLM 的位置需要分开：
+
+- HRM / TRM 是内部隐状态递归，不是显式 workspace，也不是 `address/read/write/commit` 证据。它们挑战的是“局部闭环必须外显为状态事件”的假设。
+- RLM 是外部环境化上下文上的递归 self-call，比 HRM 更接近 B 分支，因为它显式涉及 inspect、decompose、局部读取和递归调用。
+- 因此控制反馈线可以引用 HRM / TRM / RLM 作为相邻对手，但不能用 HRM / TRM 支撑 `Load/Store`，也不能把 RLM 的成功直接等同于显式状态语义成立。
 
 ## 局部状态更新闭包
 
@@ -180,6 +188,31 @@ test-time 状态至少有三层：
 - 参数层是否减少全局重解释。
 
 但这不是第一击。
+
+### HRM / TRM / RLM 的位置
+
+HRM / TRM 属于 `model-internal latent recursion`：
+
+- 递归发生在模型隐状态或 recurrent computation 中。
+- 状态不是外部可寻址 workspace。
+- 事件不可直接回放成 `address/read/write/commit`。
+- 它们更像是“内部控制循环”路线，而不是控制反馈线当前 A/B 接口的证据。
+
+这对控制反馈线是挑战而不是支撑：
+
+> 如果内部 recurrent refinement 已能在某些任务上高效解决问题，显式 workspace / control event 路线就必须证明自己在可诊断性、可训练数据、可复用 memory、工程可控性或复杂任务组织上有额外收益。
+
+RLM 属于 `external recursive self-call / prompt-as-environment`：
+
+- 它把长上下文或任务状态当成外部环境。
+- 模型通过 inspect / decompose / recursive call 控制下一步读取和处理范围。
+- 它更接近 B 分支的强基线，而不是 A 分支的显式状态语义。
+
+因此：
+
+- 若 B 只做长上下文局部访问，RLM / recursive context management 必须进入强对照。
+- 若 A 要证明显式状态语义，HRM / RLM 都不是直接对照；A 的强对照仍是 typed tools + trace/logging/approval/checkpoint/replay/diff/transaction。
+- 若 A+B 要重新讨论候选低层控制原语，必须说明外部显式事件相比内部 recurrent refinement 和外部 recursive self-call 的不可替代增量。
 
 ## 主要攻击面
 

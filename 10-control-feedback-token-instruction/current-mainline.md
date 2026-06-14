@@ -196,10 +196,13 @@ B 的强对手不是普通工具，而是 [[10-control-feedback-token-instructio
 - tree-sitter / LSP。
 - learned retriever。
 - 任务专用 resolver。
+- RLM / recursive context management / prompt-as-environment。
 
 如果 B 只证明“主动检索有用”，它应降格为 retrieval / memory system。
 
 B 的弱版本也已被现代 Agent 工程大量吸收，例如 search、index、local read/write、resource discovery、tool discovery、patch/diff 和 history；证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]]。
+
+HRM / TRM 也应进入控制反馈线的相邻对手谱系，但位置不同：它们是内部 recurrent / latent control loop，不是外部局部状态访问接口。它们提醒我们，局部闭环不一定必须外显为 workspace；因此不能用 HRM / TRM 支撑 `Load/Store`，只能用来界定显式控制事件路线的竞争边界。
 
 ## A 与 B 的 2x2
 
