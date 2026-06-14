@@ -93,6 +93,8 @@ verified_subproblem_memory:
 
 小模型不是同一层级的任务场景，而是横向载体：它可以用于 Lean、Kernel、代码 / 算法、D² 数学推理中的 cheap worker、retriever、reranker、verifier helper、repair proposer 和 router。专项调研见 [[future-small-model-landscape|小模型研究谱系调研]]。
 
+横向对标谱系见 [[mechanism-landscape|对标机制谱系：递归分解与 Memory]]。未来场景设计不能只对标 `plan-execute`，还需要同时考虑 CoT / self-consistency、prompt 级分解、search、reflection、Agent+Tools、skill memory、RLM、HRM/TRM 和 post-training / distillation。它们分别吸收了“分解、递归、记忆、adaptive compute”的不同弱版本。
+
 ## 验证强度
 
 验证强度决定 memory 的可信度，也决定是否能做局部纠偏。
