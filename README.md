@@ -19,6 +19,7 @@ tags:
 | 类别 | 文档 | 内容 |
 | --- | --- | --- |
 | 当前 | [[current-status|当前状态：D² / Phase 1]] | 现状、结果、方法、证据强弱、实验协议、当前攻击面 |
+| 横向对标 | [[mechanism-landscape|对标机制谱系：递归分解与 Memory]] | CoT、分解、搜索、反思、Agent、memory、RLM、HRM/TRM、post-training 等机制谱系 |
 | 未来 | [[future-scenarios|未来研究候选场景]] | Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划 |
 | 未来参考 | [[future-lean-landscape|Lean 方向详尽调研]] | Lean 生态、强基线、benchmark、剩余切口和实验建议 |
 | 未来参考 | [[future-kernel-landscape|Kernel 性能优化工作谱系]] | Kernel 方向的强基线、已有吸收、剩余切口和参考链接 |
@@ -70,6 +71,12 @@ Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive deco
 第三命题：
 
 > 将问题表示为可递归展开的 typed subproblem graph，并只在高不确定子节点继续展开，是否比固定深度 plan-execute 或 flat multi-agent voting 有更好的 cost-quality Pareto。
+
+横向对标见 [[mechanism-landscape|对标机制谱系：递归分解与 Memory]]。尤其需要区分：
+
+- D² 当前更接近 `structured ensemble + adaptive compute + trace-aware arbitration`。
+- RLM 是外部环境化上下文上的递归 self-call 强基线。
+- HRM / TRM 是模型内部 latent recursion，不是显式 memory 或 verified subproblem memory。
 
 ## 当前建议
 
