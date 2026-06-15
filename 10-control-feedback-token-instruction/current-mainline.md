@@ -316,35 +316,6 @@ A 与 B 是两个正交变量。
 
 只有前四阶段出现稳定收益，第五阶段才有意义；第七阶段是后续压力测试，不是第一阶段起点。
 
-## 与递归分解线的分工
-
-控制反馈线研究运行时控制过程：
-
-- 下一步看哪里。
-- 改哪里。
-- 如何验证。
-- 何时提交或回滚。
-
-递归分解与 memory 线研究任务 / 问题结构：
-
-- 如何拆分子问题。
-- 如何求解子问题。
-- 如何验证返回 artifact。
-- 如何复用和组合子问题解。
-
-二者的后续合流形态是：
-
-```text
-load local state
--> delegate subproblem to subagent
--> return artifact
--> verify
--> commit / rollback
--> store verified memory
-```
-
-这类 hybrid 不是当前控制反馈线的第一阶段主命题，而是控制反馈线与递归分解线各自形成信号后的合流验证步骤。
-
 ## 阅读分流
 
 - 实验定义和具体指标见 [[10-control-feedback-token-instruction/experiment-protocol|实验协议]]。
