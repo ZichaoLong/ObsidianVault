@@ -58,26 +58,6 @@ Phase 1 材料里最强的成果不是笼统的 `memory-augmented recursive deco
 
 > 类 RAM/RASP 路线强调状态访问；类 lambda / functional 路线强调抽象、应用、替换、组合和递归。二者都与可计算性有关，但对应的 AI 工作方式、训练对象和实验指标不同。
 
-更直接地说：
-
-- 控制反馈线研究运行时控制过程：下一步看哪里、改哪里、如何验证、何时提交或回滚。
-- 递归分解与 memory 线研究任务 / 问题结构：如何拆分、求解、验证、复用子问题。
-
-两条线不应过早合并。控制反馈线第一阶段优先使用确定性 tools / resolver / verifier，以减少变量混淆；递归分解线则允许 intelligent subagent 成为核心对象，因为它负责求解局部子问题并返回 artifact / proof / patch / diagnosis。
-
-后续合流形态可以写成：
-
-```text
-load local state
--> delegate subproblem to subagent
--> return artifact
--> verify
--> commit / rollback
--> store verified memory
-```
-
-这类 hybrid 不作为当前第一阶段主命题，而是两条线各自形成信号后的合流验证步骤。它的接口问题由控制反馈线提供，子问题与 memory 问题由本线提供。
-
 ## 当前最小可输命题
 
 第一命题：
