@@ -14,17 +14,15 @@ tags:
 
 ## 文档结构
 
-这条线现在按两大类维护：
+这条线现在按当前状态、审视、横向对标和未来候选四类维护：
 
-| 类别 | 文档 | 内容 |
-| --- | --- | --- |
-| 当前 | [[current-status|当前状态：D² / Phase 1]] | 现状、结果、方法、证据强弱、实验协议、当前攻击面 |
-| 当前审视 | [[code-review-recursive-reasoning-agents|recursive-reasoning-agents 代码审视]] | 对收到的代码仓库进行逐项审视，区分代码内可复核证据与报告材料结论 |
-| 横向对标 | [[mechanism-landscape|对标机制谱系：递归分解与 Memory]] | CoT、分解、搜索、反思、Agent、memory、RLM、HRM/TRM、post-training 等机制谱系 |
-| 未来 | [[future-scenarios|未来研究候选场景]] | Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划 |
-| 未来参考 | [[future-lean-landscape|Lean 方向详尽调研]] | Lean 生态、强基线、benchmark、剩余切口和实验建议 |
-| 未来参考 | [[future-kernel-landscape|Kernel 性能优化工作谱系]] | Kernel 方向的强基线、已有吸收、剩余切口和参考链接 |
-| 未来参考 | [[future-small-model-landscape|小模型研究谱系调研]] | 小模型的数据、蒸馏、后训练、领域专精、部署和系统角色 |
+- **当前**：[[current-status|当前状态：D² / Phase 1]]。现状、结果、方法、证据强弱、实验协议、当前攻击面。
+- **当前审视**：[[code-review-recursive-reasoning-agents|recursive-reasoning-agents 代码审视]]。对收到的代码仓库进行逐项审视，区分代码内可复核证据与报告材料结论。
+- **横向对标**：[[mechanism-landscape|对标机制谱系：递归分解与 Memory]]。CoT、分解、搜索、反思、Agent、memory、RLM、HRM/TRM、post-training 等机制谱系。
+- **未来**：[[future-scenarios|未来研究候选场景]]。Lean、Kernel、代码 / 算法、SMT 等候选场景与推进计划。
+- **未来参考**：[[future-lean-landscape|Lean 方向详尽调研]]。Lean 生态、强基线、benchmark、剩余切口和实验建议。
+- **未来参考**：[[future-kernel-landscape|Kernel 性能优化工作谱系]]。Kernel 方向的强基线、已有吸收、剩余切口和参考链接。
+- **未来参考**：[[future-small-model-landscape|小模型研究谱系调研]]。小模型的数据、蒸馏、后训练、领域专精、部署和系统角色。
 
 ## 一页版结论
 
