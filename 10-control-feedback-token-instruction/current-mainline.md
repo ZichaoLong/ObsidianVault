@@ -306,7 +306,44 @@ A 与 B 是两个正交变量。
 - 多文件一致性维护。
 - 研究笔记状态更新。
 
-只有前四阶段出现稳定收益，第五阶段才有意义。
+第七阶段：将部分确定性 tools 替换为 intelligent subagents。
+
+- 保持 A 的显式状态事件层不变。
+- 保持 B 的局部状态访问和观察预算约束不变。
+- 把部分 `resolver / solver / repair proposer / verifier helper` 从确定性工具替换为智能 subagent。
+- 检验显式状态语义在更强 Agent runtime 下是否仍带来数据质量、归因、纠偏、复用或成本优势。
+- 不把“已有 Agent 也能 spawn subagent”当作反驳；真正要检验的是 subagent 交互是否需要统一、可回放、可训练的状态转移层。
+
+只有前四阶段出现稳定收益，第五阶段才有意义；第七阶段是后续压力测试，不是第一阶段起点。
+
+## 与递归分解线的分工
+
+控制反馈线研究运行时控制过程：
+
+- 下一步看哪里。
+- 改哪里。
+- 如何验证。
+- 何时提交或回滚。
+
+递归分解与 memory 线研究任务 / 问题结构：
+
+- 如何拆分子问题。
+- 如何求解子问题。
+- 如何验证返回 artifact。
+- 如何复用和组合子问题解。
+
+二者的后续合流形态是：
+
+```text
+load local state
+-> delegate subproblem to subagent
+-> return artifact
+-> verify
+-> commit / rollback
+-> store verified memory
+```
+
+这类 hybrid 不是当前控制反馈线的第一阶段主命题，而是控制反馈线与递归分解线各自形成信号后的合流验证步骤。
 
 ## 阅读分流
 
