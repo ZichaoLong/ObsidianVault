@@ -13,6 +13,7 @@ tags:
 
 > [!summary] 本页定位
 > 本页面向项目验收与方向同步，整理 Phase 1 已完成内容、主要结果、真实结论边界、风险和后续方向。未来候选场景见 [[future-scenarios|未来研究候选场景]]。
+> 收到的代码仓库审视见 [[code-review-recursive-reasoning-agents|recursive-reasoning-agents 代码审视]]；该页专门区分代码仓库内可复核证据与 Phase 1 报告 / 汇报材料结论。
 
 ## 摘要
 
