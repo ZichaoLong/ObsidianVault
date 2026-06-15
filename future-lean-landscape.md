@@ -326,7 +326,7 @@ AlphaProof 是 Google DeepMind 的 formal math RL 系统。它把 Lean 环境建
 
 对本项目的压力：
 
-> Lean as RL environment 已经被高强度验证。若本项目谈“可学习控制反馈”或“proof search RL”，必须承认 AlphaProof 已覆盖大框架。
+> Lean as RL environment 已经被高强度验证。若本项目谈 proof search RL、可学习证明策略或可复用证明中间对象，必须承认 AlphaProof 已覆盖大框架。
 
 本项目可保留的不同点：
 
