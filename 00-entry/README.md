@@ -14,13 +14,13 @@ tags:
 - [[11-recursive-decomposition-memory/README|递归分解与 Memory]]
 - [[20-tide-decentralized-neural-network/README|TIDE / 去中心化神经网络]]
 
-其中控制反馈与递归分解先分开推进；Hybrid 只作为后续合流形态：把控制反馈线里的部分确定性 tools 替换为 intelligent subagents，并检验显式状态语义是否仍改善数据质量、归因、纠偏、复用或成本。
+其中控制反馈与递归分解先分开推进；Hybrid 作为后续合流形态：把控制反馈线里的部分确定性 tools 替换为 intelligent subagents，并检验显式状态语义是否仍改善数据质量、归因、纠偏、复用或成本。
 
-| 方向 | 关注对象 | 当前定位 |
+| 方向 | 关注对象 | 核心问题 |
 | --- | --- | --- |
-| 控制反馈 | 运行时控制过程：看哪里、改哪里、如何验证、何时提交或回滚 | 先用确定性 tools / resolver / verifier 验证显式状态语义与局部状态访问 |
-| 递归分解与 Memory | 任务 / 问题结构：如何拆分、求解、验证、复用子问题 | 研究 verified subproblem memory、D²、Lean / Kernel / 小模型等候选场景 |
-| Hybrid | 过程与问题结构的接口：`load -> subagent -> verify -> commit` | 作为控制反馈线后续压力测试，不作为当前第一阶段主命题 |
+| 控制反馈 | 运行时控制过程 | 下一步看哪里、改哪里、如何验证、何时提交或回滚 |
+| 递归分解与 Memory | 任务 / 问题结构 | 如何拆分、求解、验证、复用子问题 |
+| Hybrid | 过程与问题结构的接口 | 如何通过显式状态语义把 subproblem artifact 安全写回共享 workspace |
 
 直接进入：
 
