@@ -65,19 +65,87 @@ TapeWalker 当前实现已经包含这类接口的雏形：
 
 ## 强基线覆盖
 
-这条线必须承认，现代 Agent 工程已经覆盖了大量弱版本。
+这条线必须承认，现代强 Agent 已经覆盖了大量弱版本。不能把“支持局部读取”“支持移动视野”“支持按需查询”“支持局部 patch”当作新贡献。
 
-- 有精确关键词时，`grep / rg` 是强基线。
-- 有语义 query 时，BM25 / vector / hybrid retrieval 是强基线。
-- 有表结构时，SQL / database index 是强基线。
-- 有代码符号时，LSP / tree-sitter / code index 是强基线。
-- 有 UI 或视觉空间时，computer-use agent 是强基线。
-- 有长上下文递归访问时，RLM / recursive context management 是强基线。
-- 有确定性序关系时，临时生成查找程序本身就是强基线。
+| 已覆盖能力 | 现有强 Agent / 工具链形态 | 吸收程度 | 对 `active foveated` 的含义 |
+| --- | --- | --- | --- |
+| 精确关键词定位 | `grep` / `rg` / shell search / log search | 高 | 只要目标有稳定关键词，主动扫描几乎没有优势。 |
+| 语义检索 | BM25 / vector search / hybrid retrieval / RAG | 高 | 如果任务能写成自然语言 query，语义检索是强基线。 |
+| 结构化查询 | SQL / database index / structured API / resource templates | 高 | 表格、数据库、强 schema 任务不应作为主战场。 |
+| 代码符号导航 | LSP / tree-sitter / code index / editor jump / call graph | 高 | 代码定位任务必须对标这些，不能只对标全文上下文。 |
+| 局部读写 | `read_file(path, range)` / local patch / diff / checkpoint / rollback | 高 | 局部读写本身已经是强 Agent 正常能力。 |
+| 按需暴露反馈入口 | deferred tools / MCP resources / tool search / resource discovery | 中高 | “先生成 query，再暴露候选反馈源”已被工程吸收。 |
+| 长上下文递归管理 | compact / summarize / recursive context management / RLM | 中高 | 长上下文局部处理不能只对标 full-context baseline。 |
+| UI / 视觉空间访问 | screenshot / crop / OCR / accessibility tree / computer-use agent | 中 | 视觉或 UI foveation 有自然类比，但 computer-use 是强对手。 |
+| 确定性序关系查找 | generated search code / binary search / parser / custom resolver | 高 | 若序关系可形式化，临时生成查找程序通常更强。 |
 
-所以，TapeWalker 式机制不能把“支持局部读写”或“支持移动视野”当作独立贡献。它必须证明：
+因此，TapeWalker 式机制最稳的剩余命题不是：
 
-> 在这些强 resolver 都不直接适用，或成本 / 数据 / 任务分布不允许预先构造强 resolver 的场景中，主动视野访问策略仍有可测增量。
+> 现有 Agent 缺少局部访问。
+
+而是：
+
+> 在有序但不可完全程序化的灰色状态空间里，模型能否学习一种主动视野访问策略，在固定观察预算下比强 resolver / 强 retrieval / generated search code 更低成本、更可回放、更可训练，或更适合局部纠偏。
+
+## 主要攻击面与胜率判断
+
+这里的“胜率”是当前研究先验，不是统计结论。它只用于决定优先级：先把高胜率场景做成可输实验，再考虑是否进入主线。
+
+| 场景 / 攻击面 | 强反方解释 | 防守条件 | 当前胜率判断 |
+| --- | --- | --- | --- |
+| 有精确关键词、稳定符号、稳定 key | `grep / rg / LSP / SQL` 直接解决，主动扫描只是低效替代。 | 只作为负控任务，不作为正面证据。 | 低 |
+| 有确定性可比较谓词 | `binary_search(predicate)` 或 generated search code 更直接。 | 必须证明谓词不能稳定形式化，局部线索需要语义判断。 | 低 |
+| 普通语义定位 | BM25 / vector / hybrid retrieval 足够强。 | 任务要让一次 query 不稳定，局部窗口能提供方向信号。 | 中低 |
+| 长文档观点转折 / 定义变化 | 长上下文、RAG、RLM 可能已能处理。 | 需要无稳定关键词、跨段落语义漂移、局部观察可判断方向。 | 中低到中 |
+| 长 agent trace 首次错误定位 | trace 有时间 / 因果顺序，错误点可能没有关键词，局部观察可能提供方向信号。 | 必须对标 full trace grading、RLM、检索、线性扫描和 generated analyzer。 | 中到中高 |
+| dynamic workspace recovery | compact / checkpoint / replay 已很强，但恢复“当前进度”可能需要局部导航。 | 必须证明局部访问比重新 compact、全局回读或 checkpoint replay 更省。 | 中 |
+| UI / 表格 / 二维空间导航 | computer-use agent、OCR、accessibility tree 是强对手。 | 适合做二维 foveation，但要限制观察预算并计入视觉工具成本。 | 中 |
+| 代码仓定位 / 修复 | LSP、tree-sitter、code index、测试和编辑器跳转非常强。 | 只有在跨文件语义状态、无稳定符号、trace/debug 顺序任务上才有机会。 | 低到中 |
+| 结构化 JSON / AST / ledger | 任务天然偏向结构化接口，也容易被 query / parser 吸收。 | 可用于机制 sanity check，但结论必须收缩。 | 低 |
+| selector 轨迹训练 | 即使推理时不总赢，主动访问轨迹可能成为训练数据。 | 需要证明轨迹能提升 selector imitation、长度泛化或局部修复。 | 中到中高 |
+
+当前最值得优先试的不是代码符号定位、JSON 或 SQL 类任务，而是：
+
+> `trace first-error localization` 与 `dynamic workspace recovery`。
+
+原因是它们同时满足四点：
+
+- 有自然序关系。
+- 不能总是靠稳定关键词解决。
+- 局部窗口可能给出方向信号。
+- 结果可连接到控制反馈线的错误归因、局部修复和 selector 训练。
+
+## 参考与对标来源
+
+本节给出上面两张表对应的参考来源。它们不是为了证明 `active foveated` 不值得做，而是为了明确：哪些能力已经是强基线，实验必须把它们放进对照组。
+
+### 强 Agent / 工具链基线
+
+- 精确文本搜索：[`ripgrep`](https://github.com/BurntSushi/ripgrep) 是现代命令行全文搜索强基线。
+- BM25 / 关键词检索：[Lucene BM25Similarity](https://javadoc.io/doc/org.apache.lucene/lucene-core/latest/org/apache/lucene/search/similarities/package-summary.html) 与 [Azure AI Search BM25 配置文档](https://learn.microsoft.com/en-us/azure/search/index-ranking-similarity) 可作为 BM25 工程化参考。
+- 向量检索：[Faiss 官方文档](https://faiss.ai/index.html)、[Faiss paper](https://arxiv.org/abs/2401.08281) 说明高效向量相似搜索已经是成熟基础设施。
+- 数据库索引：[PostgreSQL Indexes](https://www.postgresql.org/docs/current/indexes.html) 与 [PostgreSQL Index Types](https://www.postgresql.org/docs/current/indexes-types.html) 是结构化查询 / 索引强基线。
+- 代码符号导航：[Language Server Protocol specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/) 与 [Tree-sitter 官方文档](https://tree-sitter.github.io/) 是代码定位、增量解析和编辑器跳转的强对手。
+- Agent 工具与资源暴露：[Model Context Protocol specification](https://modelcontextprotocol.io/specification/2025-06-18)、[MCP Resources](https://modelcontextprotocol.io/specification/2025-06-18/server/resources) 说明工具、资源、文件、数据库 schema 等上下文可以被标准化暴露给模型。
+- Agent runtime / tracing：[OpenAI Agents SDK](https://developers.openai.com/api/docs/guides/agents) 与 [OpenAI Agents SDK Tracing](https://openai.github.io/openai-agents-python/tracing/) 说明 typed tools、state、approvals、tool calls 和 trace 已是强 Agent runtime 的常规能力。
+- UI / computer use：[OpenAI Computer Use](https://developers.openai.com/api/docs/guides/tools-computer-use)、[OpenAI Computer-Using Agent](https://openai.com/index/computer-using-agent/)、[Anthropic Computer Use Tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/computer-use-tool) 是视觉 / UI foveation 的强对手。
+- 长上下文递归管理：[Recursive Language Models](https://arxiv.org/abs/2512.24601)、[RLM project page](https://alexzhang13.github.io/blog/2025/rlm/)、[RLM GitHub](https://github.com/alexzhang13/rlm) 说明长上下文可以被外部化为可 inspect / decompose / recursive call 的环境。
+- 结构化递归运行时：[λ-RLM paper](https://arxiv.org/abs/2603.20105)、[λ-RLM GitHub](https://github.com/lambda-calculus-LLM/lambda-RLM) 说明 typed functional runtime 也是长上下文局部处理的强对照。
+- 本仓库内吸收表：[[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]] 汇总了 Codex、OpenAI Agents SDK、MCP、LangGraph 等对 A/B 弱版本的吸收判断。
+
+### Active / Foveated 机制背景
+
+- [Recurrent Models of Visual Attention](https://arxiv.org/abs/1406.6247)：经典视觉注意力模型，通过自适应选择局部区域降低大图像处理成本，是 `foveated access` 的重要相邻思想来源。
+- [Multiple Object Recognition with Visual Attention](https://arxiv.org/abs/1412.7755)：展示模型可学习关注输入图像中的局部区域并识别多个对象。
+- [Foveation in the Era of Deep Learning](https://proceedings.bmvc2023.org/703/)：更直接讨论 deep learning 时代的 foveated sensing / active attending。
+
+### 对本备忘的直接约束
+
+这些参考共同给出三个约束：
+
+- 如果任务可由 `grep / BM25 / vector / SQL / LSP / tree-sitter / generated code` 稳定解决，`active foveated` 不应声称机制优势。
+- 如果任务只是长上下文局部读取，必须对标 RLM / λ-RLM / recursive context management。
+- 如果任务是视觉或 UI 空间导航，必须对标 computer-use agent，而不是只对标全文上下文或随机扫描。
 
 ## 真正可能有价值的灰色地带
 
@@ -175,4 +243,3 @@ TapeWalker 当前实现已经包含这类接口的雏形：
 > `active foveated workspace access` 是 B 分支的候选机制，不是 `Load/Store` 的最终证明。它的核心赌注是：许多现实任务处在“完全无序”和“确定性可索引”之间，存在需要智能判断的有序灰色地带；在这些任务里，主动视野访问可能比一次性 query 或强 resolver 更可控、更可训练、更适合局部纠偏。
 
 如果找不到这类任务，它应降级为 TapeWalker 的历史动机和实验 scaffold。
-
