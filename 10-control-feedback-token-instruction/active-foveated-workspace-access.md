@@ -54,6 +54,9 @@ tags:
 
 ## Trace-Local 作为第一实验入口
 
+> [!decision] 暂存判断
+> 当前判断是：`trace-local first-error localization / dynamic recovery` 应升级为 A/B 主线的候选第一任务族，但暂不直接改写主线文档。更稳的安排是把它作为 primary candidate task family，把 JSON / AST / ledger 保留为 sanity check 和低风险工程验证。
+
 若要推进 B，第一阶段更适合选择：
 
 > 在 `agent trace / state-transition log` 这个 substrate 上，用 B0 的 `addressed local cell/window access` 定位首次错误、恢复进度、做局部纠偏。
@@ -65,6 +68,23 @@ tags:
 - 它比代码符号定位更不容易被 LSP、tree-sitter、grep 完全吸收。
 - 它比普通长文档语义搜索更容易构造验证信号和失败标签。
 - 它能同时测试 TapeWalker 式顺序视野访问，但不把 B 绑定死在一维 tape 上。
+
+这意味着主线若后续调整，可以从原先的“结构化状态任务优先”改成：
+
+```text
+Primary candidate task family:
+  trace-local first-error localization / dynamic recovery
+
+Sanity check task family:
+  JSON / AST / ledger local edit
+
+Later expansion:
+  long document turning point
+  code/debug trace
+  UI / foveated navigation
+```
+
+这里不是否定 JSON / AST / ledger。它们仍然有价值，但价值更像 sanity check：验证局部 cell/window access、显式状态事件、回放和 commit/rollback 机制能否跑通。它们不应承担最强叙事，因为任务结构太容易被 parser、query、DSL 或专用工具吸收。
 
 ### 任务定义：Trace-Local First-Error Localization
 
