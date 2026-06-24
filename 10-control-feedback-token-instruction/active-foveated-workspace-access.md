@@ -30,6 +30,124 @@ tags:
 
 > B 分支下的一个候选接口：`B2: active foveated workspace access`。它检验模型是否能在固定观察预算下，学习一种低成本、可回放、可训练的主动观察策略。
 
+## 与 B 分支 Access Mode 的分层关系
+
+当前讨论中，`active foveated workspace access` 不应被写成 B 分支的总定义。更稳的分层是：
+
+| 层级 | 名称 | 作用 |
+| --- | --- | --- |
+| B 分支总问题 | 局部状态访问是否有价值 | 检验不把全局状态一次性塞进上下文时，控制、学习、纠偏和成本是否改善。 |
+| B0 基础 access mode | `addressed local cell/window access` | 抽象机制层：模型通过 address、cell、window、relation、view 访问局部状态。 |
+| 第一实验 substrate | `agent trace / state-transition log` | 实验落点层：把局部访问先落到 agent 轨迹和状态转移日志上。 |
+| 第一任务族 | `trace first-error localization / dynamic recovery` | 给定 trace step、局部窗口、导航关系和观察预算，定位首次错误、恢复进度或做局部纠偏。 |
+| TapeWalker / active foveated | access policy / view | 在 trace-local 或其他 workspace 上使用 `pos / fov / move / zoom / mark` 做主动视野控制。 |
+
+因此，两种前期建议可以统一：
+
+> 抽象上，B 选择 `addressed local cell/window access`；实验上，第一阶段优先选择 trace substrate 上的 first-error localization / dynamic recovery；TapeWalker 暂时作为 trace-local setting 中的一个顺序 / 视野导航 policy。
+
+这个分层避免两个误解。
+
+第一，trace-local 不是 B 的全部，也不是 B 的 access mode 定义。B 还可以落到代码对象、长文档、JSON、ledger、UI、proof state、dynamic workspace 等 substrate。
+
+第二，TapeWalker 不是 B 的第一定义。TapeWalker 的独特赌注是 `active foveated policy`：在有序、半有序或可导航结构里，模型是否能通过移动视野、缩放、标记和局部判断获得比强 retrieval / resolver 更低成本的访问轨迹。
+
+## Trace-Local 作为第一实验入口
+
+若要推进 B，第一阶段更适合选择：
+
+> 在 `agent trace / state-transition log` 这个 substrate 上，用 B0 的 `addressed local cell/window access` 定位首次错误、恢复进度、做局部纠偏。
+
+理由是：
+
+- 它最贴近控制反馈主线，对象就是 agent 的运行过程，而不是任意结构化数据。
+- 它天然连接 `first-error localization / rollback / repair / verify`。
+- 它比代码符号定位更不容易被 LSP、tree-sitter、grep 完全吸收。
+- 它比普通长文档语义搜索更容易构造验证信号和失败标签。
+- 它能同时测试 TapeWalker 式顺序视野访问，但不把 B 绑定死在一维 tape 上。
+
+第一版接口可以收缩为：
+
+```text
+read_budget()
+read_window(trace_step_id, radius)
+navigate(trace_step_id, relation, budget)
+zoom(trace_range, level)
+mark(trace_step_id, label)
+```
+
+其中 `relation` 的 MVP 应只保留最小顺序关系：
+
+```text
+prev / next
+```
+
+可以在第二个 condition 中再加入弱层级关系：
+
+```text
+parent / child
+```
+
+`cause_candidate / effect_candidate` 不应进入第一版 B-only。它们很容易包含诊断、归因或强 resolver 信号，应作为 `topology-aware / A+B / generated analyzer` 条件单独测试。
+
+`overview()` 也不应默认进入 MVP。第一版只提供 `read_budget()`：
+
+```text
+trace_length
+current_marks
+remaining_budget
+```
+
+如果需要 overview，应拆成单独条件：
+
+| 条件 | 允许内容 | 解释风险 |
+| --- | --- | --- |
+| no overview | 只知道长度、当前位置、预算 | 最干净，但方向信号弱 |
+| generic overview | event type histogram、粗粒度 chunk 边界 | 可能已经是派生索引 |
+| semantic overview | checkpoint summary、异常分数、失败密度 | 很可能偷走 selector / resolver 贡献 |
+
+只有 no overview / generic overview 能作为 B-only 的早期条件。semantic overview 必须计入构造成本，并对标 BM25、vector、generated analyzer。
+
+## B-Only 与 A+B 的拆分
+
+trace-local setting 很容易和 A 分支的显式状态语义混在一起。为了让结果可解释，第一版应强制拆成两层：
+
+```text
+B-only:
+trace event 只有 step_id / timestamp / bounded raw action / bounded raw observation / bounded raw output
+reader 只能返回受 token/cell budget 限制的 event window
+接口只有 read_budget / read_window / navigate(prev,next) / zoom / mark
+
+A+B:
+trace event 额外有 typed event / state delta / invariant / verify result / diagnose label / rollback scope
+接口允许 diagnose / verify / repair / commit
+```
+
+B-only 中的 `raw observation / raw output` 不是完整全局上下文，而是被 cell/window 化后的受限局部内容。否则它会退回 full-context 或大 chunk baseline。
+
+如果 B-only 已经有效，说明局部访问本身有价值。
+
+如果只有 A+B 有效，说明收益可能来自显式事件语义，而不是局部访问本身；这仍有价值，但应归入 A+B 合流，而不是归入 TapeWalker 或纯 B。
+
+## 独立成败关系
+
+B 分支、trace-local setting 与 TapeWalker 可以独立成功或失败。
+
+| 结果 | 含义 |
+| --- | --- |
+| B 成功，TapeWalker 失败 | 统一局部状态访问接口有价值，但有效 resolver 可能是 BM25、vector、LSP、tree-sitter、SQL 或 topology-aware trace access，而不是 active foveated 扫描。 |
+| TapeWalker 成功，B 总体信号不明显 | 某些有序 / 半有序 / 可导航任务里 active foveated policy 有价值，但不能推出局部状态访问接口普遍有优势。 |
+| 两者都成功 | B 提供总框架，TapeWalker 成为其中一个高价值 access policy。 |
+| 两者都失败 | 强 Agent + typed tools + indexing / retrieval / generated analyzer 可能已经吸收这部分收益，需要转向显式状态语义、训练接口或其他机制。 |
+
+当前更稳的主张不是：
+
+> TapeWalker 证明 B。
+
+而是：
+
+> TapeWalker 是 B 分支下高风险、高辨识度的 access policy 候选；如果 trace-local first-error localization 或 dynamic workspace recovery 中出现稳定信号，它才值得进入主线。
+
 ## 与 TapeWalker 的关系
 
 TapeWalker 当前实现已经包含这类接口的雏形：

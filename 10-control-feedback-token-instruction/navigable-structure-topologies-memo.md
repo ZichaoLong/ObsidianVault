@@ -43,6 +43,41 @@ tags:
 - 局部观察能暴露什么信号。
 - 什么验证器能判断局部状态是否正确。
 
+## 与 B 分支 Access Mode 的关系
+
+这份备忘讨论的是 B 分支里 `access mode` 的结构前提，不是要把 TapeWalker 直接升格为 B 的定义。
+
+当前更稳的层级是：
+
+| 层级 | 对象 | 在本页中的含义 |
+| --- | --- | --- |
+| B 分支总问题 | 局部状态访问是否有价值 | 问的是局部访问接口是否让控制、学习、纠偏和成本更好。 |
+| B0 基础 access mode | `addressed local cell/window access` | 模型通过 address、cell、window、relation、view 访问局部状态。 |
+| substrate | workspace topology | cell/window 不是孤立对象，而是处在顺序、图、树、trace、UI、proof state 等结构中。 |
+| 第一实验 substrate | `agent trace / state-transition log` | 优先用 trace step、局部窗口、顺序边做 first-error localization 和 recovery。 |
+| policy | TapeWalker / active foveated / noisy directional access | 在给定 topology 上选择如何移动视野、缩放、跳转、标记和回退。 |
+
+因此，`addressed local cell/window access` 与 trace-local setting 不是竞争关系：
+
+- `addressed local cell/window access` 是抽象机制层。
+- `trace-local` 是第一阶段最合适的 substrate / task family，不是另一个基础 access mode。
+- TapeWalker 是其中一个 access policy，尤其适合测试顺序、视野、跳步和带噪方向判断。
+
+这也改变了 topology 备忘的使用方式。它不是要求第一阶段马上比较所有拓扑，而是先把 trace 作为最小可控拓扑：
+
+```text
+S = trace step / trace window / checkpoint
+N0 = prev / next
+N1 = parent / child
+N2 = cause_candidate / effect_candidate
+O = read_window(step_id, radius)
+V = verify(scope, invariant) 或最终任务结果
+C = observation tokens + navigation steps + tool calls
+H = coarse checkpoints / trace compaction / event hierarchy
+```
+
+在这个设置下，纯 TapeWalker 可以作为只使用 `N0 + zoom / read_window / mark` 的 policy；topology-aware trace access 可以额外使用 `N1`。`N2` 很容易包含诊断或强 resolver 信号，不应进入第一版 B-only，应作为单独 condition 或 A+B 条件测试。
+
 ## 结构的常见形式
 
 | 结构形式 | 例子 | 对主动访问的意义 |

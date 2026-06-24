@@ -50,6 +50,31 @@ tags:
 
 > 最终仍要看能否找到有说服力的任务。任务越强，机制越有价值；任务越弱，它就退回为普通研究或 TapeWalker 实验 scaffold。
 
+## 在 B 分支中的具体位置
+
+`learned noisy directional access` 不是 B 分支的总定义，而是 B 分支里一种更有理论辨识度的 access policy。
+
+更稳的分层是：
+
+| 层级 | 名称 | 本页对应位置 |
+| --- | --- | --- |
+| B 分支总问题 | 局部状态访问是否让控制、学习、纠偏和成本更好 | 本页不直接覆盖全部 B，只覆盖其中的主动访问策略。 |
+| 基础 access mode | `addressed local cell/window access` | 局部窗口、地址、视图和观察预算是前置条件。 |
+| 第一实验 substrate | `agent trace / state-transition log` | 长 trace 首次错误定位和 dynamic workspace recovery 是优先场景。 |
+| access policy | `active foveated / noisy directional access` | 模型根据局部窗口判断下一步往哪里看，并逐步缩小候选空间。 |
+
+因此，当前研究推进顺序应是：
+
+1. 先用 `trace-local window/navigation access` 建立 B 的最小实验入口。
+2. 再在其中比较不同 policy：linear scan、retrieval jump、topology-aware navigation、TapeWalker-style foveated navigation。
+3. 最后才讨论 `learned noisy directional access` 是否形成稳定的复杂度或学习优势。
+
+这能避免把 B 的成败过早绑定到 TapeWalker。
+
+如果 trace-local access 有信号，但 noisy directional policy 不赢，说明局部访问仍可能有价值，只是方向判别不是最好的访问策略。
+
+如果 noisy directional policy 在 trace-local、长文档转折点、dynamic workspace recovery 等任务中持续赢过强 retrieval / generated analyzer，它才成为 B 分支中更强的机制证据。
+
 ## 方向判别器与复杂度
 
 一个更精确的问题是：

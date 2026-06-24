@@ -124,6 +124,26 @@ TapeWalker 更可守的主张应是：
 
 > 显式 `pos / fov / address / cell` 这层接口是否让观察策略更可控、更可训练、更可回放、更适合局部纠偏。
 
+## 在 B 分支分层中的位置
+
+若按当前 B 分支的分层，`computer use` 的位置应这样理解：
+
+| 层级 | 对应对象 |
+| --- | --- |
+| B 分支总问题 | 局部状态访问是否让控制、学习、纠偏和成本更好。 |
+| B0 基础 access mode | `addressed local cell/window access`。 |
+| UI / 视觉 substrate | GUI、浏览器、桌面、app UI、screenshot、accessibility tree、DOM。 |
+| computer use | UI / 视觉 substrate 上的强现实基线和相邻机制。 |
+| TapeWalker-style foveated access | 如果 harness 暴露 `crop / zoom / inspect / region / fov` 等一等公民视野控制，它会更接近 active foveated policy。 |
+
+因此，`computer use` 不应被当作 TapeWalker 的直接反例，也不应被忽略。
+
+更准确的判断是：
+
+- 对 UI / 视觉任务，computer use 是必须对标的强基线。
+- 对 trace-local first-error localization，computer use 不是核心基线，因为 substrate 不是 UI。
+- 对 active foveated access，computer use 说明“主动观察闭环”已经被强 Agent 部分吸收，但仍未必覆盖受控 workspace 上的显式 `pos / fov / address / cell`。
+
 ## 实验含义
 
 如果任务是 UI / 视觉空间导航，必须把 computer use 放进强基线。
@@ -164,4 +184,3 @@ TapeWalker 更可守的主张应是：
 - 可回放、可归因、可训练的局部访问轨迹。
 
 因此，`computer use` 应进入 `active foveated` 的对标谱系，但不应与 TapeWalker 直接画等号。
-
