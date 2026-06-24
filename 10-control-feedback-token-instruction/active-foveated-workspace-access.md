@@ -66,6 +66,193 @@ tags:
 - 它比普通长文档语义搜索更容易构造验证信号和失败标签。
 - 它能同时测试 TapeWalker 式顺序视野访问，但不把 B 绑定死在一维 tape 上。
 
+### 任务定义：Trace-Local First-Error Localization
+
+`trace-local first-error localization` 的最小任务是：
+
+> 给定一条已经失败的 agent trace，在有限局部观察预算下，定位第一次把任务推进到错误轨道上的决策、假设、工具调用、状态更新或 patch。
+
+它不是让模型重新完成原任务，而是让模型读一个已经发生过的运行轨迹，并回答：
+
+```text
+first_bad_step = ?
+```
+
+这里的 `first_bad_step` 不一定是第一次显式报错的位置。
+
+普通 log debugging 往往找：
+
+```text
+step 157: exception occurred
+```
+
+first-error localization 要找：
+
+```text
+step 083: wrote invalid state
+step 157: exception is only a downstream symptom
+```
+
+因此它更贴近控制反馈线的核心对象：
+
+- 错误归因。
+- rollback point。
+- repair scope。
+- trace replay。
+- 局部纠偏。
+- selector / diagnoser / repair policy 的训练样本。
+
+### 为什么优先做 Trace
+
+做 trace-local first-error localization 的理由不是它最容易，而是它最贴近控制反馈线要填补的裂缝：
+
+> 如果系统不能在自己的运行轨迹中定位“第一次走错的地方”，就很难谈可归因、可回放、局部纠偏、rollback 和训练数据飞轮。
+
+它的说服力来自三点。
+
+第一，对象就是 agent 的运行过程。
+
+JSON、AST、ledger 是外部结构化对象。trace 是 agent 自己的控制过程、反馈过程和状态转移过程。若目标是研究控制反馈，trace 比一般结构化数据更贴近主线。
+
+第二，它天然连接 A / B / TapeWalker / peripheral-like overview。
+
+| 方向 | trace first-error localization 的作用 |
+| --- | --- |
+| A 分支 | 若 trace 有显式状态事件，是否更容易定位 first error。 |
+| B 分支 | 若只能局部读 trace，局部访问接口是否降低观察成本。 |
+| TapeWalker | 顺序 / 视野 / zoom / mark 是否帮助在 trace 中导航。 |
+| Peripheral-like overview | 低语义 bucket features 是否提供方向信号。 |
+| 纠偏 | first error 是否能导出更好的 rollback point 和 repair scope。 |
+| 训练 | first-error trace 是否能转成 selector / diagnoser / repair policy 样本。 |
+
+第三，它有自然顺序和局部因果结构，但不总能被关键词或确定性索引吃掉。
+
+JSON 查询、AST 定位、SQL 查询、代码符号跳转常常有强 parser / query / LSP / tree-sitter 对手。trace first error 可能没有稳定关键词，且第一次错误通常早于最终显性失败。这给局部访问、顺序导航和 overview 留出更真实的实验空间。
+
+### 与其他任务的对比
+
+| 任务类型 | 优点 | 缺点 | 对主线意义 |
+| --- | --- | --- | --- |
+| JSON / ledger / AST 局部修改 | 易构造、易验证、ground truth 清楚 | 太结构化，容易被 parser / query / DSL 吃掉 | 适合 sanity check，不足以支撑强叙事。 |
+| 代码符号定位 / 修复 | 现实性强，有工程价值 | LSP、tree-sitter、grep、测试、debugger 很强 | 适合后期强基线，不适合作第一信号。 |
+| 长文档转折点定位 | 接近阅读和研究任务，有自然顺序 | 标注主观，ground truth 难稳定 | 适合 B2 / TapeWalker 后续扩展。 |
+| UI / 视觉导航 | 接近 peripheral vision 类比 | computer use 是强基线，实验噪声大 | 适合对标，不适合第一步。 |
+| trace first-error localization | 贴近 agent 控制、归因、rollback、纠偏 | 构造和标注要谨慎 | 最适合连接 A、B、TapeWalker 和 peripheral-like overview。 |
+
+因此，JSON / AST / ledger 更适合作为低风险 sanity check；trace first-error localization 更适合作为第一类有主线说服力的任务。
+
+### 具体例子
+
+代码 agent 错误修复 trace：
+
+```text
+step 01: read failing test
+step 02: inspect function parse_config
+step 03: infer bug is missing default value
+step 04: patch parse_config
+step 05: run tests -> same failure
+step 06: inspect config_loader
+step 07: patch caller
+step 08: tests now fail elsewhere
+step 09: rollback partial patch
+step 10: final failure
+```
+
+可能的 first error 是：
+
+```text
+step 03: 错误归因 bug 位置
+```
+
+而不是 `step 05` 的 test failure。
+
+数据分析 agent trace：
+
+```text
+step 01: load sales table
+step 02: filter region = US
+step 03: join customer table
+step 04: mistakenly use inner join instead of left join
+step 05: aggregate revenue
+step 06: result looks too low
+step 07: try changing date filter
+step 08: produce wrong report
+```
+
+first error 是：
+
+```text
+step 04: 错误 join 类型导致状态被破坏
+```
+
+研究 / 文档 agent trace：
+
+```text
+step 01: read problem statement
+step 02: read paper abstract
+step 03: misread "requires online setting" as "offline setting"
+step 04: design wrong comparison
+step 05: collect irrelevant references
+step 06: write wrong summary
+```
+
+first error 是：
+
+```text
+step 03: 约束误读
+```
+
+这些例子都不是单纯找最终报错，而是找后续错误链条的起点。
+
+### 最小构造方式
+
+第一阶段可以采用半合成 trace：
+
+> 真实 agent / task template + 程序化注入错误 + 可验证最终失败 + 少量人工校验 first-error label。
+
+这比纯人工玩具任务更真实，也比完全真实 trace 更容易获得 ground truth。
+
+可测输出：
+
+```text
+mark(first_bad_step)
+```
+
+可选输出：
+
+```text
+confidence
+short_reason
+suggested_rollback_scope
+```
+
+第一版主指标：
+
+- 是否命中 first bad step。
+- 与 first bad step 的距离。
+- observation tokens。
+- read_window 次数。
+- navigation steps。
+- false negative rate。
+- 是否被后续显性报错误导。
+- 走错方向后是否能恢复。
+
+### 攻击面
+
+这类任务也不是免费胜场。
+
+- first error 有时不可唯一标注。
+- 后续失败可能来自多个错误叠加。
+- 半合成 trace 可能太干净。
+- 真实 agent trace 标注成本高。
+- 如果 overview 给出太强的失败密度、异常分数或 likely-error region，就会退化成 analyzer。
+- 如果任务只是在 trace 中找显式 error keyword，就会被 grep / BM25 吃掉。
+
+因此第一阶段要避免两种极端：
+
+- 不要只做显式报错定位。
+- 不要让 overview / analyzer 直接告诉模型目标位置。
+
 第一版接口可以收缩为：
 
 ```text
