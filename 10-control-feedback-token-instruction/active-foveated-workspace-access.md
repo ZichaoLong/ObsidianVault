@@ -14,6 +14,9 @@ tags:
 > [!summary] 本页定位
 > 本页是控制反馈线 B 分支的机制备忘。它讨论 TapeWalker 式 `move / zoom / load / store / mark` 仿存扫描接口是否有独立研究价值。结论不是“它替代 grep / SQL / LSP / RAG”，而是：它可能只在部分有序、噪声有序、需要智能判断方向的灰色地带有增量。
 
+> [!note] 收敛位置
+> 本页主要内容已收敛到 [[10-control-feedback-token-instruction/local-access-active-foveated-memo|Local Access and Active Foveated Memo]]。本页暂时保留，用于审计和细节追溯。
+
 ## 一页版结论
 
 `active foveated workspace access` 的核心是：

@@ -16,6 +16,9 @@ tags:
 > [!summary] 本页定位
 > 本页是独立备忘，暂不合入控制反馈主线。它记录一个问题：TapeWalker 当前 `load()` 的下采样是否缺少类似人类 peripheral vision 的机制；如果缺少，应该如何理解这个缺口，以及是否值得在 B2 / TapeWalker 中近似。
 
+> [!note] 收敛位置
+> 本页主要内容已收敛到 [[10-control-feedback-token-instruction/local-access-active-foveated-memo|Local Access and Active Foveated Memo]]。本页暂时保留，用于审计和细节追溯。
+
 ## 核心判断
 
 TapeWalker 当前的 `load()` 下采样，更接近：

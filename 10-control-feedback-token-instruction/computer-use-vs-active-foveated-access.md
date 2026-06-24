@@ -15,6 +15,9 @@ tags:
 > [!summary] 本页定位
 > 本页是独立备忘，不合入控制反馈主线。它只记录 `computer use` 与 TapeWalker 式 `active foveated workspace access` 的关系、差异和后续研究含义。
 
+> [!note] 收敛位置
+> 本页主要内容已收敛到 [[10-control-feedback-token-instruction/local-access-active-foveated-memo|Local Access and Active Foveated Memo]]。本页暂时保留，用于审计和细节追溯。
+
 ## 一句话结论
 
 `computer use` 与 `active foveated workspace access` 在高层上相似：二者都是“观察 -> 动作 -> 再观察”的主动反馈闭环。

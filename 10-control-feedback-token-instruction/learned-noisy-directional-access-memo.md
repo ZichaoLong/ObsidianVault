@@ -17,6 +17,9 @@ tags:
 
 > 模型能否从局部观察中学习一个带噪的方向判别器，并用它把全局搜索变成逐步缩小候选空间的主动搜索？
 
+> [!note] 收敛位置
+> 本页主要内容已收敛到 [[10-control-feedback-token-instruction/local-access-active-foveated-memo|Local Access and Active Foveated Memo]]。本页暂时保留，用于审计和细节追溯。
+
 这不是 `Load/Store` 的证明，也不是 `O(log n)` 的无条件证明。它是 B 分支下一个候选理论桥：把“人眼扫描 / 移动视野 / 放大缩小 / 局部判断”的直觉，压成可实验、可失败的问题。
 
 ## 核心判断

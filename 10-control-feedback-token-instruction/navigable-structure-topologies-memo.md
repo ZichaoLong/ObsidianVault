@@ -16,6 +16,9 @@ tags:
 
 > `learned noisy directional access` 里说的结构，到底以什么形式、什么拓扑存在？
 
+> [!note] 收敛位置
+> 本页主要内容已收敛到 [[10-control-feedback-token-instruction/local-access-active-foveated-memo|Local Access and Active Foveated Memo]]。本页暂时保留，用于审计和细节追溯。
+
 这里不先追求“结构是什么”的终极数学定义，而是从研究可用性出发：
 
 > 任务状态是否形成某种可导航空间，使局部观察能提供下一步该往哪里看的信号？
