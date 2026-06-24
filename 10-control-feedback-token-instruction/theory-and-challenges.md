@@ -85,6 +85,85 @@ HRM / TRM 和 RLM 的位置需要分开：
 - RLM 是外部环境化上下文上的递归 self-call，比 HRM 更接近 B 分支，因为它显式涉及 inspect、decompose、局部读取和递归调用。
 - 因此控制反馈线可以引用 HRM / TRM / RLM 作为相邻对手，但不能用 HRM / TRM 支撑 `Load/Store`，也不能把 RLM 的成功直接等同于显式状态语义成立。
 
+## 局部访问的理论对象
+
+B 分支不应直接等同于 TapeWalker。更原始的对象是：
+
+> hidden global state + constrained local observation + model-controlled feedback source selection。
+
+可以把可导航 workspace 写成：
+
+```text
+Navigable Workspace = (S, N, A, O, V, C, H)
+```
+
+其中：
+
+- `S`：状态单元，例如 trace step、cell、proof state、code object。
+- `N`：邻接或可达关系，例如 prev/next、parent/child、caller/callee。
+- `A`：动作，例如 read、navigate、zoom、mark、write、verify。
+- `O`：局部观察函数。
+- `V`：验证器，例如 test、type check、invariant、proof checker。
+- `C`：成本，例如 token、tool call、wall time、setup cost。
+- `H`：层级、coarse-to-fine view、summary 或 feature bins。
+
+这个形式化的作用不是证明 TapeWalker 必然有效，而是约束实验必须说明：
+
+- workspace 拓扑是什么。
+- 局部观察返回什么信号。
+- 验证器如何约束错误。
+- 层级或 overview 是否由人工、runtime 或模型构造。
+- 成本是否计入。
+
+### Noisy Directional Access
+
+TapeWalker / active foveated access 背后的较硬命题是：
+
+> 模型能否从局部观察中学习带噪方向判断，并用多步观察逐渐缩小候选区域？
+
+若每次局部观察能以 `p = 1/2 + gamma` 的概率给出方向信号，并且错误可通过重复、验证或回退控制，那么查询次数可能保持对规模 `n` 的对数依赖，但常数会随噪声快速恶化：
+
+```text
+queries ~= O((log n + log(1/delta)) / gamma^2)
+```
+
+这不是无条件 `O(log n)`。如果局部窗口没有方向信号，或者 `gamma` 随长度外推迅速下降，最坏情况仍接近线性扫描。
+
+`IP = PSPACE` 不应作为 TapeWalker 的直接理论支撑。它最多作为远层背景：复杂结构有时能通过交互协议和局部检查暴露给较弱 verifier，但这不能推出现实 workspace 可由模型主动导航。
+
+### Peripheral-Like Overview 风险
+
+peripheral-like overview 的价值不是单纯少读 token，而是在受限带宽下提供方向信号。
+
+但在文本、trace、workspace 上，它通常不是免费传感器，而是派生 observation layer：
+
+- sparse sample。
+- generic feature bins。
+- learned feature。
+- semantic summary。
+- anomaly score。
+- generated analyzer。
+
+越往后越容易偷走智能。主线边界应是：
+
+- B0 不引入 overview。
+- B2 / TapeWalker 才测试 overview 消融。
+- generic feature bins 可以作为较干净 proxy。
+- semantic summary、anomaly score、likely-error region 更接近 analyzer baseline。
+
+### Computer Use 对标
+
+`computer use` 与 active foveated access 都是观察、行动、再观察的主动闭环。
+
+区别是：
+
+- computer use 的状态空间是 GUI / browser / app UI。
+- active foveated access 的状态空间是受控 workspace，例如 trace、文本、表、代码对象。
+- computer use 通过 scroll、click、focus、zoom 间接控制视野。
+- TapeWalker 把 `pos / fov / move / zoom / load / mark` 显式变成 workspace 指令。
+
+因此，UI / 视觉任务必须把 computer use 当强基线；trace-local first-error localization 则不需要把它作为核心基线，因为 substrate 不同。
+
 ## 局部状态更新闭包
 
 局部状态更新闭包仍有价值，但它不再是唯一主线。
@@ -273,9 +352,27 @@ B 可能退化成 retrieval、memory system 或 POMDP。
 - 固定 resolver，比 access interface。
 - 固定 access interface，比 resolver。
 - 预先定义 selector/resolver/reader。
+- B0 先用 `addressed local cell/window access`，不把 TapeWalker 当总定义。
+- 强基线必须包括 full-context、BM25/vector、SQL/LSP、generated analyzer 和 RLM / recursive context management。
 - 若只证明检索有用，不算控制反馈主线胜利。
 
-### 攻击 5：meaningful address 偷渡语义
+### 攻击 5：B 与 TapeWalker / overview 混淆
+
+TapeWalker 是 B2 access policy，不是 B 的定义。peripheral-like overview 是 B2 消融，不是 B0 默认能力。
+
+如果把 TapeWalker 直接写成 B，实验会被一维 tape、移动/缩放策略、下采样、overview 设计和具体 runtime 细节绑架。
+
+如果把 overview 写进 B0，收益可能来自 summary、feature bins、anomaly score 或 likely-error region，而不是局部访问本身。
+
+防守边界：
+
+- B 总定义保持为 hidden global state + fixed observation budget + model-controlled feedback source。
+- B0 使用无 overview 的 local cell/window access。
+- TapeWalker 只作为 B2，与 linear scan、retrieval jump、topology-aware access 对照。
+- overview 只作为 B2 消融，并按 generic features、learned features、semantic summary、generated analyzer 分级。
+- UI / 视觉任务必须对标 computer use；trace-local 任务则不把 computer use 当核心基线。
+
+### 攻击 6：meaningful address 偷渡语义
 
 `users[17].transactions` 已经携带大量语义，模型可能不是学会局部访问，而是吃到了地址标签。
 
@@ -284,7 +381,7 @@ B 可能退化成 retrieval、memory system 或 POMDP。
 - 做 meaningful / typed / hierarchical / opaque / learned address 消融。
 - 若只在 meaningful address 下有效，结论必须收缩。
 
-### 攻击 6：workspace 粒度由人工设计贡献全部收益
+### 攻击 7：workspace 粒度由人工设计贡献全部收益
 
 如果 cell/schema/scope 全由研究者手工定制，实验可能只是 DSL/task engineering。
 
@@ -294,7 +391,7 @@ B 可能退化成 retrieval、memory system 或 POMDP。
 - 做 [[10-control-feedback-token-instruction/experiment-protocol#Workspace 粒度消融|cell 粒度消融]]。
 - 后续引入模型辅助或自动粒度生成。
 
-### 攻击 7：scaffold 偷走全部困难
+### 攻击 8：scaffold 偷走全部困难
 
 薄接口可能只是把复杂性转嫁给 runtime。
 
@@ -304,17 +401,19 @@ B 可能退化成 retrieval、memory system 或 POMDP。
 - 区分 model-only proposal quality、runtime-corrected success、rollback-assisted success。
 - 如果胜利来自 validator 自动拒错，不能说模型学会了状态管理。
 
-### 攻击 8：任务选择偏置
+### 攻击 9：任务选择偏置
 
 JSON、AST、ledger、dependency graph 天然适合状态访问接口。
 
 防守边界：
 
-- 第一阶段允许用强结构任务切变量。
-- 第一阶段结论必须收缩。
+- trace-local first-error localization 升为第一候选任务族。
+- 强结构任务只作为 sanity check 和变量隔离。
+- 强结构任务结论必须收缩。
 - 第二阶段必须进入半结构任务。
+- dynamic workspace recovery 先补齐定义，再决定是否并列进入主线。
 
-### 攻击 9：A+B 无交互
+### 攻击 10：A+B 无交互
 
 A 和 B 可能都是有用小技巧，但组合没有统一原语意义。
 
@@ -326,7 +425,7 @@ A 和 B 可能都是有用小技巧，但组合没有统一原语意义。
 - `Y11` 单指标不是最大但 Pareto 非支配时，只能算 Pareto 弱合流。
 - 若 `Y11` 被 `Y10` 或 `Y01` 支配，则组合接口失败，但 A 或 B 单分支仍可能保留。
 
-### 攻击 10：历史动机与实验指标之间仍有裂缝
+### 攻击 11：历史动机与实验指标之间仍有裂缝
 
 RAM/RASP、write-once、time scaling 不能直接推出当前实验指标。
 
@@ -337,7 +436,7 @@ RAM/RASP、write-once、time scaling 不能直接推出当前实验指标。
 - B 提供“反馈信源是否可主动控制”的第二桥。
 - A+B 交互和成本账本才提供“是否值得继续做”的裁决。
 
-### 攻击 11：Agent+Tools 可以无限吸收
+### 攻击 12：Agent+Tools 可以无限吸收
 
 现有 Agent+Tools 可以吸收 typed schema、logging、transaction、retrieval、indexing，甚至局部访问形态。
 
@@ -368,7 +467,7 @@ RAM/RASP、write-once、time scaling 不能直接推出当前实验指标。
 
 - 历史动机足够严肃，值得提出问题。
 - A 把 `Token = Instruction` 最大训练裂缝压成可实验问题，但必须承认其低阶部分已被现代 Agent 工程部分吸收。
-- B 把“自主控制反馈信源”压成局部状态访问与地址生成问题。
+- B 把“自主控制反馈信源”压成隐藏全局状态、固定观察预算下的局部反馈信源选择问题。
 - A/B 2x2 让结果可分解、可输、可降级。
 - 强基线与成本账本避免自我奖励。
 

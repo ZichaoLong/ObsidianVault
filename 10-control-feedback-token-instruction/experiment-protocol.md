@@ -218,11 +218,11 @@ A 失败或不足以扩展叙事的情况：
 - 训练收益来自更短格式或更强 schema，而不是状态语义。
 - strong typed tools baseline 达到同等训练和纠偏效果。
 
-## B 分支：局部状态访问与地址生成
+## B 分支：局部状态访问
 
 B 的实验问题：
 
-> 在 resolver 能力相近时，局部状态访问接口是否改善地址生成、访问成本、长度泛化和局部修复范围？
+> 在隐藏全局状态、固定观察预算下，模型主动选择局部反馈信源，是否能改善控制成本、长度泛化、错误归因、rollback / repair 范围和训练样本质量？
 
 ### B 的最小阈值
 
@@ -231,10 +231,71 @@ B 的实验问题：
 - global state 默认隐藏。
 - 每步 observation budget 固定。
 - 访问由模型控制。
-- 返回粒度受限。
+- runtime 返回受限局部观察。
 - 任务推进依赖多轮局部访问。
 
 如果模型仍可随时读取完整状态，只能算支持局部读取的 full-context system。
+
+### B0 Access Mode
+
+B0 不应选择 TapeWalker 作为总入口。
+
+第一版 B0 采用：
+
+```text
+addressed local cell/window access
+```
+
+最小接口：
+
+```text
+read_budget()
+read_window(address, radius)
+navigate(address, relation, budget)
+zoom(range, level)
+mark(address, label)
+```
+
+第一版 `relation` 只保留：
+
+```text
+prev / next
+```
+
+第二阶段再考虑：
+
+```text
+parent / child
+```
+
+`cause_candidate / effect_candidate / likely_error_region` 不进入 B0。它们很容易把诊断、归因或 resolver 信号偷渡进接口，应放入 A+B、topology-aware 条件或 generated analyzer baseline。
+
+### 实验矩阵
+
+B 实验必须拆开以下变量，否则结果无法归因。
+
+| 变量 | 可选值 | 目的 |
+| --- | --- | --- |
+| substrate | trace / JSON / AST / ledger / long document / code repo / UI | 状态空间是什么。 |
+| access mode | full-context / large chunk / B0 cell-window / topology view / TapeWalker | 模型能看到什么。 |
+| selector | model-generated query / address / next move / oracle selector | 决定下一步看哪里。 |
+| resolver | oracle / BM25 / vector / SQL / LSP / learned / generated analyzer | 把意图映射到位置。 |
+| reader | exact cell / window / range / summarized bin / screenshot crop | 返回多少信息。 |
+| policy | random / linear scan / retrieval jump / topology-aware / active foveated | 多步访问策略。 |
+| overview | none / sparse / generic feature bins / learned feature / semantic summary | 是否提供低保真方向信号。 |
+| A variable | none / typed trace / explicit state event / verify-diagnose-rollback | 是否引入显式状态语义。 |
+
+第一阶段 B0 固定为：
+
+```text
+substrate = trace
+access mode = addressed local cell/window
+relation = prev / next
+overview = none
+A variable = none
+```
+
+这样先检验最小局部访问，而不把 TapeWalker、overview、diagnose 或 semantic event 混入 B 的基本判断。
 
 ### Selector Resolver Reader
 
@@ -247,6 +308,89 @@ B 必须拆开三个组件。
 | reader | candidate address、access policy | returned observation | 决定返回多少、什么粒度、什么格式的状态 |
 
 如果不拆开，B 的结果可能被 resolver、reader、cell 粒度或 address schema 偷渡解释掉。
+
+### 第一候选任务：Trace-Local First-Error Localization
+
+第一候选任务族是：
+
+> 给定一条已经失败的 agent trace，在有限局部观察预算下，定位第一次把任务推进到错误轨道上的决策、假设、工具调用、状态更新或 patch。
+
+最小输入：
+
+```text
+task_spec
+failed_trace_id
+trace_length
+initial_observation_budget
+local_access_interface
+```
+
+模型不能直接读取完整 trace。它只能通过 B0 接口逐步观察。
+
+最小输出：
+
+```text
+mark(first_bad_step)
+```
+
+可选输出：
+
+```text
+confidence
+short_reason
+suggested_rollback_scope
+```
+
+该任务不是找第一次显式报错位置。它要找错误链条的起点：
+
+```text
+step 083: wrote invalid state
+step 157: exception is downstream symptom
+```
+
+它优先于 JSON / AST / ledger 的原因是：
+
+- 它直接连接 agent 控制、错误归因、rollback、repair 和数据飞轮。
+- trace 天然有时间 / 状态转移结构，适合局部访问。
+- first error 往往没有稳定关键词，不能总被 grep 或 BM25 吃掉。
+- 它能同时区分 B-only、A+B、TapeWalker policy 和 strong analyzer baseline。
+
+### First-Error 标签协议
+
+first-error 标注必须防止实验变成标注争议。
+
+每条失败 trace 至少记录：
+
+```text
+first_bad_step
+acceptable_interval
+downstream_symptom_steps
+error_type
+rollback_scope
+label_confidence
+label_source
+```
+
+标签规则：
+
+- `first_bad_step` 是最早使任务进入错误轨道的步骤，不是最早出现报错的步骤。
+- 如果存在多因一果，使用 `acceptable_interval` 或 `first_bad_set`，不要强行单点。
+- `downstream_symptom_steps` 单独记录，避免模型因命中最终报错而被误判为成功。
+- 如果错误不可唯一归因，该样本进入 ambiguous bucket，只用于定性分析或鲁棒性测试。
+- semi-synthetic trace 必须说明错误注入点和人工校验方式。
+- real agent trace 必须允许多标注者分歧，并报告 agreement。
+
+第一版主指标：
+
+- first bad step hit rate。
+- acceptable interval hit rate。
+- distance to first bad step。
+- downstream symptom confusion rate。
+- observation tokens。
+- `read_window` 次数。
+- navigation steps。
+- false negative rate。
+- wrong-direction recovery。
 
 ### B 的两层实验
 
@@ -284,6 +428,7 @@ same local cell access <-
 
 B 的强对手包括：
 
+- full trace / full context。
 - BM25。
 - vector search。
 - SQL / index。
@@ -292,6 +437,8 @@ B 的强对手包括：
 - 编辑器跳转。
 - learned retriever。
 - 任务专用 resolver。
+- generated analyzer / generated search code。
+- RLM / recursive context management。
 
 `retriever/index/resolver` 可以是 address resolver 的实现。B 不能假装替代这些系统。
 
@@ -301,17 +448,61 @@ B 要证明的是：
 
 > 在 resolver 能力相近时，统一局部状态访问接口是否让控制、纠偏、学习或成本结构更好。
 
+### B2 / TapeWalker 位置
+
+TapeWalker 不进入 B0 定义。
+
+它作为 B2 access policy：
+
+```text
+pos / fov / move / zoom / load / mark / store
+```
+
+要比较：
+
+- random / linear scan。
+- retrieval jump。
+- topology-aware trace access。
+- pure TapeWalker scan。
+- TapeWalker + generic overview。
+
+peripheral-like overview 只作为 B2 消融，不进入 B0。第一版 B0 的 `read_window` 不依赖 overview、summary、anomaly score 或 likely-error region。
+
+如果 TapeWalker 赢，只能说明 active foveated policy 在某些可导航 workspace 上有价值；不能自动证明 B 的全部主张。
+
+如果 TapeWalker 输，也不能直接判定 B 失败；B 可能由 topology-aware trace access、retrieval jump、LSP、SQL 或其他 resolver 承载。
+
+### Dynamic Workspace Recovery
+
+`dynamic workspace recovery` 暂不与 first-error localization 并列作为第一任务。
+
+若要升级为主线任务，必须先补齐：
+
+- 输入：当前 workspace、失败 trace、可访问局部状态、可用 checkpoint。
+- 输出：恢复到哪个状态、丢弃哪些变更、保留哪些变更、下一步 repair plan。
+- 评价：恢复成功率、保留有效工作量、恢复读取范围、恢复成本、后续 repair success。
+- 强基线：full replay、checkpoint rollback、global compact / summarize、RLM、generated recovery analyzer。
+
+在这些定义完成前，它只作为 trace-local first-error localization 的后续扩展。
+
 ### B 的主指标
 
-- selector accuracy。
-- resolver top-k hit rate。
+- first bad step hit rate。
+- acceptable interval hit rate。
+- distance to first bad step。
+- downstream symptom confusion rate。
 - returned token cost。
 - accessed cell count。
+- `read_window` 次数。
+- navigation steps。
 - unnecessary read rate。
 - global fallback count。
 - length generalization。
 - repair read range。
 - false-local-repair rate。
+- selector accuracy。
+- resolver top-k hit rate。
+- wrong-direction recovery。
 - total cost Pareto。
 
 ### B 的失败条件
@@ -322,8 +513,11 @@ B 失败或不足以扩展叙事的情况：
 - 结果主要来自更强 resolver。
 - meaningful address 偷渡语义。
 - local cell 粒度由人工任务设计贡献全部收益。
+- first-error 标签不可稳定判定。
+- 模型只命中下游 symptom，而非 first error。
+- overview / analyzer 直接给出目标区域。
 - 状态变长后访问步数或全局回退爆炸。
-- strong retrieval/indexing baseline 达到同等效果。
+- strong full-context / retrieval / indexing / RLM / generated-analyzer baseline 达到同等效果。
 
 ## Workspace 粒度消融
 
@@ -457,20 +651,34 @@ Pareto 弱合流：
 
 ## 任务选择
 
-第一阶段任务：
+第一候选任务族：
+
+- trace-local first-error localization。
+
+它作为第一候选，不是因为它最容易，而是因为它最贴近控制反馈线的核心：
+
+- agent 自己的运行轨迹。
+- 错误归因。
+- rollback point。
+- repair scope。
+- trace replay。
+- 局部纠偏。
+- selector / diagnoser / repair policy 训练样本。
+
+结构化 sanity check：
 
 - JSON。
 - AST。
 - ledger。
 - dependency graph。
 
-这些任务偏结构化，天然有利于状态访问接口。第一阶段允许这样做，因为目标是切变量、降低噪声、自动判定。
+这些任务偏结构化，天然有利于状态访问接口。它们适合校准工具、验证实现、切分变量和自动判定，但不应承担 B 分支第一叙事。
 
-第一阶段结论只能写成：
+这些任务上的正结果只能写成：
 
 > 在强结构局部状态任务上，某种状态访问接口可能更可训练、更可归因或更可纠偏。
 
-第二阶段任务：
+半结构后续任务：
 
 - 长文档局部修订。
 - 代码仓局部修复。
@@ -478,7 +686,9 @@ Pareto 弱合流：
 - 实验日志与分析状态维护。
 - 研究笔记状态更新。
 
-如果第一阶段都没有稳定信号，不应直接跳到开放世界任务。
+如果 trace-local 与结构化 sanity check 都没有稳定信号，不应直接跳到开放世界任务。
+
+`dynamic workspace recovery` 只有在定义补齐后才进入候选任务族。否则它先作为 first-error localization 后续扩展，而不是并列第一任务。
 
 ## 当前交付物
 
@@ -487,7 +697,10 @@ Pareto 弱合流：
 - 一个协议中立任务定义。
 - 一份 A/B 阈值定义。
 - 一份 2x2 对照协议。
+- 一份实验矩阵，明确 substrate / access mode / resolver / reader / policy / overview / A variable。
 - 一份 selector / resolver / reader 拆分说明。
+- 一份 trace-local first-error 标签协议。
+- 一份 dynamic workspace recovery 是否进入主线的定义草案。
 - 一份 workspace 粒度消融表。
 - 一份成本账本模板。
 - 一份训练数据生成方案。

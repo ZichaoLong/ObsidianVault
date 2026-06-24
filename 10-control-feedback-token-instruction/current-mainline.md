@@ -27,7 +27,7 @@ tags:
 | 分支 | 研究对象 | 主要价值 | 强基线 |
 | --- | --- | --- | --- |
 | [A：显式状态语义](<experiment-protocol.md#A 分支：显式状态语义与训练可行性>) | instruction 事件是否成为稳定运行时对象 | 可训练、可回放、可归因、可局部修复、可继续训练 | typed tools + schema + call/trace id + approval + checkpoint/replay + diff/transaction |
-| [B：局部状态访问](<experiment-protocol.md#B 分支：局部状态访问与地址生成>) | 模型是否主动控制隐藏全局状态中的局部反馈信源 | 细粒度控制反馈、地址生成、访问成本、长度泛化 | BM25 / vector / SQL / LSP / learned retriever / resolver |
+| [B：局部状态访问](<experiment-protocol.md#B 分支：局部状态访问>) | 在隐藏全局状态、固定观察预算下，模型是否主动选择局部反馈信源 | 细粒度控制反馈、访问成本、长度泛化、局部纠偏 | full-context / BM25 / vector / SQL / LSP / learned retriever / generated analyzer / RLM |
 
 二者合流时才接近完整主张：
 
@@ -62,13 +62,13 @@ tags:
 - 历史动机里说的“自主控制反馈信源”，更具体地说，是生成地址、选择观察对象、控制局部读写范围。
 - 它不是简单工具调用，而是模型是否能在隐藏的大状态中主动决定看哪里、改哪里、验证哪里。
 
-这就是 [[10-control-feedback-token-instruction/experiment-protocol#B 分支：局部状态访问与地址生成|B 分支]]。
+这就是 [[10-control-feedback-token-instruction/experiment-protocol#B 分支：局部状态访问|B 分支]]。
 
 因此，A 不是偏离历史动机的工程化妥协。它填补的是 `Token = Instruction` 最先会被攻击的训练裂缝：
 
 > 如果 instruction token 无法形成可训练数据飞轮，那么 `Token = Instruction` 无法从口号进入技术路线。
 
-但 A 也不是历史动机的全部。B 才更直接承接“自主控制反馈信源 / address generation / 细粒度闭环”这条深层问题意识。
+但 A 也不是历史动机的全部。B 才更直接承接“自主控制反馈信源 / 细粒度闭环”这条深层问题意识。
 
 ## Token = Instruction 的当前含义
 
@@ -171,24 +171,35 @@ A 只问：
 
 B 分支的问题是：
 
-> 模型是否能在隐藏全局状态中，通过受约束寻址主动选择局部反馈信源，并因此改善访问成本、长度泛化和局部修复范围？
+> 在隐藏全局状态、固定观察预算下，模型是否能主动选择下一步局部反馈信源，并因此改善访问成本、长度泛化、局部纠偏和训练数据质量？
 
 B 更直接承接历史动机中的：
 
 - 快速、自主控制反馈信源。
-- address generation。
 - 不把整个 context 当唯一状态。
 - 分而治之与小颗粒闭环。
 
-B 的关键不是工具支持局部读取，而是信息边界：
+B 的关键不是“工具支持局部读取”，而是信息边界：
 
 - global state 默认隐藏。
 - observation budget 固定。
-- 模型必须主动生成 query / intent / address / selector。
-- runtime 只返回受限 cell / chunk / object。
+- 模型必须主动生成 query / intent / address / selector，决定下一步看哪里。
+- runtime 只返回受限 cell / window / chunk / object / trace slice。
 - 任务推进依赖多轮局部访问。
 
-B 的强对手不是普通工具，而是 [[10-control-feedback-token-instruction/experiment-protocol#B 的强基线|强检索与索引系统]]：
+当前 B 的分层应写清楚：
+
+| 层级 | 位置 | 当前判断 |
+| --- | --- | --- |
+| B 总定义 | 局部状态访问 | 隐藏全局状态，固定观察预算，模型主动选择反馈信源。 |
+| B0 | `addressed local cell/window access` | 第一阶段最小 access mode，只允许局部 cell/window 读取和有限导航。 |
+| 第一候选 substrate | `agent trace / state-transition log` | 最贴近控制反馈、归因、rollback、repair 与数据飞轮。 |
+| 第一候选任务族 | `trace-local first-error localization` | 在局部观察预算下定位首次错误，而不是最终报错。 |
+| 后续扩展 | `dynamic workspace recovery` | 暂不与 first-error 并列；必须先补成可实验任务。 |
+| B2 | TapeWalker / active foveated access | 高辨识度、高风险 access policy，不承担 B 的总定义。 |
+| B2 消融 | peripheral-like overview | 只作为方向信号消融或 future sensor，不进入 B0。 |
+
+B 的强对手不是普通工具，而是 [[10-control-feedback-token-instruction/experiment-protocol#B 的强基线|强检索、索引、长上下文递归与分析器系统]]：
 
 - BM25。
 - vector search。
@@ -196,6 +207,7 @@ B 的强对手不是普通工具，而是 [[10-control-feedback-token-instructio
 - tree-sitter / LSP。
 - learned retriever。
 - 任务专用 resolver。
+- generated analyzer / generated search code。
 - RLM / recursive context management / prompt-as-environment。
 
 如果 B 只证明“主动检索有用”，它应降格为 retrieval / memory system。
@@ -203,6 +215,10 @@ B 的强对手不是普通工具，而是 [[10-control-feedback-token-instructio
 B 的弱版本也已被现代 Agent 工程大量吸收，例如 search、index、local read/write、resource discovery、tool discovery、patch/diff 和 history；证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]]。
 
 HRM / TRM 也应进入控制反馈线的相邻对手谱系，但位置不同：它们是内部 recurrent / latent control loop，不是外部局部状态访问接口。它们提醒我们，局部闭环不一定必须外显为 workspace；因此不能用 HRM / TRM 支撑 `Load/Store`，只能用来界定显式控制事件路线的竞争边界。
+
+TapeWalker 的位置也应降级：
+
+> TapeWalker 不是 B 分支本身，而是 B2 中一种 active foveated access policy。它押注有序、半有序或可导航 workspace 中存在方向信号；若它失败，不等于 B 失败；若它成功，也不自动证明 B 的全部主张。
 
 ## A 与 B 的 2x2
 
@@ -247,7 +263,7 @@ A 与 B 是两个正交变量。
 
 当前最小可输命题：
 
-> 在同等模型能力、同等信息预算、预先定义 [[10-control-feedback-token-instruction/experiment-protocol#总体设计|A/B 阈值]] 并计入 [[10-control-feedback-token-instruction/experiment-protocol#成本账本|scaffold 成本]] 的前提下，显式状态语义与局部状态访问分别、以及组合后，是否相对强 typed tools/logging/transaction 和强 retrieval/indexing 基线，在训练、归因、纠偏或成本曲线上形成不可被 baseline、resolver、workspace 粒度或 runtime 解释掉的增量？
+> 在同等模型能力、同等信息预算、预先定义 [[10-control-feedback-token-instruction/experiment-protocol#总体设计|A/B 阈值]] 并计入 [[10-control-feedback-token-instruction/experiment-protocol#成本账本|scaffold 成本]] 的前提下，显式状态语义与局部状态访问分别、以及组合后，是否相对强 typed tools/runtime 与强 retrieval/indexing/RLM/generated-analyzer 基线，在训练、归因、纠偏或成本曲线上形成不可被 baseline、resolver、workspace 粒度或 runtime 解释掉的增量？
 
 它输掉时：
 
@@ -289,24 +305,35 @@ A 与 B 是两个正交变量。
 
 第四阶段：做 B 的局部访问实验。
 
+- B0 access mode 先选 `addressed local cell/window access`。
+- 第一候选 substrate 先选 `agent trace / state-transition log`。
+- 第一候选任务族先选 `trace-local first-error localization`。
 - 固定 resolver，比访问接口。
 - 固定访问接口，比 resolver。
-- 检验 address generation、局部读取成本、长度泛化、全局回退频率。
+- 检验局部观察成本、长度泛化、全局回退频率、首次错误定位和局部纠偏范围。
+- `dynamic workspace recovery` 先降为后续扩展，补齐定义后再并列推进。
 
-第五阶段：做 A+B 2x2。
+第五阶段：做 B2 / TapeWalker 压力测试。
+
+- 把 TapeWalker 当作 access policy，而不是 B 的总定义。
+- 比较 linear scan、retrieval jump、topology-aware trace access、TapeWalker scan。
+- peripheral-like overview 只作为 B2 消融，不进入 B0。
+- 若 B0 无信号，不应直接扩张到复杂 TapeWalker。
+
+第六阶段：做 A+B 2x2。
 
 - 检验是弱合流、Pareto 弱合流，还是 [[10-control-feedback-token-instruction/experiment-protocol#A+B 交互指标|强合流]]。
 - 预注册主指标和 Pareto 裁决规则。
 - 计入 setup、runtime、人工 schema、resolver 构造成本。
 
-第六阶段：进入半结构任务。
+第七阶段：进入半结构任务。
 
 - 长文档局部修订。
 - 代码仓局部修复。
 - 多文件一致性维护。
 - 研究笔记状态更新。
 
-第七阶段：将部分确定性 tools 替换为 intelligent subagents。
+第八阶段：将部分确定性 tools 替换为 intelligent subagents。
 
 - 保持 A 的显式状态事件层不变。
 - 保持 B 的局部状态访问和观察预算约束不变。
@@ -314,7 +341,7 @@ A 与 B 是两个正交变量。
 - 检验显式状态语义在更强 Agent runtime 下是否仍带来数据质量、归因、纠偏、复用或成本优势。
 - 不把“已有 Agent 也能 spawn subagent”当作反驳；真正要检验的是 subagent 交互是否需要统一、可回放、可训练的状态转移层。
 
-只有前四阶段出现稳定收益，第五阶段才有意义；第七阶段是后续压力测试，不是第一阶段起点。
+只有 A 与 B0 前期实验出现稳定收益，A+B 2x2 和 B2 / TapeWalker 压力测试才有意义；第八阶段是后续压力测试，不是第一阶段起点。
 
 ## 阅读分流
 
