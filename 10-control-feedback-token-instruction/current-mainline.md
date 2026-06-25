@@ -246,6 +246,41 @@ A 与 B 是两个正交变量。
 | `Y11` 被 `Y10` 或 `Y01` 支配 | A+B 组合失败，单分支仍可保留。 |
 | A+B 在强基线和 [成本账本](<experiment-protocol.md#成本账本>) 下形成 Pareto 优势 | 可以继续推进统一状态访问接口。 |
 
+## 性能与通用性桥
+
+当前更清楚的桥接表述是：
+
+> 通用性来自小而稳定的局部状态指令集；可行性与基础性能首先依赖任务状态是否具有可导航结构；resolver / cache / index 是现实任务中的工程加速层；verifier / rollback / replay 是独立的控制可靠性与训练数据层。
+
+对应到研究图谱：
+
+| 组成 | 研究位置 | 作用 |
+| --- | --- | --- |
+| 小而稳定的局部状态指令集 | A 分支 | 让 `read/write/verify/commit/rollback/diagnose` 等事件具备稳定语义、可回放性、可归因性和训练数据价值。 |
+| 可导航结构 | B 分支核心假设 | 让模型在隐藏全局状态、固定观察预算下选择下一步反馈信源，并利用 trace、文本、AST、调用图、proof graph、UI 空间、数据库 index 等结构降低访问成本。 |
+| resolver / cache / index | B 分支工程加速层 | 利用任务结构提高访问性能，但不能替代对“可导航结构 + 稳定局部指令集”这一核心假设的检验。 |
+| verifier / rollback / replay | A+B 合流可靠性层 | 让局部访问不止是 retrieval，而能进入安全的局部修改、验证、提交或回滚，并把失败转化为可训练样本。 |
+
+这三者共同承担 `Load/Store` 或更一般状态访问接口的现实意义。
+
+如果只有稳定指令集，没有可导航结构，系统可能只是更整齐的 typed trace。
+
+如果只有可导航结构，没有稳定指令集，系统可能只是 retrieval / index / memory system。
+
+如果没有 verifier / rollback / replay，局部操作一旦出错就会污染 workspace，系统只能频繁退回全局重解释或人工修复。
+
+因此，“通用 AI runtime 是否需要某种局部状态 ISA”的问题，不能只问是否支持局部读取，而要问：
+
+> 是否存在一组小而稳定的控制事件，能在多种 workspace topology 上承载局部访问、局部修改、验证、提交和回滚，并在成本、训练或纠偏上形成稳定优势？
+
+TapeWalker 在这个图谱中的位置是：
+
+> 线性 / 层级可导航 workspace 的最小 ISA 候选。
+
+它押注 `prev/next`、局部窗口、移动视野、缩放和标记等机制足够简单、通用、可退化，适合文本、trace、日志、时间线和局部扫描。
+
+但 TapeWalker 不是唯一 topology。代码更自然是 AST / 调用图，证明更自然是 proof graph，UI 更自然是二维空间，数据库更自然是 key / index。后续若要追求更强通用性，应保持稳定 opcode，把 topology 差异放进 relation、view、resolver 或 workspace metadata。
+
 ## Load Store 的降级位置
 
 `Load/Store` 当前不应写成答案，而应写成候选低层控制原语。

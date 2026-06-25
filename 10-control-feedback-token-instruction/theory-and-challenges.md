@@ -115,6 +115,94 @@ Navigable Workspace = (S, N, A, O, V, C, H)
 - 层级或 overview 是否由人工、runtime 或模型构造。
 - 成本是否计入。
 
+### 性能与通用性桥
+
+当前对齐后的核心判断是：
+
+> 通用性来自小而稳定的局部状态指令集；可行性与基础性能首先依赖任务状态是否具有可导航结构；resolver / cache / index 是现实任务中的工程加速层；verifier / rollback / replay 是独立的控制可靠性与训练数据层。
+
+对应到 `Navigable Workspace = (S, N, A, O, V, C, H)`：
+
+- 稳定小指令集主要对应 `A`，例如 read、navigate、write、verify、commit、rollback、mark。
+- 可导航结构主要对应 `N + O + H`，即拓扑、局部观察和层级 / coarse-to-fine view。
+- resolver / cache / index 不是单独变量，但会影响 `O + H + C`，即局部观察、层级视图和成本。
+- verifier / rollback / replay 主要对应 `V` 与 commit/rollback/replay 语义。
+- 性能裁决必须落到 `C`，即 token、tool call、wall time、setup、维护和失败恢复成本。
+
+这给出一个更稳的研究图谱：
+
+| 组件 | 贡献 | 如果缺失 |
+| --- | --- | --- |
+| 稳定小指令集 | 跨任务复用、可训练、可回放、可归因。 | 退化成任务专用工具或 prompt protocol。 |
+| 可导航结构 | 支持局部搜索、方向判断、长度泛化和访问成本下降。 | 局部访问只能靠盲扫、全局重读或任务专用 oracle。 |
+| resolver / cache / index | 利用现实任务结构提供工程加速。 | 可行但可能太慢，或完全依赖模型盲搜。 |
+| verifier / rollback / replay | 允许局部试探、局部修改、失败隔离和训练样本构造。 | 错误污染全局状态，系统频繁退回全局重解释。 |
+
+resolver / cache / index 很重要，但它们不应替代核心假设的检验。核心假设仍是：
+
+> 小而稳定的局部状态指令集 + 可导航结构，是否足以构成通用 AI runtime 的可接受性能 fallback？
+
+`verifier / rollback / replay` 的意义不是额外工程装饰，而是把局部启发式动作变成可控机制。模型可以提出局部修改，runtime 或验证器检查其影响；成功则 commit，失败则 rollback 并把失败事件转化为训练样本。这样，局部操作既不会要求模型一次全局正确，也不会让错误无限传播。
+
+这也是 A+B 合流比单独 A 或单独 B 更强的原因：
+
+- A 提供稳定事件语义、回放、诊断和训练接口。
+- B 提供受限观察下的局部定位和访问策略。
+- A+B 才能形成“局部访问 -> 局部修改 -> 验证 -> commit/rollback -> 继续推进”的闭环。
+
+### 计算模型类比
+
+RAM/RASP、Load/Store、ISA、cache、GPU/NPU 和 DSA/ASIC 的类比，不用于证明 `Load/Store` 或 TapeWalker 必然正确。它的作用是帮助理解本研究的意图：
+
+> 当系统面对开放任务分布时，通常会出现“通用稳定接口 + 任务结构利用 + 专用加速层”的分工压力。
+
+在经典计算机中，通用 CPU / ISA 提供相对稳定的控制核心，专用加速器、SIMD/SIMT、GPU/NPU、DSA/ASIC 则利用特定任务结构换取性能。cache、index 和 memory hierarchy 不是新的计算语义，而是让常见访问模式更快的工程层。
+
+映射到控制反馈线：
+
+- 小而稳定的局部状态指令集，对应通用接口压力。
+- workspace topology 和可导航结构，对应任务状态中的可利用结构。
+- resolver / cache / index / overview / learned sensor，对应工程加速层。
+- verifier / rollback / replay，对应控制可靠性、失败隔离和训练数据生成层。
+
+这组类比的边界同样重要：
+
+- 它不能推出 AI 必须采用 `Load/Store`。
+- 它不能推出 TapeWalker 的序关系是唯一或最终 topology。
+- 它不能替代强基线实验。
+
+它只说明：如果 AI runtime 想面对开放任务分布，又不为每个任务单独设计完整专用系统，那么它可能需要某种“可接受性能下的通用 fallback”。TapeWalker 是线性 / 层级 topology 上的一个候选 fallback，而不是终局答案。
+
+### TapeWalker 的准确位置
+
+TapeWalker 不应被写成 B 分支本身，也不应被写成唯一通用 topology。
+
+更稳的表述是：
+
+> TapeWalker 是线性 / 层级可导航 workspace 的最小 ISA 候选。
+
+它押注：
+
+- `prev / next` 是最低成本、最通用、可退化的 relation。
+- 局部窗口、移动视野、缩放、标记和局部写入可以覆盖大量文本、trace、日志、时间线和局部扫描任务。
+- 如果局部观察能提供带噪方向信号，则 active foveated policy 可能在成本上优于全局重读或线性扫描。
+
+但序关系不是唯一可导航结构：
+
+| topology | 更自然的任务 |
+| --- | --- |
+| 线性 / 时间顺序 | 文本、trace、日志、时间线。 |
+| 层级 | 文件树、章节、模块、proof/subgoal tree。 |
+| 图结构 | 调用图、依赖图、概念图、proof graph。 |
+| 空间结构 | UI、图像、地图、二维表格。 |
+| key / index | 数据库、字典、资源表、符号表。 |
+
+因此，TapeWalker 的胜利条件应收缩为：
+
+> 在线性、层级或可线性化的 workspace 上，稳定小指令集加 active foveated policy 是否能相对强 retrieval、index、generated analyzer 或 full-context 基线形成成本、训练或纠偏优势。
+
+若要走向更通用的 AI runtime，后续应保持 opcode 稳定，把 topology 差异放进 relation、view、resolver 或 workspace metadata，而不是为每个任务发明完全不同的动作语言。
+
 ### Noisy Directional Access
 
 TapeWalker / active foveated access 背后的较硬命题是：
