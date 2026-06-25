@@ -187,6 +187,10 @@ B 的关键不是“工具支持局部读取”，而是信息边界：
 - runtime 只返回受限 cell / window / chunk / object / trace slice。
 - 任务推进依赖多轮局部访问。
 
+更进一步，B 的关键也不是“反 resolver”。BM25、vector search、SQL、LSP、RLM 或 generated analyzer 都可以作为 resolver。它们与 TapeWalker 的区别在于：可导航性被放在哪里。
+
+> Resolver 路线把可导航结构预编码到词项空间、embedding space、schema、AST、递归分解树或任务专用 analyzer 中；TapeWalker 路线尝试把可导航结构保留在 workspace 层，并用稳定局部指令在线逼近目标地址。
+
 当前 B 的分层应写清楚：
 
 | 层级 | 位置 | 当前判断 |
@@ -256,12 +260,12 @@ A 与 B 是两个正交变量。
 
 | 组成 | 研究位置 | 作用 |
 | --- | --- | --- |
-| 小而稳定的局部状态指令集 | A 分支 | 让 `read/write/verify/commit/rollback/diagnose` 等事件具备稳定语义、可回放性、可归因性和训练数据价值。 |
-| 可导航结构 | B 分支核心假设 | 让模型在隐藏全局状态、固定观察预算下选择下一步反馈信源，并利用 trace、文本、AST、调用图、proof graph、UI 空间、数据库 index 等结构降低访问成本。 |
-| resolver / cache / index | B 分支工程加速层 | 利用任务结构提高访问性能，但不能替代对“可导航结构 + 稳定局部指令集”这一核心假设的检验。 |
+| 小而稳定的局部状态指令集 | `Token = Instruction` / A+B 候选接口 | 让 `read/write/verify/commit/rollback/diagnose` 等事件具备稳定语义、可回放性、可归因性和训练数据价值；A 负责语义稳定，B 负责局部访问与寻址压力。 |
+| 可导航结构 | B 分支核心假设 | 让模型在隐藏全局状态、固定观察预算下选择下一步反馈信源，并利用 trace、文本、AST、调用图、proof graph、UI 空间、数据库 schema/key 等结构降低访问成本。 |
+| resolver / cache / index | B 分支工程加速层与强基线 | 利用任务结构提高访问性能，例如倒排索引、ANN/HNSW、DB index、LSP index 或 cache；但不能替代对“可导航结构 + 稳定局部指令集”这一核心假设的检验。 |
 | verifier / rollback / replay | A+B 合流可靠性层 | 让局部访问不止是 retrieval，而能进入安全的局部修改、验证、提交或回滚，并把失败转化为可训练样本。 |
 
-这三者共同承担 `Load/Store` 或更一般状态访问接口的现实意义。
+这些层共同承担 `Load/Store` 或更一般状态访问接口的现实意义。
 
 如果只有稳定指令集，没有可导航结构，系统可能只是更整齐的 typed trace。
 
@@ -279,7 +283,7 @@ TapeWalker 在这个图谱中的位置是：
 
 它押注 `prev/next`、局部窗口、移动视野、缩放和标记等机制足够简单、通用、可退化，适合文本、trace、日志、时间线和局部扫描。
 
-但 TapeWalker 不是唯一 topology。代码更自然是 AST / 调用图，证明更自然是 proof graph，UI 更自然是二维空间，数据库更自然是 key / index。后续若要追求更强通用性，应保持稳定 opcode，把 topology 差异放进 relation、view、resolver 或 workspace metadata。
+但 TapeWalker 不是唯一 topology。代码更自然是 AST / 调用图，证明更自然是 proof graph，UI 更自然是二维空间，数据库更自然是 schema / key；index 则更接近工程加速层。后续若要追求更强通用性，应保持稳定 opcode，把 topology 差异放进 relation、view、resolver 或 workspace metadata。
 
 ## Load Store 的降级位置
 
@@ -353,7 +357,7 @@ TapeWalker 在这个图谱中的位置是：
 - 把 TapeWalker 当作 access policy，而不是 B 的总定义。
 - 比较 linear scan、retrieval jump、topology-aware trace access、TapeWalker scan。
 - peripheral-like overview 只作为 B2 消融，不进入 B0。
-- 若 B0 无信号，不应直接扩张到复杂 TapeWalker。
+- 若 B0 无信号，应先诊断任务、起点、窗口、方向信号和强基线，而不是盲目扩张到复杂 TapeWalker；但 B0 失败不直接否定 B2 的 active foveated / direction-signal 赌注。
 
 第六阶段：做 A+B 2x2。
 

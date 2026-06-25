@@ -123,9 +123,9 @@ Navigable Workspace = (S, N, A, O, V, C, H)
 
 对应到 `Navigable Workspace = (S, N, A, O, V, C, H)`：
 
-- 稳定小指令集主要对应 `A`，例如 read、navigate、write、verify、commit、rollback、mark。
+- 稳定小指令集对应 `A` 与模型可见控制事件语言，例如 read、navigate、write、verify、commit、rollback、mark。A 负责稳定事件语义，B 负责局部访问、寻址与 relation/view 压力。
 - 可导航结构主要对应 `N + O + H`，即拓扑、局部观察和层级 / coarse-to-fine view。
-- resolver / cache / index 不是单独变量，但会影响 `O + H + C`，即局部观察、层级视图和成本。
+- resolver / cache / index 不是 `Navigable Workspace` 元组里的基础项，但在实验中必须作为单独变量记录；它们会影响 `O + H + C`，即局部观察、层级视图和成本。
 - verifier / rollback / replay 主要对应 `V` 与 commit/rollback/replay 语义。
 - 性能裁决必须落到 `C`，即 token、tool call、wall time、setup、维护和失败恢复成本。
 
@@ -195,13 +195,87 @@ TapeWalker 不应被写成 B 分支本身，也不应被写成唯一通用 topol
 | 层级 | 文件树、章节、模块、proof/subgoal tree。 |
 | 图结构 | 调用图、依赖图、概念图、proof graph。 |
 | 空间结构 | UI、图像、地图、二维表格。 |
-| key / index | 数据库、字典、资源表、符号表。 |
+| schema / key | 数据库、字典、资源表、符号表。 |
 
 因此，TapeWalker 的胜利条件应收缩为：
 
 > 在线性、层级或可线性化的 workspace 上，稳定小指令集加 active foveated policy 是否能相对强 retrieval、index、generated analyzer 或 full-context 基线形成成本、训练或纠偏优势。
 
 若要走向更通用的 AI runtime，后续应保持 opcode 稳定，把 topology 差异放进 relation、view、resolver 或 workspace metadata，而不是为每个任务发明完全不同的动作语言。
+
+这里需要区分几个层级，避免 TapeWalker 概念膨胀：
+
+| 层级 | 含义 |
+| --- | --- |
+| 狭义 TapeWalker | 线性 / 层级 workspace 上的 `pos / fov / move / zoom / load / mark`。 |
+| 广义可导航 workspace | graph / spatial / proof / code / trace topology 上的局部观察、移动、标记、读写和验证。 |
+| resolver 路线 | 把可导航性预编码进 embedding、schema、AST、index、递归分解树或 generated analyzer。 |
+| world model / verifier / rollback | 支持导航可靠性的状态估计、预测、验证、回退和训练数据层。 |
+
+因此，“一切都是导航”这个说法只有在广义控制意义下成立；研究上仍应保留层级边界。狭义 TapeWalker 只负责最小线性 / 层级导航假设，不能把物理世界模型、复杂因果推理、智能度量和 verifier 全部并入自己的胜利条件。
+
+### Resolver 谱系与可导航性假设
+
+Resolver 的角色是：
+
+> 把 query / intent / symbolic address 映射到 workspace 中的候选位置。
+
+因此，resolver 不是 TapeWalker 的反面。它们都依赖某种可导航性，只是可导航结构被放在不同地方：
+
+- resolver 路线把导航结构预编码到词项空间、embedding space、schema、AST、trace topology、递归分解树或任务专用 analyzer 中。
+- TapeWalker 路线尝试把导航结构保留在 workspace 层，让模型通过稳定局部指令在线观察、移动、缩放、标记和逼近目标地址。
+
+| 机制 | 可导航性在哪里 | 核心假设 | 困难主要放在哪里 |
+| --- | --- | --- | --- |
+| grep / regex | 字符串位置与模式空间 | 目标有稳定字面 key 或可写成正则模式。 | query 构造、模式覆盖、同义表达缺失。 |
+| BM25 / lexical search | 词项空间与倒排索引 | 相关对象与 query 有足够 lexical signal。 | 词项重合、query expansion、倒排索引和 rerank。 |
+| vector / ANN / HNSW | embedding space 的近邻几何和可导航索引图 | embedding model 能把语义相关性投影成可近邻化结构，ANN 图能在目标分布上快速近似导航，近似错误可被下游容忍。 | embedding model、数据分布、近似召回、索引结构、reranker / LLM 补救。 |
+| SQL / DB index | schema、key、predicate、表关系 | 目标可表达成结构化查询，schema 足以承载任务语义。 | schema 设计、predicate 生成、索引选择、查询优化。 |
+| LSP / tree-sitter | AST、符号表、定义引用图、类型关系 | 代码任务的关键导航结构可由语言语法和静态语义暴露。 | parser、语言服务器、静态分析、跨语言/动态行为缺口。 |
+| trace topology | 时间顺序、层级、checkpoint、可能的因果边 | 错误传播在 trace 中留下可定位结构。 | 事件粒度、trace 设计、因果标签、symptom 与 first error 区分。 |
+| RLM / recursive context | 递归分解树和局部上下文 | 任务可通过 inspect / decompose / recursive call 逐步局部化。 | 递归协议、上下文管理、子问题边界、合并错误。 |
+| generated analyzer | 临时任务专用程序或诊断器 | 模型能为当前任务生成有效导航器或分析器。 | 程序生成、验证、运行成本、过拟合当前任务。 |
+| TapeWalker / active foveated access | workspace topology 与在线局部观察轨迹 | 无可靠专用 resolver 时，仍可用稳定局部指令和可导航结构逐步逼近目标。 | 起点、方向信号、错误恢复、观察预算、长度外推。 |
+
+Vector resolver 的关键不是“高维 ANN 不可能”，而是它押注一组很强的联动条件：
+
+> 语义可被投影成可近邻化几何；点集或索引图在目标分布上具有可导航性；近似召回错误可由 rerank、LLM、多轮检索、fallback 或下游任务容忍。
+
+这里有一个重要攻击：
+
+> 如果使用 cosine、L2、inner product 这类 cheap metric 作为低成本导航力场，语义相关性可能不足以被稳定表达，尤其在高维、距离集中、hubness 或任务语义细粒度变化时；如果改用 cross-encoder、LLM judge、任务专用 scoring function 这类智能度量，每次比较本身就接近一次复杂智能计算，vector resolver 的低成本优势会被削弱，并退向 semantic analyzer / reranker / agentic search。
+
+换句话说，vector retrieval 的困难没有消失，而是在 cheap metric、embedding model、ANN index、reranker 和下游容错之间被重新分摊。若 cheap metric 足够好，它是强 resolver；若 cheap metric 不够好，就必须引入更智能、更昂贵的比较或多轮修正，此时它已经接近广义在线导航系统，而不是单纯低成本检索。
+
+HNSW 这类系统不是“无导航”的检索。相反，它通过分层可导航小世界图在 embedding space 中进行近似导航。这与 TapeWalker 的区别是：
+
+- HNSW 把可导航结构压进 embedding metric 与离线索引图。
+- TapeWalker 把可导航结构留在 workspace / trace / text / topology view 中，并让模型在线导航。
+
+因此，控制反馈线不应写成 “TapeWalker vs resolver”，而应写成：
+
+> 导航结构应该被预编码进专用 resolver，还是显式暴露成可学习、可回放、可纠偏的 workspace interaction？
+
+### 人类可导航性类比
+
+人类的强处不只是“序关系”。空间连续性、物体恒常性、因果 / 物理先验、周边视觉、运动控制闭环和长期世界模型，都在广义上为导航提供结构。
+
+可以把这些能力分层理解：
+
+| 机制 | 对导航的贡献 | 边界 |
+| --- | --- | --- |
+| 空间连续性 | 让位置、方向、距离和局部移动有稳定意义。 | 是 topology / geometry，不等于完整智能。 |
+| 周边视觉 | 在低带宽下提供方向信号，指导下一次 fixation / zoom / move。 | 是 observation layer，不应被直接等同于 resolver。 |
+| 物体恒常性 | 让不可见对象仍可被追踪和重新定位。 | 是状态估计 / memory，不是移动动作本身。 |
+| 因果 / 物理先验 | 预测动作后果、错误传播和可恢复路径。 | 是 transition model，会显著改变导航策略。 |
+| 运动控制闭环 | 把观察、行动和反馈连成稳定循环。 | 是执行与控制层，不是单纯寻址。 |
+| 长期 world model | 维护跨时间的地图、对象、目标和信念状态。 | 是内部模型层，可能替代部分外部 workspace 导航。 |
+
+因此，更稳的类比是：
+
+> 人类利用现实世界赠与的大量可导航结构，使局部观察和局部行动变得高效；但这些赠与不应全部压成“序关系”，也不应全部并入狭义 TapeWalker。它们更像广义可导航 workspace 的结构、传感、状态估计和转移模型。
+
+这对控制反馈线的启发是：TapeWalker 的序关系只是最小 topology prior。若要走向更强通用性，研究对象应扩展为“稳定局部状态指令集如何作用在多种可导航 workspace 上”，而不是把人的全部智能机制都解释成线性扫描。
 
 ### Noisy Directional Access
 

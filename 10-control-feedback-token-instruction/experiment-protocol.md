@@ -355,6 +355,18 @@ step 157: exception is downstream symptom
 - first error 往往没有稳定关键词，不能总被 grep 或 BM25 吃掉。
 - 它能同时区分 B-only、A+B、TapeWalker policy 和 strong analyzer baseline。
 
+第一批 trace-local 样本还应记录不同导航信号是否存在，否则 resolver 胜负无法解释：
+
+```text
+lexical_signal        # 错误点是否有稳定关键词 / error string / tool name
+embedding_signal      # query 与错误区间是否可被语义 embedding 近邻化
+topology_signal       # prev/next、parent/child、checkpoint、call chain 是否指向错误区间
+local_direction_signal # 局部窗口是否能判断目标在前/后、内/外或更粗 bucket
+analyzer_signal       # generated analyzer 是否能构造专用诊断规则
+```
+
+这些字段不是给 B0 的额外输入，而是用于事后解释不同 resolver / policy 为什么赢或输。若某个任务只有 lexical / embedding signal，而没有 local direction signal，它更适合检验 BM25 / vector resolver，不适合支撑 TapeWalker 的 active foveated 主张。
+
 ### First-Error 标签协议
 
 first-error 标注必须防止实验变成标注争议。
@@ -447,6 +459,17 @@ B 的强基线设计应参考 [[10-control-feedback-token-instruction/reference-
 B 要证明的是：
 
 > 在 resolver 能力相近时，统一局部状态访问接口是否让控制、纠偏、学习或成本结构更好。
+
+这些强基线的区别不只是实现不同，而是把可导航性放在不同地方：
+
+- BM25 把导航结构放在词项空间和倒排索引中。
+- vector / ANN 把导航结构放在 embedding space 和近似索引图中。
+- SQL / LSP 把导航结构放在 schema、key、AST、符号图或静态语义中。
+- RLM 把导航结构放在递归分解树和局部上下文中。
+- generated analyzer 把导航结构临时生成成任务专用程序。
+- TapeWalker 把导航结构保留在 workspace / trace / text topology 中，由模型在线访问。
+
+因此，B 实验必须报告“可导航性被放在哪里”，不能只报告哪种 resolver 最终成功。
 
 ### B2 / TapeWalker 位置
 
@@ -699,7 +722,9 @@ Pareto 弱合流：
 - 一份 2x2 对照协议。
 - 一份实验矩阵，明确 substrate / access mode / resolver / reader / policy / overview / A variable。
 - 一份 selector / resolver / reader 拆分说明。
+- 一份 resolver 谱系与可导航性放置表。
 - 一份 trace-local first-error 标签协议。
+- 一份 trace-local 样本信号记录模板，至少覆盖 lexical / embedding / topology / local-direction / analyzer signal。
 - 一份 dynamic workspace recovery 是否进入主线的定义草案。
 - 一份 workspace 粒度消融表。
 - 一份成本账本模板。
