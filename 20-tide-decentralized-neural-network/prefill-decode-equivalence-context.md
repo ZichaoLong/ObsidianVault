@@ -196,6 +196,158 @@ flowchart LR
 
 如果后续 TIDE 把这些内容 flatten 成“一张图 + 同质节点 + 同质边 + 一个普通消息传递循环”，就会丢掉 `lh` 当前最重要的结构语义。TIDE 的目标不应是复刻 C++ Connectome 的类型体系，而应抽象出足以承载这些角色、相位和生命周期的 runtime contract。
 
+### 复刻 C++ Connectome 的抽象边界
+
+可以把 `input cortex`、`output cortex` 与 bridge 合并为一张统一 graph，但这张 graph 不能是普通同质 graph。更稳的抽象是：
+
+```text
+RoleAwareGraphSpec
+  = typed nodes
+  + typed edges
+  + typed state slots
+  + phase-aware execution plan
+```
+
+其中 role-aware 可以同时作用于 node 与 edge。
+
+Node role 至少应能表达：
+
+- `cortex = input | output`
+- `local_id`
+- `level / hub / lead_point / local_point`
+- `input_anchor = node 0`
+- `readout_anchor = output node 0`
+- `chal_config = input_chal | output_chal`
+- `state_namespace = ichs | ochs`
+- `selector_namespace = iselector | oselector`
+
+Edge role 至少应能表达：
+
+- `input_intra`
+- `output_intra`
+- `io_bridge`
+- `oi_bridge`
+- `external_input`
+- `readout`
+
+但 node / edge 标签只表达静态结构，不足以完整复刻行为。完整语义还需要 phase-aware execution，也就是每个 phase 明确：
+
+- 本阶段运行哪些 role 的 node / edge / module。
+- 本阶段读取哪个时刻的状态。
+- 本阶段写入哪里。
+- 写入结果对哪些后续阶段可见。
+- 本阶段允许哪些 side effects，例如 hidden decay、KV append、selector count update、hidden clear。
+
+因此，`phase` 的核心不是 enum 标签，而是：
+
+```text
+barrier + visibility + commit order
+```
+
+一个更接近 TIDE 的抽象可以写成：
+
+```text
+ExecutionPhaseSpec {
+  role_filter
+  read_view
+  write_target
+  commit_policy
+  side_effect_policy
+}
+```
+
+对应到当前 C++ Connectome，一个 internal tick 的语义可近似表达为：
+
+```text
+old iacts, old oacts
+old ichs, old ochs
+old iselector, old oselector
+
+phase oibridge:
+  read:
+    - state.oacts@tick_start
+  write:
+    - inbox.input_extra@staged
+  commit:
+    - visible_to.input_cortex_update
+
+phase external_input:
+  condition:
+    - only first internal tick of the external token step
+  read:
+    - token embedding
+  write:
+    - inbox.input_extra[node 0]@staged
+  commit:
+    - visible_to.input_cortex_update
+
+phase iobridge:
+  read:
+    - state.iacts@tick_start
+  write:
+    - inbox.output_extra@staged
+  commit:
+    - visible_to.output_cortex_update
+
+phase input_cortex_update:
+  read:
+    - state.iacts@tick_start
+    - inbox.input_extra@committed
+    - state.ichs
+    - state.iselector
+  write:
+    - state.iacts@next
+    - state.ichs@updated
+    - state.iselector@updated
+  side_effects:
+    - CHAL hidden decay / update
+    - selector affectcount / selectcount update
+    - optional hidden clear after selected activation
+  commit:
+    - end_of_phase
+
+phase output_cortex_update:
+  read:
+    - state.oacts@tick_start
+    - inbox.output_extra@committed
+    - state.ochs
+    - state.oselector
+  write:
+    - state.oacts@next
+    - state.ochs@updated
+    - state.oselector@updated
+  side_effects:
+    - CHAL hidden decay / update
+    - selector affectcount / selectcount update
+    - optional hidden clear after selected activation
+  commit:
+    - end_of_phase
+
+phase readout_cache:
+  read:
+    - state.oacts@next[node 0]
+  write:
+    - outputcache.append
+```
+
+这解释了为什么仅有 phase 顺序仍不充分。顺序只是时间骨架；`read_view`、`write_target`、`commit_policy` 与 `side_effect_policy` 才决定可见性语义。
+
+例如，`iobridge` 在当前 C++ Connectome 中读取的是进入本 tick 时的旧 `iacts`，不是 `input_cortex_update` 后的新 `iacts`。如果统一 graph runtime 没有这个 read view 约束，就很容易变成：
+
+```text
+input cortex 更新后立刻影响 output cortex；
+output cortex 更新后又立刻反馈 input cortex。
+```
+
+这会破坏与 C++ Connectome 的等价性。
+
+因此，后续 TIDE 可以采用“物理上统一 graph spec，语义上 role-aware multi-phase runtime”的设计：
+
+- 静态结构合并：一张 `RoleAwareGraphSpec`。
+- 执行语义不扁平化：用 `ExecutionPhaseSpec` 保存 barrier、visibility、commit order。
+- 状态不混用：input/output cortex 仍有独立 state namespace。
+- 控制面不隐藏：selector 与 hidden lifecycle 仍是 runtime contract 的一部分。
+
 ### Python 原型中的图结构动机
 
 `Graph.py` 构造的是分层 hubs / points 图：
