@@ -50,21 +50,153 @@ TIDE 不应被重写成 `lh` 的 C++ 复刻，而应被视为一个统一的 gra
 
 ## `lh` 提供的实现层动机
 
-`~/llm/lh` 是原始 Python/PyTorch 原型加一部分 C++ 化尝试。
+`~/llm/lh` 当前应以 C++ Connectome 为主线理解。Python / PyConnectome 是更早期的原型版，适合回看原始建模动机；C++ Connectome 才是当前已经推进到 runtime、batch hidden、selector 和局部 KV cache 的主要实现。
 
 关键文件包括：
 
+- `~/llm/lh/Connectome/cpp/include/CortexNet.h`
+- `~/llm/lh/Connectome/cpp/src/CortexNet.cpp`
+- `~/llm/lh/Connectome/cpp/include/AccumulateLocal.h`
+- `~/llm/lh/Connectome/cpp/src/AccumulateLocal.cpp`
+- `~/llm/lh/Connectome/cpp/include/BatchHidden.h`
+- `~/llm/lh/Connectome/cpp/include/Hidden.h`
+- `~/llm/lh/Connectome/cpp/include/Selector.h`
+- `~/llm/lh/Connectome/cpp/src/Selector.cpp`
+- `~/llm/lh/Connectome/cpp/include/GraphConfig.h`
+- `~/llm/lh/Connectome/cpp/src/GraphConfig.cpp`
+- `~/llm/lh/Connectome/cpp/include/Adjacency.h`
+- `~/llm/lh/Connectome/cpp/src/Adjacency.cpp`
 - `~/llm/lh/PyConnectome/Graph.py`
 - `~/llm/lh/PyConnectome/Model.py`
 - `~/llm/lh/PyConnectome/CortexNet.py`
 - `~/llm/lh/PyConnectome/AccumulateLocal.py`
 - `~/llm/lh/train.py`
-- `~/llm/lh/Connectome/cpp/include/CortexNet.h`
-- `~/llm/lh/Connectome/cpp/include/AccumulateLocal.h`
-- `~/llm/lh/Connectome/cpp/include/BatchHidden.h`
-- `~/llm/lh/Connectome/cpp/include/Selector.h`
 
-### 图结构
+### C++ Connectome 的总体工作方式
+
+`lh` C++ Connectome 不是一张普通图上的同质 message passing。更准确地说，它是一个 role-aware 的双 cortex 稀疏递归运行时：
+
+- `GraphConfig` 定义层级节点集合，包括 `levelptr`、`hpnums`、`base_num`、`localnum`。
+- `GraphData` 加载四张有向 CSR 图：`inputA`、`outputA`、`ioA`、`oiA`。
+- `inputA` 与 `outputA` 分别服务 input cortex 与 output cortex。
+- `ioA` 是 input-to-output bridge，`oiA` 是 output-to-input bridge。
+- input / output 两套 cortex 有各自的 activations、hidden、selector 与更新路径。
+- bridge 不只是边类型，而是有执行相位和方向的 runtime 对象。
+
+一个 external token step 中，`IOCortexNet::think` 会把 token embedding 注入 input cortex 的 0 号节点，然后运行 `n_layer` 次 internal tick。每个 tick 调用 `think_single_step`，并缓存每次 output cortex 的 `oacts[0]`，最后由 `Pronounce` 汇聚这些 tick cache 得到 logits。
+
+```mermaid
+flowchart TD
+  Token["token id"] --> WTE["wte embedding"]
+  WTE --> ExtInput["external input to input cortex node 0"]
+
+  subgraph Step["one external token step: IOCortexNet::think"]
+    direction TB
+
+    subgraph Tick["repeat n_layer times: think_single_step"]
+      direction TB
+      OPrev["previous oacts"] --> OIBridge["oibridge: output -> input feedback"]
+      OIBridge --> IInputs["input cortex extra inputs"]
+      ExtInput --> IInputs
+
+      IPrev["previous iacts"] --> IOBridge["iobridge: input -> output forward"]
+      IOBridge --> OInputs["output cortex extra inputs"]
+
+      IPrev --> INet["inet.forward(input cortex update)"]
+      IInputs --> INet
+      IHidden["ichs + iselector"] --> INet
+      INet --> INew["new iacts"]
+
+      OPrev --> ONet["onet.forward(output cortex update)"]
+      OInputs --> ONet
+      OHidden["ochs + oselector"] --> ONet
+      ONet --> ONew["new oacts"]
+    end
+
+    ONew --> Cache["append oacts[0] to outputcache"]
+  end
+
+  Cache --> Pronounce["Pronounce over multi-tick outputcache"]
+  Pronounce --> Logits["logits"]
+```
+
+### 单个 Cortex 的传播与更新
+
+`BaseCortexNet` 提供通用有向传播骨架：
+
+1. 每个 source node 用自己的 signalling module 生成出边信号。
+2. 每条边携带一个 `BatchSignals`。
+3. target node 收集入边信号与 optional extra input。
+4. 收集结果打包为 `BatchCHALInput`，其中 `x` 是非空信号矩阵，`ids` 是 batch-by-local-input 的稀疏 CSR 索引。
+
+`IntraCortexNet` 在这个传播骨架上做节点更新：
+
+1. `affected()` 得到每个 target node 的 `BatchCHALInput`。
+2. 每个 target node 用自己的 CHAL 结合局部输入与 hidden。
+3. `selector.select()` 决定保留哪些激活。
+4. 被保留的激活经过 norm 与 activation。
+5. 如果打开 `clear_after_activation`，被激活样本对应的 hidden 会被清理。
+
+```mermaid
+flowchart LR
+  SourceActs["source activations"] --> Emit["per-source signalling module"]
+  Emit --> EdgeSignals["edge signals"]
+  EdgeSignals --> Receive["target receives incoming edges"]
+  Extra["extra inputs from bridge or token"] --> Receive
+  Receive --> Gather["BatchCHALInput: x + sparse ids"]
+  Gather --> CHAL["CHAL + local hidden"]
+  Hidden["node hidden / local KV cache"] --> CHAL
+  CHAL --> Candidates["candidate target activations"]
+  Candidates --> Selector["selector.select"]
+  Selector --> Post["norm + activation"]
+  Post --> NewActs["new cortex activations"]
+  Post --> Clear["optional hidden clear"]
+```
+
+### CHAL 与局部记忆
+
+`AccumulateLocal` 是节点局部更新的核心。当前主要有两类 hidden：
+
+- `TensorHidden`：add 型累积状态。
+- `KVHidden`：attention 型局部 KV cache。
+
+`Attention` 型 CHAL 的语义是：
+
+1. 对本轮局部输入生成 Q/K/V。
+2. 将 K/V append 到该节点自己的 `KVHidden`。
+3. 用 Q attend 该节点的局部历史 KV。
+4. 通过 confluence 把局部输入维度压回一个输出向量。
+5. 再经过 projection 输出节点激活。
+
+这说明 `lh` 的 memory 不是全局 KV cache，而是每个节点自己维护局部历史。这个生命周期是架构语义的一部分，不应在 TIDE 中退化为普通 tensor buffer。
+
+### Selector 的层级局部语义
+
+`NaiveSelector` 不是一个通用 top-k 层，而是显式依赖 `GraphConfig` 的层级和局部组：
+
+- `s` 之前的 hub 节点，只要被影响就保留激活。
+- 底层节点按 `base_num` 个 base hub 分组。
+- 每个局部组包含 `localnum` 个 point；如果 `with_lead_point=true`，还包含一个 lead point。
+- 每个局部组按 `selectnum` 保留少量激活。
+- 选择优先级结合了 `selectcount`、`affectcount`、signal norm 和 index tie-break。
+
+因此 selector 本身带有运行时历史，影响后续激活路径。它不是可以随意藏进 node kernel 的纯函数；TIDE 如果要承载 LH role-aware 语义，必须把 selector 作为 runtime 控制面的一部分。
+
+### Role-aware 的准确含义
+
+这里的 role-aware 不只是节点或边带标签，而是 runtime 必须显式保留以下角色与相位：
+
+- `input cortex` 与 `output cortex` 是两套状态空间，不是一张普通图的两个区域。
+- `inputA`、`outputA`、`ioA`、`oiA` 不是同质边集合。
+- `oibridge` 与 `iobridge` 有方向，也有调用顺序。
+- token embedding 只作为 external input 注入 input cortex 的 0 号节点。
+- readout 只读取 output cortex 的指定输出状态，并且当前实现读的是多 internal tick 的 `oacts[0]` cache。
+- hub、lead point、local point 的层级角色会影响 selector。
+- hidden 的 decay、clear、append、cache layout 与 selector history 一起构成运行时状态。
+
+如果后续 TIDE 把这些内容 flatten 成“一张图 + 同质节点 + 同质边 + 一个普通消息传递循环”，就会丢掉 `lh` 当前最重要的结构语义。TIDE 的目标不应是复刻 C++ Connectome 的类型体系，而应抽象出足以承载这些角色、相位和生命周期的 runtime contract。
+
+### Python 原型中的图结构动机
 
 `Graph.py` 构造的是分层 hubs / points 图：
 
@@ -84,7 +216,9 @@ TIDE 不应被重写成 `lh` 的 C++ 复刻，而应被视为一个统一的 gra
 - input / output 两套 cortex 不是同一张普通图。
 - bridge 拓扑有角色和方向。
 
-### 双 cortex 与 bridge phase
+这些内容适合用来理解 `lh` 的原始动机，但当前主线语义应以 C++ Connectome 为准。
+
+### Python 原型中的双 cortex 与 bridge phase
 
 `Model.py` 中的 `IOCortexNet.forward_single_step` 明确包含四段：
 
@@ -98,12 +232,14 @@ TIDE 不应被重写成 `lh` 的 C++ 复刻，而应被视为一个统一的 gra
 这说明 `lh` 的 internal tick 不是普通 Transformer layer 的简单替代，而是有相位结构：
 
 - feedback bridge。
-- input cortex update。
 - forward bridge。
+- input cortex update。
 - output cortex update。
 - temporal readout。
 
-### selector 与 local hidden
+当前 C++ Connectome 的关键点是：bridge 既有方向，也有相位；`oibridge` 与 `iobridge` 都在 cortex update 前生成 extra inputs，然后 `inet` 和 `onet` 分别更新各自 cortex。因此，后续 TIDE 抽象应保存“bridge phase + cortex update phase”的语义，而不是只保存四张 adjacency。
+
+### Python 原型中的 selector 与 local hidden
 
 `CortexNet.py` 中的 `IntraCortexNet.select` 是 `lh` 的重要语义来源：
 
@@ -126,13 +262,14 @@ attention 型 local hidden 的工作方式是：
 
 这说明 `lh` 里每个节点拥有自己的局部记忆，局部记忆的生命周期是架构语义，而不是普通 tensor buffer。
 
-### 原型局限
+### 当前实现局限
 
 `lh` 当前不应直接作为后续 runtime 蓝图：
 
-- Python 原型大量使用 object array 和 per-node / per-edge loop。
+- Python 原型大量使用 object array 和 per-node / per-edge loop，只适合保留建模直觉。
 - `train.py` 是逐 token 串行训练，没有真正 sequence-parallel prefill。
-- C++ 版本已经引入 batch hidden、KVHidden、selector、多 batch 加速，但仍围绕 Connectome 专用类型体系展开。
+- C++ Connectome 已经是当前主线实现，并引入 batch hidden、KVHidden、selector、多 batch 加速，但仍围绕 Connectome 专用类型体系展开。
+- C++ Connectome 当前保留了 role-aware 语义，但还没有直接给出 strict `prefill = decode fold` 等价性。
 
 因此，后续应保留 `lh` 的语义动机，不应复刻它的执行组织。
 
