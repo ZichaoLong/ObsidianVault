@@ -348,6 +348,53 @@ output cortex 更新后又立刻反馈 input cortex。
 - 状态不混用：input/output cortex 仍有独立 state namespace。
 - 控制面不隐藏：selector 与 hidden lifecycle 仍是 runtime contract 的一部分。
 
+### 当前 C++ 对齐实现记录
+
+当前 `~/llm/tide` 已按上述边界实现一版轻量 C++/LibTorch 对齐原型。它不追求复刻 `tide.old` 的完整 runtime，也不直接复制 `lh` C++ Connectome，而是先固定 LH role-aware 语义中最关键的结构：
+
+- `RoleAwareGraphSpec`：物理统一图，保留 input/output cortex、bridge、anchor、node role、edge role 与 hierarchy。
+- `ExecutionPhaseSpec`：显式描述 phase 的 active roles、read view、write target、commit policy 与 side-effect 边界。
+- `LhPhaseWorkspace`：每个 token 的短期 phase workspace，承载 staged input extras、staged output extras 与 multi-tick readout cache。
+- `LhRuntimeState`：长期运行时状态，包含 input/output activations、per-node memories、selectors、pronounce memory、external step index 与 phase event log。
+
+当前 `think()` 已不再是单个硬编码流程，而是由 LH phase schedule 驱动：
+
+```text
+for tick in internal_ticks:
+  oibridge
+  external_input  # only tick 0
+  iobridge
+  input_cortex_update
+  output_cortex_update
+  readout_cache
+pronounce
+```
+
+这一步完成的是 graph / role / phase / state 语义对齐，不是数值等价。尚未完成的部分包括：
+
+- LH 参数名到 Tide 参数名的 state-dict 映射。
+- `BatchPtrKVHidden` 的 packed / cached / cross-batch 模式。
+- add 型 `TensorHidden`。
+- selector tensor path 与全部 tie-breaking 细节。
+- device affinity、CUDA stream 与 graph node placement。
+- 与原 LH C++ 的 per-phase golden test。
+
+因此，当前实现可以作为后续 prefill/decode 等价性讨论的 reference runtime，但还不能作为“已与 LH 数值完全对齐”的证据。
+
+当前机器上也已经重新编译出 native ARM 版 `lh` C++ Connectome：
+
+```text
+/home/zlong/llm/lh/Connectome/cpp/build-native/libConnectome.so
+```
+
+`~/llm/tide` 中的 `tide_lh_native_link_smoke` 会链接这个 native `libConnectome.so`，并做三件事：
+
+- 用 LH `GraphConfig / GraphData` 读取同一份 graph data。
+- 用 Tide `RoleAwareGraphSpec` 读取同一份 graph data。
+- 检查 hierarchy 与四张 CSR 图的内容完全一致，并跑一次 LH `IOCortexNet::think()`，确认 logits shape 与运行时 state 初始化。
+
+这说明当前已经具备后续 per-phase golden test 的基础条件。但它仍不是数值等价：数值等价还需要参数映射、LH/Tide 对应 phase artifact 导出，以及逐相位比较。
+
 ### Python 原型中的图结构动机
 
 `Graph.py` 构造的是分层 hubs / points 图：
