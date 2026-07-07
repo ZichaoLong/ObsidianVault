@@ -9,7 +9,7 @@ tags:
 # TIDE / 去中心化神经网络
 
 > [!summary] 本页定位
-> 本页集中保存 TIDE 线的 [[#TIDE：当前计划与 Defense|目标、计划与防守边界]]，以及 [[#从链表、星型到去中心化 Graph 神经网络|架构动机]]。
+> 本页集中保存 TIDE 线的 [[#TIDE：当前计划与 Defense|目标、计划与防守边界]]，以及 [[#从链表、星型到去中心化 Graph 神经网络|架构动机]]。当前工程架构状态见 [[current-architecture-state]]。
 
 ## 一页版结论
 
@@ -17,6 +17,7 @@ tags:
 - 稀疏性和局部通信是两个不同维度，不能在第一步同时硬化，否则失败原因不可诊断。
 - 当前工程顺序应是 `dense local updates -> block sparse active subgraph -> hard routing -> async updates`。
 - 内外时钟、节点接口、序列并行、batch 并行和节点并行必须作为架构一等公民。
+- 当前 `~/llm/tide` 已收敛到一版 LH role-aware phase runtime 骨架，具体状态见 [[current-architecture-state]]。
 - PyTorch 适合先验证可训练性与接口形状；LibTorch / 自定义算子更适合作为后续性能实现路径。
 
 ## 最小可验证 Demo
@@ -36,6 +37,7 @@ tags:
 | 读者目标 | 建议阅读 |
 | --- | --- |
 | 快速理解目标 | [[#TIDE / 去中心化神经网络：概览]] |
+| 理解当前工程架构 | [[current-architecture-state]] |
 | 判断下一步怎么做 | [[#TIDE：当前计划与 Defense]] |
 | 理解架构动机 | [[#从链表、星型到去中心化 Graph 神经网络]] |
 
@@ -56,6 +58,7 @@ TIDE 是 `Token Inference Decentralized Engine`。当前目标表述：
 - DAG / 有环图训练与推理。
 - PyTorch / LibTorch / 自定义算子路线。
 - TIDE Challenge / Defense。
+- 当前 C++/LibTorch 架构状态：[[current-architecture-state]]。
 
 ---
 
