@@ -21,17 +21,19 @@ tags:
 - 用 `LhPhaseWorkspace` 表达单个 token 内部的 staged messages 与 readout cache。
 - 用 `LhRuntimeState` 表达跨 token 持续存在的 activations、local memories、selectors、pronounce memory 与 phase event log。
 - 能链接 native ARM 版 LH `libConnectome.so`，并验证 LH 与 Tide 读取同一份 graph data 后，hierarchy 与四张 CSR 图完全一致。
+- 已实现中间路线：`LhNativeBackend` 由 Tide phase schedule 驱动，但每个 phase 的数值计算复用 LH native `oibridge / iobridge / inet / onet / pronounce`。
+- 已验证 `LhNativeBackend::think_phase_driven()` 与 LH 原生 `IOCortexNet::think()` 在同参数、连续两个 token 上 logits 一致。
 
 它还没有完成的事情是：
 
 - 还没有 LH 参数名到 Tide 参数名的 state-dict 映射。
 - 还没有逐 phase 导出 artifact 并做数值 golden test。
-- 还没有复刻 LH 的 packed / cached / cross-batch hidden modes。
+- 还没有让 Tide 独立 numeric kernel 复刻 LH 的 packed / cached / cross-batch hidden modes。
 - 还没有把当前 LH-specific runtime 抽成最终通用 TIDE backend / lowering / execution runtime。
 
 因此，当前最准确的判断是：
 
-> TIDE 已经有一版可运行、可测试、可链接 native LH 的 role-aware phase runtime 骨架；当前对齐等级是 graph / role / phase / state-semantics alignment，不是 numeric parity。
+> TIDE 已经有一版可运行、可测试、可链接 native LH 的 role-aware phase runtime 骨架；其中 native phase adapter 已经能数值复刻 LH whole `think()`，但 Tide 自己的独立 numeric kernel 仍未达到 LH numeric parity。
 
 ## 架构分层
 
@@ -54,6 +56,42 @@ flowchart TB
 ```
 
 这张图里的关键点是：当前实现先选择 LH 作为 reference family，用它把 runtime contract 钉住。等 LH 的 graph、phase、state 与数值逐步对齐后，再抽出通用 backend/runtime，而不是一开始就实现一个过重的通用系统。
+
+## 当前中间路线
+
+```mermaid
+flowchart TB
+  Schedule["Tide default_lh_phase_schedule"]
+  Wrapper["LhNativeBackend"]
+  State["LhNativeRuntimeState<br/>LH native acts / hidden / selectors"]
+  OI["LH native oibridge"]
+  IO["LH native iobridge"]
+  INet["LH native inet.forward"]
+  ONet["LH native onet.forward"]
+  Pronounce["LH native pronounce.forward"]
+  Logits["logits"]
+
+  Schedule --> Wrapper
+  Wrapper --> State
+  Wrapper --> OI
+  Wrapper --> IO
+  Wrapper --> INet
+  Wrapper --> ONet
+  Wrapper --> Pronounce
+  OI --> State
+  IO --> State
+  INet --> State
+  ONet --> State
+  Pronounce --> Logits
+```
+
+这条路线不是“直接调用 `IOCortexNet::think()` 了事”，也不是“完全重写 LH kernel”。它的含义是：
+
+- Tide 控制 phase schedule、phase event、external step、internal tick。
+- LH 控制每个 phase 内部的数值 kernel、hidden/KV cache、selector 和原生 state 对象。
+- 测试用同一组参数比较 `IOCortexNet::think()` 与 `LhNativeBackend::think_phase_driven()`，确认 phase adapter 没有改变 LH 语义。
+
+这一步的作用是先证明当前 Tide 架构可以承载 LH C++ 的真实计算过程。后续如果要替换为 Tide 独立 kernel，可以逐个 phase 替换，并用 `LhNativeBackend` 做 golden reference。
 
 ## 核心对象
 
@@ -147,9 +185,11 @@ flowchart TB
   T1["tide_lh_role_aware_smoke<br/>tiny graph + phase events + logits shape"]
   T2["tide_lh_graph_data_smoke<br/>load LH graph-data/small-cfg-bytes"]
   T3["tide_lh_native_link_smoke<br/>link native LH + exact graph equality + LH think"]
+  T4["tide_lh_native_phase_adapter_smoke<br/>Tide phase schedule + LH native kernels == LH think"]
 
   T1 --> T2
   T2 --> T3
+  T3 --> T4
 ```
 
 `tide_lh_native_link_smoke` 目前确认：
@@ -159,13 +199,20 @@ flowchart TB
 - 一致性不是只看 shape，而是检查 hierarchy 与 CSR `indptr / indices / edge_ids`。
 - LH `IOCortexNet::think()` 能跑一轮，并产出期望 logits shape。
 
+`tide_lh_native_phase_adapter_smoke` 目前确认：
+
+- 两个 native backend 拷贝同一组参数。
+- 一个 backend 直接调用 LH whole `IOCortexNet::think()`。
+- 另一个 backend 按 Tide `default_lh_phase_schedule()` 分 phase 调 LH 原生组件。
+- 连续两个 token 的 logits `allclose`，phase event schedule 也符合预期。
+
 当前还没有确认：
 
-- 同一参数下 Tide 与 LH 的 bridge 输出一致。
-- 同一参数下 Tide 与 LH 的 cortex candidate activations 一致。
-- 同一参数下 Tide 与 LH 的 selector 输出一致。
-- 同一参数下 Tide 与 LH 的 local hidden / KV cache 更新一致。
-- 同一参数下最终 logits 一致。
+- Tide 独立 bridge kernel 与 LH bridge 输出一致。
+- Tide 独立 cortex candidate activation 与 LH 一致。
+- Tide 独立 selector 输出与 LH 一致。
+- Tide 独立 local hidden / KV cache 更新与 LH 一致。
+- Tide 独立 pronounce 与最终 logits 与 LH 一致。
 
 ## 与 `tide.old` 的关系
 
