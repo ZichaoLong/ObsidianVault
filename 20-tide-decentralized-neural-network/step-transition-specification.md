@@ -258,6 +258,232 @@ logits = Readout(State)
 - 可能丢掉 LH 中某些为局部通信、超稀疏、selector 历史设计的机制。
 - 需要重新验证其表达力、训练稳定性与性能价值。
 
+## 从分支 B 逐层逼近 LH
+
+后续推进可以从分支 B 出发，逐步引入 LH 中的要素。这样做的目的不是预设 LH 一定正确，而是让每个新增机制都被单独审视：它到底新增了什么状态、什么临时工作区、什么调度约束，以及它对 `prefill = decode fold` 和高性能并行 prefill 有何影响。
+
+### B0：activation-only graph recurrent step
+
+最小模型：
+
+```text
+State:
+  activation[node]
+
+Workspace:
+  messages
+
+Step(input_token, State):
+  State.activation[input_node] = Embed(input_token)
+
+  for round in 0..R-1:
+    Workspace.messages = EdgeKernel(Graph, State.activation)
+    next_activation = NodeKernel(Graph, State.activation, Workspace.messages)
+    State.activation = next_activation
+
+  logits = Readout(State.activation[output_node])
+  return logits, State
+```
+
+如果 `Prefill` 定义为逐 token 调用 `Step`，则 `prefill = decode fold` 由定义成立。
+
+这一层的价值是给出最干净的正确性基准，但它尚未提供真正 sequence-parallel prefill；高性能 prefill 仍需证明 `forward_chunk == Step fold`。
+
+### B1：加入 node memory
+
+新增：
+
+```text
+State:
+  activation[node]
+  memory[node]
+```
+
+`NodeKernel` 变成：
+
+```text
+NodeKernel(messages, activation, memory_before)
+  -> activation_delta, memory_after
+```
+
+只要 memory 按 token 顺序更新，`prefill = decode fold` 仍然直接成立。
+
+风险是高性能 chunk prefill：如果一次性处理多个 token，必须保证 token `t` 的 node update 不能读到 token `t+1` 写入的 memory。
+
+### B2：加入 typed edge 与 mailbox
+
+新增：
+
+```text
+Graph:
+  typed edge roles
+
+Workspace:
+  mailbox[node]
+```
+
+edge kernel 从“直接生成 messages”变成：
+
+```text
+EdgeKernel(source_activation, edge_role)
+  -> mailbox[target_node]
+```
+
+这一层仍然容易保持 `prefill = decode fold`，前提是 mailbox 是当前 step / 当前 round 的临时对象，不能跨 token 持久存在。
+
+### B3：加入 internal rounds 和 phase schedule
+
+新增：
+
+```text
+Schedule:
+  ordered phases
+  read_scope
+  write_scope
+  commit timing
+```
+
+这是从普通 graph recurrent step 走向 LH-like runtime 的关键一步。
+
+`Step` 不再只是：
+
+```text
+messages -> node_update
+```
+
+而是：
+
+```text
+for internal_round:
+  for phase in Schedule:
+    view = read(State, Workspace, phase.read_scope)
+    delta = Kernel(view)
+    commit(delta, phase.write_scope)
+```
+
+只要 phase schedule 在 prefill 和 decode 中完全一致，`prefill = decode fold` 仍可由 step 等价推出。
+
+高性能并行 prefill 的风险在于跨 phase 或跨 token 重排。允许的优化应主要发生在同一 phase 内，而不是改变 phase barrier。
+
+### B4：加入 selector / controller state
+
+新增：
+
+```text
+State:
+  controller[scope]
+```
+
+selector 不应被藏进普通 node kernel 的内部细节，因为它有历史依赖，并会影响后续 active path。
+
+等价性要求：
+
+```text
+SelectorKernel(candidates, controller_before)
+  -> selected, controller_after
+```
+
+prefill 与 decode 的 selector 更新顺序必须一致。chunk prefill 如果想并行处理多个 token，不能让早期 token 的 selector 决策依赖未来 token 的 candidates 或 controller state。
+
+### B5：加入 readout cache
+
+新增：
+
+```text
+Workspace:
+  readout_cache
+```
+
+readout cache 是当前 token 内跨 internal rounds 累积的临时对象。
+
+这一点非常关键：
+
+- 它不是跨 token 的持久 `State`。
+- 它也不是每个 phase 都可见的普通 message。
+- 它在 token step 结束后被 pronounce 使用，然后应结束生命周期。
+
+如果 readout cache 被错误地跨 token 保留，`prefill = decode fold` 会被破坏。
+
+### B6：加入 pronounce memory
+
+新增：
+
+```text
+State:
+  pronounce_memory
+```
+
+pronounce kernel 变成：
+
+```text
+Pronounce(readout_cache, pronounce_memory_before)
+  -> logits, pronounce_memory_after
+```
+
+它是跨 token 持久状态，因此必须按 token 顺序更新。
+
+这会让高性能 prefill 更难，因为即使 node graph 的一部分可并行，最终 pronounce memory 仍然是 step recurrence 的一部分，除非额外证明它可以 associative scan 或其他等价并行化。
+
+### B7：加入 LH-like input/output roles and bridges
+
+新增：
+
+```text
+Graph:
+  input-role nodes
+  output-role nodes
+  io bridge edges
+  oi bridge edges
+
+State:
+  activation[node_id]
+  memory[node_id]
+  controller[selector_scope]
+```
+
+这一步可以用统一大 graph 表达 input/output 两套 cortex，但仍需要 role、scope 和 phase schedule。
+
+它不能把 LH 简化成普通无类型 graph traversal，因为：
+
+- `ExternalInput` 只写 input anchor。
+- `OiBridge` 与 `IoBridge` 有方向和可见性规则。
+- `InputUpdate` 与 `OutputUpdate` 写不同 role 的 node state。
+- `Readout` 只读 output readout anchor。
+- selector scope 仍然需要区分。
+
+到这一层，已经接近 LH 的 StepTransition 形态。
+
+## 每一层必须回答的问题
+
+逐层推进时，每一层都应回答同一组问题：
+
+1. `State` 新增了什么？
+2. `Workspace` 新增了什么？
+3. `Schedule` 新增了什么？
+4. `Kernel` 的输入输出变成什么？
+5. `prefill = decode fold` 是否仍然由 step 定义成立？
+6. 如果做高性能并行 prefill，能否实现 `forward_chunk == Step fold`？
+7. 为了实现高性能并行 prefill，需要什么 mask、ordering、state materialization、checkpoint 或 scan 结构？
+8. 哪些优化只能在同一 phase 内做，哪些优化会跨 phase 或跨 token 改变语义？
+9. 新增机制是否是局部通信目标下的必要机制，还是 LH 的实现选择？
+
+这组问题本身就是后续文档推进模板。
+
+## 逐层判断
+
+| 层级 | 新增机制 | `prefill = decode fold` | 高性能并行 prefill 风险 |
+| --- | --- | --- | --- |
+| B0 | activation-only graph step | 由定义成立 | 需要证明 chunk 等价于逐 step。 |
+| B1 | node memory | 仍成立 | 不能让 token `t` 读未来 memory。 |
+| B2 | typed edge / mailbox | 仍成立 | mailbox 必须 step-local / round-local。 |
+| B3 | internal rounds / phase schedule | 仍成立 | 不可跨 phase 改 barrier / visibility。 |
+| B4 | selector / controller state | 仍成立但更脆弱 | selector 不能基于未来 token 联合决策。 |
+| B5 | readout cache | 仍成立 | readout cache 必须 token-local。 |
+| B6 | pronounce memory | 仍成立但有 recurrence | 可能需要 scan / checkpoint / sequential update。 |
+| B7 | LH-like input/output roles and bridges | 可成立 | 必须保留 role、scope、phase read-write contract。 |
+
+当前判断：最小分支 B 满足 `prefill = decode fold`，但不自动支持高性能并行 prefill。它的价值是提供一个干净、可理解的正确性基准。真正的研究价值在于逐层引入 LH 机制时，找出哪些机制仍容易保持等价，哪些机制让高性能 prefill 变难。
+
 ## 当前建议
 
 建议先走中间路线：
