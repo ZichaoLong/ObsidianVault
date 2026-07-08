@@ -187,6 +187,551 @@ ReferenceKernel(view, state_slice)
 
 如果每个 kernel 替换都满足上述条件，则整个 `StepTransition` 不变；如果每个 step 的 `StepTransition` 不变，则 `prefill` 与 decode fold 等价。
 
+## 数学化定义一：B0 最小 Graph Runtime
+
+这一节只定义分支 B 的最小版本，不引入 LH 的 phase、selector、readout cache、pronounce memory。
+
+### 定义 1：图与空间
+
+设有向图：
+
+$$
+G=(V,E)
+$$
+
+其中：
+
+$$
+E \subseteq V \times V
+$$
+
+指定输入节点与输出节点：
+
+$$
+i \in V,\quad o \in V
+$$
+
+设：
+
+$$
+X=\text{token/input space}
+$$
+
+$$
+H=\text{node activation space}
+$$
+
+$$
+M=\text{message space}
+$$
+
+$$
+Y=\text{output/logit space}
+$$
+
+### 定义 2：B0 持久状态
+
+B0 只有节点 activation：
+
+$$
+S = h \in H^V
+$$
+
+即每个节点有：
+
+$$
+h_v \in H,\quad v\in V
+$$
+
+没有 node memory、selector、phase state、pronounce memory。
+
+### 定义 3：输入注入
+
+给定 token：
+
+$$
+x_t \in X
+$$
+
+定义输入注入函数：
+
+$$
+\iota: X \to H
+$$
+
+token `t` 开始时：
+
+$$
+h_i^{t,0} = \iota(x_t)
+$$
+
+$$
+h_v^{t,0} = h_v^t,\quad v\neq i
+$$
+
+其中 $h^t$ 是 token `t` 开始前的持久图状态。
+
+### 定义 4：round 内消息传递
+
+对 internal round：
+
+$$
+r=1,\ldots,R
+$$
+
+每条边产生消息：
+
+$$
+m_{u\to v}^{t,r} = \phi_{u\to v}^{r}(h_u^{t,r-1})
+$$
+
+其中：
+
+$$
+\phi_{u\to v}^{r}: H \to M
+$$
+
+节点聚合 incoming messages：
+
+$$
+b_v^{t,r} =
+\operatorname{Agg}_{v}^{r}
+\left(
+  \{m_{u\to v}^{t,r} \mid (u,v)\in E\}
+\right)
+$$
+
+节点更新：
+
+$$
+h_v^{t,r}
+=
+\psi_v^r(h_v^{t,r-1}, b_v^{t,r})
+$$
+
+其中：
+
+$$
+\psi_v^r: H \times \operatorname{Mailbox}(M) \to H
+$$
+
+### 定义 5：输出与状态提交
+
+执行 $R$ 个 round 后：
+
+$$
+y_t = \rho(h_o^{t,R})
+$$
+
+其中：
+
+$$
+\rho: H \to Y
+$$
+
+提交下一 token 的持久状态：
+
+$$
+h^{t+1} = h^{t,R}
+$$
+
+于是 B0 的单步转移定义为：
+
+$$
+T_x: H^V \to Y \times H^V
+$$
+
+$$
+T_x(h^t) = (y_t, h^{t+1})
+$$
+
+### 定义 6：Decode
+
+给定序列：
+
+$$
+x_{0:T} = (x_0,\ldots,x_{T-1})
+$$
+
+decode fold 定义为：
+
+$$
+(y_t, h^{t+1}) = T_{x_t}(h^t),\quad t=0,\ldots,T-1
+$$
+
+记作：
+
+$$
+\operatorname{Decode}_G(x_{0:T}, h^0)
+=
+(y_{0:T}, h^T)
+$$
+
+### 定义 7：Prefill
+
+B0 中最保守的 prefill 定义为同一个单步转移的 fold：
+
+$$
+\operatorname{Prefill}_G(x_{0:T}, h^0)
+:=
+\operatorname{fold}_{t=0}^{T-1}
+T_{x_t}(h^t)
+$$
+
+因此：
+
+$$
+\operatorname{Prefill}_G(x_{0:T}, h^0)
+=
+\operatorname{Decode}_G(x_{0:T}, h^0)
+$$
+
+这是定义性等价。
+
+### 定理 1：B0 的 prefill / decode fold 等价
+
+若 $\operatorname{Prefill}_G$ 被定义为按 token 顺序应用同一个 $T_x$，则对任意 $x_{0:T}$ 与 $h^0$：
+
+$$
+\operatorname{Prefill}_G(x_{0:T}, h^0)
+=
+\operatorname{Decode}_G(x_{0:T}, h^0)
+$$
+
+证明：
+
+对序列长度 $T$ 归纳。
+
+当 $T=0$ 时，二者都返回空输出与初始状态 $h^0$。
+
+假设长度 $T$ 成立。长度 $T+1$ 时，前 $T$ 个 token 由归纳假设得到相同的 $y_{0:T}$ 与 $h^T$。第 $T$ 个 token 二者都计算：
+
+$$
+(y_T,h^{T+1}) = T_{x_T}(h^T)
+$$
+
+因此长度 $T+1$ 也成立。
+
+证毕。
+
+### B0 的边界
+
+定理 1 只说明：
+
+$$
+\text{prefill} = \text{sequential decode fold}
+$$
+
+它不说明存在高性能并行 prefill。
+
+若要定义一个 chunk prefill：
+
+$$
+C_G(x_{0:T}, h^0) \to (y_{0:T}, h^T)
+$$
+
+必须额外证明：
+
+$$
+C_G(x_{0:T}, h^0)
+=
+\operatorname{fold}_{t=0}^{T-1} T_{x_t}(h^t)
+$$
+
+这通常需要额外结构，例如 causal dependency、可结合 scan、可物化中间 state、checkpoint / recompute，或严格的无未来 token 泄漏约束。
+
+## 数学化定义二：带 State / Workspace 的一般 StepTransition
+
+这一节定义可逐步逼近 LH 的一般版本。B0 是它的特例。
+
+### 定义 8：一般持久状态
+
+设一般持久状态空间为：
+
+$$
+\mathcal{S}
+$$
+
+其中一个状态：
+
+$$
+S_t \in \mathcal{S}
+$$
+
+可包含：
+
+$$
+S_t =
+(\text{activation},\text{memory},\text{controller},\text{pronounce memory},\ldots)
+$$
+
+B0 中：
+
+$$
+\mathcal{S}=H^V
+$$
+
+### 定义 9：Workspace
+
+设 step-local workspace 空间为：
+
+$$
+\mathcal{W}
+$$
+
+一个 token step 内的 workspace：
+
+$$
+W_t \in \mathcal{W}
+$$
+
+可包含：
+
+$$
+W_t =
+(\text{mailbox},\text{round messages},\text{readout cache},\ldots)
+$$
+
+workspace 不属于持久状态，除非某个 phase 显式 commit 到 $S$。
+
+### 定义 10：Phase
+
+设一个 phase 为：
+
+$$
+p = (\operatorname{read}_p,\operatorname{kernel}_p,\operatorname{commit}_p)
+$$
+
+其中：
+
+$$
+\operatorname{read}_p: \mathcal{S}\times\mathcal{W} \to \mathcal{V}_p
+$$
+
+读取当前 phase 可见的 view。
+
+$$
+\operatorname{kernel}_p: \mathcal{V}_p \to \Delta_p
+$$
+
+计算 phase delta。
+
+$$
+\operatorname{commit}_p: \mathcal{S}\times\mathcal{W}\times\Delta_p
+\to
+\mathcal{S}\times\mathcal{W}
+$$
+
+将 delta 写入持久 state 或 step-local workspace。
+
+### 定义 11：Schedule
+
+设一个 token step 内的 schedule 为有序 phase 列表：
+
+$$
+\Pi = (p_1,\ldots,p_K)
+$$
+
+如果存在 internal round，可写成：
+
+$$
+\Pi =
+\left(
+  \Pi^1,\ldots,\Pi^R
+\right)
+$$
+
+其中每个：
+
+$$
+\Pi^r = (p_1^r,\ldots,p_{K_r}^r)
+$$
+
+### 定义 12：一般 StepTransition
+
+给定输入 token：
+
+$$
+x_t \in X
+$$
+
+先初始化当前 token workspace：
+
+$$
+W_t^0 = \operatorname{initWorkspace}(x_t,S_t)
+$$
+
+然后按 schedule 依次执行 phase。
+
+令：
+
+$$
+(S_t^{0},W_t^{0})=(S_t,W_t^0)
+$$
+
+对 $k=1,\ldots,K$：
+
+$$
+v_k = \operatorname{read}_{p_k}(S_t^{k-1},W_t^{k-1})
+$$
+
+$$
+\delta_k = \operatorname{kernel}_{p_k}(v_k)
+$$
+
+$$
+(S_t^{k},W_t^{k})
+=
+\operatorname{commit}_{p_k}(S_t^{k-1},W_t^{k-1},\delta_k)
+$$
+
+最后：
+
+$$
+(y_t,S_{t+1})
+=
+\operatorname{finalize}(S_t^{K},W_t^{K})
+$$
+
+定义：
+
+$$
+T_x(S_t) = (y_t,S_{t+1})
+$$
+
+### 定理 2：一般 StepTransition 的 prefill / decode fold 等价
+
+若：
+
+$$
+\operatorname{Prefill}(x_{0:T},S_0)
+$$
+
+被定义为按 token 顺序应用同一个一般 StepTransition：
+
+$$
+(y_t,S_{t+1})=T_{x_t}(S_t)
+$$
+
+则：
+
+$$
+\operatorname{Prefill}(x_{0:T},S_0)
+=
+\operatorname{Decode}(x_{0:T},S_0)
+$$
+
+证明同定理 1，对 token 长度归纳。
+
+## 数学化定义三：优化 kernel 的模拟关系
+
+性能优化通常会改变内部表示，例如 reference layout 与 packed / crossbatch layout 不同。因此需要定义状态等价关系。
+
+### 定义 13：状态等价
+
+设 reference state 空间为 $\mathcal{S}$，optimized state 空间为 $\widehat{\mathcal{S}}$。
+
+定义状态等价关系：
+
+$$
+S \sim \widehat{S}
+$$
+
+表示二者在语义上代表同一个运行时状态。
+
+例如：
+
+- per-sample KV list 与 batch KV cache 表示同一组 KV。
+- `SignalVec` 与 packed active rows 表示同一组 activation。
+- vector selector count 与 tensor selector count 表示同一组 controller state。
+
+### 定义 14：step 模拟
+
+设 reference step 为：
+
+$$
+T_x:\mathcal{S}\to Y\times\mathcal{S}
+$$
+
+optimized step 为：
+
+$$
+\widehat{T}_x:\widehat{\mathcal{S}}\to Y\times\widehat{\mathcal{S}}
+$$
+
+如果对任意 $x$、$S$、$\widehat{S}$，都有：
+
+$$
+S\sim\widehat{S}
+\Rightarrow
+\begin{cases}
+T_x(S)=(y,S') \\
+\widehat{T}_x(\widehat{S})=(\widehat{y},\widehat{S}') \\
+y=\widehat{y} \\
+S'\sim\widehat{S}'
+\end{cases}
+$$
+
+则称 $\widehat{T}_x$ 模拟 $T_x$。
+
+在纯数学定义中使用精确等号。工程实现中，如果涉及浮点重排、packed / crossbatch fusion 或 backend lowering，可将 $y=\widehat{y}$ 替换为预先声明的数值容差关系，例如 `allclose`，但状态语义仍应通过明确的 $S'\sim\widehat{S}'$ 给出。
+
+### 定理 3：step 模拟推出序列级等价
+
+若初始状态：
+
+$$
+S_0 \sim \widehat{S}_0
+$$
+
+且对所有 token $x_t$，$\widehat{T}_{x_t}$ 模拟 $T_{x_t}$，则对任意序列 $x_{0:T}$：
+
+$$
+y_{0:T}=\widehat{y}_{0:T}
+$$
+
+且：
+
+$$
+S_T \sim \widehat{S}_T
+$$
+
+证明：
+
+对 token 位置 $t$ 归纳。
+
+当 $t=0$ 时，由前提 $S_0\sim\widehat{S}_0$。第一个 step 由模拟定义得到 $y_0=\widehat{y}_0$ 且 $S_1\sim\widehat{S}_1$。
+
+假设 $t$ 前状态等价，即 $S_t\sim\widehat{S}_t$。由 step 模拟定义可得：
+
+$$
+y_t=\widehat{y}_t,\quad S_{t+1}\sim\widehat{S}_{t+1}
+$$
+
+因此对所有 token 成立。
+
+证毕。
+
+### 推论：kernel 等价的证明路线
+
+若每个 phase 的 optimized kernel 都保持：
+
+$$
+\operatorname{read\ scope}
+$$
+
+$$
+\operatorname{write\ scope}
+$$
+
+$$
+\operatorname{commit\ timing}
+$$
+
+且每个 optimized phase 在状态等价关系下模拟 reference phase，则 optimized StepTransition 模拟 reference StepTransition。由定理 3，optimized sequence 与 reference sequence 等价。
+
+这就是后续 packed / crossbatch / 并行实现的证明入口。
+
 ## 为什么完整涵盖 LH 可能很难
 
 完整涵盖 LH 并自动得到严格 `prefill / decode` 等价性，大概率需要对 `Graph` 与 `Schedule` 施加强约束。
