@@ -187,7 +187,284 @@ ReferenceKernel(view, state_slice)
 
 如果每个 kernel 替换都满足上述条件，则整个 `StepTransition` 不变；如果每个 step 的 `StepTransition` 不变，则 `prefill` 与 decode fold 等价。
 
-## 数学化定义一：B0 最小 Graph Runtime
+## 三个等价性层次
+
+后续讨论中需要区分三个层次，否则容易把“定义性正确”误认为“高性能 prefill 已经解决”。
+
+### 层次 1：顺序 fold 等价
+
+这是最弱、最干净的语义定义：
+
+$$
+\operatorname{Prefill}(x_{0:T},S_0)
+:=
+\operatorname{fold}_{t=0}^{T-1} T_{x_t}(S_t)
+$$
+
+它只说明 prefill 和 decode 使用同一个 step transition。
+
+### 层次 2：chunk forward 等价
+
+工程上更有用的 prefill 通常不是逐 token 调 `Step`，而是一个 chunk kernel：
+
+$$
+C(x_{0:T},S_0)\to (y_{0:T},S_T)
+$$
+
+此时必须额外证明：
+
+$$
+C(x_{0:T},S_0)
+=
+\operatorname{fold}_{t=0}^{T-1} T_{x_t}(S_t)
+$$
+
+这个证明不由 StepTransition 定义自动给出。
+
+### 层次 3：高性能并行 prefill
+
+如果 `C` 还要并行化 token、batch、node、edge 或 internal round，则还需要证明并行执行不会改变：
+
+- token causality。
+- phase barrier。
+- read visibility。
+- write / commit order。
+- workspace lifetime。
+- persistent state update order。
+
+因此，本页后续所有“prefill = decode”默认指层次 1。只要讨论 `forward_chunk == Step fold` 或 sequence-parallel prefill，就进入层次 2 或层次 3。
+
+## 符号约定：完整 StepTransition 模型
+
+这一节给出承载 LH 或其他复杂 graph runtime 时使用的完整符号集合。它比后面的简化分支 B 更一般。
+
+### 静态结构
+
+设 typed graph 为：
+
+$$
+G=(V,E,\tau_V,\tau_E,A)
+$$
+
+其中：
+
+- $V$ 是 node 集合。
+- $E\subseteq V\times V$ 是 edge 集合。
+- $\tau_V:V\to R_V$ 是 node role。
+- $\tau_E:E\to R_E$ 是 edge role。
+- $A$ 是 anchor 集合，例如 input anchor、readout anchor、bridge anchor。
+
+对 LH-like runtime，$R_V$ 可包含：
+
+$$
+\text{input-cortex},\quad
+\text{output-cortex},\quad
+\text{hub},\quad
+\text{lead-point},\quad
+\text{local-point}
+$$
+
+$R_E$ 可包含：
+
+$$
+\text{input-intra},\quad
+\text{output-intra},\quad
+\text{io-bridge},\quad
+\text{oi-bridge}
+$$
+
+### 持久状态
+
+设持久状态空间为：
+
+$$
+\mathcal{S}
+$$
+
+一个状态可写成带命名空间的 state store：
+
+$$
+S=
+(
+S^{act},
+S^{mem},
+S^{ctrl},
+S^{readout},
+\ldots
+)
+$$
+
+例如：
+
+$$
+S^{act}:V\times N_{act}\to H
+$$
+
+$$
+S^{mem}:V\times N_{mem}\to U
+$$
+
+$$
+S^{ctrl}:C\to Q
+$$
+
+这里 $N_{act}$、$N_{mem}$ 是状态命名空间，$C$ 是 controller / selector scope 集合。对 LH，input activation 与 output activation 可以理解为不同 namespace，而不是同一个普通 activation tensor。
+
+### 临时 Workspace
+
+设 step-local workspace 空间为：
+
+$$
+\mathcal{W}
+$$
+
+workspace 可写成：
+
+$$
+W=
+(
+W^{mailbox},
+W^{message},
+W^{cache},
+W^{artifact},
+\ldots
+)
+$$
+
+其中：
+
+$$
+W^{mailbox}:V\times N_{box}\to B
+$$
+
+$$
+W^{cache}:N_{cache}\to Z
+$$
+
+workspace 的关键约束是生命周期：
+
+$$
+W_t \text{ 只属于 token } t
+$$
+
+除非某个 phase 显式 commit，否则 workspace 内容不能成为 $S_{t+1}$ 的一部分。
+
+### Phase 与 Schedule
+
+一个 phase 定义为：
+
+$$
+p=(R_p,K_p,C_p)
+$$
+
+其中：
+
+$$
+R_p:\mathcal{S}\times\mathcal{W}\to \mathcal{V}_p
+$$
+
+是 read function，决定当前 phase 可见的 view。
+
+$$
+K_p:\mathcal{V}_p\to \Delta_p
+$$
+
+是 kernel function。
+
+$$
+C_p:\mathcal{S}\times\mathcal{W}\times\Delta_p
+\to
+\mathcal{S}\times\mathcal{W}
+$$
+
+是 commit function，决定 delta 写入 state 还是 workspace，以及何时对后续 phase 可见。
+
+一个 token 内的 schedule 是有序列表：
+
+$$
+\Pi=(p_1,\ldots,p_K)
+$$
+
+如果有 internal round：
+
+$$
+\Pi=(\Pi^1,\ldots,\Pi^R),
+\quad
+\Pi^r=(p_1^r,\ldots,p_{K_r}^r)
+$$
+
+### StepTransition
+
+给定输入：
+
+$$
+x_t\in X
+$$
+
+以及 token 开始时的持久状态：
+
+$$
+S_t\in\mathcal{S}
+$$
+
+初始化：
+
+$$
+W_t^{init}=I(x_t,S_t)
+$$
+
+并令：
+
+$$
+(S_t^0,W_t^0)=(S_t,W_t^{init})
+$$
+
+按 schedule 执行：
+
+$$
+v_k=R_{p_k}(S_t^{k-1},W_t^{k-1})
+$$
+
+$$
+\delta_k=K_{p_k}(v_k)
+$$
+
+$$
+(S_t^k,W_t^k)=
+C_{p_k}(S_t^{k-1},W_t^{k-1},\delta_k)
+$$
+
+最后：
+
+$$
+(y_t,S_{t+1})=F(S_t^K,W_t^K)
+$$
+
+其中 $F$ 是 finalize / readout / pronounce。
+
+于是：
+
+$$
+T_x:\mathcal{S}\to Y\times\mathcal{S}
+$$
+
+$$
+T_x(S_t)=(y_t,S_{t+1})
+$$
+
+### 语义不变量
+
+任何优化、融合或 backend lowering 都必须保持这些不变量：
+
+- 同一 token 内 phase 顺序不变，除非能证明重排等价。
+- 每个 phase 的 read view 不变。
+- 每个 phase 的 write target 不变。
+- 每个 delta 的 commit timing 不变。
+- workspace 不跨 token 泄漏。
+- persistent state 只通过声明的 commit function 更新。
+- token `t` 不能读 token `t+1` 的 state、workspace 或 selector decision。
+
+## 数学化定义一：简化分支 B 的最小 Graph Runtime
 
 这一节只定义分支 B 的最小版本，不引入 LH 的 phase、selector、readout cache、pronounce memory。
 
@@ -440,9 +717,374 @@ $$
 
 这通常需要额外结构，例如 causal dependency、可结合 scan、可物化中间 state、checkpoint / recompute，或严格的无未来 token 泄漏约束。
 
+## 数学化定义一-B：简化分支 B 的逐层扩展
+
+这一节把前面的 B0 扩展成一组可逐层增加复杂度的数学对象。它不是 LH 的完整形式化，而是后续研究 `prefill / decode` 等价性时更容易理解的起点。
+
+### B-family 的共同外形
+
+对任意简化 B 模型，都要求存在一个单步转移：
+
+$$
+T_x:S\to Y\times S
+$$
+
+以及一个按 token 顺序运行的序列语义：
+
+$$
+(y_t,S_{t+1})=T_{x_t}(S_t)
+$$
+
+这意味着模型首先是一个 causal recurrent graph runtime。所有新增机制都必须说明自己新增了什么 $S$、什么临时 workspace $W$，以及是否改变 $T_x$。
+
+### B1：加入 node memory
+
+B1 的持久状态为：
+
+$$
+S=(h,\mu)
+$$
+
+其中：
+
+$$
+h\in H^V
+$$
+
+$$
+\mu\in U^V
+$$
+
+$h_v$ 是节点 activation，$\mu_v$ 是节点本地 memory。
+
+边消息可以读取 source node 的 activation 与 memory：
+
+$$
+m_{u\to v}^{t,r}
+=
+\phi_{u\to v}^{r}(h_u^{t,r-1},\mu_u^{t,r-1})
+$$
+
+聚合仍为：
+
+$$
+b_v^{t,r}
+=
+\operatorname{Agg}_v^r
+\left(
+\{m_{u\to v}^{t,r}\mid (u,v)\in E\}
+\right)
+$$
+
+节点更新变成：
+
+$$
+(h_v^{t,r},\mu_v^{t,r})
+=
+\psi_v^r(h_v^{t,r-1},\mu_v^{t,r-1},b_v^{t,r})
+$$
+
+提交：
+
+$$
+S_{t+1}=(h^{t,R},\mu^{t,R})
+$$
+
+若 prefill 仍定义为同一个 $T_x$ 的顺序 fold，则等价性仍由定义成立。
+
+高性能 chunk prefill 的关键约束是：
+
+$$
+\mu^{t,r}\text{ 不可依赖任意 }x_{t'>t}
+$$
+
+也就是 node memory 的写入顺序不能被未来 token 污染。
+
+### B2：加入 typed edges 与 mailbox
+
+B2 增加 edge role：
+
+$$
+\tau_E:E\to R_E
+$$
+
+并把当前 round 的消息放入临时 mailbox：
+
+$$
+W^{t,r}=b^{t,r}\in B^V
+$$
+
+edge kernel 为：
+
+$$
+m_{e}^{t,r}
+=
+\phi_{\tau_E(e)}^r(h_{\operatorname{src}(e)}^{t,r-1},\mu_{\operatorname{src}(e)}^{t,r-1})
+$$
+
+mailbox 聚合为：
+
+$$
+b_v^{t,r}
+=
+\operatorname{Agg}_{v,\tau_E}^r
+\left(
+\{m_e^{t,r}\mid \operatorname{dst}(e)=v\}
+\right)
+$$
+
+节点更新仍为：
+
+$$
+(h_v^{t,r},\mu_v^{t,r})
+=
+\psi_v^r(h_v^{t,r-1},\mu_v^{t,r-1},b_v^{t,r})
+$$
+
+B2 的新增语义不在于改变 recurrence，而在于把 edge role 和 mailbox lifetime 显式化。
+
+关键约束是：
+
+$$
+W^{t,r}\text{ 只能在 token }t\text{ 的 round }r\text{ 或声明的后续 phase 中可见}
+$$
+
+如果 mailbox 被跨 token 复用，或在未声明的 phase 中可见，B2 就不再是原来的 $T_x$。
+
+### B3：加入 phase schedule
+
+B3 不再把一个 round 写成固定的：
+
+```text
+edge kernel -> aggregate -> node update
+```
+
+而是写成 phase 列表：
+
+$$
+\Pi=(p_1,\ldots,p_K)
+$$
+
+持久状态与 workspace 分别为：
+
+$$
+S=(h,\mu,\ldots)
+$$
+
+$$
+W=(mailbox,artifact,\ldots)
+$$
+
+每个 phase：
+
+$$
+p_k=(R_k,K_k,C_k)
+$$
+
+执行：
+
+$$
+v_k=R_k(S^{k-1},W^{k-1})
+$$
+
+$$
+\delta_k=K_k(v_k)
+$$
+
+$$
+(S^k,W^k)=C_k(S^{k-1},W^{k-1},\delta_k)
+$$
+
+B3 的本质是把 barrier、visibility、commit order 从实现细节提升为模型语义。
+
+只要 decode 和 prefill 使用同一个 $\Pi$，顺序 fold 等价仍成立。高性能 prefill 的风险则来自跨 phase 重排：
+
+$$
+K_a;K_b \not\equiv K_b;K_a
+$$
+
+除非能证明二者 read/write scope 不冲突，或者存在显式交换律。
+
+### B4：加入 selector / controller state
+
+B4 增加 controller state：
+
+$$
+q\in Q^C
+$$
+
+完整状态为：
+
+$$
+S=(h,\mu,q)
+$$
+
+selector phase 可写成：
+
+$$
+(a^{t,r},q^{t,r})
+=
+\sigma(c^{t,r},q^{t,r-1})
+$$
+
+其中：
+
+- $c^{t,r}$ 是候选 activation 或候选 node 集合。
+- $a^{t,r}$ 是被选择的 active set。
+- $q$ 是 selector 历史状态，例如 select count、affect count、quota state。
+
+B4 的关键点是：selector 不是纯粹的无状态过滤器，而是会改变未来 active path 的 controller。
+
+因此 chunk prefill 不能把多个 token 的候选集合合并后一次性选择：
+
+$$
+\sigma(c^t,c^{t+1},q^{t-1})
+$$
+
+除非能证明它与顺序执行：
+
+$$
+(a^t,q^t)=\sigma(c^t,q^{t-1})
+$$
+
+$$
+(a^{t+1},q^{t+1})=\sigma(c^{t+1},q^t)
+$$
+
+等价。
+
+### B5：加入 token-local readout cache
+
+B5 增加 token-local cache：
+
+$$
+W^{cache}_t=(z_t^1,\ldots,z_t^R)
+$$
+
+每个 internal round 可追加：
+
+$$
+z_t^r=\chi(S_t^r,W_t^r)
+$$
+
+finalize 读取：
+
+$$
+y_t=\rho(W^{cache}_t,S_t^R)
+$$
+
+关键约束是：
+
+$$
+W^{cache}_t \cap W^{cache}_{t+1}=\varnothing
+$$
+
+readout cache 不是持久状态，不能跨 token 泄漏。若需要跨 token 的读出记忆，应进入 B6。
+
+### B6：加入 pronounce memory
+
+B6 增加跨 token pronounce memory：
+
+$$
+\pi_t\in P
+$$
+
+状态为：
+
+$$
+S_t=(h_t,\mu_t,q_t,\pi_t)
+$$
+
+finalize 变成：
+
+$$
+(y_t,\pi_{t+1})
+=
+\rho(W^{cache}_t,S_t^R,\pi_t)
+$$
+
+这仍满足顺序 fold 等价，但会增加高性能 prefill 的难度。若 $\rho$ 对 $\pi$ 的更新不是可结合 scan，就必须按 token 顺序更新 pronounce memory。
+
+### B7：加入 input/output roles 与 bridge
+
+B7 增加 node role：
+
+$$
+\tau_V:V\to R_V
+$$
+
+并至少区分：
+
+$$
+V=V_{in}\cup V_{out}
+$$
+
+edge role 至少区分：
+
+$$
+E_{in},E_{out},E_{io},E_{oi}
+$$
+
+schedule 变成 LH-like：
+
+$$
+\Pi =
+(
+p_{oi},
+p_{input},
+p_{io},
+p_{in\_update},
+p_{out\_update},
+p_{cache}
+)
+$$
+
+其中必须显式规定：
+
+- $p_{oi}$ 读 output-side 旧状态，写 input-side mailbox。
+- $p_{input}$ 只在 token 的指定时刻写 input anchor。
+- $p_{io}$ 读 input-side 旧状态，写 output-side mailbox。
+- $p_{in\_update}$ 只更新 input-side state namespace。
+- $p_{out\_update}$ 只更新 output-side state namespace。
+- $p_{cache}$ 只读 output readout anchor，写 token-local readout cache。
+
+这一步已经接近 LH，但它仍然是规范模型中的一个实例。它是否等价于 LH C++，还取决于 selector、hidden、KV cache、pronounce 与 tie-breaking 等 kernel 细节是否逐相位对齐。
+
+### 引理：B-family 顺序 fold 等价
+
+对任意 B0-B7 层，只要存在确定的单步转移：
+
+$$
+T_x:S\to Y\times S
+$$
+
+且 prefill 被定义为：
+
+$$
+\operatorname{Prefill}(x_{0:T},S_0)
+=
+\operatorname{fold}_{t=0}^{T-1}T_{x_t}(S_t)
+$$
+
+则：
+
+$$
+\operatorname{Prefill}(x_{0:T},S_0)
+=
+\operatorname{Decode}(x_{0:T},S_0)
+$$
+
+证明仍是对 token 长度归纳。
+
+这个引理的价值是把问题从“所有机制是否天然支持 prefill”转化为：
+
+- 新机制是否仍能定义清楚的 $T_x$？
+- chunk kernel 是否模拟这个 $T_x$ 的 fold？
+- 并行实现是否只改变表示与执行效率，而不改变 $T_x$？
+
 ## 数学化定义二：带 State / Workspace 的一般 StepTransition
 
-这一节定义可逐步逼近 LH 的一般版本。B0 是它的特例。
+这一节是前面“完整 StepTransition 模型”的压缩定理版本，用于后续证明。它不是另起一套模型；B0 是它的特例，B1-B7 则是在其中逐步增加 state、workspace 与 phase 约束。
 
 ### 定义 8：一般持久状态
 
@@ -558,7 +1200,7 @@ $$
 先初始化当前 token workspace：
 
 $$
-W_t^0 = \operatorname{initWorkspace}(x_t,S_t)
+W_t^{init} = \operatorname{initWorkspace}(x_t,S_t)
 $$
 
 然后按 schedule 依次执行 phase。
@@ -566,7 +1208,7 @@ $$
 令：
 
 $$
-(S_t^{0},W_t^{0})=(S_t,W_t^0)
+(S_t^{0},W_t^{0})=(S_t,W_t^{init})
 $$
 
 对 $k=1,\ldots,K$：
