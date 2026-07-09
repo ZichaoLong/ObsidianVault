@@ -541,21 +541,41 @@ $$
 
 4. 给出高性能实现见证：说明 $\mathcal{C}_{\theta,L}$ 可由 matmul、causal mask、parallel prefix / scan、kernel fusion、packed layout 或 backend lowering 等方式实现。高性能实现见证不替代第 3 条的正确性证明。
 
-#### 定义 3.6a：time-expanded causal graph program
+#### 定义 3.6a：logical event DAG program
 
-给定长度 $L\in\mathbb{N}$。令 $\mathcal{O}$ 是有限 operation slot 集合，并给定 token-local strict total order：
-
-$$
-\prec_{\mathcal{O}}
-$$
-
-一个长度为 $L$ 的 time-expanded graph 的节点集合为：
+给定长度 $L\in\mathbb{N}$。令 $\mathcal{EID}_L$ 是有限 logical event id 集合。每个 event id $e\in\mathcal{EID}_L$ 都带有 external token index：
 
 $$
-\mathcal{N}_L\subseteq [L]\times\mathcal{O}
+\tau(e)\in[L]
 $$
 
-若 $n=(t,o)\in\mathcal{N}_L$，则 $t$ 是 token index，$o$ 是该 token 内的 operation slot。
+并给定 logical event order：
+
+$$
+\prec_L
+$$
+
+要求 $\prec_L$ 是 strict total order，并且若 $\tau(e)<\tau(e')$，则 $e\prec_L e'$。也就是说，decode reference 的 logical order 至少按 external token tick 单调；同一 token 内可继续包含 internal round、phase、node、edge、mailbox 等字段。
+
+例如，普通 Transformer 可取：
+
+$$
+e=(t,o)
+$$
+
+其中 $o$ 是 token-local operation slot。LH-like runtime 可取：
+
+$$
+e=(t,r,p,v)
+$$
+
+其中 $t$ 是 external token tick，$r$ 是 internal round tick，$p$ 是 phase，$v$ 是 node 或 edge endpoint。
+
+一个长度为 $L$ 的 logical event graph 的节点集合为：
+
+$$
+\mathcal{N}_L\subseteq \mathcal{EID}_L
+$$
 
 给定有向边集合：
 
@@ -563,12 +583,12 @@ $$
 \mathcal{E}_L\subseteq \mathcal{N}_L\times\mathcal{N}_L
 $$
 
-称 $D_L=(\mathcal{N}_L,\mathcal{E}_L)$ 是 causal time-expanded DAG，当且仅当：
+称 $D_L=(\mathcal{N}_L,\mathcal{E}_L)$ 是 causal logical event DAG，当且仅当：
 
 1. $D_L$ 是有向无环图。
-2. 若 $((t',o'),(t,o))\in\mathcal{E}_L$，则要么 $t'<t$，要么 $t'=t$ 且 $o'\prec_{\mathcal{O}} o$。
+2. 若 $(e',e)\in\mathcal{E}_L$，则 $e'\prec_L e$。
 
-条件 2 表示依赖只来自更早 token，或同一 token 内更早 operation；它排除 future-token dependency。
+条件 2 表示依赖只来自 reference logical order 中更早的 event；由于 $\prec_L$ 至少按 external token tick 单调，它排除 future-token dependency。物理执行可以乱序，但逻辑依赖必须能映射回这个 DAG。
 
 对每个节点 $n\in\mathcal{N}_L$，给定 value space $\mathcal{V}_n$。若 $\operatorname{Pred}(n)$ 是 $n$ 的直接前驱集合，则给定局部 kernel：
 
@@ -583,7 +603,7 @@ $$
 
 这里把输入序列 $x_{0:L}$ 与初始 state $S_0$ 作为 boundary data 传入，是为了统一表达 input injection、position / clock、old KV cache、old SSM state 等边界信息。
 
-还要求每个 $F_n$ 满足 prefix-causal boundary condition。若 $n=(t,o)$，则 $F_n$ 对 $x_{0:L}$ 的依赖只能通过前缀 $x_{0:t+1}$。形式化地说，若两个输入序列 $x_{0:L}$ 与 $\bar{x}_{0:L}$ 满足：
+还要求每个 $F_n$ 满足 prefix-causal boundary condition。若 $\tau(n)=t$，则 $F_n$ 对 $x_{0:L}$ 的依赖只能通过前缀 $x_{0:t+1}$。形式化地说，若两个输入序列 $x_{0:L}$ 与 $\bar{x}_{0:L}$ 满足：
 
 $$
 x_j=\bar{x}_j,\quad j=0,\ldots,t
@@ -618,7 +638,7 @@ $$
 
 以及 time-expanded graph program $\mathcal{P}_L$。
 
-定义 decode order 为先按 token index $t$ 升序，再按 $\prec_{\mathcal{O}}$ 升序排列 $\mathcal{N}_L$ 中的节点。
+定义 decode order 为 $\prec_L$ 限制在 $\mathcal{N}_L$ 上得到的节点顺序。
 
 称 $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding，当且仅当对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$，若按 decode order 计算 $\mathcal{P}_L$ 中所有节点值，并再应用 $G_L$，得到的结果等于：
 
@@ -628,7 +648,7 @@ $$
 
 称 chunk implementation $\mathcal{C}_L$ 是 $\mathcal{P}_L$ 的 graph evaluation，当且仅当对所有 $x_{0:L}$ 与 $S_0$，$\mathcal{C}_L$ 计算同一个 $D_L$、同一组 kernel $(F_n)$ 与同一个 extraction $G_L$，但允许使用任意 topological order、batched evaluation、masked matmul、parallel scan、fusion 或 packed layout，只要每个节点的数学值与 $\mathcal{P}_L$ 中的方程相同。
 
-#### 定理 3.6c：B0 Causal Chunk Theorem
+#### 定理 3.6c：B0 Logical Event DAG Theorem
 
 给定 transition system：
 
@@ -636,7 +656,7 @@ $$
 \mathcal{T}:X\times\mathcal{S}\to Y\times\mathcal{S}
 $$
 
-若对某个 $L\in\mathbb{N}$，存在 causal time-expanded graph program $\mathcal{P}_L$，满足：
+若对某个 $L\in\mathbb{N}$，存在 causal logical event graph program $\mathcal{P}_L$，满足：
 
 1. $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding。
 2. $\mathcal{C}_L$ 是 $\mathcal{P}_L$ 的 graph evaluation。
@@ -653,7 +673,7 @@ $$
 
 证明：
 
-因为 $D_L$ 是 DAG，所以存在 topological order。decode order 是 $D_L$ 的一个 topological order，因为每条边只来自更早 token 或同 token 更早 operation。
+因为 $D_L$ 是 DAG，所以存在 topological order。decode order 是 $D_L$ 的一个 topological order，因为每条边都指向 $\prec_L$ 中更晚的 event。
 
 任取另一个 topological order。对该 order 做归纳。设当前节点为 $n$。它的所有前驱都已在两个 evaluation 中被计算。归纳假设给出所有前驱值相同。由于两个 evaluation 使用同一个 kernel $F_n$、同一个输入 $x_{0:L}$ 与同一个初始状态 $S_0$，当前节点值也相同。
 
@@ -664,6 +684,31 @@ $$
 证毕。
 
 这个定理只证明 correctness。它不声称 $\mathcal{C}_L$ 自动高性能。高性能来自具体 kernel family 的额外结构，例如 token-wise map 的批量化、attention 的 masked matmul / fused attention、affine recurrence 的 parallel scan、有限 layer chain 的逐层批量执行。
+
+#### 备注 3.6d：logical order 与物理到达顺序
+
+定理 3.6c 约束的是 logical dependency order，不是物理执行或消息到达顺序。对一般 graph runtime，特别是 LH-like runtime，可以允许 late-token 的消息在物理上先于 early-token 的消息到达某个 node，只要这些消息带有足够的 logical metadata，例如：
+
+$$
+(\text{token id},\text{internal round id},\text{phase id},\text{source node id})
+$$
+
+并且 node kernel 按 metadata 分桶、排序、mask 或 buffer，最终读取的仍是 reference logical visibility set。
+
+可以保持 correctness 的情况包括：
+
+- message 保留 token / round / phase 等 logical timestamp。
+- mailbox 或 workspace 中的聚合是 tagged collection，后续 kernel 仍可区分不同 logical event 的贡献。
+- 对同一个 state slot 的 commit order 由 $\prec_L$ 或明确的 conflict resolution 规则决定，而不是由物理 arrival order 决定。
+- chunk implementation 虽然乱序执行，但最终每个 logical event 的值与 reference DAG 方程相同。
+
+会破坏 chunk prefill correctness 的情况包括：
+
+- 多个不同 token 或 round 的消息在 node 内被不可逆聚合，且聚合结果丢失 token / round / phase provenance。
+- kernel 的行为依赖 physical first-arrival / race order，而 reference transition 依赖 logical order。
+- late-token 的信息通过无标记聚合影响 early-token 的 event、output 或 state commit。
+
+因此，完整涵盖既有 LH 实现不一定可能。若 LH 某处把同一 tick 收到的多源信号做不可逆、无时间戳的聚合，则 token influence relation 可能被折叠，无法构造与 decode fold 等价的 event DAG。要让 LH-like graph 支持 chunk prefill correctness，需要把聚合改成可追踪的 tagged aggregation，或证明该聚合对所有相关 kernel 是可交换、可结合、且不影响 reference logical visibility。
 
 #### 定理 3.7：token-wise kernel 的 chunk prefill 正确性
 
@@ -1686,7 +1731,7 @@ $$
 
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
 - 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
-- 定理 3.6c 给出一般 B0 Causal Chunk Theorem：若 chunk implementation 计算的是同一个 time-expanded causal DAG、同一组 kernel equation、同一个 output/final-state extraction，则 correctness 成立。
+- 定理 3.6c 给出一般 B0 Logical Event DAG Theorem：若 chunk implementation 计算的是同一个 logical event DAG、同一组 kernel equation、同一个 output/final-state extraction，则 correctness 成立。它允许物理执行乱序，但不允许 logical dependency / visibility / commit order 被打乱。
 - B0 proof gate 先证明 token-wise / FFN、causal attention、affine scan recurrence、linear attention accumulator 以及有限 layer stack 这些主流 kernel family 的 chunk prefill 正确性；在这些结果上，定理 3.14 给出 B0-Transformer chunk prefill 正确性，定理 3.15 给出 B0-Mamba / SSM chunk prefill 正确性。
 - 上述命名定理不推出任意 B0 graph / 任意 B0 kernel 都有高性能 chunk prefill；它们证明的是 Transformer / Mamba 这类主力结构在 B0 中满足 $\mathcal{C}_L=\operatorname{Fold}_{\mathcal{T}}^L$。
 - B0-B6 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
