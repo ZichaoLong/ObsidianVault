@@ -38,7 +38,8 @@ tags:
 | --- | --- |
 | 快速理解目标 | [[#TIDE / 去中心化神经网络：概览]] |
 | 理解当前工程架构 | [[current-architecture-state]] |
-| 理解 prefill / decode 等价性的规范模型 | [[step-transition-specification]] |
+| 理解 prefill / decode 等价性的数学定义 | [[step-transition-mathematical-specification]] |
+| 理解 StepTransition 的实现约束 | [[step-transition-implementation-specification]] |
 | 判断下一步怎么做 | [[#TIDE：当前计划与 Defense]] |
 | 理解架构动机 | [[#从链表、星型到去中心化 Graph 神经网络]] |
 
@@ -57,7 +58,8 @@ TIDE 是 `Token Inference Decentralized Engine`。当前目标表述：
 - 节点接口。
 - 局部通信与稀疏化。
 - DAG / 有环图训练与推理。
-- StepTransition 规范模型与 prefill / decode 等价性：[[step-transition-specification]]。
+- StepTransition 数学规范与 prefill / decode 等价性：[[step-transition-mathematical-specification]]。
+- StepTransition 实现规范与 LH-like runtime 约束：[[step-transition-implementation-specification]]。
 - PyTorch / LibTorch / 自定义算子路线。
 - TIDE Challenge / Defense。
 - 当前 C++/LibTorch 架构状态：[[current-architecture-state]]。
