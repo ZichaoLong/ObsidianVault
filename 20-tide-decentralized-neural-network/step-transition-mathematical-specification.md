@@ -313,6 +313,8 @@ $$
 
 若 $h\in H^V$，则 $h_v$ 表示节点 $v$ 的 activation。
 
+这里的 $H$ 是一个抽象的 per-node step state space。它可以只表示“当前可通信 activation”，也可以被取成更大的结构，把节点私有 cache / recurrent state 一并放入 $h_v$。因此，B0 足够表达许多已知模型的单步 decode 语义；但如果希望把“可通信 activation”和“私有 memory/cache”分开审视，则应进入 B1，把状态写成 $H^V\times U^V$。
+
 ### 定义 3.3：B0 kernels
 
 给定输入注入函数：
@@ -350,6 +352,33 @@ $$
 $$
 \rho:H\to Y
 $$
+
+### B0 与已知架构的直观对应
+
+B0 的作用不是发明一种新 kernel，而是把“一个 token step 内，状态如何沿 graph 被局部 kernel 更新”写成统一形式。许多熟知架构可以被看成 B0 的特例或近似特例。
+
+最简单的 chain graph 可写为：
+
+$$
+V=\{0,\ldots,N\}
+$$
+
+$$
+E=\{(j,j+1)\mid j=0,\ldots,N-1\}
+$$
+
+其中 node $j$ 可代表一个 layer / block，edge message 代表从上一层传到下一层的当前 token activation。
+
+B0 的 round 是同步 message passing。若要用 B0 精确模拟顺序 layer stack，可让 $R$ 至少覆盖链路传播步数，并让未收到有效消息的 node update 近似 identity。若要把“第 1 层执行完再执行第 2 层”的顺序执行语义作为一等公民，更自然的形式是 B3 的 phase schedule。
+
+| 架构组件 | B0 中的对应方式 | `prefill == decode fold` 的来源 |
+| --- | --- | --- |
+| Transformer attention block | $h_v$ 可包含当前 residual activation 与该层 KV cache；$\psi_v^r$ 做 Q/K/V projection、KV append、causal attention、output projection；$m_e^r$ 是传给下一层的 residual stream。 | 标准 causal attention 的 prefill 与逐 token decode 等价，前提是 causal mask、position encoding、KV append order 与数值实现一致。 |
+| Transformer FFN / MLP block | $h_v$ 可只保存当前 activation，或者保存一个平凡状态；$\psi_v^r$ 是 FFN/MLP；$m_e^r$ 是 FFN 后 activation。 | FFN 对 token 位置逐点作用，没有跨 token recurrence；只要输入 activation 一致，prefill 与 decode 逐点一致。 |
+| Mamba / SSM block | $h_v$ 可包含当前 activation 与 SSM recurrent state；$\psi_v^r$ 做 selective state update 与输出；$m_e^r$ 是传给下一层的 activation。 | decode 是 recurrent update；prefill 等价依赖 scan / chunk scan 实现与逐步 recurrence 等价。 |
+| Linear attention block | $h_v$ 可包含当前 activation 与线性 attention 的累积 state，例如 KV accumulator；$\psi_v^r$ 更新 accumulator 并产生当前输出。 | prefill 等价依赖 accumulator 的 causal prefix 更新与逐 token update 等价。 |
+
+这张表的用意是帮助理解符号，而不是声称所有真实实现都应该停留在 B0。B0 可以通过把 $H$ 取得足够大来承载 cache，但这种写法会把 activation、cache、controller state 混在同一个 $h_v$ 中。B1 之后的分层，正是为了把这些内容拆开，分别研究 memory lifecycle、selector/controller、workspace、phase barrier 与 chunk prefill 约束。
 
 ### 定义 3.4：B0 单步 transition
 
