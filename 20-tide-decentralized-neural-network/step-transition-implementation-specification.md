@@ -313,7 +313,7 @@ logits = Readout(State)
 | B0 | full node step state graph | node state 可包含 activation、KV cache、SSM state、linear-attention accumulator；edge emit + node update + readout | 只定义顺序 fold，不自动得到 chunk prefill；cache append / recurrent update 仍需 chunk 等价证明。 |
 | B1 | factorized node state | 把 B0 的 full state 拆成 visible activation + private memory/cache namespace | token `t` 不能读未来 memory/cache；materialized cache 必须等价于逐 token update。 |
 | B2 | typed edge / mailbox | edge role + token-local mailbox | mailbox 必须 step-local / round-local。 |
-| B3 | internal rounds / phase schedule | read/write/commit contract | 不可跨 phase 改 barrier / visibility。 |
+| B3 | runtime phase schedule | input/output/bridge/readout 等大范围阶段的 read/write/commit contract | 不可跨 phase 改 role / direction / barrier / visibility。 |
 | B4 | selector / controller state | selector 作为控制面状态 | selector 不能基于未来 token 联合决策。 |
 | B5 | readout cache | token-local cache lifecycle | readout cache 不能跨 token 泄漏。 |
 | B6 | pronounce memory | final readout recurrence | 可能需要 scan / checkpoint / sequential update。 |
