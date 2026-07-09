@@ -503,6 +503,473 @@ $$
 
 证毕。
 
+### B0 proof gate：主流 kernel family 的 chunk prefill 正确性
+
+B0 的理论入口不应停在“能表达 Transformer / Mamba”。真正的 B0 proof gate 是：在 B0 内给出具体 kernel family 的 reference transition $\mathcal{T}$、chunk implementation $\mathcal{C}_L$，并证明 $\mathcal{C}_L$ 满足定义 2.2。
+
+也就是说，B0 先要证明若干重要特例满足：
+
+$$
+\mathcal{C}_L(x_{0:L},S_0)=\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
+$$
+
+这些特例不是任意 B0 graph / 任意 B0 kernel，而是 Transformer / Mamba / Linear Attention / FFN 这类后续会反复使用的主力 kernel family。后续 B1-B6 的问题，是在这些已证明正确的 B0 kernel 之上继续加入 mailbox、phase、selector、readout、pronounce 等机制，并检查它们是否保持或破坏 chunk prefill 正确性。
+
+#### 定义 3.6：B0 kernel family 通过 proof gate
+
+给定一个 B0 kernel family $\mathfrak{K}$。称 $\mathfrak{K}$ 通过 B0 proof gate，当且仅当对每个具体参数实例 $\theta\in\Theta_{\mathfrak{K}}$：
+
+1. 给出一个 B0 transition：
+
+$$
+\mathcal{T}_{\theta}:X_{\theta}\times\mathcal{S}_{\theta}\to Y_{\theta}\times\mathcal{S}_{\theta}
+$$
+
+2. 对每个 $L\in\mathbb{N}$，给出一个 chunk implementation：
+
+$$
+\mathcal{C}_{\theta,L}:X_{\theta}^{L}\times\mathcal{S}_{\theta}\to Y_{\theta}^{L}\times\mathcal{S}_{\theta}
+$$
+
+3. 证明对所有 $x_{0:L}\in X_{\theta}^{L}$ 与 $S_0\in\mathcal{S}_{\theta}$：
+
+$$
+\mathcal{C}_{\theta,L}(x_{0:L},S_0)
+=
+\operatorname{Fold}_{\mathcal{T}_{\theta}}^L(x_{0:L},S_0)
+$$
+
+4. 给出高性能实现见证：说明 $\mathcal{C}_{\theta,L}$ 可由 matmul、causal mask、parallel prefix / scan、kernel fusion、packed layout 或 backend lowering 等方式实现。高性能实现见证不替代第 3 条的正确性证明。
+
+#### 定理 3.7：token-wise kernel 的 chunk prefill 正确性
+
+给定集合 $X,Y$ 与函数：
+
+$$
+f:X\to Y
+$$
+
+定义无持久更新的 transition：
+
+$$
+\mathcal{T}^{tok}:X\times\{*\}\to Y\times\{*\}
+$$
+
+其中 $\{*\}$ 是 singleton state space，且：
+
+$$
+\mathcal{T}^{tok}(x,*)=(f(x),*)
+$$
+
+对每个 $L\in\mathbb{N}$，定义 chunk implementation：
+
+$$
+\mathcal{C}^{tok}_{L}:X^L\times\{*\}\to Y^L\times\{*\}
+$$
+
+其中：
+
+$$
+\mathcal{C}^{tok}_{L}(x_{0:L},*)=
+((f(x_0),\ldots,f(x_{L-1})),*)
+$$
+
+则 $\mathcal{C}^{tok}_{L}$ 对 $\mathcal{T}^{tok}$ 正确。
+
+证明：
+
+由顺序 fold 定义，对所有 $t\in[L]$：
+
+$$
+(y_t,*)=\mathcal{T}^{tok}(x_t,*)=(f(x_t),*)
+$$
+
+因此：
+
+$$
+\operatorname{Fold}_{\mathcal{T}^{tok}}^L(x_{0:L},*)=
+((f(x_0),\ldots,f(x_{L-1})),*)
+$$
+
+这与 $\mathcal{C}^{tok}_{L}$ 的定义相同。
+
+证毕。
+
+FFN / MLP、逐 token norm、逐 token residual add、逐 token gating 都属于这个证明模式，或属于这个模式与有限维状态无关函数的直接乘积。
+
+#### 定义 3.8：causal attention decode reference
+
+这一节定义单层、单头 causal attention；多头 attention 是有限个单头的乘积加线性投影，不改变证明结构。
+
+给定维度 $d,d_k,d_v\in\mathbb{N}_{>0}$。令：
+
+$$
+X=\mathbb{R}^{d}
+$$
+
+令 KV cache state space 为：
+
+$$
+\mathcal{S}_{attn}=\bigcup_{P\in\mathbb{N}}\left((\mathbb{R}^{d_k})^P\times(\mathbb{R}^{d_v})^P\right)
+$$
+
+若 $S=(K_{0:P},V_{0:P})\in\mathcal{S}_{attn}$，则 $P$ 是已有 prefix cache 长度。
+
+给定 projection 函数：
+
+$$
+\operatorname{Proj}_Q:X\to\mathbb{R}^{d_k}
+$$
+
+$$
+\operatorname{Proj}_K:X\to\mathbb{R}^{d_k}
+$$
+
+$$
+\operatorname{Proj}_V:X\to\mathbb{R}^{d_v}
+$$
+
+给定按 prefix 长度索引的 attention readout 函数族。对每个 $P'\in\mathbb{N}_{>0}$，给定：
+
+$$
+\operatorname{Attn}_{P'}:\mathbb{R}^{d_k}\times(\mathbb{R}^{d_k})^{P'}\times(\mathbb{R}^{d_v})^{P'}\to\mathbb{R}^{d_v}
+$$
+
+例如 $\operatorname{Attn}_{P'}$ 可以是长度为 $P'$ 的 softmax dot-product attention；证明只要求 decode 与 chunk 在同一 prefix 长度上使用同一个 $\operatorname{Attn}_{P'}$。
+
+定义 causal attention decode transition：
+
+$$
+\mathcal{T}^{attn}:X\times\mathcal{S}_{attn}\to\mathbb{R}^{d_v}\times\mathcal{S}_{attn}
+$$
+
+对 $x\in X$ 与 $S=(K_{0:P},V_{0:P})$，令：
+
+$$
+q=\operatorname{Proj}_Q(x),\quad k=\operatorname{Proj}_K(x),\quad v=\operatorname{Proj}_V(x)
+$$
+
+定义 appended cache：
+
+$$
+K'_{0:P+1}=(K_0,\ldots,K_{P-1},k)
+$$
+
+$$
+V'_{0:P+1}=(V_0,\ldots,V_{P-1},v)
+$$
+
+输出：
+
+$$
+y=\operatorname{Attn}_{P+1}(q,K'_{0:P+1},V'_{0:P+1})
+$$
+
+于是：
+
+$$
+\mathcal{T}^{attn}(x,(K_{0:P},V_{0:P}))=(y,(K'_{0:P+1},V'_{0:P+1}))
+$$
+
+#### 定理 3.9：causal attention 的 chunk prefill 正确性
+
+给定 $L\in\mathbb{N}$、输入 $x_{0:L}\in X^L$ 与初始 cache：
+
+$$
+S_0=(K^{old}_{0:P},V^{old}_{0:P})\in\mathcal{S}_{attn}
+$$
+
+定义 chunk projection：
+
+$$
+q_t=\operatorname{Proj}_Q(x_t),\quad k_t=\operatorname{Proj}_K(x_t),\quad v_t=\operatorname{Proj}_V(x_t),\quad t\in[L]
+$$
+
+定义最终 concatenated cache：
+
+$$
+\widetilde{K}_{0:P+L}=(K^{old}_0,\ldots,K^{old}_{P-1},k_0,\ldots,k_{L-1})
+$$
+
+$$
+\widetilde{V}_{0:P+L}=(V^{old}_0,\ldots,V^{old}_{P-1},v_0,\ldots,v_{L-1})
+$$
+
+对每个 $t\in[L]$，定义 causal prefix：
+
+$$
+\widetilde{K}^{\le t}_{0:P+t+1}=(K^{old}_0,\ldots,K^{old}_{P-1},k_0,\ldots,k_t)
+$$
+
+$$
+\widetilde{V}^{\le t}_{0:P+t+1}=(V^{old}_0,\ldots,V^{old}_{P-1},v_0,\ldots,v_t)
+$$
+
+定义 chunk implementation：
+
+$$
+\mathcal{C}^{attn}_{L}(x_{0:L},S_0)=(y_{0:L},(\widetilde{K}_{0:P+L},\widetilde{V}_{0:P+L}))
+$$
+
+其中：
+
+$$
+y_t=
+\operatorname{Attn}_{P+t+1}(q_t,\widetilde{K}^{\le t}_{0:P+t+1},\widetilde{V}^{\le t}_{0:P+t+1})
+$$
+
+则 $\mathcal{C}^{attn}_{L}$ 对 $\mathcal{T}^{attn}$ 正确。
+
+证明：
+
+对 $t$ 归纳。$t=0$ 时，decode transition 先把 $k_0,v_0$ append 到 old cache，再用 prefix $(K^{old}_{0:P},k_0)$ 与 $(V^{old}_{0:P},v_0)$ 计算输出，等于 chunk 定义中的 $y_0$。
+
+假设对所有 $j<t$，decode 后的 cache 为：
+
+$$
+(K^{old}_0,\ldots,K^{old}_{P-1},k_0,\ldots,k_{t-1})
+$$
+
+与：
+
+$$
+(V^{old}_0,\ldots,V^{old}_{P-1},v_0,\ldots,v_{t-1})
+$$
+
+则第 $t$ 步 decode append $k_t,v_t$ 后，输出正是：
+
+$$
+\operatorname{Attn}_{P+t+1}(q_t,\widetilde{K}^{\le t}_{0:P+t+1},\widetilde{V}^{\le t}_{0:P+t+1})
+$$
+
+即 chunk 定义中的 $y_t$。最终 cache 也等于 concatenated cache。
+
+证毕。
+
+高性能实现见证：$q_{0:L},k_{0:L},v_{0:L}$ 可由 batched projection / matmul 得到；每个位置只读 $\le t$ 的 prefix 可由 causal mask 或 FlashAttention-style fused attention 实现。这里的高性能主要来自矩阵化与融合，不等于 attention work 本身从二次复杂度变成线性复杂度。
+
+#### 定义 3.10：affine scan recurrence
+
+给定 state vector space $\mathcal{H}$、input space $X$ 与 output space $Y$。对每个输入 $x\in X$，给定 affine state update：
+
+$$
+g_x:\mathcal{H}\to\mathcal{H}
+$$
+
+并写成：
+
+$$
+g_x(h)=A_x h+b_x
+$$
+
+其中 $A_x$ 是作用在 $\mathcal{H}$ 上的线性算子，$b_x\in\mathcal{H}$。
+
+给定 output 函数：
+
+$$
+o:X\times\mathcal{H}\to Y
+$$
+
+定义 recurrence transition：
+
+$$
+\mathcal{T}^{scan}:X\times\mathcal{H}\to Y\times\mathcal{H}
+$$
+
+其中：
+
+$$
+h'=g_x(h)
+$$
+
+$$
+y=o(x,h')
+$$
+
+$$
+\mathcal{T}^{scan}(x,h)=(y,h')
+$$
+
+#### 定理 3.11：affine scan recurrence 的 chunk prefill 正确性
+
+给定 $x_{0:L}\in X^L$ 与初始状态 $h_0\in\mathcal{H}$。对每个 $t\in[L]$，令：
+
+$$
+g_t=g_{x_t}
+$$
+
+定义前缀复合：
+
+$$
+G_t=g_t\circ g_{t-1}\circ\cdots\circ g_0
+$$
+
+并定义：
+
+$$
+h_{t+1}=G_t(h_0)
+$$
+
+$$
+y_t=o(x_t,h_{t+1})
+$$
+
+定义 chunk implementation：
+
+$$
+\mathcal{C}^{scan}_{L}(x_{0:L},h_0)=((y_0,\ldots,y_{L-1}),h_L)
+$$
+
+则 $\mathcal{C}^{scan}_{L}$ 对 $\mathcal{T}^{scan}$ 正确。
+
+证明：
+
+函数复合满足结合律。顺序 decode 的状态满足：
+
+$$
+h_{t+1}=g_t(h_t)
+$$
+
+展开得到：
+
+$$
+h_{t+1}=g_t\circ g_{t-1}\circ\cdots\circ g_0(h_0)=G_t(h_0)
+$$
+
+输出也同为：
+
+$$
+y_t=o(x_t,h_{t+1})
+$$
+
+因此 chunk implementation 与顺序 fold 相同。
+
+证毕。
+
+高性能实现见证：affine map 可用 pair 表示为 $(A,b)$，其复合为：
+
+$$
+(A_2,b_2)\circ(A_1,b_1)=(A_2A_1,A_2b_1+b_2)
+$$
+
+该复合由函数复合继承结合律，因此可用 parallel prefix / scan / chunk scan 实现所有前缀 $G_t$。Mamba / selective SSM 的许多高性能 prefill 路线正落在这个证明模板内；具体实现还要检查 discretization、gating、normalization、layout 与浮点重排。
+
+#### 推论 3.12：linear attention accumulator 的 chunk prefill 正确性
+
+给定函数：
+
+$$
+u:X\to\mathcal{H}
+$$
+
+若 linear attention 的持久状态是 prefix accumulator $h\in\mathcal{H}$，并且每个 token 的更新可写为：
+
+$$
+h'=h+u(x)
+$$
+
+输出为：
+
+$$
+y=o(x,h')
+$$
+
+则它是定理 3.11 的特例，其中：
+
+$$
+A_x=I,\quad b_x=u(x)
+$$
+
+因此 linear attention accumulator 的 chunk prefill 正确性由 associative prefix sum / scan 得到。
+
+#### 定理 3.13：有限 B0 chain 的 layer-wise chunk 正确性
+
+给定 $N\in\mathbb{N}_{>0}$。给定 layer input/output spaces：
+
+$$
+X_1,\ldots,X_{N+1}
+$$
+
+以及 layer state spaces：
+
+$$
+\mathcal{S}_1,\ldots,\mathcal{S}_N
+$$
+
+对每个 $j=1,\ldots,N$，给定 layer transition：
+
+$$
+\mathcal{T}_j:X_j\times\mathcal{S}_j\to X_{j+1}\times\mathcal{S}_j
+$$
+
+每个 $\mathcal{T}_j$ 都属于已经通过 B0 proof gate 的 kernel family，并有正确 chunk implementation：
+
+$$
+\mathcal{C}_{j,L}:X_j^L\times\mathcal{S}_j\to X_{j+1}^L\times\mathcal{S}_j
+$$
+
+定义 stack state space：
+
+$$
+\mathcal{S}^{stack}=\mathcal{S}_1\times\cdots\times\mathcal{S}_N
+$$
+
+定义一个 token 的 layer stack reference transition：
+
+$$
+\mathcal{T}^{stack}:X_1\times\mathcal{S}^{stack}\to X_{N+1}\times\mathcal{S}^{stack}
+$$
+
+对 $x\in X_1$ 与 $S=(S_1,\ldots,S_N)\in\mathcal{S}^{stack}$，令：
+
+$$
+z_0=x
+$$
+
+并对 $j=1,\ldots,N$ 递归定义：
+
+$$
+(z_j,S_j')=\mathcal{T}_j(z_{j-1},S_j)
+$$
+
+于是：
+
+$$
+\mathcal{T}^{stack}(x,(S_1,\ldots,S_N))=(z_N,(S_1',\ldots,S_N'))
+$$
+
+定义 layer-wise chunk implementation $\mathcal{C}^{stack}_L$。给定 $x_{0:L}\in X_1^L$ 与 $S=(S_1,\ldots,S_N)$，令：
+
+$$
+z^0_{0:L}=x_{0:L}
+$$
+
+并对 $j=1,\ldots,N$ 递归定义：
+
+$$
+(z^j_{0:L},S_j')=\mathcal{C}_{j,L}(z^{j-1}_{0:L},S_j)
+$$
+
+最后定义：
+
+$$
+\mathcal{C}^{stack}_L(x_{0:L},S)=(z^N_{0:L},(S_1',\ldots,S_N'))
+$$
+
+若每层 chunk implementation 都满足定义 2.2，则 $\mathcal{C}^{stack}_L$ 对 $\mathcal{T}^{stack}$ 正确。
+
+证明：
+
+对 layer index $j$ 归纳。$j=1$ 时由 $\mathcal{C}_{1,L}$ 的正确性得到第 1 层所有位置输出 $z^1_{0:L}$ 与最终 state $S_1'$ 等于对 $\mathcal{T}_1$ 做顺序 fold 的结果。
+
+假设前 $j$ 层的 chunk 输出序列与这些层的最终 state 等于 reference stack 在前 $j$ 层逐 token 执行的结果。则第 $j+1$ 层收到的输入序列 $z^j_{0:L}$ 与初始 state $S_{j+1}$ 与 reference 相同。由 $\mathcal{C}_{j+1,L}$ 的正确性，第 $j+1$ 层输出与 state 也相同。
+
+归纳到 $N$，得到 $\mathcal{C}^{stack}_L$ 与 $\operatorname{Fold}_{\mathcal{T}^{stack}}^L$ 相同。
+
+证毕。
+
+因此，标准 Transformer block stack 可由 token-wise kernels 与 causal attention kernel 的组合通过 B0 proof gate；Mamba / SSM stack 可由 token-wise kernels 与 affine scan recurrence kernel 的组合通过 B0 proof gate；Linear Attention stack 可由 token-wise kernels 与 prefix-sum accumulator kernel 的组合通过 B0 proof gate。
+
 ## 4. B-family：逐层增加机制
 
 这一节把 B0 扩展为 B1-B6。B0 已经是能表达 Transformer/Mamba 的标准 factorized graph runtime；后续层级不再引入“基本 memory/cache”，而是增加更强的 graph/runtime 结构。B1-B6 更准确地说是 extension schema：它们声明新增 state / workspace / kernel / schedule 约束。只有当这些 schema 与具体 kernel 组合成单步 transition 后，才可应用后面的 B-family 引理。
@@ -1023,6 +1490,7 @@ $$
 
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
 - 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
+- B0 proof gate 先证明 token-wise / FFN、causal attention、affine scan recurrence、linear attention accumulator 以及有限 layer stack 这些主流 kernel family 的 chunk prefill 正确性；这不推出任意 B0 graph / 任意 B0 kernel 都有高性能 chunk prefill。
 - B0-B6 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
 - selector、pronounce memory、KV append、phase barrier、workspace lifetime 是最容易破坏 chunk/prefill 等价的机制。
 - packed / crossbatch / backend lowering 的正确证明入口是 step simulation，而不是只比较最终 logits。

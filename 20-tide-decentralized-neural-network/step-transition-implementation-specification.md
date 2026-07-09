@@ -310,6 +310,17 @@ logits = Readout(State)
 
 当前 B0 已经吸收旧版 B1 的 factorized node state：visible activation 与 private memory/cache/state 从基线开始就同时存在。因此 Transformer KV cache、Mamba/SSM recurrent state、Linear Attention accumulator 都属于 B0 的正常表达能力，不应被当作后续层级的新增机制。
 
+B0 的工程门槛也要随之提高：不能只实现一个能容纳这些模型的 graph runtime，还要先给主力 kernel family 建立 chunk prefill proof gate。最低限度包括：
+
+| Kernel family | Reference transition | Chunk implementation | 高性能见证 |
+| --- | --- | --- | --- |
+| FFN / norm / residual | token-wise update | batched map over sequence | vectorized / fused elementwise kernel |
+| Causal attention | append KV cache, read causal prefix | batched QKV + causal mask / prefix read | matmul / FlashAttention-style fused attention |
+| Linear attention | prefix accumulator update | prefix sum / associative scan | scan / fused scan |
+| Mamba / SSM | affine recurrent state update | parallel prefix / chunk scan | scan / chunk scan kernel |
+
+只有这些 B0 kernel family 的 `C_L = Fold_T^L` 先成立，后续 B1-B6 的推进才是在可靠基线之上检查新增机制是否保持或破坏等价性。
+
 | 层级 | 新增机制 | 实现重点 | prefill 风险 |
 | --- | --- | --- | --- |
 | B0 | standard factorized graph runtime | visible activation + private memory/cache/state；覆盖 Transformer KV cache、Mamba/SSM state、linear-attention accumulator；chain graph + rounds 表达标准 block stack | 只定义顺序 fold，不自动得到 chunk prefill；cache append / recurrent update 仍需 chunk 等价证明。 |
