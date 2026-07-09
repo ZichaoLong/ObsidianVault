@@ -294,7 +294,7 @@ X=\text{input/token space}
 $$
 
 $$
-H=\text{node activation space}
+H=\text{node step state space}
 $$
 
 $$
@@ -311,17 +311,21 @@ $$
 \mathcal{S}_{B0}=H^V
 $$
 
-若 $h\in H^V$，则 $h_v$ 表示节点 $v$ 的 activation。
+若 $h\in H^V$，则 $h_v$ 表示节点 $v$ 的完整 step state。
 
-这里的 $H$ 是一个抽象的 per-node step state space。它可以只表示“当前可通信 activation”，也可以被取成更大的结构，把节点私有 cache / recurrent state 一并放入 $h_v$。因此，B0 足够表达许多已知模型的单步 decode 语义；但如果希望把“可通信 activation”和“私有 memory/cache”分开审视，则应进入 B1，把状态写成 $H^V\times U^V$。
+B0 的起点不是 `activation-only`，而是“每个节点有一个完整 step state”。这个 state 可以包含当前 token 的可通信 activation / residual stream slot，也可以包含跨 token 持久的 Transformer KV cache、Mamba / SSM recurrent state、Linear Attention accumulator，或其他节点私有 persistent state。当前 token 的 activation slot 可以在每个 step 被覆盖；cache / recurrent state 则按模型语义持久更新。
+
+因此，Transformer、Mamba、Linear Attention 这类主流自回归模型都应从 B0 开始就能被表达。B1 的作用不是第一次引入 memory，而是把 B0 中混在同一个 $h_v$ 里的“可通信 activation”和“私有 memory/cache”因子化，便于分别研究 memory lifecycle、cache materialization 和 chunk prefill 约束。
 
 ### 定义 3.3：B0 kernels
 
 给定输入注入函数：
 
 $$
-\iota:X\to H
+\operatorname{Inject}:X\times H\to H
 $$
+
+`Inject` 把当前 token 写入 input node 的完整 step state。它可以只替换 visible activation，也可以保留或更新 input node 原有 cache / recurrent state。
 
 对每个 round $r\in\{1,\ldots,R\}$ 与每条边 $e\in E$，给定 edge kernel：
 
@@ -371,14 +375,14 @@ $$
 
 B0 的 round 是同步 message passing。若要用 B0 精确模拟顺序 layer stack，可让 $R$ 至少覆盖链路传播步数，并让未收到有效消息的 node update 近似 identity。若要把“第 1 层执行完再执行第 2 层”的顺序执行语义作为一等公民，更自然的形式是 B3 的 phase schedule。
 
-| 架构组件 | B0 中的对应方式 | `prefill == decode fold` 的来源 |
+| 架构组件 | B0 中的自然对应方式 | `prefill == decode fold` 的来源 |
 | --- | --- | --- |
-| Transformer attention block | $h_v$ 可包含当前 residual activation 与该层 KV cache；$\psi_v^r$ 做 Q/K/V projection、KV append、causal attention、output projection；$m_e^r$ 是传给下一层的 residual stream。 | 标准 causal attention 的 prefill 与逐 token decode 等价，前提是 causal mask、position encoding、KV append order 与数值实现一致。 |
-| Transformer FFN / MLP block | $h_v$ 可只保存当前 activation，或者保存一个平凡状态；$\psi_v^r$ 是 FFN/MLP；$m_e^r$ 是 FFN 后 activation。 | FFN 对 token 位置逐点作用，没有跨 token recurrence；只要输入 activation 一致，prefill 与 decode 逐点一致。 |
-| Mamba / SSM block | $h_v$ 可包含当前 activation 与 SSM recurrent state；$\psi_v^r$ 做 selective state update 与输出；$m_e^r$ 是传给下一层的 activation。 | decode 是 recurrent update；prefill 等价依赖 scan / chunk scan 实现与逐步 recurrence 等价。 |
-| Linear attention block | $h_v$ 可包含当前 activation 与线性 attention 的累积 state，例如 KV accumulator；$\psi_v^r$ 更新 accumulator 并产生当前输出。 | prefill 等价依赖 accumulator 的 causal prefix 更新与逐 token update 等价。 |
+| Transformer attention block | $h_v$ 是该层的完整 step state，例如 residual activation + KV cache；$\operatorname{Inject}$ 或上一层消息提供当前 token activation；$\psi_v^r$ 做 Q/K/V projection、KV append、causal attention、output projection；$\phi_e^r$ 抽取要传给下一层的 residual stream。 | 标准 causal attention 的 prefill 与逐 token decode 等价，前提是 causal mask、position encoding、KV append order 与数值实现一致。 |
+| Transformer FFN / MLP block | $h_v$ 可以是 residual activation + 平凡 memory；$\psi_v^r$ 是 FFN/MLP；$\phi_e^r$ 抽取 FFN 后 activation。 | FFN 对 token 位置逐点作用，没有跨 token recurrence；只要输入 activation 一致，prefill 与 decode 逐点一致。 |
+| Mamba / SSM block | $h_v$ 是该层的完整 step state，例如 current activation + SSM recurrent state；$\psi_v^r$ 做 selective state update 与输出；$\phi_e^r$ 抽取传给下一层的 activation。 | decode 是 recurrent update；prefill 等价依赖 scan / chunk scan 实现与逐步 recurrence 等价。 |
+| Linear attention block | $h_v$ 是 current activation + linear-attention accumulator；$\psi_v^r$ 更新 accumulator 并产生当前输出。 | prefill 等价依赖 accumulator 的 causal prefix 更新与逐 token update 等价。 |
 
-这张表的用意是帮助理解符号，而不是声称所有真实实现都应该停留在 B0。B0 可以通过把 $H$ 取得足够大来承载 cache，但这种写法会把 activation、cache、controller state 混在同一个 $h_v$ 中。B1 之后的分层，正是为了把这些内容拆开，分别研究 memory lifecycle、selector/controller、workspace、phase barrier 与 chunk prefill 约束。
+这张表的用意是帮助理解符号，而不是声称所有真实实现都应该停留在 B0。B0 把每个 node 的完整 step state 都放在 $h_v$ 中，因此表达力足够宽；B1 之后的分层，正是为了把这个完整 state 进一步拆开，分别研究 memory lifecycle、selector/controller、workspace、phase barrier 与 chunk prefill 约束。
 
 ### 定义 3.4：B0 单步 transition
 
@@ -390,7 +394,7 @@ $$
 
 对任意 $x\in X$ 与 $h\in H^V$，$\mathcal{T}^{B0}(x,h)$ 按以下方式计算。
 
-先定义 step-local activation：
+先定义 step-local node state：
 
 $$
 a^0\in H^V
@@ -399,7 +403,7 @@ $$
 其中：
 
 $$
-a_i^0=\iota(x)
+a_i^0=\operatorname{Inject}(x,h_i)
 $$
 
 $$
@@ -466,11 +470,23 @@ $$
 
 这一节把 B0 扩展为 B1-B7。B1 给出一个完整 transition 示例；B2-B7 更准确地说是 extension schema：它们声明新增 state / workspace / kernel / schedule 约束。只有当这些 schema 与具体 kernel 组合成单步 transition 后，才可应用后面的 B-family 引理。
 
-### B1：node memory
+### B1：factorized node state
 
-B1 继承 B0 中的 $V,E,i,o,R,X,H,M,Y,\iota,\operatorname{Agg}_v^r,\rho$，只改变 edge kernel、node update kernel 与持久状态。
+B1 不是第一次引入 memory，而是把 B0 中的完整 node state 因子化为 visible activation 与 private memory。它可看作对 B0 的约束化版本：
+
+$$
+H=A\times U
+$$
+
+其中 $A$ 是可通信 activation space，$U$ 是节点私有 memory/cache space。
 
 #### 定义 4.1：B1 状态空间
+
+给定 visible activation space：
+
+$$
+A=\text{visible activation space}
+$$
 
 给定 node memory space：
 
@@ -481,7 +497,7 @@ $$
 B1 的持久状态空间为：
 
 $$
-\mathcal{S}_{B1}=H^V\times U^V
+\mathcal{S}_{B1}=A^V\times U^V
 $$
 
 记状态为：
@@ -490,20 +506,32 @@ $$
 S=(h,\mu)
 $$
 
-其中 $h\in H^V$，$\mu\in U^V$。
+其中 $h\in A^V$，$\mu\in U^V$。
 
 #### 定义 4.2：B1 kernels
+
+给定输入注入函数：
+
+$$
+\operatorname{Inject}^{B1}:X\times A\times U\to A\times U
+$$
 
 B1 edge kernel 类型变为：
 
 $$
-\phi_e^r:H\times U\to M
+\phi_e^r:A\times U\to M
 $$
 
 B1 node update 类型变为：
 
 $$
-\psi_v^r:H\times U\times \mathcal{B}_v\to H\times U
+\psi_v^r:A\times U\times \mathcal{B}_v\to A\times U
+$$
+
+给定 readout 函数：
+
+$$
+\rho^{B1}:A\times U\to Y
 $$
 
 #### 定义 4.3：B1 transition
@@ -517,17 +545,15 @@ $$
 对任意 $x\in X$ 与 $(h,\mu)\in\mathcal{S}_{B1}$，先定义：
 
 $$
-a_i^0=\iota(x)
+(a_i^0,\mu_i^0)=\operatorname{Inject}^{B1}(x,h_i,\mu_i)
 $$
 
 $$
 a_v^0=h_v,\quad v\neq i
 $$
 
-并令：
-
 $$
-\mu^0=\mu
+\mu_v^0=\mu_v,\quad v\neq i
 $$
 
 对每个 round $r=1,\ldots,R$ 与每条边 $e\in E$，定义：
@@ -562,7 +588,7 @@ $$
 输出为：
 
 $$
-y=\rho(a_o^R)
+y=\rho^{B1}(a_o^R,\mu_o^R)
 $$
 
 于是：
@@ -590,7 +616,7 @@ $$
 typed edge kernel 可写为：
 
 $$
-\phi_{\tau_E(e)}^r:H\times U\to M
+\phi_{\tau_E(e)}^r:A\times U\to M
 $$
 
 #### 定义 4.5：mailbox workspace
