@@ -424,7 +424,7 @@ $$
 
 | 架构组件 | B0 中的自然对应方式 | `prefill == decode fold` 的来源 |
 | --- | --- | --- |
-| Transformer attention block | $a_v$ 是当前 token residual activation，$\mu_v$ 是该层 KV cache；$\psi_v^r$ 做 Q/K/V projection、KV append、causal attention、output projection；$\phi_e^r$ 抽取要传给下一层的 residual stream。 | 标准 causal attention 的 prefill 与逐 token decode 等价，前提是 causal mask、position encoding、KV append order 与数值实现一致。 |
+| Transformer attention block | $a_v$ 是当前 token residual activation，$\mu_v$ 是该层 KV cache；$\psi_v^r$ 做 Q/K/V projection、KV append、causal attention、output projection；$\phi_e^r$ 抽取要传给下一层的 residual stream。 | 标准 causal attention 的 prefill 与逐 token decode 等价，前提是 causal mask 与 KV append order 一致；position signal 暂不作为 attention 证明核心，若引入则必须由 decode/chunk 一致的确定性 position 函数给出。 |
 | Transformer FFN / MLP block | $a_v$ 是当前 token residual activation，$\mu_v$ 可为空或平凡；$\psi_v^r$ 是 FFN/MLP；$\phi_e^r$ 抽取 FFN 后 activation。 | FFN 对 token 位置逐点作用，没有跨 token recurrence；只要输入 activation 一致，prefill 与 decode 逐点一致。 |
 | Mamba / SSM block | $a_v$ 是当前 token activation，$\mu_v$ 是 SSM recurrent state；$\psi_v^r$ 做 selective state update 与输出；$\phi_e^r$ 抽取传给下一层的 activation。 | decode 是 recurrent update；prefill 等价依赖 scan / chunk scan 实现与逐步 recurrence 等价。 |
 | Linear attention block | $a_v$ 是 current activation，$\mu_v$ 是 linear-attention accumulator；$\psi_v^r$ 更新 accumulator 并产生当前输出。 | prefill 等价依赖 accumulator 的 causal prefix 更新与逐 token update 等价。 |
@@ -968,7 +968,75 @@ $$
 
 证毕。
 
-因此，标准 Transformer block stack 可由 token-wise kernels 与 causal attention kernel 的组合通过 B0 proof gate；Mamba / SSM stack 可由 token-wise kernels 与 affine scan recurrence kernel 的组合通过 B0 proof gate；Linear Attention stack 可由 token-wise kernels 与 prefix-sum accumulator kernel 的组合通过 B0 proof gate。
+#### 定理 3.14：B0-Transformer chunk prefill 正确性
+
+考虑一个不含 stochastic dropout、且不含非因果 sequence-level 操作的标准自回归 Transformer。每一层由有限个以下 B0 kernel 组合而成：
+
+- token-wise deterministic kernels，例如 embedding、linear projection、output projection、FFN / MLP、norm、residual add、gating。
+- causal attention kernels，如定义 3.8。
+- 有限个 attention head 的 product / concat，以及后续 token-wise output projection。
+
+position encoding 暂不作为本定理的核心对象。若需要加入 position encoding，则要求它是由 absolute position $P+t$ 或等价 position state 决定的确定性 token-wise augmentation，并且 decode 与 chunk prefill 使用同一个 position 函数。在此前提下，它可并入 token-wise deterministic kernel。
+
+令 $\mathcal{T}^{tr}$ 是该 Transformer 在 B0 中的逐 token decode reference transition，令 $\mathcal{C}^{tr}_L$ 是按层执行的 chunk prefill implementation：每层对长度 $L$ 的序列批量执行 token-wise kernels，并对 attention 使用定理 3.9 的 causal chunk attention。
+
+则对所有 $L\in\mathbb{N}$、输入序列 $x_{0:L}$ 与初始 state $S_0$：
+
+$$
+\mathcal{C}^{tr}_L(x_{0:L},S_0)
+=
+\operatorname{Fold}_{\mathcal{T}^{tr}}^L(x_{0:L},S_0)
+$$
+
+证明：
+
+token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。causal attention kernel 由定理 3.9 满足 chunk prefill 正确性。有限个 attention head 的 product / concat 是有限个相同输入上的 component-wise transition；每个 component 的 chunk 输出与顺序 fold 相同，则它们的 product / concat 也相同。attention 后的 output projection、FFN、norm、residual 等仍是 token-wise kernels。
+
+因此，每个 Transformer layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Transformer stack 的 chunk prefill implementation 与逐 token decode fold 相同。
+
+证毕。
+
+高性能实现见证：token-wise kernels 可批量矩阵化或融合；causal attention 可用 batched QKV、causal mask、FlashAttention-style fused attention 等实现。因此，B0-Transformer 不只是可表达，而且在实数语义下满足 chunk prefill 正确性；具体浮点 backend 的误差属于实现层的数值模拟问题。
+
+#### 定理 3.15：B0-Mamba / SSM chunk prefill 正确性
+
+考虑一个自回归 Mamba / selective SSM stack。每一层由有限个以下 B0 kernel 组合而成：
+
+- token-wise deterministic kernels，例如 input projection、gate projection、output projection、norm、residual add。
+- 有限宽 causal convolution。它可表示为有限维 shift-register state 的 affine recurrence，因此属于定理 3.11 的特例。
+- selective SSM recurrence。对每个 token $x$，其状态更新可写为：
+
+$$
+h'=A_xh+b_x
+$$
+
+输出可写为：
+
+$$
+y=o(x,h')
+$$
+
+其中 $A_x,b_x,o$ 可由当前 token 的 token-wise kernels 决定。
+
+令 $\mathcal{T}^{ssm}$ 是该 Mamba / SSM stack 在 B0 中的逐 token decode reference transition，令 $\mathcal{C}^{ssm}_L$ 是按层执行的 chunk prefill implementation：token-wise kernels 批量执行，causal convolution 与 selective SSM recurrence 使用 parallel prefix / chunk scan 实现。
+
+则对所有 $L\in\mathbb{N}$、输入序列 $x_{0:L}$ 与初始 state $S_0$：
+
+$$
+\mathcal{C}^{ssm}_L(x_{0:L},S_0)
+=
+\operatorname{Fold}_{\mathcal{T}^{ssm}}^L(x_{0:L},S_0)
+$$
+
+证明：
+
+token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。有限宽 causal convolution 是有限维 shift-register 的 affine recurrence，因此由定理 3.11 满足 chunk prefill 正确性。selective SSM recurrence 的状态更新已经写成 $h'=A_xh+b_x$，输出写成 $y=o(x,h')$，因此也由定理 3.11 满足 chunk prefill 正确性。
+
+因此，每个 Mamba / SSM layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Mamba / SSM stack 的 chunk prefill implementation 与逐 token decode fold 相同。
+
+证毕。
+
+高性能实现见证：token-wise kernels 可批量矩阵化或融合；causal convolution 与 selective SSM recurrence 的 affine map 复合满足结合律，可用 parallel prefix / scan / chunk scan 实现。因此，B0-Mamba / SSM 在实数语义下满足 chunk prefill 正确性；具体浮点 backend 的误差属于实现层的数值模拟问题。
 
 ## 4. B-family：逐层增加机制
 
@@ -1490,7 +1558,8 @@ $$
 
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
 - 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
-- B0 proof gate 先证明 token-wise / FFN、causal attention、affine scan recurrence、linear attention accumulator 以及有限 layer stack 这些主流 kernel family 的 chunk prefill 正确性；这不推出任意 B0 graph / 任意 B0 kernel 都有高性能 chunk prefill。
+- B0 proof gate 先证明 token-wise / FFN、causal attention、affine scan recurrence、linear attention accumulator 以及有限 layer stack 这些主流 kernel family 的 chunk prefill 正确性；在这些结果上，定理 3.14 给出 B0-Transformer chunk prefill 正确性，定理 3.15 给出 B0-Mamba / SSM chunk prefill 正确性。
+- 上述命名定理不推出任意 B0 graph / 任意 B0 kernel 都有高性能 chunk prefill；它们证明的是 Transformer / Mamba 这类主力结构在 B0 中满足 $\mathcal{C}_L=\operatorname{Fold}_{\mathcal{T}}^L$。
 - B0-B6 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
 - selector、pronounce memory、KV append、phase barrier、workspace lifetime 是最容易破坏 chunk/prefill 等价的机制。
 - packed / crossbatch / backend lowering 的正确证明入口是 step simulation，而不是只比较最终 logits。
