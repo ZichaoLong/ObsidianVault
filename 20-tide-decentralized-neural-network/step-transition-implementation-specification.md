@@ -306,18 +306,19 @@ logits = Readout(State)
 - 可能丢掉 LH 中某些为局部通信、超稀疏、selector 历史设计的机制。
 - 需要重新验证其表达力、训练稳定性与性能价值。
 
-## B0-B7 工程推进梯度
+## B0-B6 工程推进梯度
+
+当前 B0 已经吸收旧版 B1 的 factorized node state：visible activation 与 private memory/cache/state 从基线开始就同时存在。因此 Transformer KV cache、Mamba/SSM recurrent state、Linear Attention accumulator 都属于 B0 的正常表达能力，不应被当作后续层级的新增机制。
 
 | 层级 | 新增机制 | 实现重点 | prefill 风险 |
 | --- | --- | --- | --- |
-| B0 | full node step state graph | node state 可包含 activation、KV cache、SSM state、linear-attention accumulator；edge emit + node update + readout | 只定义顺序 fold，不自动得到 chunk prefill；cache append / recurrent update 仍需 chunk 等价证明。 |
-| B1 | factorized node state | 把 B0 的 full state 拆成 visible activation + private memory/cache namespace | token `t` 不能读未来 memory/cache；materialized cache 必须等价于逐 token update。 |
-| B2 | typed edge / mailbox | edge role + token-local mailbox | mailbox 必须 step-local / round-local。 |
-| B3 | runtime phase schedule | input/output/bridge/readout 等大范围阶段的 read/write/commit contract | 不可跨 phase 改 role / direction / barrier / visibility。 |
-| B4 | selector / controller state | selector 作为控制面状态 | selector 不能基于未来 token 联合决策。 |
-| B5 | readout cache | token-local cache lifecycle | readout cache 不能跨 token 泄漏。 |
-| B6 | pronounce memory | final readout recurrence | 可能需要 scan / checkpoint / sequential update。 |
-| B7 | LH-like input/output roles and bridges | role-aware graph + state namespace | 必须保留 role、scope、phase read-write contract。 |
+| B0 | standard factorized graph runtime | visible activation + private memory/cache/state；覆盖 Transformer KV cache、Mamba/SSM state、linear-attention accumulator；chain graph + rounds 表达标准 block stack | 只定义顺序 fold，不自动得到 chunk prefill；cache append / recurrent update 仍需 chunk 等价证明。 |
+| B1 | typed edge / mailbox | edge role + token-local mailbox | mailbox 必须 step-local / round-local。 |
+| B2 | runtime phase schedule | input/output/bridge/readout 等大范围阶段的 read/write/commit contract | 不可跨 phase 改 role / direction / barrier / visibility。 |
+| B3 | selector / controller state | selector 作为控制面状态 | selector 不能基于未来 token 联合决策。 |
+| B4 | readout cache | token-local cache lifecycle | readout cache 不能跨 token 泄漏。 |
+| B5 | pronounce memory | final readout recurrence | 可能需要 scan / checkpoint / sequential update。 |
+| B6 | LH-like input/output roles and bridges | role-aware graph + state namespace | 必须保留 role、scope、phase read-write contract。 |
 
 ## Kernel 替换规则
 

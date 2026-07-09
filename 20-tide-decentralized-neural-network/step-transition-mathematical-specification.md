@@ -263,9 +263,16 @@ $$
 
 层次 1 不推出层次 2；层次 2 不推出层次 3。
 
-## 3. B0：最小 Graph Runtime
+## 3. B0：标准 Factorized Graph Runtime
 
-这一节定义简化分支 B 的最小版本。它不包含 LH 的 phase、selector、readout cache 或 pronounce memory。
+这一节定义简化分支 B 的基线版本。这个基线应从一开始就能自然表达 Transformer、Mamba / SSM、Linear Attention 等主流自回归模型。
+
+B0 已经吸收了旧版本中“factorized node state”的 B1：节点状态从一开始就拆成 visible activation 与 private memory/cache/state。这样做的目的，是让起点本身就是高性能自回归模型熟悉的形式，而不是先定义一个过弱的 activation-only graph，再额外补 memory/cache。
+
+B0 不包含 LH-style input/output cortex、bridge phase、selector、readout cache 或 pronounce memory。但它包含标准自回归模型需要的两个基本状态因子：
+
+- 当前 token 在该 node 上的可通信 activation。
+- node 私有的跨 token memory/cache/state。
 
 ### 定义 3.1：B0 静态结构
 
@@ -294,7 +301,11 @@ X=\text{input/token space}
 $$
 
 $$
-H=\text{node step state space}
+A=\text{visible activation space}
+$$
+
+$$
+U=\text{private node memory/cache/state space}
 $$
 
 $$
@@ -305,56 +316,69 @@ $$
 Y=\text{output/logit space}
 $$
 
+定义带 empty signal 的 message space：
+
+$$
+\overline{M}=M\cup\{\bot\}
+$$
+
+其中 $\bot\notin M$，表示当前 round 没有有效消息。
+
 B0 的持久状态空间为：
 
 $$
-\mathcal{S}_{B0}=H^V
+\mathcal{S}_{B0}=A^V\times U^V
 $$
 
-若 $h\in H^V$，则 $h_v$ 表示节点 $v$ 的完整 step state。
+若 $(a,\mu)\in A^V\times U^V$，则：
 
-B0 的起点不是 `activation-only`，而是“每个节点有一个完整 step state”。这个 state 可以包含当前 token 的可通信 activation / residual stream slot，也可以包含跨 token 持久的 Transformer KV cache、Mamba / SSM recurrent state、Linear Attention accumulator，或其他节点私有 persistent state。当前 token 的 activation slot 可以在每个 step 被覆盖；cache / recurrent state 则按模型语义持久更新。
+- $a_v\in A$ 是节点 $v$ 当前可通信 activation / residual stream slot。
+- $\mu_v\in U$ 是节点 $v$ 的私有 memory/cache/state。
 
-因此，Transformer、Mamba、Linear Attention 这类主流自回归模型都应从 B0 开始就能被表达。B1 的作用不是第一次引入 memory，而是把 B0 中混在同一个 $h_v$ 里的“可通信 activation”和“私有 memory/cache”因子化，便于分别研究 memory lifecycle、cache materialization 和 chunk prefill 约束。
+对 Transformer，$\mu_v$ 可包含该层 KV cache；对 Mamba / SSM，$\mu_v$ 可包含 SSM recurrent state；对 Linear Attention，$\mu_v$ 可包含 prefix accumulator。$a_v$ 通常是当前 token 的 residual / activation slot，它可以在每个 token step 初始化时被清空或覆盖。
 
 ### 定义 3.3：B0 kernels
 
-给定输入注入函数：
+给定 step 初始化函数：
 
 $$
-\operatorname{Inject}:X\times H\to H
+\operatorname{Init}:X\times A^V\times U^V\to A^V\times U^V
 $$
 
-`Inject` 把当前 token 写入 input node 的完整 step state。它可以只替换 visible activation，也可以保留或更新 input node 原有 cache / recurrent state。
+`Init` 负责把当前 token 写入 input anchor，并按模型语义初始化当前 token 的 activation slots。典型行为是：
+
+- 在 input node 写入 token embedding。
+- 清空或覆盖非 input node 的当前-token activation slot。
+- 保留各节点的 private memory/cache/state。
 
 对每个 round $r\in\{1,\ldots,R\}$ 与每条边 $e\in E$，给定 edge kernel：
 
 $$
-\phi_e^r:H\to M
+\phi_e^r:A\times U\to \overline{M}
 $$
 
 对每个节点 $v\in V$ 与 round $r\in\{1,\ldots,R\}$，先定义该节点 mailbox 空间：
 
 $$
-\mathcal{B}_v=M^{E^{-}(v)}
+\mathcal{B}_v=\overline{M}^{E^{-}(v)}
 $$
 
 给定聚合函数：
 
 $$
-\operatorname{Agg}_v^r:M^{E^{-}(v)}\to \mathcal{B}_v
+\operatorname{Agg}_v^r:\overline{M}^{E^{-}(v)}\to \mathcal{B}_v
 $$
 
 以及 node update kernel：
 
 $$
-\psi_v^r:H\times\mathcal{B}_v\to H
+\psi_v^r:A\times U\times\mathcal{B}_v\to A\times U
 $$
 
 给定 readout 函数：
 
 $$
-\rho:H\to Y
+\rho:A\times U\to Y
 $$
 
 ### B0 与已知架构的直观对应
@@ -371,7 +395,15 @@ $$
 E=\{(j,j+1)\mid j=0,\ldots,N-1\}
 $$
 
-其中 node $j$ 可代表一个 layer / block，edge message 代表从上一层传到下一层的当前 token activation。一个 token step 内运行 $R=N$ 个 round 时，信息可以沿 chain 从输入端逐步传播到输出端。尚未收到有效输入的节点，其 $\psi_v^r$ 可以是 identity / no-op。
+其中 node $0$ 是 input / embedding anchor，node $1,\ldots,N$ 分别代表 $N$ 个 layer / block，输出节点为 $o=N$。若不单独计算 input anchor，读者也可以把“$N$ 个 block node”理解为主模型部分；本文公式显式保留 input anchor，因此 $|V|=N+1$。
+
+一个 token step 内运行 $R=N$ 个 round 时，信息可以沿 chain 从输入端逐步传播到输出端。标准 chain 的 round gating 可写成：对任意 $j=1,\ldots,N$、$a\in A$ 与 $\mu\in U$，
+
+$$
+\phi_{(j-1,j)}^r(a,\mu)=\bot\quad \text{when } r\neq j
+$$
+
+也就是说，第 $j$ 个 block 只在第 $j$ 个 round 接收来自上一个 block 的当前 token activation。尚未收到有效输入的节点，其 $\psi_v^r$ 可以是 identity / no-op。
 
 若把一个 Transformer block 拆成 attention、FFN、norm/residual 等更细单元，也可以使用更长的 chain：
 
@@ -379,56 +411,46 @@ $$
 |V|\approx 2N \text{ or } 3N
 $$
 
-相应地使用 $R\approx 2N$ 或 $R\approx 3N$ 个 round。此时每个 node 的 $\psi_v^r$ 对应 attention、FFN、residual/norm 或 Mamba/SSM 子模块之一。
+相应地使用 $R\approx 2N$ 或 $R\approx 3N$ 个 round。此时每个非 anchor node 的 $\psi_v^r$ 对应 attention、FFN、residual/norm 或 Mamba/SSM 子模块之一，round gating 同样规定哪个子模块在当前 round 接收有效输入。
 
 残差连接也可以在 B0 中表达，常见有两种方式：
 
-- 把 residual stream 放入 $h_v$，由 node update kernel $\psi_v^r$ 在节点内部完成 add / norm / gating。
+- 把 residual stream 放入 $a_v$ 或 $\mu_v$，由 node update kernel $\psi_v^r$ 在节点内部完成 add / norm / gating。
 - 把 residual / skip connection 显式写成 graph edge，例如从上游 residual source 连到下游 add node。
 
 标准表达方式二是 block-as-node with internal substeps。此时 graph 仍是长度 $N$ 的 chain，每个 node 是一个完整 block；attention / SSM、FFN、residual、norm、cache append 等子步骤被封装在同一个 $\psi_v^r$ 内部。若后续需要把这些子步骤的 read/write/commit 顺序作为证明对象，标准做法仍是把 block 展开成更长的 B0 chain，或在实现文档中描述 node-local kernel contract。
 
-因此，B3 不是替代 B0 chain 的主表达，也不是把 Transformer / Mamba 的 block 或子模块编号改写成 phase。B0 chain 是表达标准 Transformer / Mamba layer stack 的自然起点；B3 只用于 runtime 明确存在大范围 role / direction / visibility barrier 的情形，例如 LH / Tide 的 input、output、iobridge、oibridge、readout 等阶段。
+因此，B2 不是替代 B0 chain 的主表达，也不是把 Transformer / Mamba 的 block 或子模块编号改写成 phase。B0 chain 是表达标准 Transformer / Mamba layer stack 的自然起点；B2 只用于 runtime 明确存在大范围 role / direction / visibility barrier 的情形，例如 LH / Tide 的 input、output、iobridge、oibridge、readout 等阶段。
 
 | 架构组件 | B0 中的自然对应方式 | `prefill == decode fold` 的来源 |
 | --- | --- | --- |
-| Transformer attention block | $h_v$ 是该层的完整 step state，例如 residual activation + KV cache；$\operatorname{Inject}$ 或上一层消息提供当前 token activation；$\psi_v^r$ 做 Q/K/V projection、KV append、causal attention、output projection；$\phi_e^r$ 抽取要传给下一层的 residual stream。 | 标准 causal attention 的 prefill 与逐 token decode 等价，前提是 causal mask、position encoding、KV append order 与数值实现一致。 |
-| Transformer FFN / MLP block | $h_v$ 可以是 residual activation + 平凡 memory；$\psi_v^r$ 是 FFN/MLP；$\phi_e^r$ 抽取 FFN 后 activation。 | FFN 对 token 位置逐点作用，没有跨 token recurrence；只要输入 activation 一致，prefill 与 decode 逐点一致。 |
-| Mamba / SSM block | $h_v$ 是该层的完整 step state，例如 current activation + SSM recurrent state；$\psi_v^r$ 做 selective state update 与输出；$\phi_e^r$ 抽取传给下一层的 activation。 | decode 是 recurrent update；prefill 等价依赖 scan / chunk scan 实现与逐步 recurrence 等价。 |
-| Linear attention block | $h_v$ 是 current activation + linear-attention accumulator；$\psi_v^r$ 更新 accumulator 并产生当前输出。 | prefill 等价依赖 accumulator 的 causal prefix 更新与逐 token update 等价。 |
+| Transformer attention block | $a_v$ 是当前 token residual activation，$\mu_v$ 是该层 KV cache；$\psi_v^r$ 做 Q/K/V projection、KV append、causal attention、output projection；$\phi_e^r$ 抽取要传给下一层的 residual stream。 | 标准 causal attention 的 prefill 与逐 token decode 等价，前提是 causal mask、position encoding、KV append order 与数值实现一致。 |
+| Transformer FFN / MLP block | $a_v$ 是当前 token residual activation，$\mu_v$ 可为空或平凡；$\psi_v^r$ 是 FFN/MLP；$\phi_e^r$ 抽取 FFN 后 activation。 | FFN 对 token 位置逐点作用，没有跨 token recurrence；只要输入 activation 一致，prefill 与 decode 逐点一致。 |
+| Mamba / SSM block | $a_v$ 是当前 token activation，$\mu_v$ 是 SSM recurrent state；$\psi_v^r$ 做 selective state update 与输出；$\phi_e^r$ 抽取传给下一层的 activation。 | decode 是 recurrent update；prefill 等价依赖 scan / chunk scan 实现与逐步 recurrence 等价。 |
+| Linear attention block | $a_v$ 是 current activation，$\mu_v$ 是 linear-attention accumulator；$\psi_v^r$ 更新 accumulator 并产生当前输出。 | prefill 等价依赖 accumulator 的 causal prefix 更新与逐 token update 等价。 |
 
-这张表的用意是帮助理解符号，而不是声称所有真实实现都应该停留在 B0。B0 把每个 node 的完整 step state 都放在 $h_v$ 中，因此表达力足够宽；B1 之后的分层，正是为了把这个完整 state 进一步拆开，分别研究 memory lifecycle、selector/controller、workspace、phase barrier 与 chunk prefill 约束。
+这张表的用意是帮助理解符号。B0 已经把 Transformer/Mamba/Linear Attention 这类已有高性能 `prefill == decode` 实现路径的主流自回归模型纳入数学对象中；后续 B-family 层级不应再把 Transformer/Mamba 的基本 cache/state 表达能力当作新增能力，而应研究 typed edge、workspace、phase、selector、readout 等额外机制。B0 本身只定义 reference transition；具体 chunk prefill 是否高性能且正确，仍必须按定义 2.2 另行证明。
 
 ### 定义 3.4：B0 单步 transition
 
 定义：
 
 $$
-\mathcal{T}^{B0}:X\times H^V\to Y\times H^V
+\mathcal{T}^{B0}:X\times (A^V\times U^V)\to Y\times (A^V\times U^V)
 $$
 
-对任意 $x\in X$ 与 $h\in H^V$，$\mathcal{T}^{B0}(x,h)$ 按以下方式计算。
+对任意 $x\in X$ 与 $(a,\mu)\in A^V\times U^V$，$\mathcal{T}^{B0}(x,(a,\mu))$ 按以下方式计算。
 
-先定义 step-local node state：
-
-$$
-a^0\in H^V
-$$
-
-其中：
+先初始化当前 token 的 step-local state：
 
 $$
-a_i^0=\operatorname{Inject}(x,h_i)
-$$
-
-$$
-a_v^0=h_v,\quad v\neq i
+(a^0,\mu^0)=\operatorname{Init}(x,a,\mu)
 $$
 
 对每个 round $r=1,\ldots,R$，对每条边 $e\in E$ 定义消息：
 
 $$
-m_e^r=\phi_e^r(a_{\operatorname{src}(e)}^{r-1})
+m_e^r=\phi_e^r(a_{\operatorname{src}(e)}^{r-1},\mu_{\operatorname{src}(e)}^{r-1})
 $$
 
 对每个节点 $v\in V$ 定义 mailbox：
@@ -444,35 +466,35 @@ $$
 对每个节点 $v\in V$ 更新：
 
 $$
-a_v^r=\psi_v^r(a_v^{r-1},b_v^r)
+(a_v^r,\mu_v^r)=\psi_v^r(a_v^{r-1},\mu_v^{r-1},b_v^r)
 $$
 
 执行完 $R$ 个 round 后，定义输出：
 
 $$
-y=\rho(a_o^R)
+y=\rho(a_o^R,\mu_o^R)
 $$
 
 定义下一持久状态：
 
 $$
-h'=a^R
+S'=(a^R,\mu^R)
 $$
 
 于是：
 
 $$
-\mathcal{T}^{B0}(x,h)=(y,h')
+\mathcal{T}^{B0}(x,(a,\mu))=(y,S')
 $$
 
 ### 定理 3.5：B0 的顺序 prefill / decode 等价
 
-对任意 $L\in\mathbb{N}$、任意 $x_{0:L}\in X^L$ 与任意 $h_0\in H^V$：
+对任意 $L\in\mathbb{N}$、任意 $x_{0:L}\in X^L$ 与任意 $S_0\in A^V\times U^V$：
 
 $$
-\operatorname{Prefill}^{seq,L}_{\mathcal{T}^{B0}}(x_{0:L},h_0)
+\operatorname{Prefill}^{seq,L}_{\mathcal{T}^{B0}}(x_{0:L},S_0)
 =
-\operatorname{Decode}_{\mathcal{T}^{B0}}^L(x_{0:L},h_0)
+\operatorname{Decode}_{\mathcal{T}^{B0}}^L(x_{0:L},S_0)
 $$
 
 证明：
@@ -483,144 +505,13 @@ $$
 
 ## 4. B-family：逐层增加机制
 
-这一节把 B0 扩展为 B1-B7。B1 给出一个完整 transition 示例；B2-B7 更准确地说是 extension schema：它们声明新增 state / workspace / kernel / schedule 约束。只有当这些 schema 与具体 kernel 组合成单步 transition 后，才可应用后面的 B-family 引理。
+这一节把 B0 扩展为 B1-B6。B0 已经是能表达 Transformer/Mamba 的标准 factorized graph runtime；后续层级不再引入“基本 memory/cache”，而是增加更强的 graph/runtime 结构。B1-B6 更准确地说是 extension schema：它们声明新增 state / workspace / kernel / schedule 约束。只有当这些 schema 与具体 kernel 组合成单步 transition 后，才可应用后面的 B-family 引理。
 
-### B1：factorized node state
+### B1：typed edge 与 token-local mailbox
 
-B1 不是第一次引入 memory，而是把 B0 中的完整 node state 因子化为 visible activation 与 private memory。它可看作对 B0 的约束化版本：
+B1 是在 B0 上增加 edge role 与显式 mailbox lifetime 的 schema。它本身不改变 transition 的顺序 fold 语义；真正的 transition 还需要指定 typed edge kernel、aggregation 与 node update。
 
-$$
-H=A\times U
-$$
-
-其中 $A$ 是可通信 activation space，$U$ 是节点私有 memory/cache space。
-
-#### 定义 4.1：B1 状态空间
-
-给定 visible activation space：
-
-$$
-A=\text{visible activation space}
-$$
-
-给定 node memory space：
-
-$$
-U=\text{node memory space}
-$$
-
-B1 的持久状态空间为：
-
-$$
-\mathcal{S}_{B1}=A^V\times U^V
-$$
-
-记状态为：
-
-$$
-S=(h,\mu)
-$$
-
-其中 $h\in A^V$，$\mu\in U^V$。
-
-#### 定义 4.2：B1 kernels
-
-给定输入注入函数：
-
-$$
-\operatorname{Inject}^{B1}:X\times A\times U\to A\times U
-$$
-
-B1 edge kernel 类型变为：
-
-$$
-\phi_e^r:A\times U\to M
-$$
-
-B1 node update 类型变为：
-
-$$
-\psi_v^r:A\times U\times \mathcal{B}_v\to A\times U
-$$
-
-给定 readout 函数：
-
-$$
-\rho^{B1}:A\times U\to Y
-$$
-
-#### 定义 4.3：B1 transition
-
-B1 transition：
-
-$$
-\mathcal{T}^{B1}:X\times\mathcal{S}_{B1}\to Y\times\mathcal{S}_{B1}
-$$
-
-对任意 $x\in X$ 与 $(h,\mu)\in\mathcal{S}_{B1}$，先定义：
-
-$$
-(a_i^0,\mu_i^0)=\operatorname{Inject}^{B1}(x,h_i,\mu_i)
-$$
-
-$$
-a_v^0=h_v,\quad v\neq i
-$$
-
-$$
-\mu_v^0=\mu_v,\quad v\neq i
-$$
-
-对每个 round $r=1,\ldots,R$ 与每条边 $e\in E$，定义：
-
-$$
-m_e^r=
-\phi_e^r(a_{\operatorname{src}(e)}^{r-1},\mu_{\operatorname{src}(e)}^{r-1})
-$$
-
-对每个节点 $v\in V$，定义：
-
-$$
-b_v^r=
-\operatorname{Agg}_v^r
-\left(
-(m_e^r)_{e\in E^{-}(v)}
-\right)
-$$
-
-每个节点更新产生：
-
-$$
-(a_v^r,\mu_v^r)=\psi_v^r(a_v^{r-1},\mu_v^{r-1},b_v^r)
-$$
-
-下一持久状态为：
-
-$$
-S'=(a^R,\mu^R)
-$$
-
-输出为：
-
-$$
-y=\rho^{B1}(a_o^R,\mu_o^R)
-$$
-
-于是：
-
-$$
-\mathcal{T}^{B1}(x,(h,\mu))=(y,S')
-$$
-
-只要 decode 与 prefill 使用同一个 $\mathcal{T}^{B1}$，顺序 fold 等价由定理 1.5 成立。
-
-高性能 chunk prefill 还必须证明任意 token $t$ 的 $\mu$ 更新不依赖未来 token。
-
-### B2：typed edge 与 token-local mailbox
-
-B2 是在 B1 上增加 edge role 与显式 mailbox lifetime 的 schema。它本身不改变 transition 的顺序 fold 语义；真正的 transition 还需要指定 typed edge kernel、aggregation 与 node update。
-
-#### 定义 4.4：edge role
+#### 定义 4.1：edge role
 
 给定有限 edge role 集合 $R_E$ 与 edge role 函数：
 
@@ -631,10 +522,10 @@ $$
 typed edge kernel 可写为：
 
 $$
-\phi_{\tau_E(e)}^r:A\times U\to M
+\phi_{\tau_E(e)}^r:A\times U\to \overline{M}
 $$
 
-#### 定义 4.5：mailbox workspace
+#### 定义 4.2：mailbox workspace
 
 对每个 token step 与 round，引入临时 mailbox：
 
@@ -646,13 +537,13 @@ $$
 
 mailbox 不是持久状态。若没有显式 commit，$W_{box}^r$ 不属于下一 token 的 $S'$。
 
-### B3：phase schedule
+### B2：phase schedule
 
-B3 不是用来把 Transformer / Mamba 的 $N$ 个 block 拆成 $N$ 个 phase。标准 block 顺序应优先由 B0 chain + rounds 表达。
+B2 不是用来把 Transformer / Mamba 的 $N$ 个 block 拆成 $N$ 个 phase。标准 block 顺序应优先由 B0 chain + rounds 表达。
 
-B3 的用途是表达 LH / Tide 这类 runtime 中的大范围执行阶段划分，例如 input-side update、output-side update、input-to-output bridge、output-to-input bridge、readout cache、pronounce 等。也就是说，phase 更像 role / direction / visibility 的全局 barrier，而不是普通 layer index。
+B2 的用途是表达 LH / Tide 这类 runtime 中的大范围执行阶段划分，例如 input-side update、output-side update、input-to-output bridge、output-to-input bridge、readout cache、pronounce 等。也就是说，phase 更像 role / direction / visibility 的全局 barrier，而不是普通 layer index。
 
-#### 定义 4.6：phase
+#### 定义 4.3：phase
 
 给定持久状态空间 $\mathcal{S}$ 与 workspace 空间 $\mathcal{W}$。
 
@@ -676,7 +567,7 @@ $$
 \operatorname{commit}_p:\mathcal{S}\times\mathcal{W}\times\Delta_p\to\mathcal{S}\times\mathcal{W}
 $$
 
-#### 定义 4.7：schedule
+#### 定义 4.4：schedule
 
 一个 flat schedule 是有限 phase 序列：
 
@@ -730,7 +621,7 @@ $$
 
 后续 transition 只读取 $\operatorname{flat}(\Pi)$。因此，无论实现上是否保留 internal round 结构，数学上的单步 transition 都是一个有限 phase 序列。
 
-#### 定义 4.8：phase transition
+#### 定义 4.5：phase transition
 
 给定 schedule $\Pi$、初始化函数：
 
@@ -784,7 +675,7 @@ $$
 
 phase schedule 的数学作用是显式规定 barrier、visibility 与 commit order。
 
-#### 约束 4.8a：高性能并行 prefill 的基本语义约束
+#### 约束 4.5a：高性能并行 prefill 的基本语义约束
 
 给定定义 2.1 的 chunk prefill implementation $\mathcal{C}_L$，并令定义 2.2 中的 reference transition 为：
 
@@ -802,9 +693,9 @@ $$
 
 这些是证明 $\mathcal{C}_L$ 满足定义 2.2 的必要审查项，不是充分条件。
 
-### B4：selector / controller state
+### B3：selector / controller state
 
-#### 定义 4.9：controller state
+#### 定义 4.6：controller state
 
 给定 controller scope 集合 $C$ 与 controller state space $Q$。
 
@@ -816,23 +707,23 @@ $$
 
 若 $q\in Q^C$，则 $q_c$ 是 scope $c\in C$ 的 controller state。
 
-#### 定义 4.10：selector kernel
+#### 定义 4.7：selector kernel
 
-给定候选空间 $\mathcal{A}$ 与 active-set 空间 $\mathcal{R}$。
+给定候选空间 $\mathcal{C}_{cand}$ 与 active-set 空间 $\mathcal{R}$。
 
 selector kernel 是函数：
 
 $$
-\sigma:\mathcal{A}\times Q^C\to \mathcal{R}\times Q^C
+\sigma:\mathcal{C}_{cand}\times Q^C\to \mathcal{R}\times Q^C
 $$
 
 其输出既包含被选择的 active set，也包含更新后的 controller state。
 
 若 chunk prefill 把多个 token 的候选集合联合输入 selector，必须证明该联合 selector 与逐 token 应用 $\sigma$ 的 fold 等价。
 
-### B5：token-local readout cache
+### B4：token-local readout cache
 
-#### 定义 4.11：readout cache
+#### 定义 4.8：readout cache
 
 给定 cache element space $Z$。若每个 token 内有 $R$ 个 internal round，则 token-local readout cache 空间可写为：
 
@@ -854,9 +745,9 @@ $$
 
 除非它被 finalize 显式写入持久状态。
 
-### B6：pronounce memory
+### B5：pronounce memory
 
-#### 定义 4.12：pronounce memory
+#### 定义 4.9：pronounce memory
 
 给定 pronounce memory space $P$。
 
@@ -869,7 +760,7 @@ $$
 加入 pronounce memory 后，完整持久状态空间为：
 
 $$
-\mathcal{S}_{B6}=\mathcal{S}_{base}\times P
+\mathcal{S}_{B5}=\mathcal{S}_{base}\times P
 $$
 
 完整状态写为：
@@ -888,16 +779,16 @@ $$
 
 如果 $P$ 的更新不是可结合 scan，则高性能 chunk prefill 必须按 token 顺序更新 pronounce memory，或提供额外等价性证明。
 
-### B7：input/output roles 与 bridge
+### B6：input/output roles 与 bridge
 
-#### 定义 4.13：role-aware graph
+#### 定义 4.10：role-aware graph
 
 给定 node role 集合 $R_V$ 与 edge role 集合 $R_E$。
 
 role-aware graph 为：
 
 $$
-G=(V,E,\tau_V,\tau_E,A)
+G=(V,E,\tau_V,\tau_E,\mathsf{Anc})
 $$
 
 其中：
@@ -910,7 +801,7 @@ $$
 \tau_E:E\to R_E
 $$
 
-$A$ 是 anchor 集合，例如 input anchor、readout anchor、bridge anchor。
+$\mathsf{Anc}$ 是 anchor 集合，例如 input anchor、readout anchor、bridge anchor。
 
 对 LH-like runtime，通常至少区分：
 
@@ -926,7 +817,7 @@ $$
 
 其中 $E_{io}$ 与 $E_{oi}$ 是有方向的 bridge edge。
 
-#### 定义 4.14：LH-like schedule 约束
+#### 定义 4.11：LH-like schedule 约束
 
 LH-like schedule 至少需要定义以下 phase 的 read / commit 语义：
 
@@ -944,7 +835,7 @@ $$
 
 其中：
 
-- 每个 $p_*$ 都是定义 4.6 中的 phase。
+- 每个 $p_*$ 都是定义 4.3 中的 phase。
 - $p_{oi}$ 读 output-side 旧状态，写 input-side mailbox。
 - $p_{input}$ 在指定 internal round 写 input anchor。
 - $p_{io}$ 读 input-side 旧状态，写 output-side mailbox。
@@ -952,11 +843,11 @@ $$
 - $p_{out\_update}$ 只更新 output-side state namespace。
 - $p_{cache}$ 只读 output readout anchor，写 token-local readout cache。
 
-B7 已经接近 LH，但它是否等价于 LH C++，还取决于 selector、hidden、KV cache、pronounce 与 tie-breaking 等 kernel 细节是否逐 phase 对齐。
+B6 已经接近 LH，但它是否等价于 LH C++，还取决于 selector、hidden、KV cache、pronounce 与 tie-breaking 等 kernel 细节是否逐 phase 对齐。
 
-### 引理 4.15：B-family 的顺序 fold 等价
+### 引理 4.12：B-family 的顺序 fold 等价
 
-对任意 $k\in\{0,\ldots,7\}$，若 Bk 定义出一个 transition system：
+对任意 $k\in\{0,\ldots,6\}$，若 Bk 定义出一个 transition system：
 
 $$
 \mathcal{T}^{Bk}:X\times\mathcal{S}_{Bk}\to Y\times\mathcal{S}_{Bk}
@@ -1132,6 +1023,6 @@ $$
 
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
 - 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
-- B0-B7 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
+- B0-B6 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
 - selector、pronounce memory、KV append、phase barrier、workspace lifetime 是最容易破坏 chunk/prefill 等价的机制。
 - packed / crossbatch / backend lowering 的正确证明入口是 step simulation，而不是只比较最终 logits。
