@@ -541,6 +541,130 @@ $$
 
 4. 给出高性能实现见证：说明 $\mathcal{C}_{\theta,L}$ 可由 matmul、causal mask、parallel prefix / scan、kernel fusion、packed layout 或 backend lowering 等方式实现。高性能实现见证不替代第 3 条的正确性证明。
 
+#### 定义 3.6a：time-expanded causal graph program
+
+给定长度 $L\in\mathbb{N}$。令 $\mathcal{O}$ 是有限 operation slot 集合，并给定 token-local strict total order：
+
+$$
+\prec_{\mathcal{O}}
+$$
+
+一个长度为 $L$ 的 time-expanded graph 的节点集合为：
+
+$$
+\mathcal{N}_L\subseteq [L]\times\mathcal{O}
+$$
+
+若 $n=(t,o)\in\mathcal{N}_L$，则 $t$ 是 token index，$o$ 是该 token 内的 operation slot。
+
+给定有向边集合：
+
+$$
+\mathcal{E}_L\subseteq \mathcal{N}_L\times\mathcal{N}_L
+$$
+
+称 $D_L=(\mathcal{N}_L,\mathcal{E}_L)$ 是 causal time-expanded DAG，当且仅当：
+
+1. $D_L$ 是有向无环图。
+2. 若 $((t',o'),(t,o))\in\mathcal{E}_L$，则要么 $t'<t$，要么 $t'=t$ 且 $o'\prec_{\mathcal{O}} o$。
+
+条件 2 表示依赖只来自更早 token，或同一 token 内更早 operation；它排除 future-token dependency。
+
+对每个节点 $n\in\mathcal{N}_L$，给定 value space $\mathcal{V}_n$。若 $\operatorname{Pred}(n)$ 是 $n$ 的直接前驱集合，则给定局部 kernel：
+
+$$
+F_n:
+\left(\prod_{m\in\operatorname{Pred}(n)}\mathcal{V}_m\right)
+\times X^L
+\times\mathcal{S}
+\to
+\mathcal{V}_n
+$$
+
+这里把输入序列 $x_{0:L}$ 与初始 state $S_0$ 作为 boundary data 传入，是为了统一表达 input injection、position / clock、old KV cache、old SSM state 等边界信息。
+
+还要求每个 $F_n$ 满足 prefix-causal boundary condition。若 $n=(t,o)$，则 $F_n$ 对 $x_{0:L}$ 的依赖只能通过前缀 $x_{0:t+1}$。形式化地说，若两个输入序列 $x_{0:L}$ 与 $\bar{x}_{0:L}$ 满足：
+
+$$
+x_j=\bar{x}_j,\quad j=0,\ldots,t
+$$
+
+则在相同前驱值与相同初始 state 下，$F_n$ 的输出相同。若某个 $F_n$ 使用 $x_{t'}$ 且 $t'>t$，则该 program 不满足 causal chunk 前提。
+
+给定 output / final-state extraction 函数：
+
+$$
+G_L:
+\left(\prod_{n\in\mathcal{N}_L}\mathcal{V}_n\right)
+\times X^L
+\times\mathcal{S}
+\to
+Y^L\times\mathcal{S}
+$$
+
+一个 time-expanded graph program 是：
+
+$$
+\mathcal{P}_L=(D_L,(F_n)_{n\in\mathcal{N}_L},G_L)
+$$
+
+#### 定义 3.6b：decode unfolding 与 chunk evaluation 一致
+
+给定 transition system：
+
+$$
+\mathcal{T}:X\times\mathcal{S}\to Y\times\mathcal{S}
+$$
+
+以及 time-expanded graph program $\mathcal{P}_L$。
+
+定义 decode order 为先按 token index $t$ 升序，再按 $\prec_{\mathcal{O}}$ 升序排列 $\mathcal{N}_L$ 中的节点。
+
+称 $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding，当且仅当对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$，若按 decode order 计算 $\mathcal{P}_L$ 中所有节点值，并再应用 $G_L$，得到的结果等于：
+
+$$
+\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
+$$
+
+称 chunk implementation $\mathcal{C}_L$ 是 $\mathcal{P}_L$ 的 graph evaluation，当且仅当对所有 $x_{0:L}$ 与 $S_0$，$\mathcal{C}_L$ 计算同一个 $D_L$、同一组 kernel $(F_n)$ 与同一个 extraction $G_L$，但允许使用任意 topological order、batched evaluation、masked matmul、parallel scan、fusion 或 packed layout，只要每个节点的数学值与 $\mathcal{P}_L$ 中的方程相同。
+
+#### 定理 3.6c：B0 Causal Chunk Theorem
+
+给定 transition system：
+
+$$
+\mathcal{T}:X\times\mathcal{S}\to Y\times\mathcal{S}
+$$
+
+若对某个 $L\in\mathbb{N}$，存在 causal time-expanded graph program $\mathcal{P}_L$，满足：
+
+1. $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding。
+2. $\mathcal{C}_L$ 是 $\mathcal{P}_L$ 的 graph evaluation。
+
+则：
+
+$$
+\mathcal{C}_L(x_{0:L},S_0)
+=
+\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
+$$
+
+对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$ 成立。因此 $\mathcal{C}_L$ 对 $\mathcal{T}$ 正确。
+
+证明：
+
+因为 $D_L$ 是 DAG，所以存在 topological order。decode order 是 $D_L$ 的一个 topological order，因为每条边只来自更早 token 或同 token 更早 operation。
+
+任取另一个 topological order。对该 order 做归纳。设当前节点为 $n$。它的所有前驱都已在两个 evaluation 中被计算。归纳假设给出所有前驱值相同。由于两个 evaluation 使用同一个 kernel $F_n$、同一个输入 $x_{0:L}$ 与同一个初始状态 $S_0$，当前节点值也相同。
+
+归纳到所有节点后，两个 evaluation 中所有节点值完全相同。再由于二者使用同一个 extraction $G_L$，输出序列与最终 state 相同。
+
+又因为 $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding，decode order evaluation 后应用 $G_L$ 等于 $\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)$。因此任意 graph evaluation，即 $\mathcal{C}_L$，也等于 $\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)$。
+
+证毕。
+
+这个定理只证明 correctness。它不声称 $\mathcal{C}_L$ 自动高性能。高性能来自具体 kernel family 的额外结构，例如 token-wise map 的批量化、attention 的 masked matmul / fused attention、affine recurrence 的 parallel scan、有限 layer chain 的逐层批量执行。
+
 #### 定理 3.7：token-wise kernel 的 chunk prefill 正确性
 
 给定集合 $X,Y$ 与函数：
@@ -992,6 +1116,8 @@ $$
 
 token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。causal attention kernel 由定理 3.9 满足 chunk prefill 正确性。有限个 attention head 的 product / concat 是有限个相同输入上的 component-wise transition；每个 component 的 chunk 输出与顺序 fold 相同，则它们的 product / concat 也相同。attention 后的 output projection、FFN、norm、residual 等仍是 token-wise kernels。
 
+从一般图角度看，Transformer 的 time-expanded graph 只包含同 token layer order、旧 KV cache、当前 chunk 内 causal prefix attention edge，不包含 future-token dependency；position signal 若存在，也由 prefix-causal position / clock 函数给出。因此它满足定理 3.6c 的 causal graph correctness 前提。
+
 因此，每个 Transformer layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Transformer stack 的 chunk prefill implementation 与逐 token decode fold 相同。
 
 证毕。
@@ -1031,6 +1157,8 @@ $$
 证明：
 
 token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。有限宽 causal convolution 是有限维 shift-register 的 affine recurrence，因此由定理 3.11 满足 chunk prefill 正确性。selective SSM recurrence 的状态更新已经写成 $h'=A_xh+b_x$，输出写成 $y=o(x,h')$，因此也由定理 3.11 满足 chunk prefill 正确性。
+
+从一般图角度看，Mamba / SSM 的 time-expanded graph 只包含同 token layer order、有限 causal convolution state、SSM prefix recurrence state，不包含 future-token dependency。因此它满足定理 3.6c 的 causal graph correctness 前提。
 
 因此，每个 Mamba / SSM layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Mamba / SSM stack 的 chunk prefill implementation 与逐 token decode fold 相同。
 
@@ -1558,6 +1686,7 @@ $$
 
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
 - 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
+- 定理 3.6c 给出一般 B0 Causal Chunk Theorem：若 chunk implementation 计算的是同一个 time-expanded causal DAG、同一组 kernel equation、同一个 output/final-state extraction，则 correctness 成立。
 - B0 proof gate 先证明 token-wise / FFN、causal attention、affine scan recurrence、linear attention accumulator 以及有限 layer stack 这些主流 kernel family 的 chunk prefill 正确性；在这些结果上，定理 3.14 给出 B0-Transformer chunk prefill 正确性，定理 3.15 给出 B0-Mamba / SSM chunk prefill 正确性。
 - 上述命名定理不推出任意 B0 graph / 任意 B0 kernel 都有高性能 chunk prefill；它们证明的是 Transformer / Mamba 这类主力结构在 B0 中满足 $\mathcal{C}_L=\operatorname{Fold}_{\mathcal{T}}^L$。
 - B0-B6 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
