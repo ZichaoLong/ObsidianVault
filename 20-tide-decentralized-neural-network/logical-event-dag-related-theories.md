@@ -45,6 +45,9 @@ The theorem separates two questions:
 | Synchronous dataflow | A static graph can be scheduled predictably when production/consumption rates are known. | Useful for fixed internal rounds, phases, and graph schedules. | Tide may have selectors, sparse activation, or data-dependent routing beyond static SDF. |
 | Timely dataflow / Naiad | Messages carry logical timestamps; operators reason over partially ordered logical time. | Very close to tagged messages and `(token, round, phase, node)` event IDs. | It is a distributed dataflow execution model, not an autoregressive-model proof by itself. |
 | Parallel prefix / scan | Sequential recurrences can be parallelized when updates compose associatively. | This is the high-performance proof path for Mamba / SSM / linear attention accumulators. | It applies only to recurrences with suitable algebraic structure. |
+| Database provenance | Query results can carry provenance explaining which inputs contributed. | Closest analogy for why untagged aggregation can destroy token / round influence relation. | Provenance frameworks are usually for databases, not neural runtime kernels. |
+| CALM / confluence | Order-independent distributed results require monotonic or coordination-safe structure. | Supports the distinction between safe aggregation and arrival-order-dependent kernels. | CALM is about distributed consistency, not chunk prefill directly. |
+| Differential Dataflow | Collections carry timestamps and differences; incremental operators preserve logical time. | Strong analogy for timestamped collections and trace/arrangement maintenance. | It assumes dataflow collection semantics, not arbitrary neural state mutation. |
 
 ## 1. DAG Evaluation And Topological Order
 
@@ -199,6 +202,92 @@ Relevant sources:
 
 - Guy E. Blelloch, "Prefix Sums and Their Applications", 1990/1993. PDF: https://www.cs.cmu.edu/~guyb/papers/Ble93.pdf
 - Mark Harris et al., "Parallel Prefix Sum (Scan) with CUDA", GPU Gems 3. NVIDIA: https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
+
+## 7. Provenance And Safe Aggregation
+
+The aggregation issue in Tide is close to database provenance.
+
+If several logical events contribute to one aggregate, then later kernels may need to know:
+
+```text
+which token?
+which round?
+which phase?
+which source node?
+```
+
+Tagged aggregation keeps that information. Untagged aggregation discards it.
+
+This does not mean untagged aggregation is always invalid. It is valid if the aggregate is a sufficient statistic for all downstream kernels and final extraction. In mathematical terms, the runtime must provide a semantics-preserving quotient:
+
+```text
+reference event values -> aggregate value
+```
+
+and every downstream kernel must factor through that quotient.
+
+Examples:
+
+- Safe: summing same-event messages when the reference kernel only uses the sum.
+- Safe: max aggregation when downstream only uses the max.
+- Safe: histogram aggregation when downstream only uses bucket counts.
+- Unsafe: merging token `t` and token `t+1` into one untagged vector when later output/state needs token-specific effects.
+- Unsafe: physical first-arrival aggregation when reference semantics depends on logical order.
+
+This maps to the database-provenance intuition: once provenance is dropped, some downstream questions become unanswerable unless the query is invariant to the dropped information.
+
+Relevant sources:
+
+- Todd J. Green, Gregory Karvounarakis, Val Tannen, "Provenance Semirings", PODS 2007. DOI: https://doi.org/10.1145/1265530.1265535
+- Peter Buneman, Sanjeev Khanna, Wang-Chiew Tan, "Why and Where: A Characterization of Data Provenance", ICDT 2001. DOI: https://doi.org/10.1007/3-540-44503-X_20
+
+## 8. CALM, Confluence, And Coordination
+
+The CALM theorem says, roughly, that monotonic programs can be eventually consistent without coordination. The analogy to Tide is not exact, but it is useful.
+
+Tide's equivalent question is:
+
+```text
+Can physical execution order vary without changing the logical result?
+```
+
+If aggregation is associative / commutative / idempotent and downstream kernels only depend on that aggregate, then reordering or batching may be safe.
+
+If a kernel depends on:
+
+```text
+first arrived message
+arrival order
+unlabeled mix of different logical times
+```
+
+then physical schedule can affect semantics, and chunk prefill correctness is not generally provable.
+
+Relevant source:
+
+- Neil Conway et al., "Logic and Lattices for Distributed Programming", SoCC 2012. DOI: https://doi.org/10.1145/2391229.2391230
+- Technical report PDF: https://db.cs.berkeley.edu/papers/UCB-lattice-tr.pdf
+- Joe Hellerstein, "The CALM Theorem and Program Analysis for Distributed Consistency", CACM article: https://cacm.acm.org/research/keeping-calm/
+
+## 9. Differential Dataflow
+
+Differential Dataflow maintains collections indexed by logical time and differences. Its relevance is the same design pressure:
+
+```text
+keep timestamped structure long enough
+to support correct incremental / out-of-order computation
+```
+
+For Tide, this suggests:
+
+- message collections should preserve token / round / phase timestamps;
+- arrangements / indexes can be derived views, not semantic replacements;
+- aggregation is safe only when it is a semantics-preserving quotient;
+- physical compaction must preserve the queries future kernels need.
+
+Relevant source:
+
+- Frank McSherry et al., "Differential Dataflow", CIDR 2013. PDF: https://www.cidrdb.org/cidr2013/Papers/CIDR13_Paper111.pdf
 
 ## Implications For Tide
 

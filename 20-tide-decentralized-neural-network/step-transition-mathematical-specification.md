@@ -103,6 +103,24 @@ $$
 E^{-}(v)=\{e\in E\mid \operatorname{dst}(e)=v\}
 $$
 
+### 定义 0.5：有限依赖族的乘积空间
+
+若 $I$ 是有限集合，且对每个 $i\in I$ 给定集合 $A_i$，定义有限乘积：
+
+$$
+\prod_{i\in I}A_i
+=
+\{a:I\to \bigcup_{i\in I}A_i\mid a_i\in A_i,\ i\in I\}
+$$
+
+若 $I=\varnothing$，则：
+
+$$
+\prod_{i\in I}A_i=\{()\}
+$$
+
+也就是说，空依赖集合的输入是唯一的空 tuple。
+
 ## 1. Transition 与顺序 Fold
 
 这一节先定义最基础的 transition 与 fold。后文所有 `prefill = decode fold` 都引用这里的定义。
@@ -517,7 +535,13 @@ $$
 
 #### 定义 3.6：B0 kernel family 通过 proof gate
 
-给定一个 B0 kernel family $\mathfrak{K}$。称 $\mathfrak{K}$ 通过 B0 proof gate，当且仅当对每个具体参数实例 $\theta\in\Theta_{\mathfrak{K}}$：
+给定一个 B0 kernel family $\mathfrak{K}$，并给定它的参数集合：
+
+$$
+\Theta_{\mathfrak{K}}
+$$
+
+称 $\mathfrak{K}$ 通过 B0 proof gate，当且仅当对每个具体参数实例 $\theta\in\Theta_{\mathfrak{K}}$：
 
 1. 给出一个 B0 transition：
 
@@ -555,7 +579,13 @@ $$
 \prec_L
 $$
 
-要求 $\prec_L$ 是 strict total order，并且若 $\tau(e)<\tau(e')$，则 $e\prec_L e'$。也就是说，decode reference 的 logical order 至少按 external token tick 单调；同一 token 内可继续包含 internal round、phase、node、edge、mailbox 等字段。
+要求 $\prec_L$ 是 strict total order。这里 strict total order 指满足以下三条的二元关系：
+
+1. irreflexive：不存在 $e\prec_L e$。
+2. transitive：若 $e_1\prec_L e_2$ 且 $e_2\prec_L e_3$，则 $e_1\prec_L e_3$。
+3. total：对任意 $e\neq e'$，恰有一个关系成立：$e\prec_L e'$ 或 $e'\prec_L e$。
+
+还要求若 $\tau(e)<\tau(e')$，则 $e\prec_L e'$。也就是说，decode reference 的 logical order 至少按 external token tick 单调；同一 token 内可继续包含 internal round、phase、node、edge、mailbox 等字段。
 
 例如，普通 Transformer 可取：
 
@@ -588,9 +618,29 @@ $$
 1. $D_L$ 是有向无环图。
 2. 若 $(e',e)\in\mathcal{E}_L$，则 $e'\prec_L e$。
 
-条件 2 表示依赖只来自 reference logical order 中更早的 event；由于 $\prec_L$ 至少按 external token tick 单调，它排除 future-token dependency。物理执行可以乱序，但逻辑依赖必须能映射回这个 DAG。
+DAG 条件 2 表示依赖只来自 reference logical order 中更早的 event；由于 $\prec_L$ 至少按 external token tick 单调，它排除 future-token dependency。物理执行可以乱序，但逻辑依赖必须能映射回这个 DAG。
 
-对每个节点 $n\in\mathcal{N}_L$，给定 value space $\mathcal{V}_n$。若 $\operatorname{Pred}(n)$ 是 $n$ 的直接前驱集合，则给定局部 kernel：
+对任意节点 $n\in\mathcal{N}_L$，定义直接前驱集合：
+
+$$
+\operatorname{Pred}(n)=\{m\in\mathcal{N}_L\mid (m,n)\in\mathcal{E}_L\}
+$$
+
+定义直接后继集合：
+
+$$
+\operatorname{Succ}(n)=\{m\in\mathcal{N}_L\mid (n,m)\in\mathcal{E}_L\}
+$$
+
+一个 topological order 是 $\mathcal{N}_L$ 的一个 tuple：
+
+$$
+\pi=(n_1,\ldots,n_K)
+$$
+
+其中 $K=|\mathcal{N}_L|$，每个节点在 $\pi$ 中恰好出现一次，并且若 $(n_i,n_j)\in\mathcal{E}_L$，则 $i<j$。
+
+对每个节点 $n\in\mathcal{N}_L$，给定 value space $\mathcal{V}_n$。给定局部 kernel：
 
 $$
 F_n:
@@ -622,13 +672,13 @@ G_L:
 Y^L\times\mathcal{S}
 $$
 
-一个 time-expanded graph program 是：
+一个 logical event graph program 是：
 
 $$
 \mathcal{P}_L=(D_L,(F_n)_{n\in\mathcal{N}_L},G_L)
 $$
 
-#### 定义 3.6b：decode unfolding 与 chunk evaluation 一致
+#### 定义 3.6b：logical event DAG 的 evaluation
 
 给定 transition system：
 
@@ -636,17 +686,61 @@ $$
 \mathcal{T}:X\times\mathcal{S}\to Y\times\mathcal{S}
 $$
 
-以及 time-expanded graph program $\mathcal{P}_L$。
+以及 logical event graph program $\mathcal{P}_L$。
 
-定义 decode order 为 $\prec_L$ 限制在 $\mathcal{N}_L$ 上得到的节点顺序。
+定义 decode order 为 $\prec_L$ 限制在 $\mathcal{N}_L$ 上得到的节点顺序。因为 $D_L$ 是 causal logical event DAG，decode order 是 $D_L$ 的一个 topological order。
 
-称 $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding，当且仅当对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$，若按 decode order 计算 $\mathcal{P}_L$ 中所有节点值，并再应用 $G_L$，得到的结果等于：
+令：
 
 $$
+\pi=(n_1,\ldots,n_K)
+$$
+
+是 $D_L$ 的任意 topological order，其中：
+
+$$
+K=|\mathcal{N}_L|
+$$
+
+对任意输入序列 $x_{0:L}\in X^L$ 与初始状态 $S_0\in\mathcal{S}$，定义沿 $\pi$ 的 node value family：
+
+$$
+v^{\pi}_{n}\in\mathcal{V}_{n},\quad n\in\mathcal{N}_L
+$$
+
+其递归定义如下。对 $j=1,\ldots,K$，令 $n=n_j$。因为 $\pi$ 是 topological order，若 $m\in\operatorname{Pred}(n)$，则 $m$ 已经出现在 $n$ 之前，因此 $v_m^\pi$ 已定义。令：
+
+$$
+v_n^\pi
+=
+F_n((v_m^\pi)_{m\in\operatorname{Pred}(n)},x_{0:L},S_0)
+$$
+
+定义沿 $\pi$ 的 graph evaluation：
+
+$$
+\operatorname{Eval}_{\pi}(\mathcal{P}_L,x_{0:L},S_0)
+=
+G_L((v_n^\pi)_{n\in\mathcal{N}_L},x_{0:L},S_0)
+$$
+
+令 $\pi_{dec}$ 表示 decode order。称 $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding，当且仅当对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$：
+
+$$
+\operatorname{Eval}_{\pi_{dec}}(\mathcal{P}_L,x_{0:L},S_0)
+=
 \operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
 $$
 
-称 chunk implementation $\mathcal{C}_L$ 是 $\mathcal{P}_L$ 的 graph evaluation，当且仅当对所有 $x_{0:L}$ 与 $S_0$，$\mathcal{C}_L$ 计算同一个 $D_L$、同一组 kernel $(F_n)$ 与同一个 extraction $G_L$，但允许使用任意 topological order、batched evaluation、masked matmul、parallel scan、fusion 或 packed layout，只要每个节点的数学值与 $\mathcal{P}_L$ 中的方程相同。
+称 chunk implementation $\mathcal{C}_L$ 是 $\mathcal{P}_L$ 的 graph evaluation，当且仅当存在 $D_L$ 的某个 topological order $\pi$，使得对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$：
+
+$$
+\mathcal{C}_L(x_{0:L},S_0)
+=
+\operatorname{Eval}_{\pi}(\mathcal{P}_L,x_{0:L},S_0)
+$$
+
+实现上，$\mathcal{C}_L$ 可以使用 batched evaluation、masked matmul、parallel scan、fusion 或 packed layout；数学上，它必须等价于某个 topological evaluation。
 
 #### 定理 3.6c：B0 Logical Event DAG Theorem
 
@@ -673,13 +767,58 @@ $$
 
 证明：
 
-因为 $D_L$ 是 DAG，所以存在 topological order。decode order 是 $D_L$ 的一个 topological order，因为每条边都指向 $\prec_L$ 中更晚的 event。
+因为 $D_L$ 是有限 DAG，所以存在 topological order。decode order $\pi_{dec}$ 是 $D_L$ 的一个 topological order，因为每条边都指向 $\prec_L$ 中更晚的 event。
 
-任取另一个 topological order。对该 order 做归纳。设当前节点为 $n$。它的所有前驱都已在两个 evaluation 中被计算。归纳假设给出所有前驱值相同。由于两个 evaluation 使用同一个 kernel $F_n$、同一个输入 $x_{0:L}$ 与同一个初始状态 $S_0$，当前节点值也相同。
+先证明任意两个 topological order 的 evaluation 相同。
 
-归纳到所有节点后，两个 evaluation 中所有节点值完全相同。再由于二者使用同一个 extraction $G_L$，输出序列与最终 state 相同。
+对任意节点 $n\in\mathcal{N}_L$，定义其 DAG depth：
 
-又因为 $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding，decode order evaluation 后应用 $G_L$ 等于 $\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)$。因此任意 graph evaluation，即 $\mathcal{C}_L$，也等于 $\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)$。
+$$
+d(n)=
+\begin{cases}
+0,& \operatorname{Pred}(n)=\varnothing,\\
+1+\max_{m\in\operatorname{Pred}(n)}d(m),& \operatorname{Pred}(n)\neq\varnothing.
+\end{cases}
+$$
+
+由于 $D_L$ 是有限 DAG，$d(n)$ 对所有节点都良定义。
+
+对 $d(n)$ 归纳。若 $d(n)=0$，则 $n$ 没有前驱，所以任何 topological order 中：
+
+$$
+v_n=
+F_n((),x_{0:L},S_0)
+$$
+
+因此 $v_n$ 唯一。
+
+假设所有 depth 小于 $q$ 的节点值唯一。若 $d(n)=q$，则所有 $m\in\operatorname{Pred}(n)$ 都满足 $d(m)<q$。由归纳假设，所有前驱值唯一。因为 $F_n$ 是函数，$v_n$ 也唯一。
+
+因此所有节点值与 topological order 无关。应用同一个 extraction $G_L$ 后，$\operatorname{Eval}_{\pi}$ 也与 topological order 无关。
+
+现在由定理前提 2，存在某个 topological order $\pi$，使得：
+
+$$
+\mathcal{C}_L(x_{0:L},S_0)=\operatorname{Eval}_{\pi}(\mathcal{P}_L,x_{0:L},S_0)
+$$
+
+由刚证明的 topological-order independence：
+
+$$
+\operatorname{Eval}_{\pi}(\mathcal{P}_L,x_{0:L},S_0)
+=
+\operatorname{Eval}_{\pi_{dec}}(\mathcal{P}_L,x_{0:L},S_0)
+$$
+
+再由定理前提 1：
+
+$$
+\operatorname{Eval}_{\pi_{dec}}(\mathcal{P}_L,x_{0:L},S_0)
+=
+\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
+$$
+
+合并三式得到结论。
 
 证毕。
 
@@ -709,6 +848,154 @@ $$
 - late-token 的信息通过无标记聚合影响 early-token 的 event、output 或 state commit。
 
 因此，完整涵盖既有 LH 实现不一定可能。若 LH 某处把同一 tick 收到的多源信号做不可逆、无时间戳的聚合，则 token influence relation 可能被折叠，无法构造与 decode fold 等价的 event DAG。要让 LH-like graph 支持 chunk prefill correctness，需要把聚合改成可追踪的 tagged aggregation，或证明该聚合对所有相关 kernel 是可交换、可结合、且不影响 reference logical visibility。
+
+#### 定义 3.6e：semantics-preserving aggregation quotient
+
+给定 logical event DAG program：
+
+$$
+\mathcal{P}_L=(D_L,(F_n)_{n\in\mathcal{N}_L},G_L)
+$$
+
+对每个 event $n\in\mathcal{N}_L$，给定 quotient value space $\widehat{\mathcal{V}}_n$ 与 abstraction map：
+
+$$
+\alpha_n:\mathcal{V}_n\to\widehat{\mathcal{V}}_n
+$$
+
+这些 $\alpha_n$ 可以表示：
+
+- identity / tagged collection：不丢失 logical event provenance。
+- sum / max / mean / histogram 等聚合：丢失部分 provenance。
+- packed layout / sparse row layout：改变表示但保留语义。
+
+称一组 quotient kernels：
+
+$$
+\widehat{F}_n:
+\left(\prod_{m\in\operatorname{Pred}(n)}\widehat{\mathcal{V}}_m\right)
+\times X^L
+\times\mathcal{S}
+\to
+\widehat{\mathcal{V}}_n
+$$
+
+以及 quotient extraction：
+
+$$
+\widehat{G}_L:
+\left(\prod_{n\in\mathcal{N}_L}\widehat{\mathcal{V}}_n\right)
+\times X^L
+\times\mathcal{S}
+\to
+Y^L\times\mathcal{S}
+$$
+
+定义 quotient program：
+
+$$
+\widehat{\mathcal{P}}_L
+=
+(D_L,(\widehat{F}_n)_{n\in\mathcal{N}_L},\widehat{G}_L)
+$$
+
+注意：$\widehat{\mathcal{P}}_L$ 使用同一个 logical event DAG $D_L$，但每个 event 的 value space 从 $\mathcal{V}_n$ 改为 $\widehat{\mathcal{V}}_n$。
+
+称 $\widehat{\mathcal{P}}_L$ 构成 $\mathcal{P}_L$ 的 semantics-preserving aggregation quotient，当且仅当：
+
+1. 对每个 event $n$、任意前驱值族 $(v_m)_{m\in\operatorname{Pred}(n)}$、任意输入 $x_{0:L}$ 与任意初始状态 $S_0$，局部 kernel 与 abstraction 交换：
+
+$$
+\alpha_n
+\left(
+F_n((v_m)_{m\in\operatorname{Pred}(n)},x_{0:L},S_0)
+\right)
+=
+\widehat{F}_n
+\left(
+(\alpha_m(v_m))_{m\in\operatorname{Pred}(n)},x_{0:L},S_0
+\right)
+$$
+
+2. 对任意 node value family $(v_n)_{n\in\mathcal{N}_L}$、任意输入 $x_{0:L}$ 与任意初始状态 $S_0$，output / final-state extraction 可通过 quotient values 因子化：
+
+$$
+G_L((v_n)_{n\in\mathcal{N}_L},x_{0:L},S_0)
+=
+\widehat{G}_L((\alpha_n(v_n))_{n\in\mathcal{N}_L},x_{0:L},S_0)
+$$
+
+直观地说，$\alpha$ 丢掉的信息必须对所有后续 kernel 与最终输出无关。此时 quotient value 是后续语义的充分统计量。
+
+#### 定理 3.6f：Aggregation Quotient Theorem
+
+给定 transition system：
+
+$$
+\mathcal{T}:X\times\mathcal{S}\to Y\times\mathcal{S}
+$$
+
+若对某个 $L\in\mathbb{N}$：
+
+1. $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding。
+2. $\widehat{\mathcal{P}}_L$ 是 $\mathcal{P}_L$ 的 semantics-preserving aggregation quotient。
+3. chunk implementation $\mathcal{C}_L$ 是 $\widehat{\mathcal{P}}_L$ 的 graph evaluation，意义同定义 3.6b，只是把 value space、kernel 与 extraction 换成 quotient 版本。定义 3.6b 对 quotient value spaces 可逐字应用。
+
+则：
+
+$$
+\mathcal{C}_L(x_{0:L},S_0)
+=
+\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
+$$
+
+对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$ 成立。
+
+证明：
+
+令 $\pi$ 是定理前提 3 中使 $\mathcal{C}_L$ 等于 $\widehat{\mathcal{P}}_L$ graph evaluation 的 topological order。由于定理 3.6c 中已经证明 topological evaluation 与所选 order 无关，并且该证明只依赖 DAG、局部函数和 extraction，不依赖具体 value space，所以同样适用于 quotient program $\widehat{\mathcal{P}}_L$。下面沿 decode order 证明 quotient event value 与 reference event value 的关系。
+
+按 decode order 对 event 做归纳。设 reference program $\mathcal{P}_L$ 中 event $n$ 的值为 $v_n$，quotient program $\widehat{\mathcal{P}}_L$ 中 event $n$ 的值为 $\widehat{v}_n$。归纳假设为：所有前驱 $m$ 都满足：
+
+$$
+\widehat{v}_m=\alpha_m(v_m)
+$$
+
+由 quotient 条件 1，对当前 event $n$，reference kernel 后再抽象，等于先抽象前驱再运行 quotient kernel。结合归纳假设：
+
+$$
+\begin{aligned}
+\widehat{v}_n
+&=
+\widehat{F}_n((\widehat{v}_m)_{m\in\operatorname{Pred}(n)},x_{0:L},S_0)\\
+&=
+\widehat{F}_n((\alpha_m(v_m))_{m\in\operatorname{Pred}(n)},x_{0:L},S_0)\\
+&=
+\alpha_n\left(F_n((v_m)_{m\in\operatorname{Pred}(n)},x_{0:L},S_0)\right)\\
+&=
+\alpha_n(v_n).
+\end{aligned}
+$$
+
+当 $\operatorname{Pred}(n)=\varnothing$ 时，上式中的前驱族是定义 0.5 中的唯一空 tuple，因此同样成立。
+
+归纳到所有 event 后，quotient evaluation 得到的 quotient values 等于 reference values 经 $\alpha$ 映射后的结果。
+
+由 quotient 条件 2，最终 output / state extraction 只依赖这些 quotient values，因此 quotient execution 的输出与 reference event DAG 的输出相同。
+
+又因为定理前提 1 说明 $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}}^L$ 的 decode unfolding，reference event DAG 的输出等于 $\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)$。
+
+定理前提 3 给出 $\mathcal{C}_L$ 等于 quotient graph evaluation。因此 $\mathcal{C}_L(x_{0:L},S_0)$ 也等于 $\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)$。
+
+证毕。
+
+#### 推论 3.6g：三类聚合的判定
+
+1. 同一 logical event 内的多源聚合是安全的，只要 reference decode 本来也在该 event 上执行同一个确定性聚合。此时聚合就是 $F_n$ 的一部分，不需要跨 event quotient。
+2. tagged cross-token / cross-round aggregation 是安全的，只要 tag 保留了后续 kernel 需要的 logical provenance。此时 $\alpha$ 可以近似看作 identity 或 layout change。
+3. untagged irreversible aggregation 只有在它满足定义 3.6e 的 quotient 条件时才安全。若存在两组 reference event values 在聚合后相同，但某个后续 kernel 或最终输出不同，则不存在 semantics-preserving quotient，不能一般性证明 chunk prefill correctness。
+
+因此，跨 token / round 的无标签聚合不是绝对禁止；它必须是下游语义的充分统计量。sum / max / histogram 等聚合在某些 kernel 中可能安全，但在需要区分 token influence、round provenance 或 per-token state commit 的 kernel 中通常不安全。
 
 #### 定理 3.7：token-wise kernel 的 chunk prefill 正确性
 
@@ -864,6 +1151,8 @@ $$
 \widetilde{V}_{0:P+L}=(V^{old}_0,\ldots,V^{old}_{P-1},v_0,\ldots,v_{L-1})
 $$
 
+当 $L=0$ 时，上式没有新增 $k_t,v_t$，因此 $\widetilde{K}_{0:P}=K^{old}_{0:P}$ 且 $\widetilde{V}_{0:P}=V^{old}_{0:P}$。
+
 对每个 $t\in[L]$，定义 causal prefix：
 
 $$
@@ -890,6 +1179,8 @@ $$
 则 $\mathcal{C}^{attn}_{L}$ 对 $\mathcal{T}^{attn}$ 正确。
 
 证明：
+
+若 $L=0$，chunk implementation 与顺序 fold 都返回空输出和初始 cache，结论成立。
 
 对 $t$ 归纳。$t=0$ 时，decode transition 先把 $k_0,v_0$ append 到 old cache，再用 prefix $(K^{old}_{0:P},k_0)$ 与 $(V^{old}_{0:P},v_0)$ 计算输出，等于 chunk 定义中的 $y_0$。
 
@@ -983,6 +1274,8 @@ $$
 y_t=o(x_t,h_{t+1})
 $$
 
+当 $L=0$ 时，没有 $G_t$ 或 $y_t$，并约定最终状态为 $h_L=h_0$。
+
 定义 chunk implementation：
 
 $$
@@ -999,7 +1292,7 @@ $$
 h_{t+1}=g_t(h_t)
 $$
 
-展开得到：
+对 $t$ 归纳可得：
 
 $$
 h_{t+1}=g_t\circ g_{t-1}\circ\cdots\circ g_0(h_0)=G_t(h_0)
@@ -1161,7 +1454,7 @@ $$
 
 token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。causal attention kernel 由定理 3.9 满足 chunk prefill 正确性。有限个 attention head 的 product / concat 是有限个相同输入上的 component-wise transition；每个 component 的 chunk 输出与顺序 fold 相同，则它们的 product / concat 也相同。attention 后的 output projection、FFN、norm、residual 等仍是 token-wise kernels。
 
-从一般图角度看，Transformer 的 time-expanded graph 只包含同 token layer order、旧 KV cache、当前 chunk 内 causal prefix attention edge，不包含 future-token dependency；position signal 若存在，也由 prefix-causal position / clock 函数给出。因此它满足定理 3.6c 的 causal graph correctness 前提。
+从一般图角度看，Transformer 的 logical event graph 只包含同 token layer order、旧 KV cache、当前 chunk 内 causal prefix attention edge，不包含 future-token dependency；position signal 若存在，也由 prefix-causal position / clock 函数给出。因此它满足定理 3.6c 的 causal graph correctness 前提。
 
 因此，每个 Transformer layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Transformer stack 的 chunk prefill implementation 与逐 token decode fold 相同。
 
@@ -1203,7 +1496,7 @@ $$
 
 token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。有限宽 causal convolution 是有限维 shift-register 的 affine recurrence，因此由定理 3.11 满足 chunk prefill 正确性。selective SSM recurrence 的状态更新已经写成 $h'=A_xh+b_x$，输出写成 $y=o(x,h')$，因此也由定理 3.11 满足 chunk prefill 正确性。
 
-从一般图角度看，Mamba / SSM 的 time-expanded graph 只包含同 token layer order、有限 causal convolution state、SSM prefix recurrence state，不包含 future-token dependency。因此它满足定理 3.6c 的 causal graph correctness 前提。
+从一般图角度看，Mamba / SSM 的 logical event graph 只包含同 token layer order、有限 causal convolution state、SSM prefix recurrence state，不包含 future-token dependency。因此它满足定理 3.6c 的 causal graph correctness 前提。
 
 因此，每个 Mamba / SSM layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Mamba / SSM stack 的 chunk prefill implementation 与逐 token decode fold 相同。
 
@@ -1732,6 +2025,7 @@ $$
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
 - 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
 - 定理 3.6c 给出一般 B0 Logical Event DAG Theorem：若 chunk implementation 计算的是同一个 logical event DAG、同一组 kernel equation、同一个 output/final-state extraction，则 correctness 成立。它允许物理执行乱序，但不允许 logical dependency / visibility / commit order 被打乱。
+- 定理 3.6f 给出 Aggregation Quotient Theorem：不可逆聚合只有在构成 semantics-preserving quotient 时才安全；tagged aggregation 与同一 logical event 内确定性聚合是安全特例。
 - B0 proof gate 先证明 token-wise / FFN、causal attention、affine scan recurrence、linear attention accumulator 以及有限 layer stack 这些主流 kernel family 的 chunk prefill 正确性；在这些结果上，定理 3.14 给出 B0-Transformer chunk prefill 正确性，定理 3.15 给出 B0-Mamba / SSM chunk prefill 正确性。
 - 上述命名定理不推出任意 B0 graph / 任意 B0 kernel 都有高性能 chunk prefill；它们证明的是 Transformer / Mamba 这类主力结构在 B0 中满足 $\mathcal{C}_L=\operatorname{Fold}_{\mathcal{T}}^L$。
 - B0-B6 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
