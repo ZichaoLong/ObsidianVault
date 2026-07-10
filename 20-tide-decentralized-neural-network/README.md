@@ -68,6 +68,18 @@ TIDE 是 `Token Inference Decentralized Engine`。
 
 ## 当前研究主线
 
+### LH 在研究中的位置
+
+LH 提供的是一组围绕“局部通信 + 超稀疏”形成的复杂机制候选：分层局部图、双 cortex、bridge phase、selector、local hidden/KV、multi-tick readout 与 pronounce。这些机制具有三种价值：
+
+- 提供早期研究动机与可运行的复杂样本。
+- 暴露跨 node/edge 并行、node/edge 稀疏与状态生命周期需要面对的问题。
+- 作为 native golden oracle，帮助检查 Tide 的 graph/phase/state 抽象是否足以表达真实复杂计算。
+
+但 LH 不是唯一机制集合，也不是数学主线必须完整复刻的终点。既有 LH 把多种机制混合在同一个 transition 中，不能因此预设它自然满足 chunk prefill correctness。当前裁决原则是：
+
+> 总体目标保持“局部通信 + 超稀疏”；当前优先约束保持 `prefill / decode` 等价性，以获得 model-level prefill 与序列并行；若某个 LH 机制破坏这一目标，可以在不违背总体目标的前提下简化、替代或暂时放弃，而不是无限复杂化理论和 runtime 去迁就它。
+
 ### 已完成的工程基座
 
 - 从 LH C++ 中提取 role-aware graph、phase、state namespace、selector、local hidden 与 pronounce 语义。
@@ -79,9 +91,9 @@ TIDE 是 `Token Inference Decentralized Engine`。
 
 1. 固定 reference semantic contract，明确输出、持久状态、workspace 与允许的 abstraction。
 2. 用 B0 覆盖 GPT-style Transformer、Mamba/SSM 与主力 kernel family。
-3. 用 Logical Event DAG Theorem 表达并行/乱序执行的 correctness gate。
-4. 用 semantic quotient 表达安全聚合与 provenance 丢失边界。
-5. 逐层加入 mailbox、phase、selector、readout、pronounce 与 LH-like role constraints，并检查 chunk correctness。
+3. 用 Unified Contract-DAG-Quotient Theorem 统一 contract resolution、logical event DAG、聚合与物理执行顺序。
+4. 用 non-degenerate chunk certificate 排除单节点 oracle，并把 correctness 与 work/span performance witness 分开。
+5. 把 mailbox、phase、selector、readout、pronounce 与 LH-like roles 视为候选机制，逐个检查、简化或替代，而不是默认全部加入 strict family。
 
 ### 下一工程阶段
 

@@ -538,12 +538,13 @@ Relevant source:
 
 The current theoretical stack should be read as:
 
-1. `Logical Event DAG Theorem` gives a correctness gate.
-2. Transformer / Mamba prove they satisfy the gate for standard kernels.
-3. Their high performance comes from known kernel structures: matmul, causal masked attention, fused attention, prefix scan.
-4. Compiler / architecture history suggests the right engineering shape: semantic contract, explicit IR, sufficient transformation rules, validation, then backend lowering.
-5. General graph support requires preserving logical event provenance, or proving the lost information is a semantics-preserving quotient.
-6. Existing LH cannot be assumed chunk-prefill-correct if it performs irreversible aggregation that loses token / round / phase provenance.
+1. `Unified Contract-DAG-Quotient Theorem` composes transition-level semantic abstraction, logical event evaluation, and event-level quotient into one correctness gate.
+2. `Non-Degenerate Chunk Certificate` prevents a vacuous one-node `RunFold` proof by requiring uniform primitives, explicit lowering, and a complete cost ledger.
+3. Transformer / Mamba prove that important standard kernels can instantiate the correctness gate.
+4. Their high performance comes from known kernel structures: matmul, causal masked attention, fused attention, prefix scan.
+5. Compiler / architecture history suggests the right engineering shape: semantic contract, explicit IR, sufficient transformation rules, validation, then backend lowering.
+6. General graph support requires preserving logical event provenance, or proving the lost information is a semantics-preserving quotient.
+7. LH is a mechanism pool and golden reference, not a mandatory final contract. Mechanisms that block strict prefill may be modified, isolated, or replaced while retaining the local-communication and ultra-sparsity goals.
 
 The design pressure for Tide is therefore:
 
@@ -553,6 +554,8 @@ reference semantic contract
 + logical event metadata
 + deterministic visibility / commit order
 + tagged or provably safe aggregation
++ non-degenerate lowering certificate
++ work / span / memory / communication ledger
 + transformation validation
 + kernel-family-specific high-performance implementations
 ```
@@ -565,11 +568,12 @@ The theorem does not say:
 any graph runtime has efficient prefill
 ```
 
-It says:
+The unified theorem says:
 
 ```text
-if the chunk runtime computes the same logical event DAG as decode fold,
-then correctness holds.
+if contract abstraction, logical event evaluation,
+and event quotient all commute,
+then chunk correctness holds for the chosen contract.
 ```
 
 The compiler/architecture analogy adds:
@@ -580,4 +584,4 @@ it must either preserve the reference IR semantics directly
 or pass through an explicitly declared semantic quotient.
 ```
 
-Efficiency is a second proof obligation. It must be supplied by the actual kernel family.
+Efficiency is a second proof obligation. It must be supplied by a non-degenerate certificate and the actual kernel family, not inferred from correctness alone.

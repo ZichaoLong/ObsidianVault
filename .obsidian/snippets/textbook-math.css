@@ -1,0 +1,89 @@
+/*
+ * Textbook-style rendering for notes that opt in with:
+ *
+ * cssclasses:
+ *   - textbook-math
+ *
+ * The source remains portable Markdown. This snippet only changes rendering.
+ */
+
+.markdown-preview-view.textbook-math,
+.markdown-source-view.textbook-math {
+  --textbook-serif: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", serif;
+  --textbook-definition-rgb: var(--color-blue-rgb, 48, 105, 135);
+  --textbook-theorem-rgb: var(--color-orange-rgb, 151, 93, 42);
+  --textbook-remark-rgb: var(--color-green-rgb, 66, 112, 83);
+  --textbook-example-rgb: var(--mono-rgb-50, 120, 120, 120);
+}
+
+/* Mathematical object headings in reading view. */
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="定义"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="约束"] {
+  border-inline-start: 0.2em solid rgb(var(--textbook-definition-rgb));
+  background: rgba(var(--textbook-definition-rgb), 0.075);
+}
+
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="引理"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="定理"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="推论"] {
+  border-inline-start: 0.2em solid rgb(var(--textbook-theorem-rgb));
+  background: rgba(var(--textbook-theorem-rgb), 0.075);
+}
+
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="备注"] {
+  border-inline-start: 0.2em solid rgb(var(--textbook-remark-rgb));
+  background: rgba(var(--textbook-remark-rgb), 0.065);
+}
+
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="例"] {
+  border-inline-start: 0.2em solid rgb(var(--textbook-example-rgb));
+  background: rgba(var(--textbook-example-rgb), 0.055);
+}
+
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="定义"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="约束"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="引理"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="定理"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="推论"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="备注"],
+.markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="例"] {
+  margin-block-start: 2.15em;
+  margin-block-end: 0.8em;
+  padding: 0.48em 0.72em;
+  font-family: var(--textbook-serif);
+  font-size: 1.05em;
+  font-weight: 650;
+  line-height: 1.45;
+  break-after: avoid-page;
+}
+
+/* Keep display equations readable on narrow mobile screens. */
+.markdown-preview-view.textbook-math mjx-container[display="true"] {
+  margin-block: 1.15em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+/* Halmos tombstone at the end of each proof. */
+.markdown-preview-view.textbook-math .qed,
+.markdown-source-view.textbook-math .qed {
+  margin-block: 0.45em 1.5em;
+  text-align: end;
+  font-family: "STIX Two Math", "Cambria Math", var(--textbook-serif);
+  font-size: 1.05em;
+  line-height: 1;
+  break-before: avoid-page;
+}
+
+@media print {
+  .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="定义"],
+  .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="约束"],
+  .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="引理"],
+  .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="定理"],
+  .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="推论"],
+  .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="备注"],
+  .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="例"] {
+    background: transparent;
+  }
+}

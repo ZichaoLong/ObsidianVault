@@ -48,6 +48,18 @@ tags:
 - Ascend/NPU execution、graph-node affinity 与 multi-device runtime。
 - 训练可行性、scaling 与一般 graph 性能优势验证。
 
+## LH 的工程与研究边界
+
+当前 native LH parity 的作用是固定一个复杂 reference family，并验证 Tide 的 graph/phase/state 抽象。它不意味着后续数学或实现必须完整保留 LH 的所有机制。
+
+LH 中的 hierarchy、bridge、selector、local hidden、multi-tick readout 等内容应被视为 mechanism pool。每个机制后续都可以进入三种去向：
+
+1. 保留，并证明它满足 strict chunk-prefill contract。
+2. 修改为 tagged、可分解、可 scan 或可验证的等价版本。
+3. 若它阻碍 prefill/sequence parallel 且没有独立价值，则留在 compatibility family 或直接移除。
+
+工程优先级由总体目标裁决：局部通信、超稀疏、可训练性与高效序列执行高于完整 LH compatibility。
+
 ## 架构分层
 
 ```mermaid
@@ -184,7 +196,7 @@ Step(input_token, State) -> logits, State'
 1. 保持 native LH 为 golden oracle，补 memory-state per-phase artifacts。
 2. 以 [[step-transition-mathematical-specification]] 的 B0 contract 为基准定义 model-level `prefill()` 输入、输出与 state contract。
 3. 先实现并验证 token-wise map、causal attention、affine scan 的 chunk paths。
-4. 再增加 parallel executor、batch memory、packed selector 与 crossbatch fusion。
+4. 为每条 chunk path 给出 non-degenerate certificate 与 work/span/memory/communication ledger，再增加 parallel executor、batch memory、packed selector 与 crossbatch fusion。
 5. 把 LH-specific config mapping 收敛为 backend-neutral state-dict API。
 6. CPU semantic parity 与 prefill proof gate 稳定后，再做 Ascend lowering。
 

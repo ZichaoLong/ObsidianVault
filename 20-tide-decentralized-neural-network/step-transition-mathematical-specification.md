@@ -1,6 +1,8 @@
 ---
 type: note
 status: active
+cssclasses:
+  - textbook-math
 tags:
   - tide
   - prefill-decode
@@ -23,6 +25,9 @@ tags:
 - `引理 / 定理`：在明确前提下给出可证明结论。
 - `高性能实现见证`：说明已有实现结构可承载该数学对象，不等于 complexity theorem。
 - `工程验证`：检查具体实现，不自动提升为一般数学定理。
+- 定义、引理、定理、推论与例使用标题编号；引用时优先链接到对应标题。
+- 只有会被正文交叉引用的公式才编号；显示编号使用 `\tag{...}`，稳定锚点使用语义化 block ID `^eq-...`。
+- 证明统一以“**证明。**”开始，并以右对齐的 `∎` 结束；不同时重复使用“证毕”。
 
 ## 0. 记号约定
 
@@ -248,7 +253,7 @@ $$
 \operatorname{Decode}_{\mathcal{T}}^L(x_{0:L},S_0)
 $$
 
-证明：
+**证明。**
 
 二者都被定义为：
 
@@ -258,7 +263,7 @@ $$
 
 因此等价。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 ## 2. Correctness、Semantic Contract 与等价层次
 
@@ -280,7 +285,10 @@ $$
 \mathcal{C}_L(x_{0:L},S_0)
 =
 \operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
+\tag{2.1}
 $$
+
+^eq-chunk-prefill-correctness
 
 ### 定义 2.3：reference semantic contract
 
@@ -423,7 +431,7 @@ $$
 
 当 $L=0$ 时，$\beta^0(())=()$。
 
-证明：
+**证明。**
 
 对 $L$ 归纳。$L=0$ 时，两个 fold 都返回空输出；coarse 初始状态是 $\alpha(S_0^{fine})$，结论成立。
 
@@ -443,7 +451,7 @@ $$
 
 因此长度 $L+1$ 的输出序列与最终状态也满足结论。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 这个引理给出一个重要边界：对 fine contract 正确通常可推出对其 coarse quotient 正确；但只对 coarse contract 正确，不能推出对 fine contract 正确。若原 reference transition 已经是高度压缩的 coarse semantics，chunk prefill correctness 会更容易证明，但证明结论也只覆盖这个较弱 contract。
 
@@ -691,11 +699,11 @@ $$
 \operatorname{Decode}_{\mathcal{T}^{B0}}^L(x_{0:L},S_0)
 $$
 
-证明：
+**证明。**
 
 由定理 1.5，取 $\mathcal{T}=\mathcal{T}^{B0}$ 即得。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 ### B0 proof gate：主流 kernel family 的 chunk prefill 正确性
 
@@ -941,7 +949,7 @@ $$
 
 对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$ 成立。因此 $\mathcal{C}_L$ 对 $\mathcal{T}$ 正确。
 
-证明：
+**证明。**
 
 因为 $D_L$ 是有限 DAG，所以存在 topological order。decode order $\pi_{dec}$ 是 $D_L$ 的一个 topological order，因为每条边都指向 $\prec_L$ 中更晚的 event。
 
@@ -996,7 +1004,7 @@ $$
 
 合并三式得到结论。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 这个定理只证明 correctness。它不声称 $\mathcal{C}_L$ 自动高性能。高性能来自具体 kernel family 的额外结构，例如 token-wise map 的批量化、attention 的 masked matmul / fused attention、affine recurrence 的 parallel scan、有限 layer chain 的逐层批量执行。
 
@@ -1023,7 +1031,7 @@ $$
 - kernel 的行为依赖 physical first-arrival / race order，而 reference transition 依赖 logical order。
 - late-token 的信息通过无标记聚合影响 early-token 的 event、output 或 state commit。
 
-因此，完整涵盖既有 LH 实现不一定可能。若 LH 某处把同一 tick 收到的多源信号做不可逆、无时间戳的聚合，则 token influence relation 可能被折叠，无法构造与 decode fold 等价的 event DAG。要让 LH-like graph 支持 chunk prefill correctness，需要把聚合改成可追踪的 tagged aggregation，或证明该聚合对所有相关 kernel 是可交换、可结合、且不影响 reference logical visibility。
+因此，完整涵盖既有 LH 实现不一定可能。若 LH 某处把同一 tick 收到的多源信号做不可逆、无时间戳的聚合，则 token influence relation 可能被折叠，无法构造与 decode fold 等价的 event DAG。若决定把该机制纳入 strict chunk-prefill family，就需要把聚合改成可追踪的 tagged aggregation，或证明该聚合对所有相关 kernel 是可交换、可结合、且不影响 reference logical visibility；若做不到，也可以在保持“局部通信 + 超稀疏”总体目标的前提下简化或替换该机制，而不是把完整 LH compatibility 设为定理前提。
 
 #### 定义 3.6e：semantics-preserving aggregation quotient
 
@@ -1129,7 +1137,7 @@ $$
 
 对所有 $x_{0:L}\in X^L$ 与 $S_0\in\mathcal{S}$ 成立。
 
-证明：
+**证明。**
 
 令 $\pi$ 是定理前提 3 中使 $\mathcal{C}_L$ 等于 $\widehat{\mathcal{P}}_L$ graph evaluation 的 topological order。由于定理 3.6c 中已经证明 topological evaluation 与所选 order 无关，并且该证明只依赖 DAG、局部函数和 extraction，不依赖具体 value space，所以同样适用于 quotient program $\widehat{\mathcal{P}}_L$。下面沿 decode order 证明 quotient event value 与 reference event value 的关系。
 
@@ -1165,7 +1173,7 @@ $$
 
 定理前提 3 给出 $\mathcal{C}_L$ 等于 quotient graph evaluation。因此 $\mathcal{C}_L(x_{0:L},S_0)$ 也等于 $\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)$。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 #### 推论 3.6g：三类聚合的判定
 
@@ -1174,6 +1182,286 @@ $$
 3. untagged irreversible aggregation 只有在它满足定义 3.6e 的 quotient 条件时才安全。若存在两组 reference event values 在聚合后相同，但某个后续 kernel 或最终输出不同，则不存在 semantics-preserving quotient，不能一般性证明 chunk prefill correctness。
 
 因此，跨 token / round 的无标签聚合不是绝对禁止；它必须是下游语义的充分统计量。sum / max / histogram 等聚合在某些 kernel 中可能安全，但在需要区分 token influence、round provenance 或 per-token state commit 的 kernel 中通常不安全。
+
+#### 定义 3.6h：Contract-DAG-Quotient correctness certificate
+
+给定 fine reference transition：
+
+$$
+\mathcal{T}^{fine}:X\times\mathcal{S}^{fine}
+\to
+Y^{fine}\times\mathcal{S}^{fine}
+$$
+
+以及 coarse reference transition：
+
+$$
+\mathcal{T}^{coarse}:X\times\mathcal{S}^{coarse}
+\to
+Y^{coarse}\times\mathcal{S}^{coarse}
+$$
+
+对某个长度 $L\in\mathbb{N}$，一个 Contract-DAG-Quotient correctness certificate，简称 CDQ correctness certificate，由以下对象组成：
+
+$$
+\mathcal{C}_L:
+X^L\times\mathcal{S}^{coarse}
+\to
+(Y^{coarse})^L\times\mathcal{S}^{coarse}
+$$
+
+$$
+\mathfrak{C}_L
+=
+(\alpha,\beta,\mathcal{P}_L,\widehat{\mathcal{P}}_L,\mathcal{C}_L)
+$$
+
+并满足：
+
+1. $\mathcal{T}^{coarse}$ 是 $\mathcal{T}^{fine}$ 关于状态抽象 $\alpha$ 与输出抽象 $\beta$ 的 semantic quotient，意义同定义 2.4。
+2. $\mathcal{P}_L$ 是 $\operatorname{Fold}_{\mathcal{T}^{coarse}}^L$ 的 decode unfolding，意义同定义 3.6b。
+3. $\widehat{\mathcal{P}}_L$ 是 $\mathcal{P}_L$ 的 semantics-preserving aggregation quotient，意义同定义 3.6e。
+4. $\mathcal{C}_L$ 是 $\widehat{\mathcal{P}}_L$ 的 graph evaluation。
+
+这四层分别回答：
+
+```text
+reference contract 要求保留什么？
+decode computation 如何展开为 logical events？
+哪些 event values 可以安全压缩？
+chunk implementation 实际计算哪个 quotient DAG？
+```
+
+#### 定理 3.6i：Unified Contract-DAG-Quotient Theorem
+
+若 $\mathfrak{C}_L$ 是定义 3.6h 中的 CDQ correctness certificate，并且：
+
+$$
+\operatorname{Fold}_{\mathcal{T}^{fine}}^L
+(x_{0:L},S_0^{fine})
+=
+(y_{0:L}^{fine},S_L^{fine})
+$$
+
+则：
+
+$$
+\mathcal{C}_L(x_{0:L},\alpha(S_0^{fine}))
+=
+(\beta^L(y_{0:L}^{fine}),\alpha(S_L^{fine}))
+$$
+
+对所有 $x_{0:L}\in X^L$ 与 $S_0^{fine}\in\mathcal{S}^{fine}$ 成立。
+
+**证明。**
+
+由 CDQ 条件 1 与引理 2.5：
+
+$$
+\operatorname{Fold}_{\mathcal{T}^{coarse}}^L
+(x_{0:L},\alpha(S_0^{fine}))
+=
+(\beta^L(y_{0:L}^{fine}),\alpha(S_L^{fine}))
+$$
+
+由 CDQ 条件 2-4 与定理 3.6f：
+
+$$
+\mathcal{C}_L(x_{0:L},\alpha(S_0^{fine}))
+=
+\operatorname{Fold}_{\mathcal{T}^{coarse}}^L
+(x_{0:L},\alpha(S_0^{fine}))
+$$
+
+合并两式即得：
+
+$$
+\mathcal{C}_L(x_{0:L},\alpha(S_0^{fine}))
+=
+(\beta^L(y_{0:L}^{fine}),\alpha(S_L^{fine}))
+$$
+
+<div class="qed" aria-label="证毕">∎</div>
+
+#### 推论 3.6j：三个退化情形
+
+1. 若 transition-level 的 $\alpha,\beta$ 都是 identity，则定理 3.6i 退化为 Aggregation Quotient Theorem。
+2. 若 event-level 的 $\alpha_n$ 都是 identity，且 $\widehat{\mathcal{P}}_L=\mathcal{P}_L$，则定理 3.6i 退化为 coarse contract 上的 Logical Event DAG Theorem。
+3. 若 transition-level 与 event-level abstraction 都是 identity，则定理 3.6i 退化为原 reference transition 上的直接 logical event DAG correctness。
+
+因此，定理 3.6i 统一了三种原本容易混在一起的情况：改变 reference semantic resolution、压缩 event representation、改变物理执行顺序。
+
+#### 定义 3.6k：non-degenerate chunk certificate
+
+CDQ correctness certificate 只证明语义正确。若允许任意 logical event granularity，给定任意 transition：
+
+$$
+\mathcal{T}:X\times\mathcal{S}\to Y\times\mathcal{S}
+$$
+
+可以构造单节点 oracle kernel：
+
+$$
+F_{oracle}:X^L\times\mathcal{S}\to Y^L\times\mathcal{S}
+$$
+
+$$
+F_{oracle}(x_{0:L},S_0)
+=
+\operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
+$$
+
+然后宣称该单节点 program 是 chunk implementation。这个构造在形式上正确，但没有揭示任何可复用 kernel、并行结构或性能来源。
+
+为排除这种退化，一个 non-degenerate chunk certificate 由以下内容组成。
+
+1. **Correctness witness**：给出定义 3.6h 的 CDQ correctness certificate。
+2. **Uniform primitive family**：给定与长度 $L$ 无关的有限 primitive kind 集合 $\mathfrak{K}_{prim}$。每个 logical event 与 physical operation 都必须由 $\mathfrak{K}_{prim}$ 中的 primitive kind 加已声明类型的 event-local metadata 实例化；metadata 不能充当任意 program 的不透明编码，也不能为每个 $L$ 临时引入一个任意的新函数。
+3. **Explicit logical granularity**：每个输出位置 $t\in[L]$ 有显式 designated output event；persistent state 的每个声明组件也有显式 commit event。logical extractions $G_L$ 与 $\widehat{G}_L$ 只能投影、拼接或执行已登记 primitive，不能隐藏完整 fold。
+4. **Explicit lowering**：给出有限 physical execution DAG：
+
+$$
+H_L=(\mathcal{R}_L,\mathcal{A}_L)
+$$
+
+对每个 physical operation $r\in\mathcal{R}_L$，定义其直接前驱：
+
+$$
+\operatorname{Pred}_{H}(r)
+=
+\{q\in\mathcal{R}_L\mid(q,r)\in\mathcal{A}_L\}
+$$
+
+给定 physical value space $\mathcal{U}_r$ 与 deterministic primitive kernel：
+
+$$
+\Phi_r:
+\left(\prod_{q\in\operatorname{Pred}_{H}(r)}\mathcal{U}_q\right)
+\times X^L
+\times\mathcal{S}^{coarse}
+\to
+\mathcal{U}_r
+$$
+
+并给定 physical extraction：
+
+$$
+J_L:
+\left(\prod_{r\in\mathcal{R}_L}\mathcal{U}_r\right)
+\times X^L
+\times\mathcal{S}^{coarse}
+\to
+(Y^{coarse})^L\times\mathcal{S}^{coarse}
+$$
+
+$J_L$ 同样只能投影、拼接或执行 $\mathfrak{K}_{prim}$ 中已登记的 extraction primitive，不能隐藏完整 fold。
+
+$H_L$ 的 topological evaluation 按定义 3.6b 的递归方式计算，只是把 logical kernels $F_n$ 与 extraction $G_L$ 换成 physical primitive kernels $\Phi_r$ 与 extraction $J_L$。
+
+以及 lowering map：
+
+$$
+\lambda_L:\mathcal{N}_L\to\mathcal{R}_L
+$$
+
+其中 $\lambda_L(n)$ 表示哪个 physical operation 实现 logical event $n$。还要求对每条 logical edge $(m,n)\in\mathcal{E}_L$：
+
+- 若 $\lambda_L(m)\neq\lambda_L(n)$，则 $H_L$ 中存在从 $\lambda_L(m)$ 到 $\lambda_L(n)$ 的有向路径。
+- 若 $\lambda_L(m)=\lambda_L(n)$，则该 physical operation 必须在其内部语义中保持 $m$ 先于 $n$ 的 logical dependency。
+
+按照 $\mathfrak{K}_{prim}$ 的 primitive semantics 对 $H_L$ 做任意 topological evaluation，必须得到函数 $\mathcal{C}_L$。多个 logical events 可以映射到同一个 physical operation，以表达 batching 或 fusion；但该 fused primitive 必须有独立的语义保持证明。
+
+这里采用一个规范化约定：$\lambda_L$ 只直接表达“一个 logical event 由一个 physical operation 承载”以及“多个 logical events 被同一个 physical operation 融合承载”。若某个实现要把一个较粗的 logical event lower 为多个 physical operations，则必须先把该 event 语义保持地细化为一个 logical sub-DAG，再对细化后的 events 定义 $\lambda_L$。这个约定不是说 runtime 不能使用多步 kernel，而是要求证明对象先显式暴露这些中间依赖，避免把任意复杂计算藏在一个未展开的 logical event 中。
+
+5. **No-oracle condition**：$\mathfrak{K}_{prim}$ 中不能包含语义为“对任意输入直接运行 $\operatorname{Fold}_{\mathcal{T}}^L$”或“对任意 program 直接运行 $\operatorname{Eval}_{\pi}(\mathcal{P}_L,\cdot,\cdot)$”的 primitive。primitive 只能实现预先声明的 kernel family，例如 token-wise map、masked matmul、associative combine、scan step、pack、copy 或固定 extraction。
+6. **Complete cost ledger**：给定 machine-cost model $\mathfrak{M}$。对每个 physical operation $r\in\mathcal{R}_L$，$\mathfrak{M}$ 给出 work cost $w(r)\ge 0$ 与 span cost $d(r)\ge 0$。定义总 work：
+
+$$
+\operatorname{Work}_L
+=
+\sum_{r\in\mathcal{R}_L}w(r)
+$$
+
+令 $\operatorname{Path}(H_L)$ 是 $H_L$ 的所有有向路径组成的集合，定义 span：
+
+$$
+\operatorname{Span}_L
+=
+\max_{\gamma\in\operatorname{Path}(H_L)}
+\sum_{r\in\gamma}d(r)
+$$
+
+当 $\mathcal{R}_L=\varnothing$ 时，约定 $\operatorname{Work}_L=\operatorname{Span}_L=0$。certificate 还必须给出 peak live memory 上界 $\operatorname{Mem}_L$ 与 communication volume 上界 $\operatorname{Comm}_L$。mask/index 构造、packing、layout conversion、copy、runtime bookkeeping/metadata 与 quotient maintenance 都必须计入相应成本，不能被视为免费 runtime；离线数学证明或编译期验证本身不计入每次 runtime execution cost。
+
+这里 $H_L$ 是 physical execution DAG，定义 3.6a 中的 $D_L$ 是 logical event DAG。二者不能混淆：$D_L$ 定义 reference dependencies，$H_L$ 描述某个具体 batching、fusion、scan 或 backend lowering 如何执行这些 dependencies。
+
+#### 定义 3.6l：parallel-prefill witness
+
+给定同一个 primitive family 与 machine-cost model。令：
+
+$$
+H_L^{dec}=(\mathcal{R}_L^{dec},\mathcal{A}_L^{dec})
+$$
+
+是按顺序 decode fold 执行相同 reference contract 的有限 physical execution DAG。按照定义 3.6k 的同一 cost ledger 公式，定义：
+
+$$
+\operatorname{Work}_L^{dec}
+=
+\sum_{r\in\mathcal{R}_L^{dec}}w(r)
+$$
+
+$$
+\operatorname{Span}_L^{dec}
+=
+\max_{\gamma\in\operatorname{Path}(H_L^{dec})}
+\sum_{r\in\gamma}d(r)
+$$
+
+当 $\mathcal{R}_L^{dec}=\varnothing$ 时，同样约定 $\operatorname{Work}_L^{dec}=\operatorname{Span}_L^{dec}=0$。
+
+一个 non-degenerate chunk certificate 称为 asymptotic parallel-prefill witness，当且仅当存在常数 $c>0$ 与 $L_0\in\mathbb{N}$，使得对所有 $L\ge L_0$：
+
+$$
+\operatorname{Span}_L^{dec}>0
+$$
+
+$$
+\operatorname{Work}_L
+\le
+c\operatorname{Work}_L^{dec}
+$$
+
+并且：
+
+$$
+\lim_{L\to\infty}
+\frac{\operatorname{Span}_L}{\operatorname{Span}_L^{dec}}
+=0
+$$
+
+第一式要求 chunk implementation 不通过无界增加总工作量换取并行；第二式要求其 critical-path span 相对于逐 token decode 渐近下降。
+
+若只能在有限硬件和有限长度上观察收益，则应称为 practical performance witness，并报告实际的 $\operatorname{Work}_L$、$\operatorname{Span}_L$、$\operatorname{Mem}_L$、$\operatorname{Comm}_L$ 或对应测量值，而不声称得到 asymptotic parallel-prefill witness。
+
+#### 例 3.6m：证书的正例与反例
+
+1. 单个 `RunFold` primitive 直接返回整个 $\operatorname{Fold}_{\mathcal{T}}^L$，违反 uniform primitive family 与 no-oracle condition，因此不是 non-degenerate certificate。
+2. token-wise map 可把每个位置建成独立 logical event，再用一个 batched-map physical primitive 实现这些 events。理想并行模型下，它可具有线性 work 与常数级或硬件相关的低 span。
+3. affine recurrence 可用固定 combine primitive 与 parallel scan lowering。其 correctness 将由后文定理 3.11 证明；其非退化性来自固定 affine-combine primitive、显式 scan DAG 与完整 cost ledger。
+4. causal attention 的 correctness 将由后文定理 3.9 证明；是否构成高性能 witness，还需要对 batched QKV、causal mask、attention kernel、KV write 与 memory traffic 给出 machine-specific cost ledger。
+
+从本节开始，定义 3.6 中的“高性能实现见证”应优先解释为：先给出 non-degenerate chunk certificate，再判断它是否进一步构成 asymptotic 或 practical parallel-prefill witness。
+
+non-degenerate chunk certificate 是本研究选择的可审计充分标准，不声称是所有正确实现的数学必要条件。某个实现可能正确但尚未找到这种证书；此时结论应是“尚未被本 proof system 认证”，而不是直接判定实现错误。若允许任意 primitive 与任意 event granularity，则所谓全局充要条件会退化为单节点 oracle 构造，因此不具有研究价值。
+
+定理 3.6i 与定义 3.6k-3.6l 的分工是：
+
+```text
+Unified CDQ Theorem: 证明结果正确。
+Non-degenerate certificate: 证明没有通过巨型 oracle kernel 作弊。
+Parallel-prefill witness: 说明性能收益来自明确的 work/span 结构。
+```
 
 #### 定理 3.7：token-wise kernel 的 chunk prefill 正确性
 
@@ -1210,7 +1498,7 @@ $$
 
 则 $\mathcal{C}^{tok}_{L}$ 对 $\mathcal{T}^{tok}$ 正确。
 
-证明：
+**证明。**
 
 由顺序 fold 定义，对所有 $t\in[L]$：
 
@@ -1227,7 +1515,7 @@ $$
 
 这与 $\mathcal{C}^{tok}_{L}$ 的定义相同。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 FFN / MLP、逐 token norm、逐 token residual add、逐 token gating 都属于这个证明模式，或属于这个模式与有限维状态无关函数的直接乘积。
 
@@ -1356,7 +1644,7 @@ $$
 
 则 $\mathcal{C}^{attn}_{L}$ 对 $\mathcal{T}^{attn}$ 正确。
 
-证明：
+**证明。**
 
 若 $L=0$，chunk implementation 与顺序 fold 都返回空输出和初始 cache，结论成立。
 
@@ -1382,7 +1670,7 @@ $$
 
 即 chunk 定义中的 $y_t$。最终 cache 也等于 concatenated cache。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 高性能实现见证：$q_{0:L},k_{0:L},v_{0:L}$ 可由 batched projection / matmul 得到；每个位置只读 $\le t$ 的 prefix 可由 causal mask 或 FlashAttention-style fused attention 实现。这里的高性能主要来自矩阵化与融合，不等于 attention work 本身从二次复杂度变成线性复杂度。
 
@@ -1462,7 +1750,7 @@ $$
 
 则 $\mathcal{C}^{scan}_{L}$ 对 $\mathcal{T}^{scan}$ 正确。
 
-证明：
+**证明。**
 
 函数复合满足结合律。顺序 decode 的状态满足：
 
@@ -1484,7 +1772,7 @@ $$
 
 因此 chunk implementation 与顺序 fold 相同。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 高性能实现见证：affine map 可用 pair 表示为 $(A,b)$，其复合为：
 
@@ -1598,7 +1886,7 @@ $$
 
 若每层 chunk implementation 都满足定义 2.2，则 $\mathcal{C}^{stack}_L$ 对 $\mathcal{T}^{stack}$ 正确。
 
-证明：
+**证明。**
 
 对 layer index $j$ 归纳。$j=1$ 时由 $\mathcal{C}_{1,L}$ 的正确性得到第 1 层所有位置输出 $z^1_{0:L}$ 与最终 state $S_1'$ 等于对 $\mathcal{T}_1$ 做顺序 fold 的结果。
 
@@ -1606,7 +1894,7 @@ $$
 
 归纳到 $N$，得到 $\mathcal{C}^{stack}_L$ 与 $\operatorname{Fold}_{\mathcal{T}^{stack}}^L$ 相同。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 #### 定理 3.14：B0-Transformer chunk prefill 正确性
 
@@ -1628,7 +1916,7 @@ $$
 \operatorname{Fold}_{\mathcal{T}^{tr}}^L(x_{0:L},S_0)
 $$
 
-证明：
+**证明。**
 
 token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。causal attention kernel 由定理 3.9 满足 chunk prefill 正确性。有限个 attention head 的 product / concat 是有限个相同输入上的 component-wise transition；每个 component 的 chunk 输出与顺序 fold 相同，则它们的 product / concat 也相同。attention 后的 output projection、FFN、norm、residual 等仍是 token-wise kernels。
 
@@ -1636,7 +1924,7 @@ token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。
 
 因此，每个 Transformer layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Transformer stack 的 chunk prefill implementation 与逐 token decode fold 相同。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 高性能实现见证：token-wise kernels 可批量矩阵化或融合；causal attention 可用 batched QKV、causal mask、FlashAttention-style fused attention 等实现。因此，B0-Transformer 不只是可表达，而且在实数语义下满足 chunk prefill 正确性；具体浮点 backend 的误差属于实现层的数值模拟问题。
 
@@ -1670,7 +1958,7 @@ $$
 \operatorname{Fold}_{\mathcal{T}^{ssm}}^L(x_{0:L},S_0)
 $$
 
-证明：
+**证明。**
 
 token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。有限宽 causal convolution 是有限维 shift-register 的 affine recurrence，因此由定理 3.11 满足 chunk prefill 正确性。selective SSM recurrence 的状态更新已经写成 $h'=A_xh+b_x$，输出写成 $y=o(x,h')$，因此也由定理 3.11 满足 chunk prefill 正确性。
 
@@ -1678,13 +1966,17 @@ token-wise deterministic kernels 由定理 3.7 满足 chunk prefill 正确性。
 
 因此，每个 Mamba / SSM layer 都通过 B0 proof gate。由定理 3.13 的有限 B0 chain layer-wise chunk 正确性，整个 Mamba / SSM stack 的 chunk prefill implementation 与逐 token decode fold 相同。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 高性能实现见证：token-wise kernels 可批量矩阵化或融合；causal convolution 与 selective SSM recurrence 的 affine map 复合满足结合律，可用 parallel prefix / scan / chunk scan 实现。因此，B0-Mamba / SSM 在实数语义下满足 chunk prefill 正确性；具体浮点 backend 的误差属于实现层的数值模拟问题。
 
 ## 4. B-family：逐层增加机制
 
-这一节把 B0 扩展为 B1-B6。B0 已经是能表达 Transformer/Mamba 的标准 factorized graph runtime；后续层级不再引入“基本 memory/cache”，而是增加更强的 graph/runtime 结构。B1-B6 更准确地说是 extension schema：它们声明新增 state / workspace / kernel / schedule 约束。只有当这些 schema 与具体 kernel 组合成单步 transition 后，才可应用后面的 B-family 引理。
+这一节把 B0 扩展为 B1-B6。B0 已经是能表达 Transformer/Mamba 的标准 factorized graph runtime；后续层级不再引入“基本 memory/cache”，而是列出更强的 graph/runtime 机制候选。
+
+B1-B6 不是必须依次完整实现的唯一架构路线，也不是为了最终逐项复刻 LH。它们更准确地说是 extension schema / mechanism catalog：每一层声明一种新增 state、workspace、kernel 或 schedule 约束。研究时可以保留、简化、替换或拒绝某一机制；裁决标准是它是否服务于“局部通信 + 超稀疏”总体目标，并能否在可接受 contract 下获得 chunk prefill correctness 与有意义的 parallel-prefill witness。
+
+只有当某个 schema 与具体 kernel 组合成明确的单步 transition 后，才可应用后面的 B-family 引理。
 
 ### B1：typed edge 与 token-local mailbox
 
@@ -2040,11 +2332,11 @@ $$
 \operatorname{Decode}_{\mathcal{T}^{Bk}}^L(x_{0:L},S_0)
 $$
 
-证明：
+**证明。**
 
 由定理 1.5 直接得到。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 ## 5. Optimized Kernel 的模拟关系
 
@@ -2150,7 +2442,7 @@ $$
 S_L\sim\widehat{S}_L
 $$
 
-证明：
+**证明。**
 
 对 $L$ 归纳。
 
@@ -2182,7 +2474,7 @@ $$
 
 因此长度 $L+1$ 成立。
 
-证毕。
+<div class="qed" aria-label="证毕">∎</div>
 
 ### 推论 5.5：kernel 等价证明路线
 
@@ -2202,11 +2494,13 @@ $$
 
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
 - chunk prefill correctness 永远相对于一个 reference semantic contract；对 coarse quotient 正确，不推出对 fine contract 正确。
-- 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
+- 真正需要证明的是 chunk implementation 是否满足 [[#^eq-chunk-prefill-correctness|式 (2.1)]]。
 - 定理 3.6c 给出一般 B0 Logical Event DAG Theorem：若 chunk implementation 计算的是同一个 logical event DAG、同一组 kernel equation、同一个 output/final-state extraction，则 correctness 成立。它允许物理执行乱序，但不允许 logical dependency / visibility / commit order 被打乱。
 - 定理 3.6f 给出 Aggregation Quotient Theorem：不可逆聚合只有在构成 semantics-preserving quotient 时才安全；tagged aggregation 与同一 logical event 内确定性聚合是安全特例。
+- 定理 3.6i 把 transition semantic quotient、logical event DAG 与 event-level aggregation quotient 合并为 Unified Contract-DAG-Quotient Theorem。
+- 定义 3.6k-3.6l 用 uniform primitives、explicit lowering、no-oracle condition 与完整 work/span ledger 排除无意义的单节点 fold，并区分 correctness certificate 与 parallel-prefill witness。
 - B0 proof gate 先证明 token-wise / FFN、causal attention、affine scan recurrence、linear attention accumulator 以及有限 layer stack 这些主流 kernel family 的 chunk prefill 正确性；在这些结果上，定理 3.14 给出 B0-Transformer chunk prefill 正确性，定理 3.15 给出 B0-Mamba / SSM chunk prefill 正确性。
 - 上述命名定理不推出任意 B0 graph / 任意 B0 kernel 都有高性能 chunk prefill；它们证明的是 Transformer / Mamba 这类主力结构在 B0 中满足 $\mathcal{C}_L=\operatorname{Fold}_{\mathcal{T}}^L$。
-- B0-B6 的每一层只要定义出清楚的单步 transition，就保持顺序 fold 等价。
+- B1-B6 是 mechanism catalog，不是必须完整复刻 LH 的唯一升级路径；每个机制都可保留、修改、替换或拒绝。
 - selector、pronounce memory、KV append、phase barrier、workspace lifetime 是最容易破坏 chunk/prefill 等价的机制。
 - packed / crossbatch / backend lowering 的正确证明入口是 step simulation，而不是只比较最终 logits。
