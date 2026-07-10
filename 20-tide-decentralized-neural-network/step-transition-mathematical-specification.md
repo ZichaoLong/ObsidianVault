@@ -13,6 +13,17 @@ tags:
 > [!summary] 本页定位
 > 本页只处理 `StepTransition`、`prefill`、`decode`、chunk prefill 与 kernel 优化的数学定义。实现对象、LH 映射、phase 工程约束放在 [[step-transition-implementation-specification]]。
 
+> [!note] 写作与证明约定
+> 本页按“定义先于使用、简单例子先于复杂架构、引理先于定理、证明不跳步”的顺序推进。CPU ISA、编译器、SSA、memory model 等外部概念只作为参考谱系，见 [[logical-event-dag-related-theories]]；它们不替代本页的数学证明。
+
+阅读本页时，所有结论按以下强度区分：
+
+- `定义`：约定数学对象的含义。
+- `例`：帮助理解定义，不承担一般性证明。
+- `引理 / 定理`：在明确前提下给出可证明结论。
+- `高性能实现见证`：说明已有实现结构可承载该数学对象，不等于 complexity theorem。
+- `工程验证`：检查具体实现，不自动提升为一般数学定理。
+
 ## 0. 记号约定
 
 ### 定义 0.1：自然数与区间
@@ -249,7 +260,7 @@ $$
 
 证毕。
 
-## 2. 三个等价性层次
+## 2. Correctness、Semantic Contract 与等价层次
 
 ### 定义 2.1：chunk prefill implementation
 
@@ -328,6 +339,65 @@ $$
 $$
 
 也就是说，fine transition 的一步计算先执行再抽象，与先抽象再执行 coarse transition，得到同一个 coarse output 与 coarse next state。
+
+#### 例 2.4a：完整历史 contract 与求和 contract
+
+令输入空间为 $X=\mathbb{R}$，输出空间为 singleton $Y=\{*\}$。定义 finite-history state space：
+
+$$
+\mathcal{S}^{fine}=\bigcup_{P\in\mathbb{N}}\mathbb{R}^{P}
+$$
+
+若 $h=(h_0,\ldots,h_{P-1})\in\mathcal{S}^{fine}$，定义 append transition：
+
+$$
+\mathcal{T}^{fine}(x,h)=(*,(h_0,\ldots,h_{P-1},x))
+$$
+
+这个 fine contract 要求最终 state 保留每个输入及其顺序。
+
+令 coarse state space 为 $\mathcal{S}^{coarse}=\mathbb{R}$，并定义：
+
+$$
+\mathcal{T}^{coarse}(x,s)=(*,s+x)
+$$
+
+定义状态抽象与输出抽象：
+
+$$
+\alpha(h_0,\ldots,h_{P-1})=\sum_{j=0}^{P-1}h_j
+$$
+
+$$
+\beta(*)=*
+$$
+
+约定空和为 $0$，因此 $\alpha(())=0$。记 $h\mathbin{\|}x$ 为在有限序列 $h$ 末尾 append 元素 $x$。对任意 $x\in\mathbb{R}$ 与历史 $h$：
+
+$$
+\alpha(h\mathbin{\|}x)=\alpha(h)+x
+$$
+
+由于：
+
+$$
+\mathcal{T}^{fine}(x,h)=(*,h\mathbin{\|}x)
+$$
+
+并且：
+
+$$
+\begin{aligned}
+\mathcal{T}^{coarse}(x,\alpha(h))
+&=(*,\alpha(h)+x)\\
+&=(*,\alpha(h\mathbin{\|}x))\\
+&=(\beta(*),\alpha(h\mathbin{\|}x)),
+\end{aligned}
+$$
+
+所以先执行 $\mathcal{T}^{fine}$ 再应用 $(\alpha,\beta)$，等于先应用 $\alpha$ 再执行 $\mathcal{T}^{coarse}$。由定义 2.4，$\mathcal{T}^{coarse}$ 是 $\mathcal{T}^{fine}$ 的 semantic quotient。
+
+在 coarse contract 下，历史 $(1,2)$ 与 $(2,1)$ 都映射到 state $3$，实现无需恢复顺序 provenance；在 fine contract 下，这两个历史必须保持可区分。这个例子说明：同一个 chunk algorithm 是否正确，取决于 reference semantic contract 要求观察什么。
 
 ### 引理 2.5：semantic quotient 保持顺序 fold
 
@@ -2131,6 +2201,7 @@ $$
 ## 6. 当前数学结论
 
 - `prefill = decode fold` 只有在顺序 fold 语义下由定义成立。
+- chunk prefill correctness 永远相对于一个 reference semantic contract；对 coarse quotient 正确，不推出对 fine contract 正确。
 - 真正需要证明的是 chunk implementation $\mathcal{C}_L$ 是否等价于 $\operatorname{Fold}_{\mathcal{T}}^L$。
 - 定理 3.6c 给出一般 B0 Logical Event DAG Theorem：若 chunk implementation 计算的是同一个 logical event DAG、同一组 kernel equation、同一个 output/final-state extraction，则 correctness 成立。它允许物理执行乱序，但不允许 logical dependency / visibility / commit order 被打乱。
 - 定理 3.6f 给出 Aggregation Quotient Theorem：不可逆聚合只有在构成 semantics-preserving quotient 时才安全；tagged aggregation 与同一 logical event 内确定性聚合是安全特例。

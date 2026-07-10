@@ -10,254 +10,184 @@ tags:
 
 # TIDE 当前架构状态
 
+> [!summary] 本页定位
+> 本页是 `~/llm/tide` 的动态工程快照，不定义数学语义。数学 contract 见 [[step-transition-mathematical-specification]]，规范性实现接口见 [[step-transition-implementation-specification]]。
+
+## 快照边界
+
+本页基于 2026-07-10 的本机代码状态，代码基线至少包含：
+
+```text
+79bb9ec Add selector artifacts and CPU stress benchmark
+```
+
+当前 `~/llm/tide` 已经不是单纯的 LH native wrapper，也不是完整通用 TIDE。最准确的定位是：
+
+> 一套由 Tide 自己的 role-aware graph、phase schedule、state/workspace contract 与独立 CPU kernels 承载的 LH-compatible reference runtime；native LH 继续作为 golden oracle。
+
 ## 一页版
 
-当前 `~/llm/tide` 的状态不是完整 TIDE，也不是 `lh` C++ Connectome 的逐行复刻，而是一版轻量的 `LH role-aware reference runtime`。
+已经完成：
 
-它已经完成的事情是：
+- `RoleAwareGraphSpec` 承载 input/output cortex、bridge、anchor、hierarchy、node role 与 edge role。
+- `ExecutionPhaseSpec` 明确 phase 的 read view、write target、commit policy 与 side-effect boundary。
+- `LhPhaseWorkspace` 表达 token-local staged messages 与 multi-tick readout cache。
+- `LhRuntimeState` 表达跨 token activations、local memories、selectors、pronounce memory 与 phase events。
+- native LH whole `think()`、Tide schedule 驱动的 native phase path、独立 Tide CPU path 已形成可比较的三层 reference chain。
+- 独立 Tide CPU kernels 在当前覆盖配置上与 native LH end-to-end logits 对齐。
+- signal-level phase artifacts 与 selector count artifacts 已逐 phase 对齐。
+- attention/add hidden families、主要 cache modes、norm families 与 heterogeneous cortex configuration 已有覆盖测试。
+- 已有 CPU stress benchmark，并限制最多 160 核、800 GB address-space budget。
 
-- 用一张 `RoleAwareGraphSpec` 承载 LH 的 input cortex、output cortex、bridge、anchor、hierarchy、node role 与 edge role。
-- 用 `ExecutionPhaseSpec` 明确每个 phase 的 `read view / write target / commit policy / side effects`。
-- 用 `LhPhaseWorkspace` 表达单个 token 内部的 staged messages 与 readout cache。
-- 用 `LhRuntimeState` 表达跨 token 持续存在的 activations、local memories、selectors、pronounce memory 与 phase event log。
-- 能链接 native ARM 版 LH `libConnectome.so`，并验证 LH 与 Tide 读取同一份 graph data 后，hierarchy 与四张 CSR 图完全一致。
-- 已实现中间路线：`LhNativeBackend` 由 Tide phase schedule 驱动，但每个 phase 的数值计算复用 LH native `oibridge / iobridge / inet / onet / pronounce`。
-- 已验证 `LhNativeBackend::think_phase_driven()` 与 LH 原生 `IOCortexNet::think()` 在同参数、连续两个 token 上 logits 一致。
+尚未完成：
 
-它还没有完成的事情是：
-
-- 还没有 LH 参数名到 Tide 参数名的 state-dict 映射。
-- 还没有逐 phase 导出 artifact 并做数值 golden test。
-- 还没有让 Tide 独立 numeric kernel 复刻 LH 的 packed / cached / cross-batch hidden modes。
-- 还没有把当前 LH-specific runtime 抽成最终通用 TIDE backend / lowering / execution runtime。
-
-因此，当前最准确的判断是：
-
-> TIDE 已经有一版可运行、可测试、可链接 native LH 的 role-aware phase runtime 骨架；其中 native phase adapter 已经能数值复刻 LH whole `think()`，但 Tide 自己的独立 numeric kernel 仍未达到 LH numeric parity。
+- strict model-level `prefill()` API 与 `prefill = decode fold` 证明。
+- memory-state 级 per-phase artifact equality。
+- 通用 backend-neutral state-dict / parameter mapping API。
+- 独立的通用 parallel executor、完整 packed/crossbatch performance lowering。
+- Ascend/NPU execution、graph-node affinity 与 multi-device runtime。
+- 训练可行性、scaling 与一般 graph 性能优势验证。
 
 ## 架构分层
 
 ```mermaid
 flowchart TB
-  Motivation["研究目标：有界局部通信的自回归神经动力系统"]
-  Contract["Runtime contract：状态、指令、phase、commit、side effect"]
-  LHRef["LH role-aware reference runtime"]
-  TideCore["当前 Tide C++ 实现"]
-  NativeLH["native LH libConnectome.so"]
-  Golden["后续 per-phase golden tests"]
-  Backend["后续通用 backend / lowering / kernel runtime"]
+  Math["数学语义<br/>transition / fold / DAG / quotient"]
+  Contract["规范接口<br/>Graph / State / Workspace / Schedule / Kernel"]
+  LHSpec["LH-compatible role-aware family"]
+  TideCPU["Independent Tide CPU kernels"]
+  Native["Native LH golden oracle"]
+  Validate["End-to-end + per-phase validation"]
+  Optimize["Prefill / parallel / packed lowering"]
+  Backend["CPU / Ascend backend"]
 
-  Motivation --> Contract
-  Contract --> LHRef
-  LHRef --> TideCore
-  NativeLH --> Golden
-  TideCore --> Golden
-  Golden --> Backend
+  Math --> Contract
+  Contract --> LHSpec
+  LHSpec --> TideCPU
+  Native --> Validate
+  TideCPU --> Validate
+  Validate --> Optimize
+  Optimize --> Backend
 ```
 
-这张图里的关键点是：当前实现先选择 LH 作为 reference family，用它把 runtime contract 钉住。等 LH 的 graph、phase、state 与数值逐步对齐后，再抽出通用 backend/runtime，而不是一开始就实现一个过重的通用系统。
+这套分层刻意把三件事分开：
 
-## 当前中间路线
-
-```mermaid
-flowchart TB
-  Schedule["Tide default_lh_phase_schedule"]
-  Wrapper["LhNativeBackend"]
-  State["LhNativeRuntimeState<br/>LH native acts / hidden / selectors"]
-  OI["LH native oibridge"]
-  IO["LH native iobridge"]
-  INet["LH native inet.forward"]
-  ONet["LH native onet.forward"]
-  Pronounce["LH native pronounce.forward"]
-  Logits["logits"]
-
-  Schedule --> Wrapper
-  Wrapper --> State
-  Wrapper --> OI
-  Wrapper --> IO
-  Wrapper --> INet
-  Wrapper --> ONet
-  Wrapper --> Pronounce
-  OI --> State
-  IO --> State
-  INet --> State
-  ONet --> State
-  Pronounce --> Logits
-```
-
-这条路线不是“直接调用 `IOCortexNet::think()` 了事”，也不是“完全重写 LH kernel”。它的含义是：
-
-- Tide 控制 phase schedule、phase event、external step、internal tick。
-- LH 控制每个 phase 内部的数值 kernel、hidden/KV cache、selector 和原生 state 对象。
-- 测试用同一组参数比较 `IOCortexNet::think()` 与 `LhNativeBackend::think_phase_driven()`，确认 phase adapter 没有改变 LH 语义。
-
-这一步的作用是先证明当前 Tide 架构可以承载 LH C++ 的真实计算过程。后续如果要替换为 Tide 独立 kernel，可以逐个 phase 替换，并用 `LhNativeBackend` 做 golden reference。
+- 数学文档规定什么叫正确。
+- LH-compatible family 提供一个复杂但具体的 reference transition。
+- Tide CPU / packed / Ascend 只是该语义的不同实现或 lowering。
 
 ## 核心对象
 
-```mermaid
-flowchart LR
-  subgraph Static["静态结构"]
-    Graph["RoleAwareGraphSpec"]
-    Nodes["NodeSpec<br/>cortex / point role / anchors / namespaces"]
-    Edges["EdgeSpec<br/>input_intra / output_intra / io_bridge / oi_bridge"]
-    Hierarchy["GraphHierarchy<br/>levelptr / base_num / localnum"]
-    Graph --> Nodes
-    Graph --> Edges
-    Graph --> Hierarchy
-  end
+| 对象 | 当前职责 | 不应承担的职责 |
+| --- | --- | --- |
+| `RoleAwareGraphSpec` | 静态 node/edge role、anchor、hierarchy 与 CSR topology | 不决定 phase visibility 或 commit order |
+| `ExecutionPhaseSpec` | active roles、read view、write target、commit policy、side effects | 不实现数值 kernel |
+| `LhPhaseWorkspace` | token-local input/output extras、output cache、phase artifacts | 默认不跨 token 持久化 |
+| `LhRuntimeState` | activations、local hidden/cache、selector、pronounce、step/tick coordinates | 不隐藏 workspace lifecycle |
+| `EdgeSet` / `CortexRuntime` | bridge、affected、cortex update | 不改变 schedule |
+| `LocalChal` / `LocalAttention` / `LocalAdd` | node-local numerical transition | 不偷偷扩大 read scope |
+| `LhNativeBackend` | native LH golden oracle 与 phase-driven reference path | 不是最终 Tide backend |
 
-  subgraph Phase["phase contract"]
-    PhaseSpec["ExecutionPhaseSpec"]
-    ReadView["read_view"]
-    WriteTarget["write_target"]
-    Commit["commit_policy"]
-    Effects["side_effects"]
-    PhaseSpec --> ReadView
-    PhaseSpec --> WriteTarget
-    PhaseSpec --> Commit
-    PhaseSpec --> Effects
-  end
+## LH Phase Contract
 
-  subgraph Runtime["运行时状态"]
-    Workspace["LhPhaseWorkspace<br/>input_extra / output_extra / output_cache"]
-    State["LhRuntimeState<br/>acts / memories / selectors / phase_events"]
-    Kernels["Node kernels<br/>EdgeSet / CortexRuntime / LocalAttention / RmsNorm"]
-  end
-
-  Static --> Phase
-  Phase --> Runtime
-  Runtime --> Kernels
-```
-
-这里最重要的抽象边界是：
-
-- `RoleAwareGraphSpec` 只回答“图上有什么”。
-- `ExecutionPhaseSpec` 回答“当前 phase 允许看什么、写什么、什么时候提交”。
-- `LhPhaseWorkspace` 回答“一个 token 内部的短期 staged 信息在哪里”。
-- `LhRuntimeState` 回答“跨 token 持续存在的控制器状态在哪里”。
-- node kernels 只负责局部计算，不应偷偷决定 phase 可见性和 commit 顺序。
-
-## 当前 LH phase runtime
-
-LH 的一个 external token step 被拆成多个 internal tick。当前 Tide 实现的 phase schedule 是：
-
-```mermaid
-sequenceDiagram
-  participant Token as token id
-  participant WTE as wte embedding
-  participant OI as oibridge
-  participant IO as iobridge
-  participant INet as input cortex update
-  participant ONet as output cortex update
-  participant Cache as readout cache
-  participant Pronounce as pronounce
-
-  Token->>WTE: embedding
-  loop internal tick
-    OI->>INet: old oacts -> staged input extras
-    alt tick == 0
-      WTE->>INet: token embedding -> input node 0
-    end
-    IO->>ONet: old iacts -> staged output extras
-    INet->>INet: old iacts + input extras + ichs + iselector -> new iacts
-    ONet->>ONet: old oacts + output extras + ochs + oselector -> new oacts
-    ONet->>Cache: append output anchor activation
-  end
-  Cache->>Pronounce: multi-tick output cache
-  Pronounce->>Pronounce: local accumulator + norm + lm_head -> logits
-```
-
-这张图容易误解的一点是：`iobridge` 读取的是 tick start 时的旧 `iacts`，不是 `input cortex update` 后的新 `iacts`。所以 phase 的核心不是顺序标签，而是：
+一个 external token step 的当前 reference order 是：
 
 ```text
-barrier + visibility + commit order
+for internal_tick:
+  oibridge
+  external_input    # only tick 0
+  iobridge
+  input_update
+  output_update
+  readout_cache
+pronounce
 ```
 
-如果没有这层约束，统一 graph runtime 很容易退化成普通消息传递循环，从而破坏 LH 语义。
+顺序本身还不够。每个 phase 还固定：
 
-## 数据与对齐状态
+- 读取 tick-start 还是 phase-updated state。
+- 写入 workspace 还是 persistent state。
+- 写入何时对后续 phase 可见。
+- hidden decay、KV append、selector count、clear-after-activation 等 side effects。
 
-当前已有三层测试：
+因此当前最重要的架构结论仍然是：
 
-```mermaid
-flowchart TB
-  T1["tide_lh_role_aware_smoke<br/>tiny graph + phase events + logits shape"]
-  T2["tide_lh_graph_data_smoke<br/>load LH graph-data/small-cfg-bytes"]
-  T3["tide_lh_native_link_smoke<br/>link native LH + exact graph equality + LH think"]
-  T4["tide_lh_native_phase_adapter_smoke<br/>Tide phase schedule + LH native kernels == LH think"]
+> 物理上可以是一张 role-aware graph；语义上必须保留 multi-phase runtime、独立 state namespaces、selector control state、hidden lifecycle 与 commit policy。
 
-  T1 --> T2
-  T2 --> T3
-  T3 --> T4
+## 对齐矩阵
+
+| 层级 | 当前状态 | 证据边界 |
+| --- | --- | --- |
+| Graph hierarchy / CSR | 已对齐 | LH 与 Tide loader 比较 hierarchy、`indptr / indices / edge_ids` |
+| Phase contract | 已对齐 | phase order、read view、write target、commit policy、side effects |
+| Native whole vs native phase-driven | 已对齐 | 连续 token logits 与 phase event equality |
+| Independent Tide whole model | 已对齐于当前覆盖配置 | 独立 Tide CPU kernels 对 native LH end-to-end logits |
+| Per-phase signal artifacts | 已对齐 | input/output extras、activations、output cache |
+| Selector artifacts | 已覆盖 count state | `affectcount / selectcount`；并非宣称所有未来 tie-breaking 均已证明 |
+| Memory-state artifacts | 未完整覆盖 | hidden/KV memory 尚未进入完整 per-phase artifact report |
+| Hidden/cache modes | 已有组件级覆盖 | `CROSSBATCH / LOOP / PACKED / CACHEDMATMUL / CACHEDPACKED / CACHEDATTENTION` |
+| Add hidden / norm / heterogeneous config | 已覆盖 | TensorHidden、RMSNorm、LayerNorm、Identity、mixed CHAL bands |
+| Strict chunk prefill | 未完成 | 当前模型入口仍是 decode-style `think()` |
+| Ascend/NPU | 未实现 | 目前只有 adaptation/lowering 调查与设计 |
+
+## Golden Reference Chain
+
+当前验证链可以写成：
+
+```text
+native LH whole think
+  == Tide schedule + native LH phase kernels
+  == captured native phase artifacts
+  == independent Tide CPU kernels
 ```
 
-`tide_lh_native_link_smoke` 目前确认：
+这条链证明的是当前覆盖 family 下的实现语义与数值对齐。它没有自动证明：
 
-- native LH `libConnectome.so` 可以在当前 ARM 机器上链接。
-- LH `GraphConfig / GraphData` 与 Tide `RoleAwareGraphSpec` 对同一份 graph data 的读取结果一致。
-- 一致性不是只看 shape，而是检查 hierarchy 与 CSR `indptr / indices / edge_ids`。
-- LH `IOCortexNet::think()` 能跑一轮，并产出期望 logits shape。
+- 一般 graph 的 chunk prefill correctness。
+- 训练时反向传播等价。
+- 浮点重排后的所有 backend 都等价。
+- 当前 LH transition 本身具有理想的可训练性或高性能 prefill 结构。
 
-`tide_lh_native_phase_adapter_smoke` 目前确认：
+## CPU Mode 与性能状态
 
-- 两个 native backend 拷贝同一组参数。
-- 一个 backend 直接调用 LH whole `IOCortexNet::think()`。
-- 另一个 backend 按 Tide `default_lh_phase_schedule()` 分 phase 调 LH 原生组件。
-- 连续两个 token 的 logits `allclose`，phase event schedule 也符合预期。
+当前 CPU path 已覆盖主要 LH hidden/cache mode，并提供：
 
-当前还没有确认：
+```text
+tide_lh_cpu_stress
+scripts/run_cpu_stress_matrix.sh
+```
 
-- Tide 独立 bridge kernel 与 LH bridge 输出一致。
-- Tide 独立 cortex candidate activation 与 LH 一致。
-- Tide 独立 selector 输出与 LH 一致。
-- Tide 独立 local hidden / KV cache 更新与 LH 一致。
-- Tide 独立 pronounce 与最终 logits 与 LH 一致。
+benchmark 可比较 native LH 与 independent Tide 的 forward/backward、batch、sequence length 与线程数。解释时必须保持同 graph、config、参数、mode、batch、length 与 thread budget。
 
-## 与 `tide.old` 的关系
+当前 benchmark 的意义是发现性能瓶颈和回归，不是证明 sequence-parallel prefill。调用端循环多个 `think()` 仍然只是 decode fold。
 
-`tide.old` 有更完整但更重的 runtime 抽象，例如：
+## 与数学主线的接口
 
-- `GraphSpec`
-- `ClockContext`
-- `ExecutionPlan`
-- `GraphState`
-- `NodeKernel`
-- `CommitPolicy`
-- lowering / backend / packed runtime
+当前工程 runtime 提供一个具体 reference transition：
 
-当前 `~/llm/tide` 没有直接继承这套复杂结构。原因是：如果一开始就把通用 runtime、backend、packed kernel、LH compatibility 全部放进来，失败原因会不可诊断。
+```text
+Step(input_token, State) -> logits, State'
+```
 
-当前路线更窄：
+数学主线接下来需要回答：
 
-1. 先用 LH role-aware runtime 固定语义。
-2. 再做 native LH per-phase numeric alignment。
-3. 再把稳定对象抽成通用 TIDE runtime contract。
-4. 最后再决定哪些 `tide.old` 的 backend / lowering 设计值得复用。
+1. 这个 transition 的 reference semantic contract 到底保留哪些 state 与 provenance？
+2. 哪些 LH/Tide kernel 可证明具有 chunk implementation？
+3. 哪些跨 token / round 聚合是 semantics-preserving quotient？
+4. 哪些 phase、selector、readout、pronounce 机制必须顺序执行，哪些可以 scan、batch 或 reorder？
+5. 如何从 decode-style runtime 得到第一版真实 model-level `prefill()`？
 
-## 当前架构判断
+## 当前下一步
 
-当前最重要的抽象不是“统一成一张普通图”，而是：
+建议顺序：
 
-> 物理上可以统一成一张 role-aware graph；语义上必须保留 multi-phase runtime、独立 state namespace、selector 控制面、hidden lifecycle 与 commit policy。
+1. 保持 native LH 为 golden oracle，补 memory-state per-phase artifacts。
+2. 以 [[step-transition-mathematical-specification]] 的 B0 contract 为基准定义 model-level `prefill()` 输入、输出与 state contract。
+3. 先实现并验证 token-wise map、causal attention、affine scan 的 chunk paths。
+4. 再增加 parallel executor、batch memory、packed selector 与 crossbatch fusion。
+5. 把 LH-specific config mapping 收敛为 backend-neutral state-dict API。
+6. CPU semantic parity 与 prefill proof gate 稳定后，再做 Ascend lowering。
 
-也就是说：
+工程判断应始终保持：
 
-- 图统一是静态结构层的统一。
-- phase 不统一成普通循环，是执行语义层的保真。
-- input / output cortex 不混用，是状态语义层的保真。
-- selector 与 hidden lifecycle 不藏进 kernel，是控制语义层的保真。
-
-## 下一步
-
-下一步不应马上扩张到完整 TIDE backend，而应继续做对齐：
-
-1. 做 LH -> Tide 参数映射。
-2. 增加 per-phase artifact capture。
-3. 先比较 bridge 输出。
-4. 再比较 `BatchCHALInput` / candidate activations。
-5. 再比较 selector selected activations。
-6. 再比较 hidden / KV cache 更新。
-7. 最后比较 pronounce 与 logits。
-
-只有逐 phase 对齐后，`prefill / decode` 等价性讨论才有稳固工程基础。否则即使最终 logits 不同，也无法判断差异来自参数映射、phase 可见性、selector、hidden cache，还是 kernel 实现。
+> 后端优化可以改变 layout、物理执行顺序和 kernel fusion，但不能反过来定义 reference semantics。

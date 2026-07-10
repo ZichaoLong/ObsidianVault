@@ -1,17 +1,20 @@
 ---
-type: memo
-status: draft
+type: historical-note
+status: archived
 tags:
   - tide
   - prefill-decode
   - runtime-contract
 ---
 
-# Prefill / Decode 等价性研究上下文
+# Prefill / Decode 等价性研究上下文（历史探索）
+
+> [!warning] 阅读边界
+> 本页保存从 `lh`、`tide.old` 到 StepTransition 抽象的早期推演，其中大量“当前状态”“尚未完成”描述对应较早工程阶段，已经被后续实现超越。当前数学规范见 [[step-transition-mathematical-specification]]，当前实现规范见 [[step-transition-implementation-specification]]，当前代码完成度见 [[current-architecture-state]]。本页只用于追溯设计来源，不再作为当前计划或验收依据。
 
 ## 定位
 
-这份备忘记录对 `~/llm/lh` 与 `~/llm/tide.old` 的初步审视结论，用于后续展开 `prefill / decode` 等价性问题。
+这份历史备忘记录对 `~/llm/lh` 与 `~/llm/tide.old` 的初步审视结论，以及 StepTransition 抽象形成前的推演过程。
 
 当前不把这里的结论视为最终架构方案。更准确地说：
 

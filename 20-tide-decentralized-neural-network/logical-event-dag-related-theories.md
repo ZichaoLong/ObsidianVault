@@ -12,6 +12,9 @@ tags:
 
 ## Position
 
+> [!summary] 本页定位
+> 本页是 [[step-transition-mathematical-specification]] 的外部理论与工程谱系参考。读者不需要预先掌握 CPU ISA、编译器、SSA 或分布式数据流；每节只提炼对 Tide 有用的最小概念、适用边界与原始参考。类比本身不构成 Tide 定理的证明。
+
 `Logical Event DAG Theorem` is not meant to be a mathematically novel theorem. Its core is a specialization of several mature ideas:
 
 - deterministic evaluation of a DAG is independent of the chosen topological order;
