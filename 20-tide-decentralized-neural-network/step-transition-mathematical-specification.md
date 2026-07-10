@@ -18,6 +18,9 @@ tags:
 > [!note] 写作与证明约定
 > 本页按“定义先于使用、简单例子先于复杂架构、引理先于定理、证明不跳步”的顺序推进。CPU ISA、编译器、SSA、memory model 等外部概念只作为参考谱系，见 [[logical-event-dag-related-theories]]；它们不替代本页的数学证明。
 
+> [!roadmap] 当前形式化边界
+> 第 1-5 节已经定义顺序 fold、chunk correctness、semantic quotient、finite logical event DAG、主力 kernel family 与 step simulation。dynamic event generation、有限执行的 DAG representation、zero-delay SCC 与 fixed-point kernel 尚未形成正式定理；其候选定义和推进顺序暂存于 [[finite-event-dag-and-zero-delay-loops-memo]]，不能提前当作本页已证明结论。
+
 阅读本页时，所有结论按以下强度区分：
 
 - `定义`：约定数学对象的含义。
@@ -784,6 +787,8 @@ e=(t,r,p,v)
 $$
 
 其中 $t$ 是 external token tick，$r$ 是 internal round tick，$p$ 是 phase，$v$ 是 node 或 edge endpoint。
+
+这里定义的是某次有限 execution 已经实例化后的 logical events，不要求 Tide static graph 本身无环，也不要求 runtime 在执行前预先枚举完整路径。未来若允许 selector 在线生成 event，需要额外证明：该次 execution 终止、event 集合有限，并且每条 dependency 严格推进某个良基 logical rank。普通 CFG / recurrent graph 的 back edge 可以通过 token、round 或 iteration index 展开；同一 logical rank 内的 zero-delay cycle 不在当前定义覆盖范围内。
 
 一个长度为 $L$ 的 logical event graph 的节点集合为：
 
@@ -2504,3 +2509,13 @@ $$
 - B1-B6 是 mechanism catalog，不是必须完整复刻 LH 的唯一升级路径；每个机制都可保留、修改、替换或拒绝。
 - selector、pronounce memory、KV append、phase barrier、workspace lifetime 是最容易破坏 chunk/prefill 等价的机制。
 - packed / crossbatch / backend lowering 的正确证明入口是 step simulation，而不是只比较最终 logits。
+
+## 7. 下一数学阶段
+
+本节只列出尚未证明的目标，不把它们记作当前定理。
+
+1. **Finite Logical Event DAG Representation Lemma**：若一次 execution 产生有限 event，且所有 dependencies 严格增加良基 logical rank，则 dynamic event graph 是有限 DAG。
+2. **Dependency-Complete Local Refinement Theorem**：若 reference event DAG dependency-complete，implementation 对每个 event / sub-DAG 给出局部 simulation 或 semantics-preserving quotient，reference dependencies 被保留为 path、fused-node 内部顺序或经证明安全消除，且 extraction commute，则 chunk implementation 正确。
+3. **Zero-Delay Cycle Dichotomy**：同一 logical rank 内的 dependency cycle 没有普通 topological evaluation；必须增加 delay/state boundary、把 SCC 声明为具有独立语义的 simultaneous/fixed-point kernel，或判定 program 非法。
+4. **No Semantic Resurrection Audit**：quotient kernel 应直接消费 quotient representation；若通过 reconstruction 恢复 fine representation，必须证明 reference contract 允许该代表元，并把 inverse/re-encoding 的 work、span、memory 与 communication 全部计入成本。
+5. **Dynamic Tide Instantiation**：在上述结果稳定后，再把 mailbox、phase、selector、readout、pronounce 等机制逐个实例化，而不是一次性证明完整 LH。

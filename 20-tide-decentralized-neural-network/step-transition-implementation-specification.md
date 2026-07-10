@@ -11,7 +11,7 @@ tags:
 # StepTransition Implementation Specification
 
 > [!summary] 本页定位
-> 本页只处理 `StepTransition` 的规范性实现抽象、LH 映射、phase/read/write/commit 约束、kernel 替换路线与工程检查项。数学定义与证明见 [[step-transition-mathematical-specification]]；`~/llm/tide` 当前完成度见 [[current-architecture-state]]。
+> 本页只处理 `StepTransition` 的规范性实现抽象、Event IR、LH 映射、phase/read/write/commit 约束、kernel 替换路线与工程检查项。数学定义与证明见 [[step-transition-mathematical-specification]]；`~/llm/tide` 当前完成度见 [[current-architecture-state]]。
 
 本页不是代码状态日志。这里的 `Graph / State / Workspace / Schedule / Kernel` 是稳定接口词汇；某个接口是否已经由当前 CPU、packed 或 Ascend backend 实现，应以 [[current-architecture-state]] 为准。
 
@@ -99,6 +99,8 @@ phase 的核心不是 enum 名称，而是：
 barrier + visibility + commit order
 ```
 
+固定 schedule 是最简单实例。未来 dynamic runtime 可以在线选择 phase-local events，但生成策略仍必须服从同一个 visibility、commit 与 logical-rank contract。
+
 ### 5. Kernel
 
 `Kernel` 是局部计算函数。
@@ -138,6 +140,97 @@ Step(input_token, State):
 - `Kernel_phase` 不直接写全局状态。
 - `commit` 是唯一改变持久 state 的入口。
 - `Workspace` 的生命周期默认不跨 token。
+
+上面的伪代码描述 fixed-round reference family。若 round 数或 active events 由 selector 动态决定，还必须给出终止条件、event budget 或良基 rank，不能把无限循环隐藏在 `rounds` 中。
+
+## Dynamic Event Contract
+
+dynamic Tide 不要求从 input 到 output 的路径在运行前固定。规范对象应从“静态路径”提升为“运行时产生的有限 logical events”。
+
+建议最小 Event IR 为：
+
+```text
+EventId {
+  external_token
+  internal_round
+  phase
+  microstep
+  node_or_edge
+  role
+}
+
+Event {
+  id
+  read_set
+  write_set
+  predecessors
+  state_version
+  visibility_scope
+  commit_target
+  kernel_kind
+}
+```
+
+### Logical rank
+
+定义：
+
+```text
+LogicalRank = (external_token, internal_round, phase_ordinal, microstep)
+```
+
+rank 使用良基字典序。runtime 每次创建 dependency 时都必须满足：
+
+```text
+rank(predecessor) < rank(successor)
+```
+
+selector 可以在线决定是否创建 event、激活哪些 node / edge，或选择哪些 predecessor；但它不能在 strict core 中创建同 rank 的未声明 cycle。
+
+### Dependency completeness
+
+Event IR 至少需要显式表达：
+
+- consumed value 的 producer。
+- state read 对应的 version。
+- write/write 与 read/write conflict order。
+- phase visibility 与 barrier。
+- selector decision 对 future routing 的影响。
+- output 与 persistent-state commit event。
+
+若 implementation 删除一条 dependency，必须提供 independence、commutativity、non-aliasing 或 semantics-preserving quotient 证明。
+
+### Finite execution
+
+有限 token 输入不自动保证有限执行。dynamic runtime 还必须满足至少一种：
+
+- internal round 有静态上界。
+- event budget 有运行时上界。
+- event generation 有终止性证明。
+- rank 除单调增加外还被有限 chunk domain 有界。
+
+### Zero-delay SCC policy
+
+对同一 logical rank 的 dependency subgraph 做 SCC 检查：
+
+1. singleton 且无 self-loop：普通 event。
+2. cycle 跨越显式 token / round / state-version / delay boundary：在 dynamic unfolding 中属于不同 rank。
+3. 同 rank zero-delay SCC：strict core 拒绝。
+
+若未来确实需要 equilibrium / implicit computation，应把整个 SCC 显式声明为 `FixedPointKernel` 或 `RootSolveKernel`，并单独规定 fixed-point selection、termination、cost 与 differentiation contract。它不能作为普通 graph cycle 自动获得语义。
+
+### Kernel metadata lowering
+
+logical time 是语义要求，但底层 kernel 不一定接收原始整数 tuple。合法 lowering 包括：
+
+- causal mask。
+- segment offset。
+- packed row index。
+- CSR / block-sparse layout。
+- batch descriptor。
+- 已验证的固定 schedule。
+
+这些表示必须保留 kernel 所需的 logical partition、visibility 和 commit provenance。data pack 是物理布局优化，不是删除时间语义。
 
 ## LH 如何纳入
 
@@ -317,6 +410,8 @@ logits = Readout(State)
 
 ## B0-B6 工程推进梯度
 
+`EventId / LogicalRank / Dependency / StateVersion / CommitEvent` 是贯穿 B0-B6 的 cross-cutting execution contract，不是额外的 B7 机制。static executor 可以预先生成 events；dynamic executor 在线生成同一种 Event IR。
+
 当前 B0 已经吸收旧版 B1 的 factorized node state：visible activation 与 private memory/cache/state 从基线开始就同时存在。因此 Transformer KV cache、Mamba/SSM recurrent state、Linear Attention accumulator 都属于 B0 的正常表达能力，不应被当作后续层级的新增机制。
 
 B0 的工程门槛也要随之提高：不能只实现一个能容纳这些模型的 graph runtime，还要先给主力 kernel family 建立 chunk prefill proof gate。最低限度包括：
@@ -413,7 +508,7 @@ same parameters
 短期应保持四层协同：
 
 1. 用数学规范定义 transition、fold、chunk correctness 与 simulation。
-2. 用实现规范约束 LH-like runtime 的 graph/state/workspace/phase/kernel 边界。
+2. 用 Event IR 与实现规范约束 logical rank、dependency、graph/state/workspace/phase/kernel 边界。
 3. 工程上保留 native LH golden path，并用独立 Tide CPU path 做 translation-validation-style 对齐。
 4. 用更简单的 strict B-family 建立 model-level prefill，再把结果逐层推广到 LH-like mechanisms。
 
@@ -423,6 +518,7 @@ same parameters
 
 ```text
 StepTransition Math Spec
+Event IR / LogicalRank Spec
 StateStore Spec
 Workspace Lifetime Spec
 Phase Read/Write Scope Spec

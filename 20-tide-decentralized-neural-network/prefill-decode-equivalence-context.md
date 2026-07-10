@@ -23,6 +23,17 @@ tags:
 - `~/llm/tide.old` 提供一轮已经推进过的 runtime 架构尝试。
 - 最终哪些对象应留下、如何设计，应由 `prefill / decode` 等价性研究反过来裁决。
 
+### 阅读地图
+
+| 内容 | 现在如何使用 |
+| --- | --- |
+| LH C++ Connectome、双 cortex、bridge、selector、local hidden 解读 | 继续作为机制来源与语义背景 |
+| 当时的 Tide C++ 对齐记录 | 只用于理解架构演进；当前完成度以 [[current-architecture-state]] 为准 |
+| `tide.old` strict / non-strict family 与 runtime 对象 | 作为设计候选，不直接继承 |
+| 当时的必要条件、未解决问题与下一步 | 历史问题清单；其中部分已被数学规范和 finite logical event DAG 讨论取代 |
+
+特别是“有环图是否进入第一阶段”的旧判断，后来已经细化为：static graph 可以有环，但每次对有限 chunk 的终止 strict execution 应能展开为 dependency-complete logical event DAG；详见 [[finite-event-dag-and-zero-delay-loops-memo]]。
+
 ## 总体判断
 
 TIDE 不应被重写成 `lh` 的 C++ 复刻，而应被视为一个统一的 graph-state token runtime。
@@ -53,7 +64,7 @@ TIDE 不应被重写成 `lh` 的 C++ 复刻，而应被视为一个统一的 gra
 
 ## `lh` 提供的实现层动机
 
-`~/llm/lh` 当前应以 C++ Connectome 为主线理解。Python / PyConnectome 是更早期的原型版，适合回看原始建模动机；C++ Connectome 才是当前已经推进到 runtime、batch hidden、selector 和局部 KV cache 的主要实现。
+在这轮调查时，`~/llm/lh` 应以 C++ Connectome 为主线理解。Python / PyConnectome 是更早期的原型版，适合回看原始建模动机；C++ Connectome 是当时已经推进到 runtime、batch hidden、selector 和局部 KV cache 的主要实现。
 
 关键文件包括：
 
@@ -158,7 +169,7 @@ flowchart LR
 
 ### CHAL 与局部记忆
 
-`AccumulateLocal` 是节点局部更新的核心。当前主要有两类 hidden：
+`AccumulateLocal` 是节点局部更新的核心。当时主要有两类 hidden：
 
 - `TensorHidden`：add 型累积状态。
 - `KVHidden`：attention 型局部 KV cache。
@@ -193,11 +204,11 @@ flowchart LR
 - `inputA`、`outputA`、`ioA`、`oiA` 不是同质边集合。
 - `oibridge` 与 `iobridge` 有方向，也有调用顺序。
 - token embedding 只作为 external input 注入 input cortex 的 0 号节点。
-- readout 只读取 output cortex 的指定输出状态，并且当前实现读的是多 internal tick 的 `oacts[0]` cache。
+- readout 只读取 output cortex 的指定输出状态，并且当时实现读的是多 internal tick 的 `oacts[0]` cache。
 - hub、lead point、local point 的层级角色会影响 selector。
 - hidden 的 decay、clear、append、cache layout 与 selector history 一起构成运行时状态。
 
-如果后续 TIDE 把这些内容 flatten 成“一张图 + 同质节点 + 同质边 + 一个普通消息传递循环”，就会丢掉 `lh` 当前最重要的结构语义。TIDE 的目标不应是复刻 C++ Connectome 的类型体系，而应抽象出足以承载这些角色、相位和生命周期的 runtime contract。
+如果后续 TIDE 把这些内容 flatten 成“一张图 + 同质节点 + 同质边 + 一个普通消息传递循环”，就会丢掉这轮调查认为 `lh` 最重要的结构语义。TIDE 的目标不应是复刻 C++ Connectome 的类型体系，而应抽象出足以承载这些角色、相位和生命周期的 runtime contract。
 
 ### 复刻 C++ Connectome 的抽象边界
 
@@ -259,7 +270,7 @@ ExecutionPhaseSpec {
 }
 ```
 
-对应到当前 C++ Connectome，一个 internal tick 的语义可近似表达为：
+对应到当时的 C++ Connectome，一个 internal tick 的语义可近似表达为：
 
 ```text
 old iacts, old oacts
@@ -335,7 +346,7 @@ phase readout_cache:
 
 这解释了为什么仅有 phase 顺序仍不充分。顺序只是时间骨架；`read_view`、`write_target`、`commit_policy` 与 `side_effect_policy` 才决定可见性语义。
 
-例如，`iobridge` 在当前 C++ Connectome 中读取的是进入本 tick 时的旧 `iacts`，不是 `input_cortex_update` 后的新 `iacts`。如果统一 graph runtime 没有这个 read view 约束，就很容易变成：
+例如，`iobridge` 在当时的 C++ Connectome 中读取的是进入本 tick 时的旧 `iacts`，不是 `input_cortex_update` 后的新 `iacts`。如果统一 graph runtime 没有这个 read view 约束，就很容易变成：
 
 ```text
 input cortex 更新后立刻影响 output cortex；
@@ -351,16 +362,16 @@ output cortex 更新后又立刻反馈 input cortex。
 - 状态不混用：input/output cortex 仍有独立 state namespace。
 - 控制面不隐藏：selector 与 hidden lifecycle 仍是 runtime contract 的一部分。
 
-### 当前 C++ 对齐实现记录
+### 当时的 C++ 对齐实现记录
 
-当前 `~/llm/tide` 已按上述边界实现一版轻量 C++/LibTorch 对齐原型。它不追求复刻 `tide.old` 的完整 runtime，也不直接复制 `lh` C++ Connectome，而是先固定 LH role-aware 语义中最关键的结构：
+在这一历史阶段，`~/llm/tide` 已按上述边界实现一版轻量 C++/LibTorch 对齐原型。它不追求复刻 `tide.old` 的完整 runtime，也不直接复制 `lh` C++ Connectome，而是先固定 LH role-aware 语义中最关键的结构：
 
 - `RoleAwareGraphSpec`：物理统一图，保留 input/output cortex、bridge、anchor、node role、edge role 与 hierarchy。
 - `ExecutionPhaseSpec`：显式描述 phase 的 active roles、read view、write target、commit policy 与 side-effect 边界。
 - `LhPhaseWorkspace`：每个 token 的短期 phase workspace，承载 staged input extras、staged output extras 与 multi-tick readout cache。
 - `LhRuntimeState`：长期运行时状态，包含 input/output activations、per-node memories、selectors、pronounce memory、external step index 与 phase event log。
 
-当前 `think()` 已不再是单个硬编码流程，而是由 LH phase schedule 驱动：
+当时的 `think()` 已不再是单个硬编码流程，而是由 LH phase schedule 驱动：
 
 ```text
 for tick in internal_ticks:
@@ -382,9 +393,9 @@ pronounce
 - device affinity、CUDA stream 与 graph node placement。
 - 与原 LH C++ 的 per-phase golden test。
 
-因此，当前实现可以作为后续 prefill/decode 等价性讨论的 reference runtime，但还不能作为“已与 LH 数值完全对齐”的证据。
+因此，当时实现可以作为后续 prefill/decode 等价性讨论的 reference runtime，但还不能作为“已与 LH 数值完全对齐”的证据。
 
-当前机器上也已经重新编译出 native ARM 版 `lh` C++ Connectome：
+当时的机器环境也已经重新编译出 native ARM 版 `lh` C++ Connectome：
 
 ```text
 /home/zlong/llm/lh/Connectome/cpp/build-native/libConnectome.so
@@ -396,7 +407,7 @@ pronounce
 - 用 Tide `RoleAwareGraphSpec` 读取同一份 graph data。
 - 检查 hierarchy 与四张 CSR 图的内容完全一致，并跑一次 LH `IOCortexNet::think()`，确认 logits shape 与运行时 state 初始化。
 
-这说明当前已经具备后续 per-phase golden test 的基础条件。但它仍不是数值等价：数值等价还需要参数映射、LH/Tide 对应 phase artifact 导出，以及逐相位比较。
+这说明当时已经具备后续 per-phase golden test 的基础条件。但它仍不是数值等价：数值等价还需要参数映射、LH/Tide 对应 phase artifact 导出，以及逐相位比较。
 
 ### Python 原型中的图结构动机
 
@@ -418,7 +429,7 @@ pronounce
 - input / output 两套 cortex 不是同一张普通图。
 - bridge 拓扑有角色和方向。
 
-这些内容适合用来理解 `lh` 的原始动机，但当前主线语义应以 C++ Connectome 为准。
+这些内容适合用来理解 `lh` 的原始动机；在这轮调查中，主线语义以 C++ Connectome 为准。
 
 ### Python 原型中的双 cortex 与 bridge phase
 
@@ -439,7 +450,7 @@ pronounce
 - output cortex update。
 - temporal readout。
 
-当前 C++ Connectome 的关键点是：bridge 既有方向，也有相位；`oibridge` 与 `iobridge` 都在 cortex update 前生成 extra inputs，然后 `inet` 和 `onet` 分别更新各自 cortex。因此，后续 TIDE 抽象应保存“bridge phase + cortex update phase”的语义，而不是只保存四张 adjacency。
+当时 C++ Connectome 的关键点是：bridge 既有方向，也有相位；`oibridge` 与 `iobridge` 都在 cortex update 前生成 extra inputs，然后 `inet` 和 `onet` 分别更新各自 cortex。因此，后续 TIDE 抽象应保存“bridge phase + cortex update phase”的语义，而不是只保存四张 adjacency。
 
 ### Python 原型中的 selector 与 local hidden
 
@@ -464,20 +475,20 @@ attention 型 local hidden 的工作方式是：
 
 这说明 `lh` 里每个节点拥有自己的局部记忆，局部记忆的生命周期是架构语义，而不是普通 tensor buffer。
 
-### 当前实现局限
+### 当时观察到的实现局限
 
-`lh` 当前不应直接作为后续 runtime 蓝图：
+在当时的判断中，`lh` 不应直接作为后续 runtime 蓝图：
 
 - Python 原型大量使用 object array 和 per-node / per-edge loop，只适合保留建模直觉。
 - `train.py` 是逐 token 串行训练，没有真正 sequence-parallel prefill。
-- C++ Connectome 已经是当前主线实现，并引入 batch hidden、KVHidden、selector、多 batch 加速，但仍围绕 Connectome 专用类型体系展开。
-- C++ Connectome 当前保留了 role-aware 语义，但还没有直接给出 strict `prefill = decode fold` 等价性。
+- C++ Connectome 已经是当时主线实现，并引入 batch hidden、KVHidden、selector、多 batch 加速，但仍围绕 Connectome 专用类型体系展开。
+- C++ Connectome 当时保留了 role-aware 语义，但还没有直接给出 strict `prefill = decode fold` 等价性。
 
 因此，后续应保留 `lh` 的语义动机，不应复刻它的执行组织。
 
 ## `tide.old` 提供的架构尝试
 
-`~/llm/tide.old` 当前工作区干净，但它可能已经被多轮实验和架构推进弄得过重。它仍然有重要参考价值。
+调查时 `~/llm/tide.old` 工作区干净，但它可能已经被多轮实验和架构推进弄得过重。它仍然有重要参考价值。
 
 关键文件包括：
 
@@ -531,9 +542,9 @@ strict family 声明 `prefill / decode` 的 sequence-parallel equivalence contra
 
 这个区分应保留。原因是 `lh` 的 selector、bridge phase、hidden lifecycle 与多 tick readout 更容易破坏逐 token causal equivalence。未经验证前，不应把它包装成 strict family。
 
-### 当前重点已经转向 contract
+### 当时重点已经转向 contract
 
-`tide.old/docs/zh/status/current.md` 已经把当前高优先关注点收缩为：
+`tide.old/docs/zh/status/current.md` 在当时已经把高优先关注点收缩为：
 
 - `prefill / decode` 等价性 contract。
 - `prefill = decode fold` 的数学前提。
@@ -703,7 +714,7 @@ LH-like 路径短期更适合用于验证：
 - complex selector history。
 - CUDA / NPU custom kernel ABI。
 
-## 当前未解决问题
+## 当时未解决问题
 
 1. strict contract 的最小 family 应选哪个？
 
@@ -728,17 +739,19 @@ LH-like 路径短期更适合用于验证：
 
 4. 有环图是否进入第一阶段？
 
-当前判断：不应进入第一阶段。应先做无环、dense、同步图，再做固定 tick 的有环图。
+当时判断：不应进入第一阶段。应先做无环、dense、同步图，再做固定 tick 的有环图。
+
+后续修正：这个判断适合作为早期实现降复杂度策略，但不应升级为 Tide 的一般语义限制。现在更准确的边界是区分 static topology 与 finite dynamic event graph，并单独拒绝或封装 zero-delay SCC。
 
 5. 昇腾后端何时进入？
 
-当前判断：在 strict contract 与 CPU reference gate 稳定前，不应让昇腾后端决定核心语义。昇腾应作为后端实现目标，而不是语义源头。
+当时判断：在 strict contract 与 CPU reference gate 稳定前，不应让昇腾后端决定核心语义。昇腾应作为后端实现目标，而不是语义源头。
 
 6. `lh` 中 multi-tick readout 如何与 strict prefill/decode 对齐？
 
-当前判断：multi-tick readout 本身不必然破坏 sequence parallel，但必须明确 readout 消费哪些 tick cache、sequence state 或 memory view。未经定义前，不应把它纳入 strict contract。
+当时判断：multi-tick readout 本身不必然破坏 sequence parallel，但必须明确 readout 消费哪些 tick cache、sequence state 或 memory view。未经定义前，不应把它纳入 strict contract。
 
-## 下一步讨论建议
+## 当时的下一步讨论建议
 
 后续应专门讨论 `prefill = decode fold` 的形式化定义。建议按以下顺序：
 
@@ -748,3 +761,31 @@ LH-like 路径短期更适合用于验证：
 4. 再定义 strict family 与 non-strict family。
 5. 再反推第一版 TIDE runtime 最小对象。
 6. 最后才决定哪些 `tide.old` 代码或文档概念应保留。
+
+## 原始吞吐记录（历史）
+
+以下表格来自早期 TIDE / LH 探索，只保留为历史证据。它们不是当前 `~/llm/tide` stress benchmark，也不能证明 sequence-parallel prefill、训练可行性或当前硬件性能。
+
+| ms/per token/step |          |     |        | 56Core CPU |     |     |     | 7*T4 GPU 15GB / [8.5B 8*V100 32GB] |      |     |     |
+| ----------------- | -------- | --- | ------ | ---------- | --- | --- | --- | ---------------------------------- | ---- | --- | --- |
+| Size              | Node     | Dim | Batch  | 1          | 16  | 256 | 512 | 1                                  | 16   | 256 | 512 |
+| 1B                | 7168/64  | 128 | Grad   | 140        | 50  | 27  | 24  | 350                                | 156  | 60  | 48  |
+|                   |          |     | NoGrad | 130        | 34  | 5   | 2.5 | 320                                | 120  | 17  | 9   |
+| 8.5B              | 57344/64 | 128 | Grad   | 1350       | 543 | 234 | 136 | 3600                               | 1200 | 273 |     |
+|                   |          |     | NoGrad | 1000       | 375 | 54  | 29  | 3600                               | 906  | 109 | 57  |
+
+| ms/per token/step |        |      |        | 56Core CPU |     |   |      | 7*T4 GPU 15GB |   |      |      |
+| ----------------- | ------ | ---- | ------ | ---------- | --- | - | ---- | -------------- | - | ---- | ---- |
+| Size              | Node   | Dim  | Batch  | 1          | 16  |   | 512  | 16             |   | 512  | 2048 |
+| 0.58B             | 224/32 | 512  | Grad   | 15         | 2.5 |   | 0.57 | 6.9            |   | 1.4  | 1    |
+|                   |        |      | NoGrad | 15         |     |   | 0.3  |                |   | 0.65 | 0.35 |
+| 2.2B              | 224/32 | 1024 | Grad   | 25         | 5.6 |   | 1.17 | 8.8            |   | 1.8  | 1.2  |
+|                   |        |      | NoGrad | 25         |     |   | 0.88 |                |   | 0.88 | 0.56 |
+| 8.8B              | 224/32 | 2048 | Grad   | 85         |     |   | 3.6  | 9.1            |   | 2.8  |      |
+|                   |        |      | NoGrad | 85         |     |   | 3.3  |                |   | 1.46 | 0.95 |
+
+| ms/per token/step |                   |   |        | 56Core CPU |     |   |     | 7*T4 GPU 15GB |    |   |     |
+| ----------------- | ----------------- | - | ------ | ---------- | --- | - | --- | -------------- | -- | - | --- |
+| Qwen 7B           |                   |   | Batch  | 1          | 16  |   | 512 | 1              | 16 |   | 512 |
+| 44input+56output  |                   |   | NoGrad | 210        | 56  |   | 29  | 46             | 21 |   | 6.4 |
+| 34input+66output  |                   |   | NoGrad |            |     |   |     | 51             | 24 |   | 6.7 |

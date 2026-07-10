@@ -23,13 +23,26 @@ tags:
 
 当前对齐结论是：
 
-1. CFG loop、SSA $\phi$ 与 MemorySSA `MemoryPhi` 不是 finite event-DAG 观点的反例。它们是 static cyclic representation；加入 dynamic iteration / memory-version index 后，有限执行依赖仍从较早实例指向较晚实例。
+1. CFG loop、SSA $\phi$ 与 MemorySSA `MemoryPhi` 不是 finite logical event DAG 观点的反例。它们是 static cyclic representation；加入 dynamic iteration / memory-version index 后，有限执行依赖仍从较早实例指向较晚实例。
 2. Tide static graph 可以有环，selector 也可以在线决定路径；strict runtime 的约束对象是每次有限 execution 产生的 logical events，而不是要求 static topology 本身无环。
 3. logical time 是语义要求。底层 kernel 可以接收 raw token / round / phase id，也可以接收由这些 metadata lowering 得到的 mask、segment、packed offset 或 sparse layout。
 4. 同一 logical rank 内的 zero-delay SCC 不存在普通 topological schedule。strict core 应默认拒绝；若确有任务需要，必须显式封装为具有独立 fixed-point contract 的 implicit kernel。
-5. 当前优先目标不是寻找无约束的全局充分必要条件，而是建立 finite event-DAG representation、local refinement sufficiency、zero-delay cycle dichotomy 与 non-degenerate performance witness 四层结果。
+5. 当前优先目标不是寻找无约束的全局充分必要条件，而是建立 finite logical event DAG representation、local refinement sufficiency、zero-delay cycle dichotomy 与 non-degenerate performance witness 四层结果。
 
 因此，zero-delay loop 对近期 Tide 的主要价值是提供 causality verifier 与负向设计约束，而不是成为默认支持的计算机制。
+
+## Integration Boundary
+
+本文保留完整推演，但不同内容应进入不同正式文档：
+
+| 内容 | 正式归属 | 当前状态 |
+| --- | --- | --- |
+| finite logical event DAG representation、local refinement、zero-delay dichotomy | [[step-transition-mathematical-specification]] | 仅列为下一数学阶段，尚未证明 |
+| EventId、LogicalRank、Dependency、StateVersion、SCC verifier | [[step-transition-implementation-specification]] | 已成为目标接口，尚未由当前 runtime 完整实现 |
+| 当前代码已有对象与缺口 | [[current-architecture-state]] | 以代码快照为准 |
+| ISA、SSA/MemorySSA、scheduling、dataflow、fixed-point 历史谱系 | [[logical-event-dag-related-theories]] | 参考材料，不替代 Tide 证明 |
+
+因此，本 memo 后续可以被拆分吸收，但在对应定义和定理完成前不应删除；它承担设计审计与问题边界记录。
 
 ## 1. 为什么有限 chunk 是更强的应用基础
 
@@ -50,7 +63,7 @@ Tide 后续需要动态性：
 
 注意：有限 token 输入本身不自动推出有限执行。若 dynamic runtime 可以无限增加 internal round，或 fixed-point iteration 不收敛，则仍可能产生无限执行。Tide strict family 因而还需要终止性证明、单调推进的 logical rank，或显式有限 budget。
 
-## 2. 有限 event DAG 的规范表述
+## 2. 有限 logical event DAG 的规范表述
 
 给定长度为 $L$ 的有限 chunk，令 $mathcal{N}_L$ 是该次 reference execution 中产生的有限 logical event 集合。一个 event 可以带有：
 
@@ -62,7 +75,7 @@ $$
 
 - $t$ 是 external token tick。
 - $r$ 是 internal round tick。
-- $p$ 是 phase。
+- $p$ 是带有明确顺序的 phase ordinal。
 - $k$ 是 phase 内 operation slot 或 microstep。
 - $v$ 是 node / edge / state endpoint。
 - $\mu$ 是 role、type、selector provenance 等附加 metadata。
@@ -151,7 +164,7 @@ selector 可以动态决定是否创建 $e'$、连接哪个 predecessor，或激
 
 因此更现实的数学路线是：
 
-1. 先证明 finite event-DAG representation lemma。
+1. 先证明 finite logical event DAG representation lemma。
 2. 再证明 dependency preservation + local refinement 推出 chunk correctness。
 3. 单独给出 zero-delay cycle 的判定与处理定理。
 4. 用 non-degenerate / parallel-prefill witness 判断工程价值。
@@ -205,6 +218,8 @@ $$
 即使某个编码可逆，逆变换成本也必须进入 cost ledger。语义正确性不能自动升级为工程价值。
 
 ## 6. ISA、编译器与依赖图的准确类比
+
+本节只保留与 Tide 设计直接相关的结论。更完整的历史、术语解释和原始参考统一见 [[logical-event-dag-related-theories]]。
 
 ### 6.1 ISA 与乱序执行
 
@@ -357,7 +372,7 @@ CommitEvent
 
 ## 11. 建议的数学推进顺序
 
-### 11.1 Finite Event-DAG Representation Lemma
+### 11.1 Finite Logical Event DAG Representation Lemma
 
 证明：若一次 Tide execution 产生有限 event，且每条 dependency 严格增加良基 logical rank，则 dynamic event graph 是有限 DAG。
 

@@ -13,7 +13,7 @@ tags:
 ## Position
 
 > [!summary] 本页定位
-> 本页是 [[step-transition-mathematical-specification]] 的外部理论与工程谱系参考。读者不需要预先掌握 CPU ISA、编译器、SSA 或分布式数据流；每节只提炼对 Tide 有用的最小概念、适用边界与原始参考。类比本身不构成 Tide 定理的证明。
+> 本页是 [[step-transition-mathematical-specification]] 的外部理论与工程谱系参考。读者不需要预先掌握 CPU ISA、编译器、SSA 或分布式数据流；每节只提炼对 Tide 有用的最小概念、适用边界与原始参考。类比本身不构成 Tide 定理的证明。dynamic event DAG 与 zero-delay 的 Tide-specific 推演见 [[finite-event-dag-and-zero-delay-loops-memo]]。
 
 `Logical Event DAG Theorem` is not meant to be a mathematically novel theorem. Its core is a specialization of several mature ideas:
 
@@ -44,11 +44,13 @@ The theorem separates two questions:
 | --- | --- | --- | --- |
 | ISA contract and out-of-order execution | Hardware may execute instructions out of program order, but must retire results as if the ISA program order had been respected. | Strong analogy for separating reference semantic contract from physical execution schedule. Tide's decode fold / logical event DAG plays the role of architectural semantics; chunk runtime is the optimized micro-execution. | CPU instructions have a mature fixed ISA and precise exception model; Tide kernels, state, provenance, and quotient boundaries are still research objects. |
 | Compiler IR and SSA | Make data dependencies, definitions, and control/dataflow easier to analyze and transform. | Suggests that Tide needs an explicit IR: logical event ids, state namespaces, read/write sets, phase barriers, and provenance tags. | SSA makes analysis tractable; it does not solve aliasing, memory ordering, floating point, or arbitrary semantic equivalence. |
+| Static cyclic IR and dynamic unrolling | CFG loops, SSA phi nodes, and loop-carried dependencies can be cyclic statically while each finite dynamic execution advances iteration/time. | Supports allowing cyclic Tide topology while requiring a finite dependency-complete logical event DAG for each terminating execution over a finite chunk. | Finite input does not imply termination; event generation still needs a bound or well-founded rank. |
 | Abstract interpretation | Replace concrete semantics with a sound abstract semantics through abstraction maps. | Direct analogy for `alpha`, semantic quotient, sufficient statistics, and safe aggregation. | Usually gives useful sufficient conditions, not complete conditions for all optimizations. |
 | Translation validation | Validate a specific optimized program against a source program instead of proving the whole optimizer correct. | Practical route for Tide lowerings: fusion, packed/crossbatch layout, backend-specific kernels, and phase rewrites. | The validator needs a precise IR semantics; hard cases remain floats, memory/state effects, undefined behavior, and solver scalability. |
 | Verified compiler | Mechanically prove that a compiler preserves source semantics. | Long-term analogy for a verified Tide core subset. | High assurance but expensive; probably realistic only for a small core, not the whole experimental runtime at first. |
 | Memory models and alias analysis | Define which reads/writes may be reordered or optimized without changing observable behavior. | Maps to Tide state namespaces, mailbox lifetime, commit order, selector side effects, and provenance-sensitive aggregation. | Memory models are notoriously subtle even in mature systems; Tide should avoid implicit state semantics. |
 | DAG topological evaluation | A deterministic DAG can be evaluated in any topological order with the same result. | This is the proof core of `C_L = Fold_T^L` when chunk execution preserves the same logical event DAG. | It proves correctness only, not high performance. |
+| Causality analysis and algebraic loops | Instantaneous dependency cycles have no ordinary topological schedule and need delay, rejection, or fixed-point semantics. | Gives a verifier rule for same-rank SCCs and separates ordinary recurrence from optional implicit kernels. | Fixed-point existence, uniqueness, convergence, cost, and differentiation are separate obligations. |
 | Lamport logical time | Logical ordering of events is more fundamental than wall-clock arrival order. | `token_id / round_id / phase_id / node_id` are logical event metadata; physical arrival order can differ. | Logical clocks do not by themselves define model kernels or state semantics. |
 | Kahn process networks | Deterministic processes communicate over channels; results can be independent of scheduling. | Supports the intuition that asynchronous graph execution can be deterministic if communication semantics are disciplined. | KPN assumes specific blocking stream semantics; LH/Tide message aggregation may not satisfy them. |
 | Synchronous dataflow | A static graph can be scheduled predictably when production/consumption rates are known. | Useful for fixed internal rounds, phases, and graph schedules. | Tide may have selectors, sparse activation, or data-dependent routing beyond static SDF. |
@@ -153,6 +155,8 @@ make dependencies explicit before optimizing them.
 For Tide, this means a chunk runtime should not rely on implicit physical arrival order or hidden mutation if we later want to prove prefill/decode equivalence. Values that matter for future kernels should have explicit names, timestamps, or state slots. If a value is intentionally compressed, the compression should be represented as a quotient, not as an accidental implementation detail.
 
 MemorySSA is especially relevant because ordinary SSA handles scalar values more cleanly than mutable memory. Tide has the same issue: node activations are easy; persistent state, mailbox mutation, selector counters, caches, and readout memory need a separate read/write model.
+
+SSA does not make an entire program statically acyclic. CFG loop back edges remain, and a loop-header phi may select a value produced by the previous dynamic iteration. MemorySSA likewise uses `MemoryPhi` at control-flow joins and loops. Once a finite execution is indexed by dynamic iteration or memory version, those dependencies point from an earlier instance to a later instance and can be represented as a finite logical event DAG. This static/dynamic distinction is the relevant lesson for Tide.
 
 Relevant sources:
 
@@ -323,6 +327,57 @@ This is why preserving logical dependency matters more than preserving physical 
 Relevant source:
 
 - A. B. Kahn, "Topological sorting of large networks", Communications of the ACM, 1962. DOI: https://doi.org/10.1145/368996.369025
+
+## Static Cycles, Dynamic Unrolling, And Zero-Delay SCCs
+
+### Static loop is not an instantaneous algebraic loop
+
+A compiler CFG may contain a back edge, and a scheduling representation for a loop may contain recurrence edges. These edges normally carry an iteration distance: an operation in iteration $i+1$ depends on a value from iteration $i$. Adding the dynamic iteration index turns the finite execution into an acyclic event relation.
+
+This is also how Tide should interpret ordinary recurrence:
+
+```text
+static graph cycle
++ token / round / iteration delay
+-> finite dynamic logical event DAG
+```
+
+The same idea appears in modulo scheduling. The static loop dependence graph may be cyclic, but recurrence distance constrains the legal initiation interval; it does not mean that two operations in the same dynamic instant recursively require each other's result.
+
+### Zero-delay algebraic loop
+
+A zero-delay loop has dependencies in the same logical instant:
+
+```text
+x = F(y, u)
+y = G(x, u)
+```
+
+There is no topological order unless the strongly connected component is given additional simultaneous-equation or fixed-point semantics. Related systems handle this in different ways:
+
+- hardware synthesis usually rejects unintended combinational loops;
+- synchronous languages perform causality or constructiveness checks and use explicit delay operators for stateful feedback;
+- synchronous dataflow cycles need initial tokens/delays to fire productively;
+- Simulink / Modelica identify algebraic loops and invoke equation solvers;
+- deep equilibrium models deliberately define an implicit fixed point and pay the solver/training cost.
+
+For Tide, the near-term rule should be conservative: strict event execution rejects same-rank SCCs. A future implicit family may collapse such an SCC into an explicit `FixedPointKernel`, but then existence, uniqueness, fixed-point selection, finite execution, cost, and differentiation become part of that kernel's contract.
+
+### SCC condensation
+
+Every finite directed graph can be condensed by strongly connected components into a DAG. This does not solve the semantics of a nontrivial SCC; it only localizes the problem. A Tide verifier can classify each SCC as:
+
+1. ordinary acyclic event;
+2. delayed recurrence whose edges advance logical rank;
+3. same-rank zero-delay SCC requiring rejection or an explicit implicit-kernel contract.
+
+Relevant sources:
+
+- B. R. Rau, "Iterative Modulo Scheduling", MICRO 1994. DOI: https://doi.org/10.1145/192724.192731
+- LLVM MemorySSA documentation: https://llvm.org/docs/MemorySSA.html
+- Edward A. Lee and David G. Messerschmitt, "Synchronous Data Flow", Proceedings of the IEEE, 1987. DOI: https://doi.org/10.1109/PROC.1987.13876
+- MathWorks, "Algebraic Loop Concepts": https://www.mathworks.com/help/simulink/ug/algebraic-loops.html
+- Shaojie Bai, J. Zico Kolter, Vladlen Koltun, "Deep Equilibrium Models", NeurIPS 2019: https://arxiv.org/abs/1909.01377
 
 ## 2. Lamport Logical Time
 
@@ -545,6 +600,8 @@ The current theoretical stack should be read as:
 5. Compiler / architecture history suggests the right engineering shape: semantic contract, explicit IR, sufficient transformation rules, validation, then backend lowering.
 6. General graph support requires preserving logical event provenance, or proving the lost information is a semantics-preserving quotient.
 7. LH is a mechanism pool and golden reference, not a mandatory final contract. Mechanisms that block strict prefill may be modified, isolated, or replaced while retaining the local-communication and ultra-sparsity goals.
+8. Static Tide topology may be cyclic, but each terminating strict execution over a finite chunk should admit a dependency-complete logical event DAG indexed by token / round / phase / microstep.
+9. Same-rank zero-delay SCCs are not ordinary scheduling problems; they require delay, rejection, or an explicit fixed-point contract.
 
 The design pressure for Tide is therefore:
 
@@ -585,3 +642,5 @@ or pass through an explicitly declared semantic quotient.
 ```
 
 Efficiency is a second proof obligation. It must be supplied by a non-degenerate certificate and the actual kernel family, not inferred from correctness alone.
+
+Likewise, finite logical event DAG representability is a proposed Tide design gate, not yet a global theorem about all computation. It becomes useful only together with a declared event granularity, admissible primitive family, complete dependency relation, termination condition, and cost model.
