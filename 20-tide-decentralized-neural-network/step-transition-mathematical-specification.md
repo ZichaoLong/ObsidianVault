@@ -271,7 +271,113 @@ $$
 \operatorname{Fold}_{\mathcal{T}}^L(x_{0:L},S_0)
 $$
 
-### 定义 2.3：三个层次
+### 定义 2.3：reference semantic contract
+
+给定 transition system：
+
+$$
+\mathcal{T}:X\times\mathcal{S}\to Y\times\mathcal{S}
+$$
+
+称四元组：
+
+$$
+(X,Y,\mathcal{S},\mathcal{T})
+$$
+
+是一个 reference semantic contract。它规定了 chunk implementation 必须复现的输入、输出、持久状态与单步状态更新语义。
+
+因此，定义 2.2 中的 correctness 不是绝对性质，而是相对于 reference semantic contract 的性质。若 $\mathcal{T}$ 本身只把历史压缩为某个 aggregate state，则 $\mathcal{C}_L$ 只需要复现该 aggregate state；若 $\mathcal{T}$ 明确保存 token / round / phase provenance，则 $\mathcal{C}_L$ 也必须保存这些 provenance，或证明丢弃它们不会改变该 contract 的输出与最终状态。
+
+### 定义 2.4：transition semantic quotient
+
+给定 fine reference transition：
+
+$$
+\mathcal{T}^{fine}:X\times\mathcal{S}^{fine}\to Y^{fine}\times\mathcal{S}^{fine}
+$$
+
+以及 coarse reference transition：
+
+$$
+\mathcal{T}^{coarse}:X\times\mathcal{S}^{coarse}\to Y^{coarse}\times\mathcal{S}^{coarse}
+$$
+
+给定状态抽象映射：
+
+$$
+\alpha:\mathcal{S}^{fine}\to\mathcal{S}^{coarse}
+$$
+
+以及输出抽象映射：
+
+$$
+\beta:Y^{fine}\to Y^{coarse}
+$$
+
+称 $\mathcal{T}^{coarse}$ 是 $\mathcal{T}^{fine}$ 关于 $(\alpha,\beta)$ 的 semantic quotient，当且仅当对所有 $x\in X$ 与 $S\in\mathcal{S}^{fine}$，若：
+
+$$
+\mathcal{T}^{fine}(x,S)=(y,S')
+$$
+
+则：
+
+$$
+\mathcal{T}^{coarse}(x,\alpha(S))=(\beta(y),\alpha(S'))
+$$
+
+也就是说，fine transition 的一步计算先执行再抽象，与先抽象再执行 coarse transition，得到同一个 coarse output 与 coarse next state。
+
+### 引理 2.5：semantic quotient 保持顺序 fold
+
+若 $\mathcal{T}^{coarse}$ 是 $\mathcal{T}^{fine}$ 关于 $(\alpha,\beta)$ 的 semantic quotient，则对任意 $L\in\mathbb{N}$、$x_{0:L}\in X^L$ 与 $S_0^{fine}\in\mathcal{S}^{fine}$，若：
+
+$$
+\operatorname{Fold}_{\mathcal{T}^{fine}}^L(x_{0:L},S_0^{fine})=(y^{fine}_{0:L},S_L^{fine})
+$$
+
+则：
+
+$$
+\operatorname{Fold}_{\mathcal{T}^{coarse}}^L(x_{0:L},\alpha(S_0^{fine}))
+=
+(\beta^L(y^{fine}_{0:L}),\alpha(S_L^{fine}))
+$$
+
+其中 $\beta^L$ 是逐位置应用 $\beta$ 的序列映射：
+
+$$
+\beta^L(y^{fine}_{0:L})=(\beta(y^{fine}_0),\ldots,\beta(y^{fine}_{L-1}))
+$$
+
+当 $L=0$ 时，$\beta^0(())=()$。
+
+证明：
+
+对 $L$ 归纳。$L=0$ 时，两个 fold 都返回空输出；coarse 初始状态是 $\alpha(S_0^{fine})$，结论成立。
+
+假设长度 $L$ 成立。考虑长度 $L+1$。由归纳假设，前 $L$ 个 token 后 coarse state 等于 $\alpha(S_L^{fine})$，coarse 输出等于 $\beta^L(y^{fine}_{0:L})$。对第 $L$ 个 token，若：
+
+$$
+\mathcal{T}^{fine}(x_L,S_L^{fine})=(y_L^{fine},S_{L+1}^{fine})
+$$
+
+则由 semantic quotient 定义：
+
+$$
+\mathcal{T}^{coarse}(x_L,\alpha(S_L^{fine}))
+=
+(\beta(y_L^{fine}),\alpha(S_{L+1}^{fine}))
+$$
+
+因此长度 $L+1$ 的输出序列与最终状态也满足结论。
+
+证毕。
+
+这个引理给出一个重要边界：对 fine contract 正确通常可推出对其 coarse quotient 正确；但只对 coarse contract 正确，不能推出对 fine contract 正确。若原 reference transition 已经是高度压缩的 coarse semantics，chunk prefill correctness 会更容易证明，但证明结论也只覆盖这个较弱 contract。
+
+### 定义 2.6：三个层次
 
 本页区分三个层次：
 
@@ -850,6 +956,8 @@ $$
 因此，完整涵盖既有 LH 实现不一定可能。若 LH 某处把同一 tick 收到的多源信号做不可逆、无时间戳的聚合，则 token influence relation 可能被折叠，无法构造与 decode fold 等价的 event DAG。要让 LH-like graph 支持 chunk prefill correctness，需要把聚合改成可追踪的 tagged aggregation，或证明该聚合对所有相关 kernel 是可交换、可结合、且不影响 reference logical visibility。
 
 #### 定义 3.6e：semantics-preserving aggregation quotient
+
+定义 2.3-2.5 说明了 transition-level 的语义强弱：如果 reference semantic contract 本身已经是 coarse semantics，则实现只需复现该 coarse contract。本节进一步处理 event-level 的聚合：在一个给定 logical event DAG program 内，哪些 event value 可以被压缩为 quotient value 而不改变该 program 对 reference contract 的输出与最终状态。
 
 给定 logical event DAG program：
 

@@ -39,6 +39,12 @@ The theorem separates two questions:
 
 | Theory | Core idea | Relation to Tide | Boundary |
 | --- | --- | --- | --- |
+| ISA contract and out-of-order execution | Hardware may execute instructions out of program order, but must retire results as if the ISA program order had been respected. | Strong analogy for separating reference semantic contract from physical execution schedule. Tide's decode fold / logical event DAG plays the role of architectural semantics; chunk runtime is the optimized micro-execution. | CPU instructions have a mature fixed ISA and precise exception model; Tide kernels, state, provenance, and quotient boundaries are still research objects. |
+| Compiler IR and SSA | Make data dependencies, definitions, and control/dataflow easier to analyze and transform. | Suggests that Tide needs an explicit IR: logical event ids, state namespaces, read/write sets, phase barriers, and provenance tags. | SSA makes analysis tractable; it does not solve aliasing, memory ordering, floating point, or arbitrary semantic equivalence. |
+| Abstract interpretation | Replace concrete semantics with a sound abstract semantics through abstraction maps. | Direct analogy for `alpha`, semantic quotient, sufficient statistics, and safe aggregation. | Usually gives useful sufficient conditions, not complete conditions for all optimizations. |
+| Translation validation | Validate a specific optimized program against a source program instead of proving the whole optimizer correct. | Practical route for Tide lowerings: fusion, packed/crossbatch layout, backend-specific kernels, and phase rewrites. | The validator needs a precise IR semantics; hard cases remain floats, memory/state effects, undefined behavior, and solver scalability. |
+| Verified compiler | Mechanically prove that a compiler preserves source semantics. | Long-term analogy for a verified Tide core subset. | High assurance but expensive; probably realistic only for a small core, not the whole experimental runtime at first. |
+| Memory models and alias analysis | Define which reads/writes may be reordered or optimized without changing observable behavior. | Maps to Tide state namespaces, mailbox lifetime, commit order, selector side effects, and provenance-sensitive aggregation. | Memory models are notoriously subtle even in mature systems; Tide should avoid implicit state semantics. |
 | DAG topological evaluation | A deterministic DAG can be evaluated in any topological order with the same result. | This is the proof core of `C_L = Fold_T^L` when chunk execution preserves the same logical event DAG. | It proves correctness only, not high performance. |
 | Lamport logical time | Logical ordering of events is more fundamental than wall-clock arrival order. | `token_id / round_id / phase_id / node_id` are logical event metadata; physical arrival order can differ. | Logical clocks do not by themselves define model kernels or state semantics. |
 | Kahn process networks | Deterministic processes communicate over channels; results can be independent of scheduling. | Supports the intuition that asynchronous graph execution can be deterministic if communication semantics are disciplined. | KPN assumes specific blocking stream semantics; LH/Tide message aggregation may not satisfy them. |
@@ -48,6 +54,242 @@ The theorem separates two questions:
 | Database provenance | Query results can carry provenance explaining which inputs contributed. | Closest analogy for why untagged aggregation can destroy token / round influence relation. | Provenance frameworks are usually for databases, not neural runtime kernels. |
 | CALM / confluence | Order-independent distributed results require monotonic or coordination-safe structure. | Supports the distinction between safe aggregation and arrival-order-dependent kernels. | CALM is about distributed consistency, not chunk prefill directly. |
 | Differential Dataflow | Collections carry timestamps and differences; incremental operators preserve logical time. | Strong analogy for timestamped collections and trace/arrangement maintenance. | It assumes dataflow collection semantics, not arbitrary neural state mutation. |
+
+## 0. Architecture And Compiler Semantics Lineage
+
+The closest analogy is not that Tide is a CPU or a compiler. The useful analogy is the mature discipline around:
+
+```text
+reference semantics
+high-performance implementation
+semantic preservation proof or validation
+```
+
+This lineage is valuable because it shows a pattern that appears repeatedly:
+
+```text
+do not optimize against intuition;
+optimize against an explicit semantic contract.
+```
+
+### 0.1 ISA Contract And Out-Of-Order Execution
+
+For a CPU, the architectural contract is the ISA-level program behavior. A high-performance implementation may pipeline, speculate, rename registers, reorder instructions, and execute many operations in parallel. Correctness means the committed architectural state is the same as if the program had executed according to the ISA's reference order.
+
+For Tide, the corresponding separation is:
+
+```text
+reference semantic contract = transition / decode fold / logical event DAG
+physical execution = chunk runtime / packed layout / parallel kernels / out-of-order messages
+```
+
+The same deep issue appears in a different concrete form:
+
+```text
+Can the implementation change physical order
+without changing the reference-visible state and output?
+```
+
+In CPU terms, this is handled by architectural state, dependency tracking, reorder buffers, commit order, and precise exceptions. In Tide terms, the corresponding tools are logical event ids, token / round / phase timestamps, provenance-preserving messages, semantic quotients, output / final-state extraction, and step simulation.
+
+This analogy clarifies why the reference semantic contract matters. If the architectural contract only observes a coarse state, then the implementation only needs to reproduce that coarse state. If the contract exposes fine-grained provenance, then an implementation cannot freely erase it.
+
+Relevant sources:
+
+- Robert M. Tomasulo, "An Efficient Algorithm for Exploiting Multiple Arithmetic Units", IBM Journal of Research and Development, 1967. DOI: https://doi.org/10.1147/rd.111.0025
+- John L. Hennessy and David A. Patterson, "Computer Architecture: A Quantitative Approach".
+
+### 0.2 Compiler Optimization As Semantics-Preserving Translation
+
+A compiler optimization pass usually does not preserve every internal detail of the source program. It preserves the source language or IR's observable behavior:
+
+```text
+source program
+  -> optimization / lowering
+target program
+```
+
+Correctness is judged against the chosen semantics:
+
+```text
+same observable output
+same required memory/state behavior
+same permitted nondeterminism / undefined behavior boundary
+```
+
+This is directly useful for Tide. A Tide lowering pass may fuse kernels, pack sparse rows, batch tokens, reorder graph evaluation, or lower to a device backend. It does not need to preserve every temporary mailbox or workspace representation. It must preserve the reference semantic contract: outputs and persistent state, up to explicitly declared abstraction maps and numeric tolerances.
+
+The warning is also direct. If the contract is vague, optimization becomes ungrounded. In C/LLVM, undefined behavior, poison values, aliasing, and floating-point flags shape which transformations are legal. In Tide, the analogous danger points are provenance loss, selector side effects, phase visibility, state namespace aliasing, commit order, and floating-point reordering.
+
+Relevant sources:
+
+- LLVM Language Reference Manual: https://llvm.org/docs/LangRef.html
+- LLVM MemorySSA documentation: https://llvm.org/docs/MemorySSA.html
+
+### 0.3 IR, SSA, And Explicit Def-Use Structure
+
+Static Single Assignment form makes each variable definition syntactically unique and exposes def-use structure. Its value is not that hardware works this way. Its value is that optimization and analysis become tractable.
+
+The Tide analogue is a disciplined IR:
+
+```text
+logical event id
+state namespace
+read set / write set
+phase barrier
+provenance tag
+value type / quotient boundary
+```
+
+SSA suggests a design principle:
+
+```text
+make dependencies explicit before optimizing them.
+```
+
+For Tide, this means a chunk runtime should not rely on implicit physical arrival order or hidden mutation if we later want to prove prefill/decode equivalence. Values that matter for future kernels should have explicit names, timestamps, or state slots. If a value is intentionally compressed, the compression should be represented as a quotient, not as an accidental implementation detail.
+
+MemorySSA is especially relevant because ordinary SSA handles scalar values more cleanly than mutable memory. Tide has the same issue: node activations are easy; persistent state, mailbox mutation, selector counters, caches, and readout memory need a separate read/write model.
+
+Relevant sources:
+
+- Ron Cytron et al., "Efficiently Computing Static Single Assignment Form and the Control Dependence Graph", ACM TOPLAS 1991. DOI: https://doi.org/10.1145/115372.115320
+- LLVM MemorySSA documentation: https://llvm.org/docs/MemorySSA.html
+
+### 0.4 Abstract Interpretation And Semantic Quotients
+
+Abstract interpretation gives a disciplined way to reason about abstraction:
+
+```text
+concrete semantics
+  -- alpha -->
+abstract semantics
+```
+
+The abstract semantics does not recover concrete details. It is useful only if it soundly preserves the properties being asked.
+
+This is the closest mature theory to Tide's `alpha` / quotient idea. If a runtime aggregates several messages into a summary, correctness is not obtained by reconstructing the lost provenance. Correctness is obtained only when the summary is a sufficient abstract value for every downstream kernel and final-state extraction required by the reference contract.
+
+This also explains why a universal necessary-and-sufficient condition is unlikely to be the first practical target. Mature abstract interpretation often builds useful abstract domains that give sound sufficient conditions. Completeness is domain-specific and usually expensive.
+
+Relevant source:
+
+- Patrick Cousot and Radhia Cousot, "Abstract Interpretation: A Unified Lattice Model for Static Analysis of Programs by Construction or Approximation of Fixpoints", POPL 1977. Paper page: https://www.di.ens.fr/~cousot/COUSOTpapers/POPL77.shtml
+
+### 0.5 Translation Validation And Alive2
+
+Verified compilers try to prove the optimizer correct once and for all. Translation validation takes a more local route:
+
+```text
+given source IR and optimized IR,
+check this transformation instance is semantics-preserving.
+```
+
+This is probably the most practical near-term analogy for Tide. Instead of trying to prove every future Tide optimizer correct, we can define a small IR and validate each transformation class:
+
+- topological reorder of a logical event DAG;
+- token-wise map fusion;
+- associative scan lowering;
+- packed / crossbatch layout change;
+- backend kernel replacement;
+- phase rewrite or barrier movement;
+- semantics-preserving aggregation quotient.
+
+For a Tide implementation, this maps to:
+
+```text
+reference artifacts
+optimized artifacts
+state equivalence relation
+step simulation
+random differential tests
+SMT / Lean / specialized checker where feasible
+```
+
+Alive2 is a useful modern example because it checks LLVM optimizations against LLVM IR semantics. It also demonstrates the hard parts: precise IR semantics, memory model details, poison/undef behavior, floating-point flags, and solver bounds.
+
+Relevant sources:
+
+- Amir Pnueli, Michael Siegel, Eli Singerman, "Translation Validation", TACAS 1998. DOI: https://doi.org/10.1007/BFb0054170
+- Alive2 online checker: https://alive2.llvm.org/ce/
+- Nuno P. Lopes et al., "Alive2: Bounded Translation Validation for LLVM", PLDI 2021. DOI: https://doi.org/10.1145/3453483.3454030
+
+### 0.6 Verified Compiler As A Long-Term Upper Bar
+
+CompCert shows that a realistic compiler can be mechanically verified to preserve semantics for a substantial C subset. This is the high-assurance end of the spectrum.
+
+For Tide, this suggests a realistic long-term split:
+
+```text
+small verified core
+larger experimentally validated runtime
+backend-specific differential tests
+```
+
+The verified core might include:
+
+- transition / fold semantics;
+- logical event DAG evaluation;
+- topological-order independence;
+- semantic quotient conditions;
+- step simulation;
+- a few kernel families such as token-wise maps and affine scan.
+
+The full Tide runtime, including selectors, sparse routing, device lowering, and mixed-precision kernels, is unlikely to be fully verified early. A smaller verified core plus validation tools is more realistic.
+
+Relevant sources:
+
+- CompCert project: https://compcert.org/
+- Xavier Leroy, "Formal Verification of a Realistic Compiler", CACM 2009. PDF: https://xavierleroy.org/publi/compcert-CACM.pdf
+
+### 0.7 Memory Models, Alias Analysis, And Floating-Point Boundaries
+
+Memory models show how hard it is to specify what reorderings are allowed. Even mature CPU and language ecosystems still need careful definitions for relaxed memory, data races, atomics, undefined behavior, and floating-point transformations.
+
+The Tide equivalent is not one single memory model yet, but a cluster of semantic questions:
+
+- Which state namespace does a kernel read?
+- Which state namespace does it write?
+- Is a mailbox token-local or persistent?
+- Can two writes commute?
+- Does a selector update affect future routing?
+- Is provenance observable by later kernels?
+- Are floating-point reorderings allowed, and under what tolerance?
+
+This suggests a strong design rule:
+
+```text
+state and visibility rules must be explicit before optimization.
+```
+
+Otherwise, a packed or parallel implementation may appear correct on final logits while silently changing selector state, cache state, provenance, or future behavior.
+
+Relevant sources:
+
+- Peter Sewell et al., "x86-TSO: A Rigorous and Usable Programmer's Model for x86 Multiprocessors", CACM 2010. DOI: https://doi.org/10.1145/1785414.1785443
+- LLVM Language Reference Manual: https://llvm.org/docs/LangRef.html
+
+### 0.8 Practical Lessons For Tide
+
+The mature lesson is not "find one perfect theorem and finish the problem." The practical pattern is:
+
+1. Define a precise semantic contract.
+2. Design an IR that exposes the dependencies needed for optimization.
+3. Prove reusable sufficient conditions for important transformation families.
+4. Validate concrete transformations when global proof is too expensive.
+5. Keep backend implementation below the semantic layer.
+
+For Tide, the corresponding stack should be:
+
+```text
+reference semantic contract
+-> logical event DAG / B-family IR
+-> sufficient transformation rules
+-> validation / simulation layer
+-> CPU / Ascend / packed backend
+```
+
+This is why a useful theory does not need to solve all necessary-and-sufficient conditions. Compiler and architecture history suggests that a well-chosen IR plus sound sufficient rules plus validation tools can be both scientifically meaningful and practically useful.
 
 ## 1. DAG Evaluation And Topological Order
 
@@ -296,16 +538,19 @@ The current theoretical stack should be read as:
 1. `Logical Event DAG Theorem` gives a correctness gate.
 2. Transformer / Mamba prove they satisfy the gate for standard kernels.
 3. Their high performance comes from known kernel structures: matmul, causal masked attention, fused attention, prefix scan.
-4. General graph support requires preserving logical event provenance.
-5. Existing LH cannot be assumed chunk-prefill-correct if it performs irreversible aggregation that loses token / round / phase provenance.
+4. Compiler / architecture history suggests the right engineering shape: semantic contract, explicit IR, sufficient transformation rules, validation, then backend lowering.
+5. General graph support requires preserving logical event provenance, or proving the lost information is a semantics-preserving quotient.
+6. Existing LH cannot be assumed chunk-prefill-correct if it performs irreversible aggregation that loses token / round / phase provenance.
 
 The design pressure for Tide is therefore:
 
 ```text
-general graph execution
+reference semantic contract
++ explicit Tide IR
 + logical event metadata
 + deterministic visibility / commit order
 + tagged or provably safe aggregation
++ transformation validation
 + kernel-family-specific high-performance implementations
 ```
 
@@ -322,6 +567,14 @@ It says:
 ```text
 if the chunk runtime computes the same logical event DAG as decode fold,
 then correctness holds.
+```
+
+The compiler/architecture analogy adds:
+
+```text
+if a lowering changes representation or execution schedule,
+it must either preserve the reference IR semantics directly
+or pass through an explicitly declared semantic quotient.
 ```
 
 Efficiency is a second proof obligation. It must be supplied by the actual kernel family.
