@@ -21,6 +21,9 @@ tags:
 > [!roadmap] 当前形式化边界
 > 第 1-5 节已经定义顺序 fold、chunk correctness、semantic quotient、finite logical event DAG、主力 kernel family 与 step simulation。dynamic event generation、有限执行的 DAG representation、zero-delay SCC 与 fixed-point kernel 尚未形成正式定理；其候选定义和推进顺序暂存于 [[finite-event-dag-and-zero-delay-loops-memo]]，不能提前当作本页已证明结论。
 
+> [!important] 证否边界
+> 本页以构造性 correctness 为主。任意黑盒自适应 routing 在 exact、work-efficient 前提下为何不能获得次线性 adaptive-depth prefill，见独立数学文档 [[adaptive-routing-prefill-impossibility]]。该下界不自动等价于具体 LH selector 的不可能性结论。
+
 阅读本页时，所有结论按以下强度区分：
 
 - `定义`：约定数学对象的含义。
