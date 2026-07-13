@@ -143,6 +143,8 @@ Step(input_token, State):
 
 上面的伪代码描述 fixed-round reference family。若 round 数或 active events 由 selector 动态决定，还必须给出终止条件、event budget 或良基 rank，不能把无限循环隐藏在 `rounds` 中。
 
+该伪代码默认一个 `Step` 完成后才开始下一个 token。若允许长路径 event 跨 step boundary carry over，就不能再把 `external_token` 当成 global internal time；应使用 [[token-owned-general-dag-routing]] 的注入时钟 `sigma(t)`、absolute internal round、trajectory path age 与可选 phase coordinate，并把 in-flight event stream 纳入 runtime state/contract。
+
 ## Dynamic Event Contract
 
 dynamic Tide 不要求从 input 到 output 的路径在运行前固定。规范对象应从“静态路径”提升为“运行时产生的有限 logical events”。

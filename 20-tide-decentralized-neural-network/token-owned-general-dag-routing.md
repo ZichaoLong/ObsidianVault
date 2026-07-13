@@ -14,13 +14,13 @@ tags:
 # Token-Owned General DAG Routing
 
 > [!summary] 本页定位
-> 本页给出一个面向 Tide 的正向候选：空间结构是任意有限 unit-delay DAG，不要求所有路径等长；运行时 signal 保留 owner、causal frontier 与 absolute timestamp；node 持有长期 context；prefill 按空间拓扑序处理每个 node 的完整事件流。本文定义 owner-ordered、atomic-joint 与 frontier-owned atomic fusion 三种 reference semantics，并证明它们各自满足一般 DAG 的 schedule equivalence。
+> 本页给出一个面向 Tide 的正向候选：空间结构是任意有限 unit-delay DAG，不要求所有路径等长；外部 token step 通过一般注入时钟映射到全局 internal-round 时间；运行时 signal 保留 owner、causal frontier 与 absolute timestamp；node 持有长期 context；prefill 按空间拓扑序处理每个 node 的完整多 token / 多 round 事件流。本文定义 owner-ordered、atomic-joint 与 frontier-owned atomic fusion 三种 reference semantics，并证明它们各自满足一般 DAG 的 schedule equivalence。
 
 > [!important] 核心结论
-> Leveled DAG 是容易证明的特殊情形，但不是 exact chunk prefill 的必要条件。一般 DAG 中，真正需要的是：保留消息的 owner 与到达时间；每个 mutable state 有明确 owner node；routing 只沿 DAG 前进；每个 node 对自身 timestamped event stream 提供与 reference fold 等价的 chunk transducer。跨 token selector state 若存在，也必须纳入该 contract；若还要求高性能，则需另证其 scan/bulk contraction。在这些条件下，absolute-time streaming schedule 可以重排为 node-topological chunk schedule。
+> Leveled DAG 是容易证明的特殊情形，但不是 exact chunk prefill 的必要条件。一般 DAG 中，真正需要的是：把 token index、注入时刻、trajectory path age 与 node arrival time 分开；保留消息的 owner 与到达时间；每个 mutable state 有明确 owner node；routing 只沿 DAG 前进；每个 node 对自身 timestamped event stream 提供与 reference fold 等价的 chunk transducer。跨 token selector state 若存在，也必须纳入该 contract。在这些条件下，absolute-time streaming schedule 可以重排为 node-topological chunk schedule。
 
 > [!warning] Correctness 不自动推出高性能
-> 本页主定理只证明 streaming 与 chunk 两种 schedules 计算同一 reference semantics。高性能还要求具体 node transducer 具有 causal attention、scan、segmented bulk、packed sparse kernel 等额外结构，并要求总 event 数受控。任意黑盒 transition、任意 fan-out 或带在线历史计数的 selector 不会因为空间图是 DAG 就自动获得高性能 prefill。
+> 本页主定理只证明 streaming 与 chunk 两种 schedules 计算同一 reference semantics。它允许一个 node 在一次调用中处理完整 chunk，并消除逐 token 的全局 host orchestration；但若 node-local transition 本身有顺序 state/control chain，其内部 span 仍可随事件数线性增长。Transformer/Mamba 意义上的低 token-axis span 还要求 causal attention、scan、segmented bulk、packed sparse kernel 等额外结构，并要求总 event 数受控。
 
 ## 0. 一页版模型
 
@@ -39,7 +39,8 @@ flowchart LR
 
 - `S -> V` 与 `S -> A -> B -> V` 同时存在。
 - 不同路径保留真实长度；不插入 relay node 强行对齐。
-- 较早 token 的长路径 signal 与较晚 token 的短路径 signal 在同一 node、同一绝对时间相遇。
+- 外部 token step 可以间隔多个 internal rounds；长路径 signal 默认允许跨 external-step boundary 继续传播。
+- 当路径长度差等于两个 token 的注入时间差时，较早 token 的长路径 signal 与较晚 token 的短路径 signal 会在同一 node、同一绝对时间相遇。
 - 同一个 owner 经不同路径在同一 node 的不同绝对时间多次出现。
 
 候选模型包含三类对象：
@@ -50,10 +51,13 @@ flowchart LR
 | Node-owned context state | 跨 token 与事件持久 | KV、SSM state、linear-attention accumulator，以及 state causal frontier |
 | Node event-stream transducer | 每个有限 chunk 调用一次 | 在 node 内按 reference semantics 处理完整 timestamped inbox stream |
 
-本页把 `strict prefill-native` 分成两个独立要求：
+本页把 `strict prefill-native` 分成三个逐级增强的要求：
 
 1. **正确性要求**：chunk schedule 与 absolute-time streaming reference 产生相同 messages、routes、node outputs、final states 与 readout。
-2. **性能要求**：空间调度的顺序 stages 由 DAG critical path 与 node chunk spans 决定，不再额外产生长度随 token 数线性增长的 graph-level control chain。
+2. **Node-local chunk throughput**：每个 node 能在一次或少量 device invocations 中处理完整 chunk event stream，支持本地 packing、批量 edge communication 与 node 内普通程序，不需要逐 token 的全局调度往返。
+3. **Sequence-axis low span**：node 内跨 token transition 还能通过 token-local、scan、causal-bulk 或其他 contraction 避免长度随 token/event 数线性增长的 critical path。
+
+第 1 项是本文主定理的结论；第 2 项是 Tide 当前最直接的实现目标；第 3 项是更强但不自动成立的性能性质。
 
 同一绝对时间到达同一 node 的多个 owners 有三种候选 semantics：
 
@@ -158,9 +162,19 @@ $$
 D\leq |V|-1.
 $$
 
+定义 input 到 output 的最短路径长度：
+
+$$
+d_{\min}
+=
+\min\Lambda(z).
+$$
+
+在某些 streaming/decode 设计中，会把相邻 token 的固定注入间隔取为 $d_{\min}$，使最短 output path 恰好在下一 token 的注入 boundary 到达 output。这是一种 injection policy，不是一般 DAG 的图论性质；当 $D>d_{\min}$ 时，更长路径仍会跨越 external-step boundary。同一 boundary 上“先 readout 还是先注入”必须由 phase order 单独规定。
+
 ### 定义 1.3：Unit-delay edge
 
-本文假设每条 edge 的 reference propagation delay 恰好为一个 internal tick：
+本文假设每条 edge 的 reference propagation delay 恰好为一个 global internal round：
 
 $$
 \operatorname{delay}(u,v)=1,
@@ -172,9 +186,9 @@ $$
 > [!note] 一般 DAG 与 Leveled DAG
 > 若对任意 node $v$，集合 $\Lambda(v)$ 只有一个元素，则所有从 $s$ 到 $v$ 的路径等长，旧文档中的 leveled DAG 是本页模型的特殊情形。本文不再把这一性质作为前提，也不通过 relay nodes 改变原 edge 的单位时延。
 
-## 2. Token Owner、Internal Tick 与绝对时间
+## 2. External Step、Internal Round、Owner 与绝对时间
 
-### 定义 2.1：External token tick 与 owner
+### 定义 2.1：External token step、注入时钟与 Owner
 
 给定长度为 $L$ 的输入序列：
 
@@ -182,11 +196,52 @@ $$
 x_{0:L}=(x_0,x_1,\ldots,x_{L-1}).
 $$
 
-Token $t\in[L]$ 在 external tick $t$ 注入 input node $s$。由该次注入产生并继续传播的每条 message 都携带 owner：
+External token step $t\in[L]$ 是 token 的顺序编号，不是 internal-round 时间单位。
+
+若 $L>0$，给定一个注入时钟：
+
+$$
+\sigma:[L]\to\mathbb N,
+$$
+
+满足：
+
+$$
+\sigma(0)=0,
+$$
+
+以及对任意 $t,t+1\in[L]$：
+
+$$
+\sigma(t)<\sigma(t+1).
+$$
+
+$\sigma(t)$ 表示 token $x_t$ 被注入 input node $s$ 时的全局 internal-round 时刻。对每个满足 $t,t+1\in[L]$ 的 $t$，定义相邻 external steps 之间的 internal-round 数：
+
+$$
+R_t
+=
+\sigma(t+1)-\sigma(t)
+\in\mathbb N_{>0}.
+$$
+
+固定 round 数 $R\in\mathbb N_{>0}$ 是特殊情形：
+
+$$
+\sigma(t)=Rt,
+\qquad
+R_t=R.
+$$
+
+由 token $x_t$ 的注入产生并继续传播的每条 trajectory message 都携带 owner：
 
 $$
 \operatorname{owner}(m)=t.
 $$
+
+本文把 $\sigma$ 视为 reference semantics 的给定输入，并要求 streaming/chunk 两种 schedules 使用同一个 $\sigma$。若下一 token 的注入时刻由尚未完成的 routing/output 动态决定，则该 schedule generator 本身也必须进入 logical event DAG 与 chunk contract；本文定理不能把这类自适应注入时钟当作免费条件。
+
+默认采用 **carry-over semantics**：external-step boundary 不截断仍在空间 DAG 中传播的 messages。若 $t,t+1\in[L]$，且 token $t$ 的 trajectory 在 path age $R_t$ 后仍未终止，它会在 token $t+1$ 注入后继续传播。Boundary absorption、truncate 或强制 clear 都是不同 reference semantics，必须单独定义。
 
 在 owner-ordered 与 atomic-joint profile 中，owner 默认表示 message 正在推进哪个 token 的 trajectory。它不表示 payload 只能依赖该 token；例如 owner 为 B 的 query 可以通过 node-owned KV state 读取 A 的影响。
 
@@ -226,23 +281,83 @@ $$
 \operatorname{frontier}(x_t)=t.
 $$
 
-### 定义 2.2：Internal tick
+### 定义 2.2：Trajectory Path Age 与 Ambient Internal Round
 
-一条 message 从 token $t$ 的注入开始，每经过一条 edge，internal tick 增加 $1$。
+一条 trajectory message 从 token $t$ 的注入开始，每经过一条 edge，其 path age 增加 $1$。
 
-若某条 message 已沿其实际 routing path 经过 $k\in\mathbb N$ 条 edges，则它的 internal tick 为 $k$。
+若某条 message 已沿其实际 routing path 经过 $k\in\mathbb N$ 条 edges，则称 $k$ 为该 trajectory 的 path age。Path age 是相对于其注入时刻的局部量，不等于“当前 external step 内已经运行了多少 round”。
+
+对任意至少已有一个 token 注入的 absolute time $\tau$，定义 ambient external step：
+
+$$
+e_{\sigma}(\tau)
+=
+\max\{t\in[L]\mid \sigma(t)\leq\tau\},
+$$
+
+以及该 external step 内的 ambient round offset：
+
+$$
+r_{\sigma}(\tau)
+=
+\tau-\sigma(e_{\sigma}(\tau)).
+$$
+
+当 $e_{\sigma}(\tau)<L-1$ 时：
+
+$$
+0\leq r_{\sigma}(\tau)<R_{e_{\sigma}(\tau)}.
+$$
+
+在最后一个 token 注入后的 drain tail 中，$r_{\sigma}(\tau)$ 可以继续增大。一个 message 的 trajectory owner $t$ 通常不等于其到达时的 ambient external step $e_{\sigma}(\tau)$；这正是跨 external-step carry-over 的含义。
+
+若 runtime 在一个 internal round 内还有有限个具有语义可见性的 phases，取 $N_{\mathrm{phase}}\in\mathbb N_{>0}$，并给定有序 phase tuple：
+
+$$
+\mathcal P
+=
+(\varphi_0,\ldots,\varphi_{N_{\mathrm{phase}}-1}),
+$$
+
+并使用完整 logical timestamp：
+
+$$
+\theta=(\tau,\varphi_j),
+\qquad
+j\in\{0,\ldots,N_{\mathrm{phase}}-1\}.
+$$
+
+Timestamp 按 lexicographic order 排序。本文后续假设跨 edge message 在固定 inbox phase 可见，因此主要公式只写 $\tau$；node-local phases 封装在 node transducer 内。若 phase 会改变跨 event 的 visibility/commit order，则应把后续公式中的 $\tau$ 系统地替换为 $\theta$，证明形式不变。
+
+例如固定 $R=d_{\min}$ 时，token $t$ 的最短 output event 与 token $t+1$ 的 injection 可能具有同一个 $\tau$。取 $\varphi_{\mathrm{readout}},\varphi_{\mathrm{inject}}\in\mathcal P$ 分别表示 readout 与 injection phase。若 decode 中 $x_{t+1}$ 来自该 output readout，就必须声明：
+
+$$
+(\tau,\varphi_{\mathrm{readout}})
+<
+(\tau,\varphi_{\mathrm{inject}}),
+$$
+
+或把下一次 injection 延后一轮。本文主定理比较的是给定 token sequence 下的 streaming/chunk execution；它不把同刻 autoregressive generation feedback 隐藏在未声明的物理顺序中。
 
 ### 定义 2.3：绝对逻辑时间
 
-对尚未经过 owner promotion 的 trajectory message，owner token $t$、internal tick $k$ 对应的绝对逻辑时间为：
+对尚未经过 owner promotion 的 trajectory message，owner token $t$、path age $k$ 对应的绝对逻辑时间为：
 
 $$
-\tau=t+k.
+\tau=\sigma(t)+k.
 \tag{GD-1}
 $$
 ^eq-general-absolute-time
 
 $\tau$ 不是硬件 wall-clock。它是 reference semantics 中所有 tokens 共用的逻辑时间轴。
+
+固定每步 $R$ 个 internal rounds 时，式 GD-1 退化为：
+
+$$
+\tau=Rt+k.
+$$
+
+这里 $k$ 可以大于 $R$；它描述 message 自 token $t$ 注入后已经沿路径传播了多少个 unit-delay edges，而不是被限制在当前 external step 内。
 
 一般情况下，absolute time $\tau$ 是 message 的一等字段。Frontier fusion 可以改变 owner，但不能重置或重算 $\tau$；fusion 后每经过一条 edge，arrival time 仍只增加 $1$。因此式 GD-1 不能用 promoted owner 反推 internal path length。
 
@@ -251,7 +366,7 @@ $\tau$ 不是硬件 wall-clock。它是 reference semantics 中所有 tokens 共
 若 owner token $t$ 的 message 尚未经过 owner promotion，并沿长度为 $k$ 的实际 trajectory path 到达 node $v$，则它的 absolute arrival time 为：
 
 $$
-\tau=t+k,
+\tau=\sigma(t)+k,
 \qquad k\in\Lambda(v).
 \tag{GD-2}
 $$
@@ -259,22 +374,47 @@ $$
 
 **证明。**
 
-Token $t$ 在 absolute time $t$ 注入。每经过一条 unit-delay edge，arrival time 增加 $1$。长度为 $k$ 的路径包含 $k$ 条 edges，所以到达时间为 $t+k$。
+Token $t$ 在 absolute time $\sigma(t)$ 注入。每经过一条 unit-delay edge，arrival time 增加 $1$。长度为 $k$ 的路径包含 $k$ 条 edges，所以到达时间为 $\sigma(t)+k$。
 
 <div class="qed" aria-label="证毕">∎</div>
 
 ### 推论 2.4a：Absolute-Time Prefix
 
+若 $L>0$，对任意 absolute time $\tau\in\mathbb N$，定义已注入 token prefix 的最大 index：
+
+$$
+a_{\sigma}(\tau)
+=
+\max
+\left(
+\{-1\}
+\cup
+\{t\in[L]\mid \sigma(t)\leq\tau\}
+\right).
+$$
+
 假设 node kernel 不直接读取尚未注入的未来 token。任意在 absolute time $\tau$ 产生或到达的 well-formed object $q$ 都可以声明某个满足：
 
 $$
-\operatorname{frontier}(q)\leq\tau
+\operatorname{frontier}(q)\leq a_{\sigma}(\tau)
 $$
 
 的有效 causal frontier。三种 profile 的 message owner 也都满足：
 
 $$
-\operatorname{owner}(m)\leq\tau.
+\operatorname{owner}(m)\leq a_{\sigma}(\tau).
+$$
+
+在固定 $R$ 且 $L>0$ 的情形：
+
+$$
+a_{\sigma}(\tau)
+=
+\min
+\left(
+L-1,
+\left\lfloor\frac{\tau}{R}\right\rfloor
+\right).
 $$
 
 **证明。**
@@ -282,13 +422,13 @@ $$
 对 absolute time $\tau$ 做外层归纳，并在 owner-ordered profile 的同一 timestamp 内按 owner order 做内层归纳。初始 state 与 tokens 无关，frontier 为 $-1$。在 time $\tau$，系统只可能读取：
 
 - 已在更早 absolute time 产生的 state/messages。
-- 当前注入的 token $x_\tau$。
+- 若存在满足 $\sigma(t)=\tau$ 的 $t$，则读取本时刻注入的唯一 token $x_t$。
 - 同一 timestamp 内已经完成的 earlier-owner intermediate state。
 - Static parameters 与 metadata。
 
-由外层归纳假设，更早 objects 的 frontier 不超过 $\tau-1$；$x_\tau$ 的 frontier 为 $\tau$。由内层归纳，同刻 earlier-owner intermediate state 的 frontier 也不超过 $\tau$。确定性 kernel 对这些 objects 的任意组合至多依赖 input prefix $0{:}\tau$，所以可以声明不超过 $\tau$ 的 frontier。
+由外层归纳假设，更早 objects 的 frontier 不超过相应时刻的 $a_{\sigma}$；因为 $a_{\sigma}$ 单调不减，它们也不超过 $a_{\sigma}(\tau)$。若本时刻注入 $x_t$，则 $t=a_{\sigma}(\tau)$。由内层归纳，同刻 earlier-owner intermediate state 的 frontier 也不超过 $a_{\sigma}(\tau)$。确定性 kernel 对这些 objects 的任意组合至多依赖 input prefix $0{:}a_{\sigma}(\tau)$，所以可以声明不超过该 index 的 frontier。
 
-Owner-ordered/atomic-joint message 的 trajectory owner 来自已经注入的 token，因此不超过 $\tau$。Frontier-fusion message 的 owner 等于其 frontier，同样不超过 $\tau$。
+Owner-ordered/atomic-joint message 的 trajectory owner 来自已经注入的 token，因此不超过 $a_{\sigma}(\tau)$。Frontier-fusion message 的 owner 等于其 frontier，同样不超过 $a_{\sigma}(\tau)$。
 
 <div class="qed" aria-label="证毕">∎</div>
 
@@ -299,30 +439,37 @@ Owner-ordered/atomic-joint message 的 trajectory owner 来自已经注入的 to
 考虑：
 
 ```text
-s ---------> v
-s -> a ----> v
+s -----------------> v
+s -> a -> b --------> v
 ```
 
-第一条路径长度为 $1$，第二条路径长度为 $2$。
+第一条路径长度为 $1$，第二条路径长度为 $3$。取固定 external-step interval：
 
-- Token A 的 index 为 $0$，沿长路径到达 $v$ 的时间为 $0+2=2$。
-- Token B 的 index 为 $1$，沿短路径到达 $v$ 的时间为 $1+1=2$。
+$$
+R=2,
+\qquad
+\sigma(t)=2t.
+$$
 
-因此 A 与 B 在同一 node $v$、同一 absolute time $\tau=2$ 到达。
+- Token A 的 index 为 $0$，沿长路径到达 $v$ 的时间为 $\sigma(0)+3=3$。
+- Token B 的 index 为 $1$，沿短路径到达 $v$ 的时间为 $\sigma(1)+1=3$。
+
+因此 A 与 B 在同一 node $v$、同一 absolute time $\tau=3$ 到达。A 的长路径 signal 已跨过 token B 的注入 boundary，但没有被截断。
 
 ### 命题 2.6：一般 DAG 中 Owner 不能由 Node 与时间恢复
 
-若存在 node $v$ 和两个不同路径长度：
+若存在 node $v$、两个不同 token indices $t_A,t_B\in[L]$ 与路径长度：
 
 $$
 k_A,k_B\in\Lambda(v),
-\qquad k_A>k_B,
 $$
 
-并且输入长度允许选择：
+满足：
 
 $$
-t_B=t_A+k_A-k_B<L,
+\sigma(t_A)+k_A
+=
+\sigma(t_B)+k_B,
 $$
 
 则 owner 为 $t_A$、路径长度为 $k_A$ 的 message，与 owner 为 $t_B$、路径长度为 $k_B$ 的 message，在同一 node、同一 absolute time 到达。
@@ -332,21 +479,21 @@ $$
 两条 message 的 arrival time 分别为：
 
 $$
-\tau_A=t_A+k_A,
+\tau_A=\sigma(t_A)+k_A,
 $$
 
 $$
-\tau_B=t_B+k_B.
+\tau_B=\sigma(t_B)+k_B.
 $$
 
-代入 $t_B=t_A+k_A-k_B$：
+由题设：
 
 $$
 \tau_B
 =
-t_A+k_A-k_B+k_B
+\sigma(t_B)+k_B
 =
-t_A+k_A
+\sigma(t_A)+k_A
 =
 \tau_A.
 $$
@@ -356,6 +503,52 @@ $$
 <div class="qed" aria-label="证毕">∎</div>
 
 这个命题说明：在一般 DAG 中，owner metadata 不是冗余字段。若把同刻不同 owners 的 messages 无标签合并，后续 output alignment、routing、loss、replay 与归因都会失去明确语义。
+
+### 命题 2.7：前序 Token 晚到与 Owner Inversion 条件
+
+取 $t_A<t_B$，并令两条 trajectory messages 到达同一 node $v$ 的 path ages 分别为 $k_A,k_B\in\Lambda(v)$。则后序 token B 的 message 先于前序 token A 的 message 到达，当且仅当：
+
+$$
+k_A-k_B
+>
+\sigma(t_B)-\sigma(t_A).
+$$
+
+二者同刻到达，当且仅当上式中的 $>$ 改为 $=$。
+
+**证明。**
+
+由引理 2.4：
+
+$$
+\tau_A=\sigma(t_A)+k_A,
+\qquad
+\tau_B=\sigma(t_B)+k_B.
+$$
+
+因此：
+
+$$
+\tau_B<\tau_A
+$$
+
+当且仅当：
+
+$$
+\sigma(t_B)+k_B
+<
+\sigma(t_A)+k_A,
+$$
+
+移项即得结论。同刻条件同理。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+这个命题精确区分了两种情况：增大 external-step interval 会减少不同 token trajectories 的重叠；但只要路径长度差超过注入时间差，一般 DAG 仍会出现后序 owner 先到。固定 $R$ 时，条件化为：
+
+$$
+k_A-k_B>R(t_B-t_A).
+$$
 
 ## 3. 可选的双 Cortex 空间结构
 
@@ -462,10 +655,14 @@ Event id 使重复 payload 仍保持为不同 messages。Logical event id 必须
 $$
 m_t^{\mathrm{in}}
 =
-(\iota_t,t,t,t,\mathtt{input},s,\mu_t,x_t).
+(\iota_t,t,t,\sigma(t),\mathtt{input},s,\mu_t,x_t).
 $$
 
-因此 input injection 的 owner、frontier 与 arrival time 都是 $t$，其 internal tick 为 $0$。
+因此 input injection 的 owner 与 frontier 都是 $t$，arrival time 为 $\sigma(t)$，trajectory path age 为 $0$。Metadata $\mu_t$ 应至少允许恢复 external step $t$；ambient round offset 为：
+
+$$
+r_{\sigma}(\sigma(t))=0.
+$$
 
 ### 定义 4.2：Unit-delay dispatch
 
@@ -573,7 +770,7 @@ $$
 若 token 数为 $L>0$，则所有由这些 tokens 产生并沿 $G$ 传播的 messages 都满足：
 
 $$
-0\leq\tau\leq L-1+D.
+0\leq\tau\leq \sigma(L-1)+D.
 \tag{GD-6}
 $$
 ^eq-finite-horizon
@@ -583,15 +780,23 @@ $$
 对每条 message 保留一个只用于 timing proof 的 witness $(t,p)$：$t\in[L]$ 是某个触发该 event chain 的 input injection，$p$ 是从 $s$ 到当前 destination 的有向路径，并满足：
 
 $$
-\tau=t+|p|.
+\tau=\sigma(t)+|p|.
 $$
 
 Input injection 取空路径即可。若 node invocation 由一条带 witness $(t,p)$ 的 incoming message 触发，则沿 edge $(v,w)$ 发出的任意 message 可以取延长路径 $p\mathbin{\|}(v,w)$ 作为 witness。Owner/frontier promotion 不改变 absolute time，也不影响这个 timing witness。
 
-因为默认 profile 不在 empty timestamp 自主发射 message，所有 dispatched messages 都可由上述归纳得到 witness。又因为 $t\leq L-1$ 且 $|p|\leq D$：
+因为默认 profile 不在 empty timestamp 自主发射 message，所有 dispatched messages 都可由上述归纳得到 witness。又因为 $\sigma$ 严格递增、$t\leq L-1$ 且 $|p|\leq D$：
 
 $$
-\tau=t+|p|\leq L-1+D.
+\tau=\sigma(t)+|p|
+\leq
+\sigma(L-1)+D.
+$$
+
+固定每步 $R$ 个 internal rounds 时，上界化为：
+
+$$
+\tau\leq R(L-1)+D.
 $$
 
 <div class="qed" aria-label="证毕">∎</div>
@@ -749,12 +954,12 @@ $$
 
 #### 例 5.2b：跨时间的 Owner Inversion
 
-考虑 owner A 的 token index 为 $0$，沿长度 $3$ 的路径到达 $v$；owner B 的 token index 为 $1$，沿长度 $1$ 的路径到达 $v$。二者 arrival times 为：
+取固定 external-step interval $R=2$，所以 $\sigma(0)=0$、$\sigma(1)=2$。考虑 owner A 的 token index 为 $0$，沿长度 $4$ 的路径到达 $v$；owner B 的 token index 为 $1$，沿长度 $1$ 的路径到达 $v$。二者 arrival times 为：
 
 $$
-\tau_A=3,
+\tau_A=\sigma(0)+4=4,
 \qquad
-\tau_B=2.
+\tau_B=\sigma(1)+1=3.
 $$
 
 虽然 $t_A<t_B$，但在 absolute-time event order 中：
@@ -1444,10 +1649,27 @@ $$
 E_{v,\tau}
 =
 \left(
+e_{\sigma}(\tau),
+r_{\sigma}(\tau),
 I_{v,\tau},
 B_{v,\tau}
 \right).
 $$
+
+因此 event group 同时保留：
+
+- 全局 internal-round time $\tau$。
+- 当时已经推进到的 ambient external step $e_{\sigma}(\tau)$。
+- 该 external step 内的 round offset $r_{\sigma}(\tau)$。
+- 每条 message 自己的 trajectory owner/frontier；它们不要求等于 ambient external step。
+
+若 phase 是 reference-visible 的，再把 $\varphi_j$ 加入 record，完整 coordinate 为：
+
+$$
+(e_{\sigma}(\tau),r_{\sigma}(\tau),\varphi_j),
+$$
+
+其 flatten 后的主时间坐标仍是 $\theta=(\tau,\varphi_j)$。External step、round offset 与 phase 是执行坐标；owner/frontier 是 token dependency labels，二者不能互相替代。
 
 对 node $v$，收集全部 event-group records，并按 absolute time 递增排列：
 
@@ -1529,6 +1751,8 @@ $$
 
 等式比较全部四类 artifacts，而不只比较 final state 或最终 logits。
 
+这个 contract 允许 $\mathcal C_v^P$ 在一次调用中接收许多 token owners、许多 path ages 与许多 ambient rounds。它只要求结果等于 reference event-stream fold，不要求这些 events 彼此独立或全部矩阵化并行；实现可以包含有限的 node-local ordinary loops。未声明的 zero-delay algebraic loop 仍不属于该 contract。
+
 ### 引理 7.4：有限 Execution 可展开为 Logical Event DAG
 
 对一个满足引理 4.6 的有限 execution：
@@ -1566,6 +1790,8 @@ Spatial message edge 与相邻 local state edge 都指向更大的 absolute time
 
 Node kernel 内部的 matmul、scan、attention 或其他 primitive DAG 由 node chunk contract 封装；若 kernel 内存在未声明 zero-delay cycle，则不满足本引理前提。
 
+若 phase 是 reference-visible 的，把 rank 的第一坐标扩展为 lexicographic timestamp $(\tau,j)$，其中 $j$ 是 $\varphi_j$ 在 $\mathcal P$ 中的 ordinal。只要每条 phase dependency 都严格推进 $(\tau,j)$，或在同一 phase 内推进声明的 owner/microstep order，上述无环证明不变。
+
 <div class="qed" aria-label="证毕">∎</div>
 
 ### 例 7.5：已知 Kernel Family 如何进入 Contract
@@ -1583,10 +1809,81 @@ Node kernel 内部的 matmul、scan、attention 或其他 primitive DAG 由 node
 一般 DAG 只改变每个 node 收到的 event stream 可能是不规则的。实现可按：
 
 $$
-(\tau,t,c,\mu)
+(\tau,e_{\sigma}(\tau),r_{\sigma}(\tau),t,c,\mu)
 $$
 
 排序与 pack，但必须保持式 [[#^eq-node-event-stream-contract|GD-12]]。
+
+### 7.6 完整 Inbox、等待与 Node 内 Chunk 可行性
+
+“后序 token 是否必须等待前序 token”需要区分三种不同含义。
+
+**第一种是 data-availability wait。** 在在线 streaming runtime 中，node $v$ 只有确认所有空间前驱都不会再发送 arrival time 不超过 $\tau$ 的 message 后，才能认定 timestamp group $E_{v,\tau}$ 已完整。实现可以使用 predecessor completion、watermark 或显式 end-of-chunk marker。
+
+Node-topological chunk schedule 不需要逐 token 等待：处理 $v$ 之前，它的全部空间前驱已经对整个 chunk 完成，所以 $\mathbf E_v$ 已完整可知。这里的等待被提升为按空间 DAG 的 coarse dependency，而不是 token-by-token 的 host barrier。
+
+**第二种是 semantic dependency。** 假设 node state 的 reference order 中 event $e_A$ 位于 event $e_B$ 之前，且 $e_B$ 读取 $e_A$ 提交后的 state。即使完整 inbox 已一次性交给 node，$e_B$ 在逻辑上仍依赖 $e_A$。Chunk operator 可以：
+
+- 对 token-local events 做 batched map。
+- 对 affine/associative recurrence 做 scan。
+- 对 causal interaction 做 masked bulk kernel。
+- 对没有 contraction 的 arbitrary transition 使用 node-local sequential loop。
+
+最后一种仍满足 exact node chunk contract，也仍可获得一次 device invocation、连续内存、packed data 与批量通信的收益；但其 node-local span 可以是 $\Theta(M_v)$，不能主张 Transformer/Mamba 式 token-axis 低 span。
+
+**第三种是 circular readiness dependency。** 若为了生成 $v$ 的完整 inbox，必须先执行 $v$ 自己的 output、共享 mutable selector 或沿空间 cycle 返回的 message，那么不能先得到 $\mathbf E_v$ 再调用 $\mathcal C_v^P$。这不是普通“等待”，而是 node-topological factorization 失败。本页通过空间 DAG、mutable state 的唯一 node owner 与 forward-only routing 排除了这类环；带 cycle 的模型必须改用有限 event-DAG/wavefront contract。
+
+对 $t_A<t_B$ 的两个 events，是否存在 semantic wait 由 absolute-time event order 决定，而不是只看 owner：
+
+- 若 $\tau_A<\tau_B$，且两者通过 node state 相连，则 B event 必须看到 A event 的已提交影响。
+- 若 $\tau_B<\tau_A$，absolute-time semantics 会先处理 B；它不会为了尚未到达的 A event 主动等待。
+- 若研究目标要求“任意 B event 都必须等完 A 的所有路径”，就已经从 absolute-time semantics 改成 token-first buffering/reorder semantics；这可能需要额外 completeness watermark，并改变 latency 与模型行为。
+
+例如，设 owner A/B 的 token indices 分别为 $t_A,t_B$，并记：
+
+$$
+e_{A,2}=(2,t_A),
+\qquad
+e_{B,3}=(3,t_B),
+\qquad
+e_{A,4}=(4,t_A).
+$$
+
+对 owner event $e=(\tau,t)$ 与 pre-state $S\in\mathcal S_v$，取 $h\in H_v\cup\{\bot\}$ 与 $S'\in\mathcal S_v$ 满足定义 5.3 的 transition：
+
+$$
+(h,S')
+=
+\mathcal T_v(t,\tau,x_{v,\tau,t},S)
+$$
+
+并定义 $\operatorname{StepState}_v(e,S)=S'$。若某个 node 的完整 event order 是：
+
+$$
+e_{A,2}
+\prec_v
+e_{B,3}
+\prec_v
+e_{A,4}.
+$$
+
+对应 reference state fold 为：
+
+$$
+S_1=\operatorname{StepState}_v(e_{A,2},S_0),
+$$
+
+$$
+S_2=\operatorname{StepState}_v(e_{B,3},S_1),
+$$
+
+$$
+S_3=\operatorname{StepState}_v(e_{A,4},S_2).
+$$
+
+B event 必须等待并看到 absolute time $2$ 的 A 影响，但不能看到尚处在其逻辑未来的 $e_{A,4}$。Node chunk operator 可以一次收到这三个 records 后在设备内执行上述 fold，或在 $\mathcal T_v$ 具有代数结构时做等价 contraction；它不需要 runtime 在三个 external token steps 之间往返调度。
+
+所以，前序信号造成的等待不会使“node 一次处理多个 chunk tokens”在数学上不可行；它决定的是 node 内可并行程度。真正使当前定理不可用的是 inbox 生成与 node output 之间形成空间或共享状态的循环依赖。
 
 ## 8. Streaming 与 Node-Topological Chunk Schedules
 
@@ -1595,17 +1892,18 @@ $$
 若 $L=0$，execution 没有 input injection，所有 node 保持初始 state。若 $L>0$，streaming reference 按：
 
 $$
-\tau=0,1,\ldots,L-1+D
+\tau=0,1,\ldots,\sigma(L-1)+D
 $$
 
 推进。
 
 在 absolute time $\tau$：
 
-1. 收集所有满足 arrival time 为 $\tau$ 的 messages。
-2. 对每个 node 构造 $E_{v,\tau}=(I_{v,\tau},B_{v,\tau})$。
-3. 按选定 profile 执行 node transition 与 routing。
-4. 所有 outgoing messages 在 $\tau+1$ 到达。
+1. 若存在满足 $\sigma(t)=\tau$ 的 token $t$，生成 input injection record $m_t^{\mathrm{in}}$。
+2. 收集所有满足 arrival time 为 $\tau$ 的 messages。
+3. 对每个 node 构造 $E_{v,\tau}=(e_{\sigma}(\tau),r_{\sigma}(\tau),I_{v,\tau},B_{v,\tau})$。
+4. 按选定 profile 执行 node transition 与 routing。
+5. 所有 outgoing messages 在 $\tau+1$ 到达。
 
 因为每条 edge delay 为 $1$，同一个 $\tau$ 内不存在从一个 spatial node 到另一个 spatial node 的 zero-delay dependency。
 
@@ -1656,13 +1954,14 @@ $$
 并假设：
 
 1. 空间图 $G$ 满足定义 1.1，不要求 $\Lambda(v)$ 为 singleton。
-2. 每条 edge 满足 unit-delay dispatch。
-3. 每条 message 保留 owner、causal frontier、arrival time 与 event id。
-4. Inbox aggregation 满足定义 4.4。
-5. 每个 mutable state location 有唯一 owner node。
-6. Routing 只沿 $E$ 前进且是确定函数；任何 mutable routing state 都由唯一 node 持有，并包含在该 node 的 chunk contract 中。
-7. 每个 node 的 chunk operator 满足式 [[#^eq-node-event-stream-contract|GD-12]]。
-8. Execution 满足引理 4.6 的有限事件条件。
+2. Streaming 与 chunk schedules 使用同一个严格递增注入时钟 $\sigma$，并采用定义 2.1 的 carry-over semantics。
+3. 每条 edge 满足 unit-delay dispatch。
+4. 每条 message 保留 owner、causal frontier、arrival time 与 event id。
+5. Inbox aggregation 满足定义 4.4。
+6. 每个 mutable state location 有唯一 owner node。
+7. Routing 只沿 $E$ 前进且是确定函数；任何 mutable routing state 都由唯一 node 持有，并包含在该 node 的 chunk contract 中。
+8. 每个 node 的 chunk operator 满足式 [[#^eq-node-event-stream-contract|GD-12]]。
+9. Execution 满足引理 4.6 的有限事件条件。
 
 则 node-topological chunk schedule 与 absolute-time streaming schedule 产生完全相同的：
 
@@ -1685,7 +1984,7 @@ $$
 
 对 $i=1,\ldots,N$ 做数学归纳，证明 node $v_i$ 在两种 schedules 中得到相同完整 inbox stream，并产生相同 reference artifacts。
 
-当 $i=1$ 时，$v_1=s$。这是因为定义 1.1 要求每个其他 node 都位于某条从 $s$ 出发的路径上，所以每个 $v\neq s$ 至少有一个空间前驱。Input node 的 inbox 在两种 schedules 中都只包含定义 4.1 的相同 input injection records。由式 [[#^eq-node-event-stream-contract|GD-12]]，chunk operator 与该 node 在 streaming schedule 中按 absolute time 执行的 reference transducer 相等。因此 $v_1$ 的 hidden/frontier labels、routes、outgoing messages 与 final augmented state 全部相同。
+当 $i=1$ 时，$v_1=s$。这是因为定义 1.1 要求每个其他 node 都位于某条从 $s$ 出发的路径上，所以每个 $v\neq s$ 至少有一个空间前驱。Input node 的 inbox 在两种 schedules 中都只包含由同一个 $\sigma$ 生成的相同 input injection records。由式 [[#^eq-node-event-stream-contract|GD-12]]，chunk operator 与该 node 在 streaming schedule 中按 absolute time 执行的 reference transducer 相等。因此 $v_1$ 的 hidden/frontier labels、routes、outgoing messages 与 final augmented state 全部相同。
 
 假设结论对 $v_1,\ldots,v_{i-1}$ 成立。考虑 $v_i$。由 topological order 的定义，$v_i$ 的每个直接前驱都位于：
 
@@ -1706,6 +2005,22 @@ $$
 所以结论对 $v_i$ 成立。由数学归纳法，结论对所有 nodes 成立，特别地对 output node $z$ 成立。
 
 证明中没有使用“所有到达同一 node 的路径等长”，所以一般 DAG 中的 path-length collision 被完整保留，而不是通过 relay node 消除。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+### 推论 8.4a：多个 Internal Rounds 不破坏 Schedule Equivalence
+
+定理 8.4 对任意严格递增注入时钟 $\sigma$ 成立，因而同时覆盖：
+
+- 固定每个 external step 运行 $R>1$ 个 internal rounds，即 $\sigma(t)=Rt$。
+- 每步 round 数可变，即 $\sigma(t+1)-\sigma(t)=R_t$。
+- 取 $R=d_{\min}$，并允许长度大于 $d_{\min}$ 的 trajectories 跨 external-step boundary carry over。
+
+这些设置会改变 event collisions、owner inversions 与 node inbox stream，但只要 streaming/chunk schedules 使用同一个 $\sigma$、同一种 carry-over policy，并且 node chunk contract 对改变后的完整 event stream 成立，就不会破坏 schedule equivalence。
+
+**证明。**
+
+定理 8.4 的归纳只使用：相同 input injection records、相同 timestamped predecessor streams、空间 DAG 的 topological order 与 exact node chunk contract。证明没有要求 $\sigma(t+1)-\sigma(t)=1$，也没有要求 message 在下一 external step 前终止。
 
 <div class="qed" aria-label="证毕">∎</div>
 
@@ -1757,15 +2072,37 @@ $$
 \Lambda(v)=\{d(v)\},
 $$
 
-则尚未经过 owner promotion 的 trajectory message 到达 $v$ 的时间唯一为 $t+d(v)$；不同 trajectory owners 不会在同一 $v$、同一 $\tau$ 到达。定理 8.4 仍然成立，并在 owner-ordered/atomic-joint profile 中退化为旧 leveled-DAG schedule-equivalence 结论；frontier-fusion profile 仍可因 persistent state dependency 发生 owner promotion。
+则尚未经过 owner promotion 的 trajectory message 到达 $v$ 的时间唯一为 $\sigma(t)+d(v)$；不同 trajectory owners 不会在同一 $v$、同一 $\tau$ 到达。定理 8.4 仍然成立，并在 owner-ordered/atomic-joint profile 中退化为旧 leveled-DAG schedule-equivalence 结论；frontier-fusion profile 仍可因 persistent state dependency 发生 owner promotion。
 
 **证明。**
 
-由引理 2.4，任意未经过 owner promotion 而到达 $v$ 的 trajectory message 都有 $\tau=t+d(v)$。若 $t\neq t'$，则 $t+d(v)\neq t'+d(v)$，所以不存在同刻 trajectory-owner collision。其余结论直接由定理 8.4 得到。
+由引理 2.4，任意未经过 owner promotion 而到达 $v$ 的 trajectory message 都有 $\tau=\sigma(t)+d(v)$。若 $t\neq t'$，由 $\sigma$ 的严格单调性：
+
+$$
+\sigma(t)+d(v)
+\neq
+\sigma(t')+d(v),
+$$
+
+所以不存在同刻 trajectory-owner collision。其余结论直接由定理 8.4 得到。
 
 <div class="qed" aria-label="证毕">∎</div>
 
 ## 9. 正确性之外：Work、Span 与超稀疏约束
+
+### 9.0 三层性能目标
+
+本文把“支持 chunk prefill”拆成三个不能混用的层级：
+
+| 层级 | 要求 | 允许的 node 内实现 | 本页状态 |
+| --- | --- | --- | --- |
+| Exact chunk correctness | 一次 chunk 调用与逐 timestamp reference artifacts 完全相同 | 包括 sequential fallback | 由定理 8.4 归约到 node contract |
+| Node-local chunk throughput | 一个 node 一次或少量调用处理完整多 token / 多 round stream；本地 pack，批量收发 edge messages，无逐 token 全局 orchestration | 普通 C++/device loop、branch、top-k、gather/scatter、局部矩阵 kernel 均可 | Tide 当前首要性能目标 |
+| Sequence-axis low span | 跨 token/event 依赖可被 contraction，不保留长度随 chunk 线性增长的 critical path | Token-local map、causal attention、scan、segmented bulk 等 | 更强的可选目标，需逐 kernel 证明 |
+
+在默认 identity idle semantics 下，固定有限 $R$ 或一般给定注入时钟 $\sigma$ 不会自动破坏前两层。它们只是改变每个 node 的 timestamped event stream。若 empty timestamp 也执行非平凡 decay/update，其 work/span 必须另行计入。真正阻止第三层的是 node-local state/control transition 缺少可组合结构，而不是“一个 external step 含多个 internal rounds”这一事实本身。
+
+因此，若每个 node 映射到独立设备，合理的第一阶段实现是：空间前驱批量生成完整或分块 event streams，node 在本设备内对这些 records 做 sort/segment/pack 后一次处理，再批量 dispatch。Node 内某些 selector/routing 代码即使只能顺序执行，也不要求 runtime 回到逐 token 的跨设备控制循环；但它的实际 span 与吞吐必须诚实计入性能报告。
 
 ### 定义 9.1：Node Event Count
 
@@ -2098,7 +2435,7 @@ Artifact equality 至少包括：
 | Input/output cortex + bridge | 保留为定义 3.1 的可选空间结构 |
 | 每条 edge unit delay | 直接保留 |
 | Signal payload | 增加 owner、causal frontier、arrival time、event id、birth slot |
-| 同 tick 多源聚合 | 同时保留 raw inbox 与 owner view；选择 ordered、joint 或 frontier-fusion contract |
+| 同 absolute internal round 多源聚合 | 同时保留 raw inbox 与 owner view；选择 ordered、joint 或 frontier-fusion contract |
 | Local hidden/KV | 归入 node-owned state 与 node transducer |
 | `signal norm` | 作为式 GD-11 的 local content feature |
 | `affectcount/selectcount` | Streaming profile 保留；strict profile 改为日志、训练统计或 static bias 来源 |
@@ -2112,7 +2449,7 @@ Artifact equality 至少包括：
 - 现有 aggregate 是否保留 owner/time provenance。
 - 现有 state/message 是否能增加 causal-frontier audit label。
 - Selector counters 是否跨 owners/events 形成 adaptive chain。
-- 同一 tick 的 node update 是 ordered、joint、frontier-fusion，还是依赖线程顺序。
+- 同一 absolute internal round 的 node update 是 ordered、joint、frontier-fusion，还是依赖线程顺序。
 - Memory clear/decay 的 visibility 与 commit timing。
 - Output readout 如何把多路径 event stream 映射为 token outputs。
 
@@ -2121,11 +2458,12 @@ Artifact equality 至少包括：
 ### 13.1 已经解决的结构问题
 
 1. **不再修改路径时延**：skip edge 保持 unit delay，不通过 relay leveling 改写 reference semantics。
-2. **同刻碰撞有明确定义**：owner、frontier 与 arrival time 共同标识事件；ordered、joint、frontier-fusion 三种语义分开。
-3. **一般 DAG 有直接证明**：证明按空间 topological order 归纳，不要求等长路径。
-4. **长期上下文位置明确**：长期历史进入 node-owned KV/SSM/accumulator，不藏在无 owner 的游走 signal 中。
-5. **Correctness 与 performance 分离**：定理 8.4 证明 schedule equivalence；第 9 节单独给 work/span 与 event bound。
-6. **稀疏性不再依赖 spatial level**：fixed birth slots 给出适用于一般 DAG 与 owner promotion 的 $LK|V|$ 上界。
+2. **内外时间已分离**：external token index、注入时钟 $\sigma(t)$、trajectory path age $k$、absolute arrival time $\tau$ 与可选 phase 不再互相混用。
+3. **同刻碰撞有明确定义**：owner、frontier 与 arrival time 共同标识事件；ordered、joint、frontier-fusion 三种语义分开。
+4. **一般 DAG 有直接证明**：证明按空间 topological order 归纳，不要求等长路径，也不要求相邻 token 只间隔一个 internal round。
+5. **长期上下文位置明确**：长期历史进入 node-owned KV/SSM/accumulator，不藏在无 owner 的游走 signal 中。
+6. **Correctness 与 performance 分层**：定理 8.4 证明 schedule equivalence；第 9 节再区分 node-local chunk throughput、token-axis low span、work 与 event bound。
+7. **稀疏性不再依赖 spatial level**：fixed birth slots 给出适用于一般 DAG 与 owner promotion 的 $LK|V|$ 上界。
 
 这里“已经解决”只指 streaming 与 chunk schedules 相对同一个 absolute-time reference 的等价性，不表示已经解决该 reference 与标准 token-prefix autoregressive semantics 的关系。
 
@@ -2147,7 +2485,7 @@ Artifact equality 至少包括：
 
 #### 风险二：一般 DAG 的 Absolute-Time Order 不自动等于 Token Order
 
-即使选择 owner-ordered profile，一般 DAG 仍允许例 5.2b 的 owner inversion：较晚 token 的短路径 event 先于较早 token 的长路径 event 修改同一 node state。Atomic-joint 还进一步允许较早 owner 的同刻 output 读取较晚 owner 的 input。
+即使选择 owner-ordered profile，一般 DAG 仍允许例 5.2b 的 owner inversion：当路径长度差超过注入时间差时，较晚 token 的短路径 event 会先于较早 token 的长路径 event 修改同一 node state。增大 $R_t$ 会减少这种 inversion，但除非 injection interval 与全部有效路径差满足额外约束，否则不会自动消失。Atomic-joint 还进一步允许较早 owner 的同刻 output 读取较晚 owner 的 input。
 
 这些行为在 absolute-time streaming reference 下可以是合法模型，但不自动等于 GPT 风格的 token-prefix-causal model。当前 [[step-transition-mathematical-specification#定义 3.6a：logical event DAG program|logical event DAG program]] 把 external token index 作为 causal order 的首要坐标；本页的一般 DAG theorem 则以 absolute time 为首要坐标。因此，二者之间还需要一个明确的 embedding/refinement 选择：
 
@@ -2223,21 +2561,23 @@ Schedule correctness 不自动证明：
 
 ### 13.3 当前推荐的最小实现顺序
 
-1. 实现 message key：`(event_id, owner, frontier, arrival_time, src, dst, birth_slot)`。
-2. 实现一般 DAG 的 absolute-time scalar oracle。
-3. 实现 owner-ordered node-topological chunk executor，并做全 artifacts 对齐。
-4. 为 token-wise、attention、SSM/linear attention 增加 packed node kernels。
-5. 实现 atomic-joint scalar oracle 与 grouped chunk executor。
-6. 实现 frontier-fusion scalar oracle、frontier invariant checker 与 unified-output chunk executor。
-7. 用 unequal-path collision、owner inversion 与 state-frontier contamination 比较三种 profile。
-8. 加入 fixed birth slots、event ledger、work/span 与 load metrics。
-9. 最后再引入训练期均衡和更复杂 selector。
+1. 实现 reference injection clock $\sigma$，并固定 carry-over/truncate policy；strict profile 默认 carry-over。
+2. 实现 message key：`(event_id, owner, frontier, arrival_time, ambient_external_step, round_offset, phase, src, dst, birth_slot)`。
+3. 实现一般 DAG 的 absolute-time scalar oracle。
+4. 实现 owner-ordered node-topological chunk executor，并做全 artifacts 对齐。
+5. 为 token-wise、attention、SSM/linear attention 增加 packed node kernels；其他局部逻辑先允许 sequential fallback。
+6. 实现 atomic-joint scalar oracle 与 grouped chunk executor。
+7. 实现 frontier-fusion scalar oracle、frontier invariant checker 与 unified-output chunk executor。
+8. 用 unequal-path collision、owner inversion、跨 external-step carry-over 与 state-frontier contamination 比较三种 profile。
+9. 加入 fixed birth slots、event ledger、work/span 与 load metrics。
+10. 最后再引入训练期均衡和更复杂 selector。
 
 ### 13.4 当前可主张与不可主张
 
 当前可以主张：
 
 - 一般 finite unit-delay DAG 在本文条件下具有 exact node-topological chunk schedule。
+- 固定或可变的多 internal-round external step 不破坏该 schedule equivalence；它通过 $\sigma$ 改变 event stream。
 - Token owner 在非等长路径中是必要 provenance 字段。
 - Owner-ordered、atomic-joint 与 frontier-fusion 都可以分别建立 schedule-equivalence theorem。
 - Fold-equivalent joint kernel 可以批量实现 owner-ordered semantics。
@@ -2260,11 +2600,11 @@ Schedule correctness 不自动证明：
 
 最小正向命题是：
 
-> 对任意有限 unit-delay 空间 DAG，只要每个 node 对自己的 owner/frontier-labelled timestamped event stream 提供 exact chunk transducer，routing 只沿 DAG 前进，并且所有 mutable control/context state 都有唯一 node owner 且纳入该 transducer，就可以把 absolute-time streaming execution 重排为 node-topological chunk execution，而不改变所选择的 ordered、joint 或 frontier-fusion reference semantics。
+> 对任意有限 unit-delay 空间 DAG 与任意给定的严格递增注入时钟 $\sigma$，只要两种 schedules 采用相同 carry-over policy，每个 node 对自己的 owner/frontier-labelled timestamped event stream 提供 exact chunk transducer，routing 只沿 DAG 前进，并且所有 mutable control/context state 都有唯一 node owner 且纳入该 transducer，就可以把 absolute-time streaming execution 重排为 node-topological chunk execution，而不改变所选择的 ordered、joint 或 frontier-fusion reference semantics。
 
 这个命题保留了 Tide 所需的一般空间 DAG，也把真正的性能问题准确地下推到：
 
-- Node event-stream kernel 是否具有 causal-bulk/scan/joint structure。
+- Node event-stream kernel 是否至少具有可接受的 local chunk throughput，以及是否进一步具有 causal-bulk/scan/joint low-span structure。
 - Event 数是否有超稀疏上界。
 - Selector 是否避免不可收缩的跨 token control chain。
 - Ordered、joint 与 frontier-fusion semantics 中哪一种更有训练价值、任务价值与可实现的 numerical contraction。

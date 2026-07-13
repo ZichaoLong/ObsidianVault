@@ -500,6 +500,9 @@ $$
 
 令 $R\in\mathbb{N}_{>0}$ 为每个 external token step 内的 internal round 数。
 
+> [!note] 固定步长 B0 与一般重叠注入模型
+> 本节把一个 token 的 $R$ 个 rounds 封装进单步 transition $\mathcal T^{B0}$，再按 token 顺序做 fold；它是便于承载 Transformer/Mamba chain 的固定-round baseline。若模型允许前序 token 的长路径 message 在下一 token 注入后继续传播，就需要显式区分 token index、注入时刻与 path age。[[token-owned-general-dag-routing]] 使用一般注入时钟 $\sigma(t)$；固定 $R$ 只是 $\sigma(t)=Rt$ 的特例，并明确采用跨 external-step carry-over semantics。除非 B0 state 显式保存 in-flight messages，否则不能把本节的 step-complete fold 与该重叠 streaming semantics 直接视为同一个模型。
+
 ### 定义 3.2：B0 空间
 
 给定集合：
