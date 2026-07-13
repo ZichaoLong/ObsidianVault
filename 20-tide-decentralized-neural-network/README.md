@@ -60,6 +60,7 @@ TIDE 是 `Token Inference Decentralized Engine`。
 | 规范 | [[step-transition-implementation-specification]] | graph/state/workspace/schedule/kernel/Event IR 接口与验证约束 |
 | 状态 | [[current-architecture-state]] | `~/llm/tide` 当前代码、测试、完成度与目标架构缺口 |
 | 研究 | [[adaptive-routing-prefill-impossibility]] | Exact、work-efficient 自适应 routing 的 parallel-query 下界及 Tide Graph 嵌入 |
+| 研究 | [[token-owned-leveled-dag-routing]] | Unit-delay leveled DAG、token-owned signal、context state、稀疏 routing 与 prefill-compatible 均衡候选 |
 | 研究 | [[selector-and-chunk-prefill-performance-memo]] | Selector、reference/execution DAG、capability contraction 与 work/span 设计备忘 |
 | 研究 | [[finite-event-dag-and-zero-delay-loops-memo]] | dynamic execution、finite logical event DAG、zero-delay SCC 与后续定理候选 |
 | 参考 | [[logical-event-dag-related-theories]] | ISA、编译器、SSA/MemorySSA、数据流、provenance、scan 与 fixed-point 谱系 |
@@ -67,7 +68,7 @@ TIDE 是 `Token Inference Decentralized Engine`。
 
 建议阅读顺序：
 
-1. 研究语义：本页 -> [[step-transition-mathematical-specification]] 第 1-3 节 -> [[adaptive-routing-prefill-impossibility]] -> [[finite-event-dag-and-zero-delay-loops-memo]]。
+1. 研究语义：本页 -> [[step-transition-mathematical-specification]] 第 1-3 节 -> [[adaptive-routing-prefill-impossibility]] -> [[token-owned-leveled-dag-routing]] -> [[finite-event-dag-and-zero-delay-loops-memo]]。
 2. 工程实现：[[step-transition-implementation-specification]] -> [[current-architecture-state]]。
 3. 外部先修：遇到 ISA、SSA、MemorySSA、dataflow、fixed-point 等概念时查 [[logical-event-dag-related-theories]]。
 4. 历史追溯：只有需要理解 LH、`tide.old` 与 StepTransition 的来源时才读 [[prefill-decode-equivalence-context]]。
