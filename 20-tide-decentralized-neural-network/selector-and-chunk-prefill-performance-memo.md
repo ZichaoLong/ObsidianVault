@@ -17,7 +17,7 @@ tags:
 
 其中“任意自适应 routing 为什么不存在通用 exact、work-efficient、次线性 adaptive-depth prefill”的正式定义与证明，已经独立写入 [[adaptive-routing-prefill-impossibility]]；本页继续保留架构分层、capability contraction 与候选推进路线。
 
-基于每条 edge 延迟为 1 的进一步正向候选，包括 leveled DAG、token-owned signal、显式 node context 和 prefill-compatible 均衡 selector，见 [[token-owned-leveled-dag-routing]]。
+基于每条 edge 延迟为 1 的进一步正向候选，包括一般空间 DAG、timestamped token-owned signal、显式 node context、两种同刻语义和 prefill-compatible selector，见 [[token-owned-general-dag-routing]]。
 
 核心判断是：
 
