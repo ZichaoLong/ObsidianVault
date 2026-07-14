@@ -19,7 +19,7 @@ tags:
 > 本页按“定义先于使用、简单例子先于复杂架构、引理先于定理、证明不跳步”的顺序推进。CPU ISA、编译器、SSA、memory model 等外部概念只作为参考谱系，见 [[logical-event-dag-related-theories]]；它们不替代本页的数学证明。
 
 > [!roadmap] 当前形式化边界
-> 第 1-5 节已经定义顺序 fold、chunk correctness、semantic quotient、finite logical event DAG、主力 kernel family 与 step simulation。dynamic event generation、有限执行的 DAG representation、zero-delay SCC 与 fixed-point kernel 尚未形成正式定理；其候选定义和推进顺序暂存于 [[finite-event-dag-and-zero-delay-loops-memo]]，不能提前当作本页已证明结论。
+> 第 1-5 节已经定义顺序 fold、chunk correctness、semantic quotient、finite logical event DAG、主力 kernel family 与 step simulation。[[token-owned-general-dag-routing]] 已对“固定周期 + finite unit-delay spatial DAG + forward-only routing”这一受限 profile 给出 typed event-DAG 与 closed-finite schedule-equivalence theorem；可接续 decode 的 boundary-state embedding、任意 cyclic topology、一般 dynamic event generation、zero-delay SCC 与 fixed-point kernel 仍未形成统一定理，其候选推进顺序见 [[finite-event-dag-and-zero-delay-loops-memo]]。
 
 > [!important] 证否边界
 > 本页以构造性 correctness 为主。任意黑盒自适应 routing 在 exact、work-efficient 前提下为何不能获得次线性 adaptive-depth prefill，见独立数学文档 [[adaptive-routing-prefill-impossibility]]。该下界不自动等价于具体 LH selector 的不可能性结论。
@@ -501,7 +501,7 @@ $$
 令 $R\in\mathbb{N}_{>0}$ 为每个 external token step 内的 internal round 数。
 
 > [!note] 固定步长 B0 与一般重叠注入模型
-> 本节把一个 token 的 $R$ 个 rounds 封装进单步 transition $\mathcal T^{B0}$，再按 token 顺序做 fold；它是便于承载 Transformer/Mamba chain 的固定-round baseline。若模型允许前序 token 的长路径 message 在下一 token 注入后继续传播，就需要显式区分 token index、注入时刻与 path age。[[token-owned-general-dag-routing]] 使用一般注入时钟 $\sigma(t)$；固定 $R$ 只是 $\sigma(t)=Rt$ 的特例，并明确采用跨 external-step carry-over semantics。除非 B0 state 显式保存 in-flight messages，否则不能把本节的 step-complete fold 与该重叠 streaming semantics 直接视为同一个模型。
+> 本节把一个 token 的 $R$ 个 rounds 封装进单步 transition $\mathcal T^{B0}$，再按 token 顺序做 fold；它是便于承载 Transformer/Mamba chain 的 fixed-step baseline。[[token-owned-general-dag-routing]] 研究另一种固定周期 streaming semantics：token $t$ 在 $Rt$ injection，第 $t$ 个 readout 在 $R(t+1)$ 发生，长路径 messages 可以跨 boundary carry over。除非 B0 state 显式保存 in-flight messages 与 commit trace，否则不能把本节的 step-complete fold 与该重叠模型直接视为同一个 transition。
 
 ### 定义 3.2：B0 空间
 
@@ -760,13 +760,37 @@ $$
 
 #### 定义 3.6a：logical event DAG program
 
-给定长度 $L\in\mathbb{N}$。令 $\mathcal{EID}_L$ 是有限 logical event id 集合。每个 event id $e\in\mathcal{EID}_L$ 都带有 external token index：
+给定长度 $L\in\mathbb{N}$，定义 frontier index space：
 
 $$
-\tau(e)\in[L]
+\mathbb F_L
+=
+\{-1\}\cup[L].
 $$
 
-并给定 logical event order：
+给定有限 totally ordered logical timestamp set：
+
+$$
+(\Theta_L,<_{\Theta}).
+$$
+
+令 $\mathcal{EID}_L$ 是有限 logical event id 集合。每个 event id $e\in\mathcal{EID}_L$ 都带有：
+
+$$
+\operatorname{time}(e)\in\Theta_L,
+$$
+
+$$
+\operatorname{support}(e)\subseteq[L],
+$$
+
+$$
+\operatorname{frontier}(e)\in\mathbb F_L.
+$$
+
+$\operatorname{support}(e)$ 表示该 event 直接联合处理或标识的 token owners；$\operatorname{frontier}(e)$ 表示 event value 对 input-token prefix 的保守依赖上界。二者不是同一个概念。
+
+给定 logical event order：
 
 $$
 \prec_L
@@ -778,7 +802,19 @@ $$
 2. transitive：若 $e_1\prec_L e_2$ 且 $e_2\prec_L e_3$，则 $e_1\prec_L e_3$。
 3. total：对任意 $e\neq e'$，恰有一个关系成立：$e\prec_L e'$ 或 $e'\prec_L e$。
 
-还要求若 $\tau(e)<\tau(e')$，则 $e\prec_L e'$。也就是说，decode reference 的 logical order 至少按 external token tick 单调；同一 token 内可继续包含 internal round、phase、node、edge、mailbox 等字段。
+还要求若：
+
+$$
+\operatorname{time}(e)<_{\Theta}\operatorname{time}(e'),
+$$
+
+则：
+
+$$
+e\prec_L e'.
+$$
+
+同一 timestamp 内的 tie 必须由 owner order、phase-local microstep、canonical event id 或显式 joint-event semantics 唯一确定，不能依赖物理线程竞争顺序。
 
 例如，普通 Transformer 可取：
 
@@ -786,13 +822,13 @@ $$
 e=(t,o)
 $$
 
-其中 $o$ 是 token-local operation slot。LH-like runtime 可取：
+其中 $o$ 是 token-local operation slot，$\operatorname{support}(e)=\{t\}$，$\operatorname{frontier}(e)=t$。固定周期 Tide event 可取：
 
 $$
-e=(t,r,p,v)
+e=(\text{kind},\text{node},\text{absolute round},\text{phase},\text{owner support})
 $$
 
-其中 $t$ 是 external token tick，$r$ 是 internal round tick，$p$ 是 phase，$v$ 是 node 或 edge endpoint。
+并把 absolute round 与 phase 放入 $\operatorname{time}(e)$。这样 external token index、logical time 与 causal frontier 不再复用同一个符号。
 
 这里定义的是某次有限 execution 已经实例化后的 logical events，不要求 Tide static graph 本身无环，也不要求 runtime 在执行前预先枚举完整路径。未来若允许 selector 在线生成 event，需要额外证明：该次 execution 终止、event 集合有限，并且每条 dependency 严格推进某个良基 logical rank。普通 CFG / recurrent graph 的 back edge 可以通过 token、round 或 iteration index 展开；同一 logical rank 内的 zero-delay cycle 不在当前定义覆盖范围内。
 
@@ -813,7 +849,7 @@ $$
 1. $D_L$ 是有向无环图。
 2. 若 $(e',e)\in\mathcal{E}_L$，则 $e'\prec_L e$。
 
-DAG 条件 2 表示依赖只来自 reference logical order 中更早的 event；由于 $\prec_L$ 至少按 external token tick 单调，它排除 future-token dependency。物理执行可以乱序，但逻辑依赖必须能映射回这个 DAG。
+DAG 条件 2 表示依赖只来自 reference logical order 中更早的 event。物理执行可以乱序，但逻辑依赖必须映射回这个 DAG。一般 kernel 可以通过 overwrite、mask 或已证明的 projection 得到更小 frontier；只有特定 monotone-frontier profile 才额外要求 dependency edge 上 frontier 单调。
 
 对任意节点 $n\in\mathcal{N}_L$，定义直接前驱集合：
 
@@ -848,13 +884,19 @@ $$
 
 这里把输入序列 $x_{0:L}$ 与初始 state $S_0$ 作为 boundary data 传入，是为了统一表达 input injection、position / clock、old KV cache、old SSM state 等边界信息。
 
-还要求每个 $F_n$ 满足 prefix-causal boundary condition。若 $\tau(n)=t$，则 $F_n$ 对 $x_{0:L}$ 的依赖只能通过前缀 $x_{0:t+1}$。形式化地说，若两个输入序列 $x_{0:L}$ 与 $\bar{x}_{0:L}$ 满足：
+还要求每个 $F_n$ 满足 prefix-causal boundary condition。令：
 
 $$
-x_j=\bar{x}_j,\quad j=0,\ldots,t
+c=\operatorname{frontier}(n).
 $$
 
-则在相同前驱值与相同初始 state 下，$F_n$ 的输出相同。若某个 $F_n$ 使用 $x_{t'}$ 且 $t'>t$，则该 program 不满足 causal chunk 前提。
+则 $F_n$ 对 $x_{0:L}$ 的依赖只能通过前缀 $x_{0:c+1}$；当 $c=-1$ 时，它不能读取任何 input token。若 $c\geq 0$，形式化地说，若两个输入序列 $x_{0:L}$ 与 $\bar{x}_{0:L}$ 满足：
+
+$$
+x_j=\bar{x}_j,\quad j=0,\ldots,c
+$$
+
+则在相同前驱值与相同初始 state 下，$F_n$ 的输出相同。若某个 $F_n$ 使用 $x_{t'}$ 且 $t'>c$，则该 program 不满足 causal chunk 前提。
 
 给定 output / final-state extraction 函数：
 

@@ -37,7 +37,7 @@ tags:
 
 | 内容 | 正式归属 | 当前状态 |
 | --- | --- | --- |
-| finite logical event DAG representation、local refinement、zero-delay dichotomy | [[step-transition-mathematical-specification]] | 仅列为下一数学阶段，尚未证明 |
+| finite logical event DAG representation、local refinement、zero-delay dichotomy | [[step-transition-mathematical-specification]] | [[token-owned-general-dag-routing]] 已证明固定周期 closed-finite spatial-DAG 特例；continuation-state embedding 与一般 dynamic/cyclic 情形尚未证明 |
 | EventId、LogicalRank、Dependency、StateVersion、SCC verifier | [[step-transition-implementation-specification]] | 已成为目标接口，尚未由当前 runtime 完整实现 |
 | 当前代码已有对象与缺口 | [[current-architecture-state]] | 以代码快照为准 |
 | ISA、SSA/MemorySSA、scheduling、dataflow、fixed-point 历史谱系 | [[logical-event-dag-related-theories]] | 参考材料，不替代 Tide 证明 |

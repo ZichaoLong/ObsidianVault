@@ -143,7 +143,9 @@ Step(input_token, State):
 
 上面的伪代码描述 fixed-round reference family。若 round 数或 active events 由 selector 动态决定，还必须给出终止条件、event budget 或良基 rank，不能把无限循环隐藏在 `rounds` 中。
 
-该伪代码默认一个 `Step` 完成后才开始下一个 token。若允许长路径 event 跨 step boundary carry over，就不能再把 `external_token` 当成 global internal time；应使用 [[token-owned-general-dag-routing]] 的注入时钟 `sigma(t)`、absolute internal round、trajectory path age 与可选 phase coordinate，并把 in-flight event stream 纳入 runtime state/contract。
+该伪代码默认一个 `Step` 完成后才开始下一个 token。[[token-owned-general-dag-routing]] 的固定周期 streaming profile 则规定 `inject(t) = R*t`、`readout(t) = R*(t+1)`，并允许长路径 event 跨 boundary carry over。实现该 profile 时必须把 absolute round、phase、owner/frontier、in-flight messages 与 state commit trace 纳入 runtime contract，不能把 `external_token` 直接当成 global internal time。
+
+当前数学定理只对齐最后一个 readout 后继续 flush 的 closed finite execution；可直接接续 decode 的实现还必须定义 boundary cut，并把 cut 上的 node-state snapshots 与 in-flight messages 共同编码进 continuation state。
 
 ## Dynamic Event Contract
 

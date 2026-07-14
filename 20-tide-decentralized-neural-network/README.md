@@ -22,7 +22,7 @@ TIDE 是 `Token Inference Decentralized Engine`。
 - `~/llm/tide` 的 CPU 路径已经不只是 LH phase runtime 骨架；独立 Tide kernels 已在当前覆盖配置和 hidden/cache mode 上与 native LH 对齐，并已有 phase artifact 与压力测试入口。
 - 当前仍没有得到 strict model-level `prefill()`、一般 graph 的高性能 chunk prefill 定理或 Ascend backend。
 - 对允许任意黑盒自适应 routing 的模型类别，[[adaptive-routing-prefill-impossibility]] 已证明：若 prefill 保持 exact、工作量接近实际 route chain 且不枚举整个 routing state space，则 adaptive depth 至少随 token 数线性增长。该结论尚未自动覆盖每个具体 LH selector 配置。
-- 正向候选 [[token-owned-general-dag-routing]] 已把 leveled-only 约束放宽为一般 finite unit-delay DAG，并用严格递增注入时钟 $\sigma(t)$ 分离 external token step、global internal round、trajectory path age 与 phase。它证明：若每个 node 对 owner/frontier-labelled timestamped event stream 提供 exact chunk transducer，则 absolute-time streaming schedule 与 node-topological chunk schedule 等价；固定/可变的多 internal-round step 与长路径 carry-over 都被覆盖。文档同时区分 exact chunk correctness、node-local chunk throughput 与 sequence-axis low span，后两者不能由 correctness theorem 自动推出。
+- 正向候选 [[token-owned-general-dag-routing]] 已固定 external contract：token $t$ 在 $Rt$ injection，第 $t$ 个 readout 在 $R(t+1)$ 发生，长路径 messages 跨 boundary carry over。文档现已严格定义 phase order、typed logical events、dependency-complete event DAG、state commit trace 与 fixed-period readout，并证明在 exact node chunk contract 下 closed finite absolute-time streaming schedule 与 node-topological chunk schedule 等价。该结论仍是 correctness theorem：不自动给出低-span high-performance prefill，也尚未构造包含 boundary in-flight messages、可直接接续 decode 的统一 StepTransition state。
 - 数学上以 `transition -> fold -> semantic contract -> logical event DAG -> quotient -> simulation` 为主路径；CPU/编译器/数据流谱系只提供可借鉴的成熟方法，不替代证明。
 - 稀疏性、动态 selector、异步执行与 NPU lowering 后置，避免在 reference semantics 尚未稳定时混入新的不可辨识变量。
 
