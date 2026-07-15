@@ -16,10 +16,13 @@ tags:
 > 本页只处理 `StepTransition`、`prefill`、`decode`、chunk prefill 与 kernel 优化的数学定义。实现对象、LH 映射、phase 工程约束放在 [[step-transition-implementation-specification]]。
 
 > [!note] 写作与证明约定
-> 本页按“定义先于使用、简单例子先于复杂架构、引理先于定理、证明不跳步”的顺序推进。CPU ISA、编译器、SSA、memory model 等外部概念只作为参考谱系，见 [[logical-event-dag-related-theories]]；它们不替代本页的数学证明。
+> 本页按“定义先于使用、简单例子先于复杂架构、引理先于定理、证明不跳步”的顺序推进。CPU ISA、编译器、SSA、内存模型等外部概念只作为参考谱系，见 [[logical-event-dag-related-theories]]；它们不替代本页的数学证明。
+
+> [!note] 中英文术语
+> Tide 数学文档共用 [[token-owned-general-dag-routing#术语约定与中英文对照|术语约定与中英文对照]]。解释性正文原则上使用中文；数学符号、公式字段、代码接口、固定缩写和模型专名保留英文。
 
 > [!roadmap] 当前形式化边界
-> 第 1-5 节已经定义顺序 fold、chunk correctness、semantic quotient、finite logical event DAG、主力 kernel family 与 step simulation。[[token-owned-general-dag-routing]] 已对“固定周期 + finite unit-delay spatial DAG + forward-only routing”这一受限 profile 给出 typed event-DAG 与 closed-finite schedule-equivalence theorem；可接续 decode 的 boundary-state embedding、任意 cyclic topology、一般 dynamic event generation、zero-delay SCC 与 fixed-point kernel 仍未形成统一定理，其候选推进顺序见 [[finite-event-dag-and-zero-delay-loops-memo]]。
+> 第 1-5 节已经定义顺序折叠、分块正确性、语义商、有限逻辑事件有向无环图、主力计算核族与步骤模拟。[[token-owned-general-dag-routing]] 已对“固定周期 + 有限单位时延空间有向无环图 + 仅向前路由”这一受限语义配置给出类型化事件有向无环图与封闭有限调度等价定理；可接续解码的边界状态嵌入、任意有环拓扑、一般动态事件生成、零时延强连通分量与定点计算核仍未形成统一定理，其候选推进顺序见 [[finite-event-dag-and-zero-delay-loops-memo]]。
 
 > [!important] 证否边界
 > 本页以构造性 correctness 为主。任意黑盒自适应 routing 在 exact、work-efficient 前提下为何不能获得次线性 adaptive-depth prefill，见独立数学文档 [[adaptive-routing-prefill-impossibility]]。该下界不自动等价于具体 LH selector 的不可能性结论。

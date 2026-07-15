@@ -11,9 +11,12 @@ tags:
 # StepTransition Implementation Specification
 
 > [!summary] 本页定位
-> 本页只处理 `StepTransition` 的规范性实现抽象、Event IR、LH 映射、phase/read/write/commit 约束、kernel 替换路线与工程检查项。数学定义与证明见 [[step-transition-mathematical-specification]]；`~/llm/tide` 当前完成度见 [[current-architecture-state]]。
+> 本页只处理 `StepTransition` 的规范性实现抽象、事件中间表示（Event IR）、LH 映射、阶段/读取/写入/提交约束、计算核替换路线与工程检查项。数学定义与证明见 [[step-transition-mathematical-specification]]；`~/llm/tide` 当前完成度见 [[current-architecture-state]]。
 
-本页不是代码状态日志。这里的 `Graph / State / Workspace / Schedule / Kernel` 是稳定接口词汇；某个接口是否已经由当前 CPU、packed 或 Ascend backend 实现，应以 [[current-architecture-state]] 为准。
+> [!note] 中英文术语
+> 本页沿用 [[token-owned-general-dag-routing#术语约定与中英文对照|Tide 中英文术语表]]；解释性正文原则上使用中文，接口名、代码字段、固定缩写和模型专名保留英文。
+
+本页不是代码状态日志。这里的 `Graph / State / Workspace / Schedule / Kernel` 是稳定接口词汇；某个接口是否已经由当前 CPU、紧凑打包或 Ascend 后端实现，应以 [[current-architecture-state]] 为准。
 
 ## 为什么需要实现规范
 
