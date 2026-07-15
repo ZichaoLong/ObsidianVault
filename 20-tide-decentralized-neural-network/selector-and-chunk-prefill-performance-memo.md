@@ -17,7 +17,10 @@ tags:
 
 其中“任意自适应 routing 为什么不存在通用 exact、work-efficient、次线性 adaptive-depth prefill”的正式定义与证明，已经独立写入 [[adaptive-routing-prefill-impossibility]]；本页继续保留架构分层、capability contraction 与候选推进路线。
 
-基于每条 edge 延迟为 1 的进一步正向候选，包括一般空间 DAG、owner/frontier-labelled signal、显式 node context、三种同刻/融合语义和 prefill-compatible selector，见 [[token-owned-general-dag-routing]]。
+基于每条空间边延迟为 1 的进一步正向候选，包括一般空间 DAG、带 `owner/frontier` 的消息和局部输出记录、显式节点上下文、三种同刻/融合语义和 prefill-compatible selector，见 [[token-owned-general-dag-routing]]。
+
+> [!note] 术语边界
+> 本 memo 讨论的是架构候选，规范对象以 [[token-owned-general-dag-routing#^tide-object-layers|四层对象模型]] 为准。为避免与因果前沿字段 `frontier` 混淆，旧称 `frontier-local` 的执行能力在本页统一改名为 `ready-set-local`；它只表示一组依赖已满足、可联合调度的事件。
 
 核心判断是：
 
@@ -52,9 +55,9 @@ $$
 
 其中：
 
-- $C_j$ 是本次调用的 candidate activations。
+- $C_j$ 是本次调用的候选记录集合；每条记录至少包含候选空间位置和数值隐藏激活。
 - $Q_j$ 是 selector persistent state。
-- $A_j$ 是被保留的 active set。
+- $A_j$ 是被选择的候选记录集合；它决定后续路由或节点更新事件，不是数值 activation 本身。
 - $Q_{j+1}$ 是更新后的 selector state。
 
 当前 LH / Tide 的 $Q_j$ 至少包含：
@@ -68,7 +71,7 @@ selectcount[base, sample, local_point]
 
 1. `selectcount` 较少者优先。
 2. `affectcount` 较多者优先。
-3. candidate signal norm 较高者优先。
+3. candidate hidden-value norm 较高者优先。
 4. column / local index 较小者优先。
 
 因此，它不是 stateless current-step top-k。第 $j$ 次选择需要精确的 $Q_j$，而 $Q_j$ 依赖此前所有 selector calls。
@@ -95,7 +98,7 @@ $$
 
 ### 3.2 Active-set-dependent future computation
 
-被选中的 $A_j$ 会成为后续 graph propagation 的 source activations，因此下一批 candidates 依赖本次选择：
+被选中的 $A_j$ 会产生后续路由、消息或节点更新事件，因此下一批候选记录依赖本次选择：
 
 $$
 C_{j+1}=F_j(A_j,H_j,X_j)
@@ -120,13 +123,13 @@ $$
 当前 LH-like runtime 中最直接的 selector-conditioned memory side effect 是：
 
 ```text
-if clear_after_activation:
+if clear_after_activation:  # historical name: selector accepted the candidate
     clear hidden / local KV memory for selected samples
 ```
 
-也就是说，同一个 node/sample 的 memory 是否清空取决于 selector mask。
+也就是说，同一个空间节点/sample 的 memory 是否清空取决于 selector mask。历史字段名 `clear_after_activation` 中的 activation 指“候选被选择”，不是事件实例或隐藏激活值。
 
-还有一层间接影响：active set 决定后续哪些节点被影响，进而决定未来哪些 node-local memories 会执行 append、decay、update 或 read。
+还有一层间接影响：已选候选记录集合决定后续哪些路由和消息实际产生，进而决定未来哪些空间节点事件会实例化，以及哪些 node-local memories 会执行 append、decay、update 或 read。
 
 这类机制不是 Tide 总目标的必要组成。可以考虑：
 
@@ -177,7 +180,7 @@ pack many selector calls
 | Dynamic active graph | 可在线生成 finite event DAG | 稀疏 compaction、负载均衡与调度 |
 | Stateful selector | 可顺序复现 | 主要 sequence critical-path 候选 |
 
-## 6. 一个两 Token、两路径例子
+## 6. 一个两输入位置、两路径例子
 
 考虑节点：
 
@@ -187,7 +190,7 @@ router -> left -> output
 router -> right -> output
 ```
 
-selector 每次只允许 `left/right` 中一个节点激活，并维护历史计数 $Q$。
+selector 每次只允许 `left/right` 中一条路由被选择，并维护历史计数 $Q$；被选路径随后产生相应消息和节点事件。
 
 对 token A：
 
@@ -200,7 +203,7 @@ selector 每次只允许 `left/right` 中一个节点激活，并维护历史计
 
 1. B 到达 `router` 时，选择依赖 $Q_A'$。
 2. 如果 A 选择过 `left`，公平性计数可能让 B 更倾向 `right`。
-3. B 在 `left/right` 上的后续 candidates 还依赖 A 是否激活、清空或更新过对应 node memory。
+3. B 在 `left/right` 上的后续候选还依赖 A 的候选是否被选择，以及对应空间节点 memory 是否已被清空或更新。
 
 因此，在保持当前 exact semantics 时，B 的完整路径通常不能在 A 的 selector decision 与相关 state commits 之前确定。
 
@@ -218,7 +221,7 @@ selector 每次只允许 `left/right` 中一个节点激活，并维护历史计
 
 1. `all-active`：先建立无 selector 的 graph chunk prefill 基线。
 2. `stateless top-k`：只按当前 candidate score 选择。
-3. `token-local selector`：每个 external token 重置 selector history。
+3. `token-local selector`：每个输入位置开始时重置 selector history。
 4. `persistent LH selector`：保留跨 token / round 的 `affectcount / selectcount`。
 
 这个梯度可区分：
@@ -285,25 +288,27 @@ $$
 $$
 \mathcal D_{\mathrm{ref}}(L)
 =
-(E_{\mathrm{ref}},\prec_{\mathrm{ref}}).
+(E_{\mathrm{ref}},\mathcal A_{\mathrm{ref}}).
 $$
 
-其中，一个 logical event 可以带有坐标：
+其中 $E_{\mathrm{ref}}$ 是实际发生的逻辑事件实例集合，$\mathcal A_{\mathrm{ref}}$ 是直接数据、状态或控制依赖边集合。沿用主文档的对象分层，一个事件实例由事件头与事件值组成；事件头可写为：
 
 $$
-e=(t,r,p,v,\nu),
+h_e=(\eta_e,\kappa_e,\ell_e,\theta_e,\Omega_e,c_e).
 $$
 
 这里：
 
-- $t$ 是 external token index。
-- $r$ 是 internal round index。
-- $p$ 是 phase。
-- $v$ 是 graph node 或 subgraph role。
-- $\nu$ 是被读取或写入的 state version。
-- $\prec_{\mathrm{ref}}$ 包含 data、state、control、visibility 与 commit dependencies。
+- $\eta_e$ 是事件实例标识符。
+- $\kappa_e$ 是事件种类。
+- $\ell_e$ 是外部位置、空间节点或已声明子图位置。
+- $\theta_e$ 是由语义 profile 定义的逻辑时间戳。
+- $\Omega_e$ 是事件直接处理或标识的归属支持集。
+- $c_e$ 是输入前缀依赖上界。
+- 事件值 $\nu(e)$ 另行记录数值产物、状态提交、路由和消息。
+- 状态版本不是事件位置或事件身份的一部分；事件若读取或写入某个状态版本，相应状态依赖必须进入 $\mathcal A_{\mathrm{ref}}$。
 
-Graph schema 本身可以有环，只要对任意有限 $L$ 和有限 internal rounds，实际执行可以展开成有限、dependency-complete 的 event DAG。所有 feedback edge 必须推进 token、round、phase 或其他明确的 logical rank；未定义的 zero-delay algebraic loop 不进入这一执行模型。
+因此，$\mathcal A_{\mathrm{ref}}$ 必须包含 data、state、control、visibility 与 commit dependencies。Graph schema 本身可以有环，只要对任意有限 $L$ 和有限 internal rounds，实际执行可以展开成有限、dependency-complete 的 event DAG。所有 feedback edge 必须严格推进语义 profile 声明的良基 logical rank，例如 step/round/phase/microstep 或 absolute-round/phase/iteration；消息 `owner` 本身不是默认时间秩。未定义的 zero-delay algebraic loop 不进入这一执行模型。
 
 ### 9.2 Certified contraction 与 execution DAG
 
@@ -351,20 +356,20 @@ $$
 | `token-local` | token 之间没有 mutable temporal dependency | batch / map | FFN、Norm、projection、token-local router |
 | `scan-composable` | transition 有紧凑且封闭的 associative summary | parallel prefix scan | Mamba/SSM、affine recurrence |
 | `causal-bulk` | 存在已证明等价的 causal chunk operator | attention/conv 等专用 bulk kernel | causal attention、causal convolution |
-| `frontier-local` | 同一 ready frontier 内没有相互依赖或可见写冲突 | wavefront packing | message-passing round、MoE routing |
+| `ready-set-local` | 同一就绪事件集合内没有相互依赖或可见写冲突 | wavefront packing | message-passing round、MoE routing |
 | `sequential-fallback` | 尚无可用的并行等价 lowering | exact sequential execution | 当前 LH persistent selector |
 
 ### 10.1 Token-local
 
-若对所有 token $t$：
+若对所有输入位置 $t$：
 
 $$
 z_t=f(x_t;\theta),
 $$
 
-并且 $f$ 不读取由其他 token 在本 region 内更新的 mutable state，则所有 $z_t$ 可以并行计算。
+并且 $f$ 不读取由其他输入位置在本 region 内更新的 mutable state，则所有 $z_t$ 可以并行计算。
 
-`token-local` 不要求所有 token 采用同一路径。MoE router 可以根据每个 token 的 hidden state 动态选择不同 expert，只要同层 token 的 routing decisions 不通过 mutable selector state 相互影响。
+`token-local` 描述输入位置之间的依赖性质，不是消息 `owner` 的同义词，也不要求所有输入位置采用同一路径。MoE router 可以根据每个位置的 hidden state 动态选择不同 expert，只要同层各位置的 routing decisions 不通过 mutable selector state 相互影响。
 
 ### 10.2 Scan-composable
 
@@ -418,19 +423,21 @@ $$
 
 则它可以声明 `causal-bulk`。GPT causal attention 是主要例子；它不需要被强行解释为 Mamba 风格的 scan。
 
-### 10.4 Frontier-local
+### 10.4 Ready-set-local
 
-在 event DAG 中，定义 frontier $F_k$ 为一组前驱均已完成、当前可以执行的 events。若 $F_k$ 中任意两个 events：
+在事件 DAG 中，称事件集合 $F_k$ 为一个就绪集合，当且仅当其中每个事件在该调度点的全部前驱均已完成。若 $F_k$ 中任意两个事件：
 
 - 不读取对方尚未提交的 state。
 - 不通过 mutable control state 改变对方的 routing decision。
 - 不发生未定义顺序的 conflicting writes。
 
-则该 frontier 可以并行执行并按 kernel role 打包。
+则该就绪集合可以并行执行并按计算核角色打包，称相应区域满足 `ready-set-local`。
 
-`layer-local` 是 `frontier-local` 在规则 Transformer chain 中的特殊情况。一般 Tide Graph 未必具有 layer；它可能按 graph distance、internal round，或者 $(t,r)$ 的 anti-diagonal 形成 wavefront。
+`layer-local` 是 `ready-set-local` 在规则 Transformer chain 中的特殊情况。一般 Tide Graph 未必具有 layer；它可能按图距离、内部轮次，或者 $(t,r)$ 的反对角线形成 wavefront。
 
-Phase 与 frontier 也不相同。Phase 定义大范围的 barrier、visibility 与 commit order；frontier 是满足这些约束后，由实际 event dependencies 产生的更细粒度 ready set。
+这里的 wavefront 只是调度术语：它表示按依赖关系连续推进的一系列就绪集合，不是消息、持久状态或新的 `frontier` 字段。
+
+Phase 与就绪集合也不相同。Phase 定义大范围的 barrier、visibility 与 commit order；就绪集合是在满足这些约束后，由实际事件依赖与当前执行进度共同确定的可调度集合。它不是消息的因果前沿 `frontier`。
 
 ### 10.5 Sequential fallback
 
@@ -489,18 +496,18 @@ $$
 
 ### 12.3 Prefill-capable temporal state
 
-跨 token state 应尽量由 `scan-composable` 或 `causal-bulk` kernel 承载。对于只在部分 token 激活的 node，可以把该 node 的事件压成按 logical time 排序的稀疏 event stream，再执行 segmented scan 或 packed causal kernel。
+跨输入位置状态应尽量由 `scan-composable` 或 `causal-bulk` 计算核承载。对于只在部分输入位置收到消息并实例化事件的空间节点，可以把该节点的事件压成按逻辑时间排序的稀疏事件序列，再执行 segmented scan 或 packed causal kernel。
 
-如果 state transition 包含时间间隔，kernel 需要显式接收 token id、round id 或 gap $\Delta t$。例如固定 decay 可以把未激活区间折叠为 $A^{\Delta t}$，而不是逐 token 执行空操作。
+如果 state transition 包含时间间隔，计算核需要显式接收输入位置、逻辑轮次或时间间隔 $\Delta t$。例如固定 decay 可以把没有节点事件的区间折叠为 $A^{\Delta t}$，而不是逐输入位置执行空操作。
 
-### 12.4 Frontier-local routing
+### 12.4 Ready-set-local routing
 
-Router 应优先读取当前 event input 和已提交 predecessor state。它不应在同一 frontier 内用一个全局 mutable counter 逐个更新其他 token 的选择优先级。
+Router 应优先读取当前事件输入和已提交前驱状态。它不应在同一就绪集合内用一个全局可变计数器逐项更新其他输入位置的选择优先级。
 
 可接受的 routing 形式包括：
 
 - token-local top-k。
-- 基于上一 frontier snapshot 的 routing。
+- 基于上一就绪集合边界快照的 routing。
 - scan-composable controller state。
 - speculation + validation + replay。
 
@@ -527,7 +534,7 @@ $$
 
 同时还受通信、内存带宽和 kernel efficiency 影响。
 
-“局部通信 + 超稀疏”主要降低 $W$ 与 $C$；`token-local / scan-composable / causal-bulk / frontier-local` 主要降低 $D$。只满足前者还不够：一条极稀疏但跨全部 token 的自适应链，work 很小，却无法获得高吞吐 prefill。
+“局部通信 + 超稀疏”主要降低 $W$ 与 $C$；`token-local / scan-composable / causal-bulk / ready-set-local` 主要降低 $D$。只满足前者还不够：一条极稀疏但跨全部 token 的自适应链，work 很小，却无法获得高吞吐 prefill。
 
 可以据此定义三个运行等级：
 
@@ -572,11 +579,11 @@ $$
 如果：
 
 - `NodeKernel` 可由 token-local、scan 或 causal-bulk lowering 承载。
-- `Router` 是 token-local 或 frontier-local。
+- `Router` 是 token-local 或 ready-set-local。
 - inbox aggregation 是 associative reduction，或有显式 ordered semantics。
 - node state 不与 routing 构成跨 token 的不可组合串行闭环。
 
-那么每个 round 可以把所有 token、active nodes 按 role 和 kernel type 打包。Graph 路径仍然可以是动态的，但 execution span 主要随 internal rounds 与 graph dependency depth 增长，而不是直接退化为 $\Theta(LR)$。
+那么每个 round 可以把所有输入位置和已实例化节点事件按 role 与 kernel type 打包。Graph 路径仍然可以是动态的，但 execution span 主要随 internal rounds 与 graph dependency depth 增长，而不是直接退化为 $\Theta(LR)$。
 
 当前 LH selector 的困难正是它同时引入 persistent selector state、active-set-dependent future computation 和 conditional memory side effects。它可以被 Tide 正确表达，却暂时只能声明 `sequential-fallback`，直到找到等价的 composable lowering、可验证 speculation，或者重新定义 selector semantics。
 
@@ -584,10 +591,10 @@ $$
 
 Tide 可以据此划分为六层：
 
-1. **Reference semantics**：定义 `Step(input_token, State)`、phase、visibility 和 commit order。
+1. **Reference semantics**：定义 `Step(input_value, State)`、phase、visibility 和 commit order。
 2. **Logical Event IR**：展开有限 chunk 的 token/round/phase/node/state-version dependencies。
 3. **Capability registry**：登记 node/subgraph 的 reference operator、chunk lowering 与证明义务。
-4. **Region partition and lowering**：识别 token-local、scan、causal-bulk、frontier-local regions，并生成 execution DAG。
+4. **Region partition and lowering**：识别 token-local、scan、causal-bulk、ready-set-local regions，并生成 execution DAG。
 5. **Sparse scheduler and backend**：active event compaction、role-aware packing、CPU/Ascend lowering、barrier 与 state commit。
 6. **Verification and cost witness**：验证 output/final-state equality，并报告 work、span、communication、memory 和 fallback critical path。
 
@@ -595,10 +602,10 @@ Tide 可以据此划分为六层：
 
 1. 固定稀疏 topology 与 all-active message passing。
 2. Token-local dynamic routing。
-3. Frontier-local sparse activation。
+3. Ready-set-local sparse event execution。
 4. Node-local segmented scan 或 causal-bulk state。
 5. 最后再研究 persistent/stateful selector、speculation 与 replay。
 
 因此，当前设计目标可以最终概括为：
 
-> “局部通信 + 超稀疏”负责降低 work 和 communication；`token-local / scan-composable / causal-bulk / frontier-local` 负责降低 span；reference event DAG、capability contract 与局部等价证明负责确保这些优化没有改变 decode semantics。
+> “局部通信 + 超稀疏”负责降低 work 和 communication；`token-local / scan-composable / causal-bulk / ready-set-local` 负责降低 span；reference event DAG、capability contract 与局部等价证明负责确保这些优化没有改变 decode semantics。

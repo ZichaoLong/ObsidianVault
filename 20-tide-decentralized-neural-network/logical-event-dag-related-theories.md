@@ -26,10 +26,10 @@ The value in Tide is the specialization:
 
 ```text
 autoregressive model / graph neural runtime
-+ external token tick
++ external input position and boundary contract
 + internal round tick
 + phase
-+ node / edge event
++ spatial graph + dynamic event/message instances
 + chunk prefill correctness
 ```
 
@@ -51,12 +51,12 @@ The theorem separates two questions:
 | Memory models and alias analysis | Define which reads/writes may be reordered or optimized without changing observable behavior. | Maps to Tide state namespaces, mailbox lifetime, commit order, selector side effects, and provenance-sensitive aggregation. | Memory models are notoriously subtle even in mature systems; Tide should avoid implicit state semantics. |
 | DAG topological evaluation | A deterministic DAG can be evaluated in any topological order with the same result. | This is the proof core of `C_L = Fold_T^L` when chunk execution preserves the same logical event DAG. | It proves correctness only, not high performance. |
 | Causality analysis and algebraic loops | Instantaneous dependency cycles have no ordinary topological schedule and need delay, rejection, or fixed-point semantics. | Gives a verifier rule for same-rank SCCs and separates ordinary recurrence from optional implicit kernels. | Fixed-point existence, uniqueness, convergence, cost, and differentiation are separate obligations. |
-| Lamport logical time | Logical ordering of events is more fundamental than wall-clock arrival order. | `token_id / round_id / phase_id / node_id` are logical event metadata; physical arrival order can differ. | Logical clocks do not by themselves define model kernels or state semantics. |
+| Lamport logical time | Logical ordering of events is more fundamental than wall-clock completion order. | `message_id / owner / absolute_round / phase / spatial_node` must remain separate metadata; only the declared timestamp/order fields determine logical time. | Logical clocks do not by themselves define model kernels or state semantics. |
 | Kahn process networks | Deterministic processes communicate over channels; results can be independent of scheduling. | Supports the intuition that asynchronous graph execution can be deterministic if communication semantics are disciplined. | KPN assumes specific blocking stream semantics; LH/Tide message aggregation may not satisfy them. |
-| Synchronous dataflow | A static graph can be scheduled predictably when production/consumption rates are known. | Useful for fixed internal rounds, phases, and graph schedules. | Tide may have selectors, sparse activation, or data-dependent routing beyond static SDF. |
-| Timely dataflow / Naiad | Messages carry logical timestamps; operators reason over partially ordered logical time. | Very close to tagged messages and `(token, round, phase, node)` event IDs. | It is a distributed dataflow execution model, not an autoregressive-model proof by itself. |
+| Synchronous dataflow | A static graph can be scheduled predictably when production/consumption rates are known. | Useful for fixed internal rounds, phases, and graph schedules. | Tide may have selectors, sparse event instantiation, or data-dependent routing beyond static SDF. |
+| Timely dataflow / Naiad | Messages carry logical timestamps; operators reason over partially ordered logical time. | Very close to separating message identity, owner labels, profile-specific timestamps, and spatial location. | It is a distributed dataflow execution model, not an autoregressive-model proof by itself. |
 | Parallel prefix / scan | Sequential recurrences can be parallelized when updates compose associatively. | This is the high-performance proof path for Mamba / SSM / linear attention accumulators. | It applies only to recurrences with suitable algebraic structure. |
-| Database provenance | Query results can carry provenance explaining which inputs contributed. | Closest analogy for why untagged aggregation can destroy token / round influence relation. | Provenance frameworks are usually for databases, not neural runtime kernels. |
+| Database provenance | Query results can carry provenance explaining which inputs contributed. | Closest analogy for why untagged aggregation can destroy message-instance and input influence relations. | Provenance frameworks are usually for databases, not neural runtime kernels. |
 | CALM / confluence | Order-independent distributed results require monotonic or coordination-safe structure. | Supports the distinction between safe aggregation and arrival-order-dependent kernels. | CALM is about distributed consistency, not chunk prefill directly. |
 | Differential Dataflow | Collections carry timestamps and differences; incremental operators preserve logical time. | Strong analogy for timestamped collections and trace/arrangement maintenance. | It assumes dataflow collection semantics, not arbitrary neural state mutation. |
 
@@ -95,7 +95,7 @@ Can the implementation change physical order
 without changing the reference-visible state and output?
 ```
 
-In CPU terms, this is handled by architectural state, dependency tracking, reorder buffers, commit order, and precise exceptions. In Tide terms, the corresponding tools are logical event ids, token / round / phase timestamps, provenance-preserving messages, semantic quotients, output / final-state extraction, and step simulation.
+In CPU terms, this is handled by architectural state, dependency tracking, reorder buffers, commit order, and precise exceptions. In Tide terms, the corresponding tools are logical event ids, profile-specific timestamps, separate `owner/frontier` labels, explicit message production/consumption relations, semantic quotients, output / final-state extraction, and step simulation.
 
 This analogy clarifies why the reference semantic contract matters. If the architectural contract only observes a coarse state, then the implementation only needs to reproduce that coarse state. If the contract exposes fine-grained provenance, then an implementation cannot freely erase it.
 
@@ -142,7 +142,8 @@ logical event id
 state namespace
 read set / write set
 phase barrier
-provenance tag
+message production / consumption relation
+declared provenance fields
 value type / quotient boundary
 ```
 
@@ -154,7 +155,7 @@ make dependencies explicit before optimizing them.
 
 For Tide, this means a chunk runtime should not rely on implicit physical arrival order or hidden mutation if we later want to prove prefill/decode equivalence. Values that matter for future kernels should have explicit names, timestamps, or state slots. If a value is intentionally compressed, the compression should be represented as a quotient, not as an accidental implementation detail.
 
-MemorySSA is especially relevant because ordinary SSA handles scalar values more cleanly than mutable memory. Tide has the same issue: node activations are easy; persistent state, mailbox mutation, selector counters, caches, and readout memory need a separate read/write model.
+MemorySSA is especially relevant because ordinary SSA handles scalar values more cleanly than mutable memory. Tide has the same issue: numerical node activation values are comparatively easy; persistent state, mailbox mutation, selector counters, caches, and readout memory need a separate read/write model.
 
 SSA does not make an entire program statically acyclic. CFG loop back edges remain, and a loop-header phi may select a value produced by the previous dynamic iteration. MemorySSA likewise uses `MemoryPhi` at control-flow joins and loops. Once a finite execution is indexed by dynamic iteration or memory version, those dependencies point from an earlier instance to a later instance and can be represented as a finite logical event DAG. This static/dynamic distinction is the relevant lesson for Tide.
 
@@ -257,7 +258,7 @@ The Tide equivalent is not one single memory model yet, but a cluster of semanti
 
 - Which state namespace does a kernel read?
 - Which state namespace does it write?
-- Is a mailbox token-local or persistent?
+- Is a mailbox step-local, round-local, or persistent across input positions?
 - Can two writes commute?
 - Does a selector update affect future routing?
 - Is provenance observable by later kernels?
@@ -300,13 +301,13 @@ This is why a useful theory does not need to solve all necessary-and-sufficient 
 
 ## 1. DAG Evaluation And Topological Order
 
-The minimal mathematical fact is simple: if every value in a deterministic DAG is a function of its predecessors, then any topological order computes the same node values.
+The minimal mathematical fact is simple: if every event-vertex value in a deterministic logical event DAG is a function of its predecessor event values, then any topological order computes the same event-vertex values. This use of “vertex” is distinct from a reusable spatial node in the Tide graph.
 
-For Tide, decode fold gives one legal order:
+For Tide, a step-complete decode fold gives one legal order:
 
 ```text
-for token t:
-  for logical event e in token-local order:
+for input position t:
+  for logical event e in the declared step-local reference order:
     compute e
 ```
 
@@ -386,16 +387,16 @@ Lamport's key point is that distributed systems need an event ordering relation 
 This maps directly to Tide:
 
 ```text
-physical arrival order != logical dependency order
+wall-clock completion order != logical dependency order
 ```
 
-A late-token signal may physically arrive before an early-token signal, but it must carry enough metadata:
+一个 `owner` 较大的消息可以在墙钟时间上先完成或先写入缓冲区，但它必须携带足够的逻辑元数据：
 
 ```text
-(token_id, internal_round_id, phase_id, source_node_id)
+(message_id, owner_index, absolute_round, phase_id, source_spatial_node)
 ```
 
-Then the receiving node can bucket, sort, mask, or buffer messages according to logical time.
+接收空间节点随后按逻辑时间戳分桶、排序、掩码或缓冲。这里 `owner_index` 是归属字段，`absolute_round + phase_id` 才构成逻辑时间；二者不能合并。
 
 This is the conceptual basis for allowing out-of-order packed / parallel execution while still proving `C_L = Fold_T^L`.
 
@@ -431,7 +432,7 @@ Synchronous Dataflow studies graphs whose nodes consume and produce fixed number
 
 The connection to Tide is strongest when the runtime has:
 
-- fixed external token ticks;
+- fixed external input boundaries;
 - fixed internal round count;
 - fixed phase order;
 - fixed graph topology;
@@ -440,13 +441,13 @@ The connection to Tide is strongest when the runtime has:
 This resembles the cleanest version of B0/B2:
 
 ```text
-for external token:
+for external input step:
   for internal round:
     for phase:
       compute fixed graph operations
 ```
 
-The limitation is that Tide/LH may introduce selectors, sparse activation, and data-dependent routing. Once routing changes dynamically, SDF is no longer enough; logical event DAG semantics still apply, but static scheduling may not.
+The limitation is that Tide/LH may introduce selectors, sparse event instantiation, and data-dependent routing. Once routing changes dynamically, SDF is no longer enough; logical event DAG semantics still apply, but static scheduling may not.
 
 Relevant source:
 
@@ -459,11 +460,11 @@ Naiad is especially relevant because messages carry logical timestamps, and comp
 This is close to what Tide needs for LH-like chunk prefill:
 
 ```text
-message = value + logical timestamp
-logical timestamp = (token, round, phase, node/edge)
+message = message_id + value + owner + logical_timestamp + spatial_location
+logical_timestamp = profile-specific rank fields
 ```
 
-With such metadata, physical delivery can be out of order while logical visibility is preserved.
+其中 `owner` 不是时间戳，空间位置也不是时间字段。保留这些相互独立的元数据后，物理交付可以乱序，而逻辑可见性仍可保持。
 
 This is the closest existing system-level analogy to `Logical Event DAG Theorem`.
 
@@ -580,7 +581,7 @@ to support correct incremental / out-of-order computation
 
 For Tide, this suggests:
 
-- message collections should preserve token / round / phase timestamps;
+- message collections should preserve message identity, owner labels, logical timestamps, and required source relations;
 - arrangements / indexes can be derived views, not semantic replacements;
 - aggregation is safe only when it is a semantics-preserving quotient;
 - physical compaction must preserve the queries future kernels need.
@@ -600,7 +601,7 @@ The current theoretical stack should be read as:
 5. Compiler / architecture history suggests the right engineering shape: semantic contract, explicit IR, sufficient transformation rules, validation, then backend lowering.
 6. General graph support requires preserving logical event provenance, or proving the lost information is a semantics-preserving quotient.
 7. LH is a mechanism pool and golden reference, not a mandatory final contract. Mechanisms that block strict prefill may be modified, isolated, or replaced while retaining the local-communication and ultra-sparsity goals.
-8. Static Tide topology may be cyclic, but each terminating strict execution over a finite chunk should admit a dependency-complete logical event DAG indexed by token / round / phase / microstep.
+8. Static Tide topology may be cyclic, but each terminating strict execution over a finite chunk should admit a dependency-complete logical event DAG indexed by a profile-specific well-founded rank such as external step/internal round/phase/microstep or absolute round/phase/semantic tie.
 9. Same-rank zero-delay SCCs are not ordinary scheduling problems; they require delay, rejection, or an explicit fixed-point contract.
 
 The design pressure for Tide is therefore:

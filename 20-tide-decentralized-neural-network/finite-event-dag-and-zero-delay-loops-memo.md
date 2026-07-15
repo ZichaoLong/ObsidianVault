@@ -11,6 +11,9 @@ tags:
 
 # Finite Event DAG And Zero-Delay Loops Memo
 
+> [!note] 术语边界
+> 本 memo 中的空间节点/空间边属于静态图，事件顶点/事件依赖边属于一次动态执行；`token` 是外部输入位置和值，不是计算轨迹；逻辑秩描述依赖推进方向，不等于消息 `owner`。选择器所谓“激活节点”统一理解为产生路由/消息，并使未来节点事件在消息到达后实例化，而不是创建静态空间节点。
+
 ## Position
 
 本文记录一项尚未正式并入 Tide 数学主线的判断：
@@ -25,7 +28,7 @@ tags:
 
 1. CFG loop、SSA $\phi$ 与 MemorySSA `MemoryPhi` 不是 finite logical event DAG 观点的反例。它们是 static cyclic representation；加入 dynamic iteration / memory-version index 后，有限执行依赖仍从较早实例指向较晚实例。
 2. Tide static graph 可以有环，selector 也可以在线决定路径；strict runtime 的约束对象是每次有限 execution 产生的 logical events，而不是要求 static topology 本身无环。
-3. logical time 是语义要求。底层 kernel 可以接收 raw token / round / phase id，也可以接收由这些 metadata lowering 得到的 mask、segment、packed offset 或 sparse layout。
+3. logical time 是语义要求。底层 kernel 可以接收原始输入位置、绝对轮次、阶段与并列键，也可以接收由这些 metadata lowering 得到的 mask、segment、packed offset 或 sparse layout；消息 `owner` 单独作为归属字段处理。
 4. 同一 logical rank 内的 zero-delay SCC 不存在普通 topological schedule。strict core 应默认拒绝；若确有任务需要，必须显式封装为具有独立 fixed-point contract 的 implicit kernel。
 5. 当前优先目标不是寻找无约束的全局充分必要条件，而是建立 finite logical event DAG representation、local refinement sufficiency、zero-delay cycle dichotomy 与 non-degenerate performance witness 四层结果。
 
@@ -48,37 +51,46 @@ tags:
 
 Tide 后续需要动态性：
 
-- 激活哪些 node / edge 可能由 selector 或 controller state 决定。
+- 哪些空间边被选择、哪些未来节点事件会实例化，可能由 selector 或 controller state 决定。
 - 从输入到输出不一定存在预先固定的单一路径或有限路径集合。
-- 同一个 static graph 可以在不同 token、round、phase 上产生不同 dynamic execution。
+- 同一个静态空间图可以在不同输入位置、内部轮次和阶段上产生不同的动态事件执行。
 - kernel 可以把多个 logical events pack、batch、fuse 后执行。
 
 但正常 prefill 调用只处理有限 token 序列。若一次调用还满足以下条件：
 
 1. internal round 数有限，或运行时有有限 event budget；
 2. 每个 kernel 调用终止；
-3. selector 不产生无限的同一时刻递归激活；
+3. selector 不产生无限的同一逻辑时刻递归事件实例化；
 
 那么该次调用只产生有限 logical event 集合。
 
-注意：有限 token 输入本身不自动推出有限执行。若 dynamic runtime 可以无限增加 internal round，或 fixed-point iteration 不收敛，则仍可能产生无限执行。Tide strict family 因而还需要终止性证明、单调推进的 logical rank，或显式有限 budget。
+注意：有限长度输入本身不自动推出有限执行。若 dynamic runtime 可以无限增加 internal round，或 fixed-point iteration 不收敛，则仍可能产生无限执行。Tide strict family 因而还需要终止性证明、单调推进的 logical rank，或显式有限 budget。
 
 ## 2. 有限 logical event DAG 的规范表述
 
-给定长度为 $L$ 的有限 chunk，令 $mathcal{N}_L$ 是该次 reference execution 中产生的有限 logical event 集合。一个 event 可以带有：
+给定长度为 $L$ 的有限 chunk，令 $\mathcal{N}_L$ 是该次参考执行中实际产生的有限逻辑事件实例集合。沿用统一对象模型，把事件写成事件头和值的有序对：
 
 $$
-e=(t,r,p,k,v,\mu)
+e=(h_e,\nu_e),
 $$
 
-其中：
+其中事件头为：
 
-- $t$ 是 external token tick。
-- $r$ 是 internal round tick。
-- $p$ 是带有明确顺序的 phase ordinal。
-- $k$ 是 phase 内 operation slot 或 microstep。
-- $v$ 是 node / edge / state endpoint。
-- $\mu$ 是 role、type、selector provenance 等附加 metadata。
+$$
+h_e=(\eta_e,\kappa_e,\ell_e,\theta_e,\Omega_e,c_e).
+$$
+
+各字段分别表示：
+
+- $\eta_e$：事件实例标识符。
+- $\kappa_e$：事件种类。
+- $\ell_e$：外部位置、空间节点、空间边或已声明子图位置。
+- $\theta_e$：由语义 profile 定义的逻辑时间戳。
+- $\Omega_e$：事件直接处理或在外部接口上标识的归属支持集。
+- $c_e$：事件值的输入前缀依赖上界。
+- $\nu_e$：事件值，其中可以包含数值产物、状态提交、路由记录和消息记录。
+
+内部轮次、阶段与微步若属于时间语义，应进入 $\theta_e$ 或逻辑秩；role/type 若决定事件类别，应进入 $\kappa_e$ 或显式类型字段。状态版本、选择器来源信息和消息来源关系不应塞进一个无结构的 metadata 坐标，而应由事件值与后续依赖边明确表示。
 
 给定 dependency relation：
 
@@ -105,11 +117,25 @@ $$
 
 ## 3. 动态 runtime 不需要预先知道完整 DAG
 
-dynamic execution 可以在线产生 event，而不必在 prefill 开始前枚举完整路径。可给每个 event 定义 logical rank：
+dynamic execution 可以在线产生 event，而不必在 prefill 开始前枚举完整路径。逻辑秩应由语义 profile 明确给出。例如 step-complete profile 可取：
 
 $$
-\rho(e)=(t,r,p,k)
+\rho_{\mathrm{step}}(e)
+=
+(\text{external step},\text{internal round},\text{phase},\text{microstep}),
 $$
+
+固定周期 streaming profile 可取：
+
+$$
+\rho_{\mathrm{stream}}(e)
+=
+(\text{absolute round},\text{phase},\text{semantic tie},\text{microstep}).
+$$
+
+消息 `owner` 与因果前沿不是默认时间字段；只有配置 O 明确以 `owner` 消解同刻并列时，它才进入 `semantic tie`。
+
+这里 `semantic tie` 是参考语义为同一逻辑时间戳内必须有序的事件指定的确定性并列键；`microstep` 是阶段内部仍需展开多个有序子事件时使用的可选坐标。二者都不能由物理线程完成顺序临时生成，严格术语边界见 [[token-owned-general-dag-routing#时间与边界|时间与边界]] 与 [[token-owned-general-dag-routing#执行、调度与性能|执行、调度与性能]]。
 
 并给 rank 空间规定良基的字典序。runtime 只允许产生满足下式的依赖：
 
@@ -119,9 +145,9 @@ $$
 \rho(e)<\rho(e')
 $$
 
-selector 可以动态决定是否创建 $e'$、连接哪个 predecessor，或激活哪些 node / edge；但一旦创建 dependency，它必须指向更大的 logical rank。这样可以增量构造 DAG，而不要求 static path 固定。
+选择器输出可以动态决定 $e'$ 是否会在未来实例化、连接哪些前驱，或选择哪些空间边并产生后继消息；它不创建或销毁静态空间节点。一旦建立事件依赖，该依赖必须指向更大的 logical rank。这样可以增量构造 DAG，而不要求静态路径固定。
 
-这里的时间 metadata 是语义要求，不一定要求每个底层数值 kernel 都接收若干独立整数 tensor。编译器或 runtime 可以把 $(t,r,p,k)$ lowering 为：
+这里的时间 metadata 是语义要求，不一定要求每个底层数值 kernel 都接收若干独立整数 tensor。编译器或 runtime 可以把相应逻辑秩 lowering 为：
 
 - segment offset。
 - causal mask。
@@ -353,7 +379,7 @@ RootSolveKernel
 ImplicitStateKernel
 ```
 
-这类 kernel 必须有独立的 existence、uniqueness、selection、termination、cost 与 differentiation contract。它们不应成为普通 node/edge runtime 的默认逃生口。
+这类 kernel 必须有独立的 existence、uniqueness、selection、termination、cost 与 differentiation contract。它们不应成为普通空间节点计算与消息传递 runtime 的默认逃生口。
 
 ### 10.3 Static-first prototype
 

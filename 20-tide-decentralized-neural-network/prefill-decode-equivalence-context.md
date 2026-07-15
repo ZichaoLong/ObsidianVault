@@ -11,6 +11,7 @@ tags:
 
 > [!warning] 阅读边界
 > 本页保存从 `lh`、`tide.old` 到 StepTransition 抽象的早期推演，其中大量“当前状态”“尚未完成”描述对应较早工程阶段，已经被后续实现超越。当前数学规范见 [[step-transition-mathematical-specification]]，当前实现规范见 [[step-transition-implementation-specification]]，当前代码完成度见 [[current-architecture-state]]。本页只用于追溯设计来源，不再作为当前计划或验收依据。
+> 本页中的 `signal`、`active node`、`token id`、轨迹等历史用语也不覆盖当前对象定义；阅读时应映射到 [[token-owned-general-dag-routing#^tide-object-layers|四层对象模型]]，不能把历史命名直接带入新定理。
 
 ## 定位
 

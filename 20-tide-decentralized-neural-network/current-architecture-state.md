@@ -31,11 +31,11 @@ tags:
 
 - `RoleAwareGraphSpec` 承载 input/output cortex、bridge、anchor、hierarchy、node role 与 edge role。
 - `ExecutionPhaseSpec` 明确 phase 的 read view、write target、commit policy 与 side-effect boundary。
-- `LhPhaseWorkspace` 表达 token-local staged messages 与 multi-tick readout cache。
-- `LhRuntimeState` 表达跨 token activations、local memories、selectors、pronounce memory 与 phase events。
+- `LhPhaseWorkspace` 表达 step-local staged messages 与 multi-tick readout cache。
+- `LhRuntimeState` 表达跨输入步保存的数值 activation values、local memories、selectors、pronounce memory 与 phase events；这里的 activation 是张量状态，不是事件实例化。
 - native LH whole `think()`、Tide schedule 驱动的 native phase path、独立 Tide CPU path 已形成可比较的三层 reference chain。
 - 独立 Tide CPU kernels 在当前覆盖配置上与 native LH end-to-end logits 对齐。
-- signal-level phase artifacts 与 selector count artifacts 已逐 phase 对齐。
+- message/hidden-level phase artifacts 与 selector count artifacts 已逐 phase 对齐；历史测试接口中的 `signal` 指数值张量，不表示计算轨迹。
 - attention/add hidden families、主要 cache modes、norm families 与 heterogeneous cortex configuration 已有覆盖测试。
 - 已有 CPU stress benchmark，并限制最多 160 核、800 GB address-space budget。
 
@@ -103,8 +103,8 @@ flowchart TB
 | --- | --- | --- |
 | `RoleAwareGraphSpec` | 静态 node/edge role、anchor、hierarchy 与 CSR topology | 不决定 phase visibility 或 commit order |
 | `ExecutionPhaseSpec` | active roles、read view、write target、commit policy、side effects | 不实现数值 kernel |
-| `LhPhaseWorkspace` | token-local input/output extras、output cache、phase artifacts | 默认不跨 token 持久化 |
-| `LhRuntimeState` | activations、local hidden/cache、selector、pronounce、step/tick coordinates | 不隐藏 workspace lifecycle |
+| `LhPhaseWorkspace` | step-local input/output extras、output cache、phase artifacts | 默认不跨输入步持久化 |
+| `LhRuntimeState` | 数值 activation values、local hidden/cache、selector、pronounce、step/tick coordinates | 不隐藏 workspace lifecycle；activation value 不等于事件实例化 |
 | `EdgeSet` / `CortexRuntime` | bridge、affected、cortex update | 不改变 schedule |
 | `LocalChal` / `LocalAttention` / `LocalAdd` | node-local numerical transition | 不偷偷扩大 read scope |
 | `LhNativeBackend` | native LH golden oracle 与 phase-driven reference path | 不是最终 Tide backend |
@@ -115,8 +115,8 @@ flowchart TB
 
 | 目标对象 | 当前可复用基础 | 尚缺内容 |
 | --- | --- | --- |
-| `EventId` | external step、internal tick、phase、node/edge role | 稳定的跨 family schema 与序列化表示 |
-| `LogicalRank` | 固定 LH phase order | dynamic event 的良基 rank 与在线校验 |
+| `EventId` | external step、internal tick、phase、node/edge role 可作为现有字段来源 | 稳定的跨 family 实例标识；不能把单个 `token`/`owner` 同时当作事件身份与逻辑时间 |
+| `LogicalRank` | 固定 LH phase order | profile-specific logical timestamp、semantic tie、良基 rank 与在线校验 |
 | `Dependency` | phase read/write contract、CSR topology | value/state/control/commit dependency 的显式边 |
 | `StateVersion` | `LhRuntimeState` 与 phase read view | backend-neutral version identity 与 conflict relation |
 | `CommitEvent` | `ExecutionPhaseSpec.commit_policy` | 可被 chunk lowering 和 validator 共同引用的事件对象 |
@@ -126,7 +126,7 @@ flowchart TB
 
 ## LH Phase Contract
 
-一个 external token step 的当前 reference order 是：
+一个 external input step 的当前 reference order 是：
 
 ```text
 for internal_tick:
@@ -144,7 +144,7 @@ pronounce
 - 读取 tick-start 还是 phase-updated state。
 - 写入 workspace 还是 persistent state。
 - 写入何时对后续 phase 可见。
-- hidden decay、KV append、selector count、clear-after-activation 等 side effects。
+- hidden decay、KV append、selector count、clear-after-selector-accept 等 side effects。
 
 因此当前最重要的架构结论仍然是：
 
@@ -158,7 +158,7 @@ pronounce
 | Phase contract | 已对齐 | phase order、read view、write target、commit policy、side effects |
 | Native whole vs native phase-driven | 已对齐 | 连续 token logits 与 phase event equality |
 | Independent Tide whole model | 已对齐于当前覆盖配置 | 独立 Tide CPU kernels 对 native LH end-to-end logits |
-| Per-phase signal artifacts | 已对齐 | input/output extras、activations、output cache |
+| Per-phase message/hidden artifacts | 已对齐 | input/output extras、数值 activations、output cache；历史测试名中的 signal 不表示独立计算轨迹 |
 | Selector artifacts | 已覆盖 count state | `affectcount / selectcount`；并非宣称所有未来 tie-breaking 均已证明 |
 | Memory-state artifacts | 未完整覆盖 | hidden/KV memory 尚未进入完整 per-phase artifact report |
 | Hidden/cache modes | 已有组件级覆盖 | `CROSSBATCH / LOOP / PACKED / CACHEDMATMUL / CACHEDPACKED / CACHEDATTENTION` |
