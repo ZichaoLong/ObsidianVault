@@ -16,13 +16,13 @@ tags:
 > 本页只处理 `StepTransition`、`prefill`、`decode`、chunk prefill 与 kernel 优化的数学定义。实现对象、LH 映射、phase 工程约束放在 [[step-transition-implementation-specification]]。
 
 > [!note] 写作与证明约定
-> 本页按“定义先于使用、简单例子先于复杂架构、引理先于定理、证明不跳步”的顺序推进。CPU ISA、编译器、SSA、内存模型等外部概念只作为参考谱系，见 [[logical-event-dag-related-theories]]；它们不替代本页的数学证明。
+> 本页按“概念与符号先于使用、简单例子先于复杂架构、引理先于定理、证明不跳步”的顺序推进。进入定义或证明的每个对象都必须先声明为集合、集合元素、函数、部分函数、关系、有限序列、多重集或有限元组；函数给出定义域和值域，关系给出所在笛卡尔积。直观说明若不承担数学前提，必须保持直白，不能用未定义术语模拟精确性。CPU ISA、编译器、SSA、内存模型等外部概念只作为参考谱系，见 [[logical-event-dag-related-theories]]；它们不替代本页的数学证明，本页也不从其他文档隐式导入正式定义或定理。
 
 > [!note] 中英文术语
 > Tide 数学文档共用 [[token-owned-general-dag-routing#术语约定与中英文对照|术语约定与中英文对照]]。`token`、`prefill`、`decode`、`logits` 以及数学符号、公式字段、代码接口、固定缩写和模型专名保留英文，其余解释性正文优先使用中文。
 
 > [!important] 对象层级约定
-> 本页沿用 [[token-owned-general-dag-routing#六种容易混淆的身份、归属与来源信息|身份、归属与来源信息]] 以及 [[token-owned-general-dag-routing#定义 4.2b：消息来源图、消息分支、分叉与汇聚|消息来源图]] 的区分。$t$ 是输入位置，$x_t$ 是输入值，二者都不是计算轨迹；空间图的节点是可复用计算位置，逻辑事件 DAG 的顶点是一次有限执行中的事件。数学符号 $\mathcal S$ 表示在相邻 transition 调用之间传递的 **transition-state 容器**；其中只有旧值能够影响下一步语义的分量才称为**持久上下文**。B0 为统一表达而把会被 `Init` 无条件覆盖的当前步 activation slot 也放进 $\mathcal S$，但它不承载跨步历史。临时工作区、局部输出记录、消息和事件值若不属于返回的 $\mathcal S$，则不自动成为 transition state 或持久上下文。
+> 本页区分输入位置、输入值、空间节点与逻辑事件：$t$ 是输入位置，$x_t$ 是输入值，二者都不是计算轨迹；空间图的节点是可复用计算位置，逻辑事件 DAG 的顶点是一次有限执行中的事件。数学符号 $\mathcal S$ 表示在相邻 transition 调用之间传递的 **transition-state 容器**；其中只有旧值能够影响下一步语义的分量才称为**持久上下文**。B0 为统一表达而把会被 `Init` 无条件覆盖的当前步 activation slot 也放进 $\mathcal S$，但它不承载跨步历史。临时工作区、局部输出记录、消息和事件值若不属于返回的 $\mathcal S$，则不自动成为 transition state 或持久上下文。本页需要的这些区分均在本页相应定义中重新给出，不以其他文档为定义来源。
 
 > [!roadmap] 当前形式化边界
 > 第 1-5 节已经定义顺序折叠、分块正确性、语义商、有限逻辑事件 DAG、主力计算核族与步骤模拟。[[token-owned-general-dag-routing]] 已对“固定周期 + 有限单位时延空间 DAG + 仅向前路由”这一受限语义配置给出类型化事件 DAG 与封闭有限调度等价定理；可接续 `decode` 的边界状态嵌入、任意有环拓扑、一般动态事件生成、零时延强连通分量与定点计算核仍未形成统一定理，其候选推进顺序见 [[finite-event-dag-and-zero-delay-loops-memo]]。
