@@ -52,6 +52,20 @@ tags:
 7. 直观说明可以不形式化，但必须同时满足两点：其含义无需一串新术语即可直接理解；正文明确它不承担定义或证明前提。若一段文字为了显得准确而引入多个未定义抽象词，就必须改写成数学定义。
 8. 本页不从其他文档导入正式定义或定理。外部文档只能提供研究关系、历史或参考；本页使用的数学对象、前提与结论必须在本页重新声明。
 
+### 0.1b：排版与编号约定
+
+定义只引入对象、函数、关系、集合、记录类型或约束；证明只跟在引理、定理或推论之后。若某个等式从定义推出，应单独写成引理或推论，而不放在定义内部证明。
+
+本文公式标签按用途加前缀。只有需要被引用或强调的展示公式才必须编号；普通中间推导可以不编号。
+
+1. `D-*` 表示定义式，例如某个函数或构造的规定。
+2. `A-*` 表示假设、约束或契约条件。
+3. `L-*` 表示引理中的结论。
+4. `T-*` 表示定理中的核心结论。
+5. `C-*` 表示推论中的结论。
+
+前缀后的数字尽量跟随所在小节编号。例如 `A-5.8d` 表示定义 5.8 中的第四类约束。若一个公式只是中间推导，通常不编号。
+
 ### 定义 0.2：自然数、有限区间与函数族
 
 定义：
@@ -291,7 +305,7 @@ $$
 
 对 $t\in\mathbb I_{B,L}$，值 $x_t\in X$ 是全局位置 $t$ 的输入值。本文写“`token` $t$”时，指位置索引 $t$ 和它的出现 $(t,x_t)$；它不是消息、事件或计算轨迹。
 
-历史位置 $0,\ldots,B-1$ 不属于当前输入变量的定义域。它们对当前窗口的影响只能通过第 3.4 节的左边界延续状态 $C_B$ 出现。
+历史位置 $0,\ldots,B-1$ 不属于当前输入变量的定义域。它们对当前窗口的影响只能通过定义 3.4 的左边界延续状态 $C_B$ 出现。
 
 ### 定义 1.2：当前窗口上的前缀因果函数
 
@@ -403,7 +417,7 @@ i_{\mathrm{read}}
 i_{\mathrm{sample}}
 <
 i_{\mathrm{inject}}.
-\tag{GD-1}
+\tag{A-1.3}
 $$
 
 对 $t\in\mathbb I_{B,L}$，定义：
@@ -466,7 +480,7 @@ a_{R,B,L}(\theta)
 \cup
 \{t\in\mathbb I_{B,L}\mid \theta_t^{\mathrm{in}}\leq_\Theta\theta\}
 \right).
-\tag{GD-2}
+\tag{D-1.4a}
 $$
 
 最大值存在，因为集合非空且有限。
@@ -481,23 +495,25 @@ $$
 
 $$
 c\leq a_{R,B,L}(\theta).
-\tag{GD-3}
+\tag{D-1.4b}
 $$
+
+### 引理 1.5：读出时刻的可见前缀
 
 若 $t\in\mathbb I_{B,L}$，则：
 
 $$
 a_{R,B,L}(\theta_t^{\mathrm{out}})=t.
-\tag{GD-4}
+\tag{L-1.5}
 $$
 
 **证明。**
 
-对任意 $j\in\mathbb I_{B,L}$，若 $j\leq t$，则 $Rj\leq Rt<R(t+1)$，所以 $\theta_j^{\mathrm{in}}\leq_\Theta\theta_t^{\mathrm{out}}$。若 $j>t$，则 $j\geq t+1$；当 $j=t+1$ 时，二者轮次同为 $R(t+1)$，但 $i_{\mathrm{read}}<i_{\mathrm{inject}}$，所以 $\theta_t^{\mathrm{out}}<_\Theta\theta_j^{\mathrm{in}}$；当 $j>t+1$ 时，$R(t+1)<Rj$，所以同样有 $\theta_t^{\mathrm{out}}<_\Theta\theta_j^{\mathrm{in}}$。故 $\theta_j^{\mathrm{in}}\leq_\Theta\theta_t^{\mathrm{out}}$ 当且仅当 $j\leq t$。代入式 GD-2 即得结论。
+对任意 $j\in\mathbb I_{B,L}$，若 $j\leq t$，则 $Rj\leq Rt<R(t+1)$，所以 $\theta_j^{\mathrm{in}}\leq_\Theta\theta_t^{\mathrm{out}}$。若 $j>t$，则 $j\geq t+1$；当 $j=t+1$ 时，二者轮次同为 $R(t+1)$，但 $i_{\mathrm{read}}<i_{\mathrm{inject}}$，所以 $\theta_t^{\mathrm{out}}<_\Theta\theta_j^{\mathrm{in}}$；当 $j>t+1$ 时，$R(t+1)<Rj$，所以同样有 $\theta_t^{\mathrm{out}}<_\Theta\theta_j^{\mathrm{in}}$。故 $\theta_j^{\mathrm{in}}\leq_\Theta\theta_t^{\mathrm{out}}$ 当且仅当 $j\leq t$。代入式 D-1.4a 即得结论。
 
 <div class="qed" aria-label="证毕">∎</div>
 
-### 定义 1.5：给定序列与自回归接口
+### 定义 1.6：给定序列与自回归接口
 
 给定序列 `prefill` 参考把 $x_{B:B+L}$ 作为外部给定函数，但逻辑可见性仍由定义 1.4 约束。
 
@@ -511,7 +527,7 @@ $$
 
 $$
 x_{t+1}=\operatorname{SelectToken}(y_t).
-\tag{GD-5}
+\tag{A-1.6}
 $$
 
 窗口左端 $x_B$ 是否可由 $y_{B-1}$ 接续，不由 $x_{B:B+L}$ 本身表达，而由左边界延续状态 $C_B$ 是否来自前一窗口决定。
@@ -557,7 +573,7 @@ $$
 
 这些条件只排除与输入输出无关的孤立节点，不要求路径等长。
 
-### 定义 2.2：路径与空间深度
+### 定义 2.2：路径集合
 
 对 $u,v\in V$ 与 $k\in\mathbb N$，从 $u$ 到 $v$ 的长度为 $k$ 的路径是序列：
 
@@ -585,7 +601,19 @@ $$
 \{p\mid p\text{ 是从 }u\text{ 到 }v\text{ 的有限有向路径}\}.
 $$
 
-因为 $G$ 是有限 DAG，$\mathsf{Path}_G(u,v)$ 是有限集。
+### 引理 2.3：有限 DAG 的路径集合有限
+
+对任意 $u,v\in V$，路径集合 $\mathsf{Path}_G(u,v)$ 是有限集。
+
+**证明。**
+
+若 $p=(v_0,\ldots,v_k)\in\mathsf{Path}_G(u,v)$ 且存在 $0\leq i<j\leq k$ 使 $v_i=v_j$，则 $(v_i,\ldots,v_j)$ 给出有向环，违反定义 2.1 的 DAG 条件。因此 $p$ 中没有重复节点，所以 $k\leq |V|-1$。集合 $V$ 有限，长度不超过 $|V|-1$ 的 $V$ 中元素序列只有有限多个，故 $\mathsf{Path}_G(u,v)$ 有限。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+### 定义 2.4：空间深度与固定周期
+
+定义 2.1 保证 $\mathsf{Path}_G(s,z)$ 非空；引理 2.3 保证相关路径集合有限，所以本定义中的 $d_{\min}$ 与 $D$ 都存在。
 
 定义最短输入输出距离：
 
@@ -607,16 +635,16 @@ $$
 
 $$
 R=d_{\min}.
-\tag{GD-6}
+\tag{A-2.4}
 $$
 
-### 定义 2.3：单位时延空间边
+### 定义 2.5：单位时延空间边
 
 若一个事件在空间节点 $u$、绝对轮次 $\tau$ 产生沿空间边 $(u,v)\in E$ 的消息，则该消息的到达时间戳必须为：
 
 $$
 (\tau+1,i_{\mathrm{arrive}}).
-\tag{GD-7}
+\tag{A-2.5}
 $$
 
 因此同一绝对轮次内没有跨空间边的零时延传播。
@@ -816,24 +844,24 @@ $$
 
 $$
 \operatorname{frontier}(\widetilde S_v^b)\leq\operatorname{prev}(b).
-\tag{GD-8}
+\tag{A-3.4a}
 $$
 
 对每个 $m\in\mathcal M_b^\partial$：
 
 $$
 \operatorname{frontier}(m)\leq\operatorname{prev}(b),
-\tag{GD-9}
+\tag{A-3.4b}
 $$
 
 并且：
 
 $$
 \beta(b)<_\Theta\operatorname{arrival}(m).
-\tag{GD-10}
+\tag{A-3.4c}
 $$
 
-式 GD-10 表示这些消息在切面 $\beta(b)$ 之后才到达；若某条历史消息在同一轮次 $Rb$ 的到达阶段已经到达，它应已经被边界状态 $\mathbf S^b$ 吸收，而不应仍放在 $\mathcal M_b^\partial$ 中。
+式 A-3.4c 表示这些消息在切面 $\beta(b)$ 之后才到达；若某条历史消息在同一轮次 $Rb$ 的到达阶段已经到达，它应已经被边界状态 $\mathbf S^b$ 吸收，而不应仍放在 $\mathcal M_b^\partial$ 中。
 
 第四，消息标识符在 $\mathcal M_b^\partial$ 上单射。即对 $m,m'\in\mathcal M_b^\partial$：
 
@@ -861,7 +889,7 @@ $$
 C_{B+L}=(\mathbf S^{B+L},\mathcal M_{B+L}^\partial).
 $$
 
-它由第 5.8 节的执行记录构造。直观上，$\mathbf S^{B+L}$ 是每个节点在右切面 $\beta_{B+L}$ 前最后可见的状态，$\mathcal M_{B+L}^\partial$ 是到达时间戳严格晚于 $\beta_{B+L}$ 的未消费消息。这里先只说明它的类型；构造公式在定义 5.8 中给出。
+它由定义 5.9 的右边界构造给出。直观上，$\mathbf S^{B+L}$ 是每个节点在右切面 $\beta_{B+L}$ 前最后可见的状态，$\mathcal M_{B+L}^\partial$ 是到达时间戳严格晚于 $\beta_{B+L}$ 的未消费消息。这里先只说明它的类型；构造公式在定义 5.9 中给出。
 
 ## 4. 节点局部对象与路由对象
 
@@ -891,7 +919,7 @@ I_{v,\tau,t}^{\mathcal M}(m)
 \operatorname{owner}(m)=t,\\
 0,&\text{其他情形}.
 \end{cases}
-\tag{GD-11}
+\tag{D-4.1}
 $$
 
 定义同一节点同一轮次出现的 `owner` 集合：
@@ -1615,14 +1643,14 @@ $$
 
 $$
 \mathcal M_B^\partial\subseteq\mathcal M.
-\tag{GD-12}
+\tag{A-5.6a}
 $$
 
 若 $m\in\mathcal M_B^\partial$，则 $\operatorname{producer}(m)$ 是唯一头为 $h_m^{\mathrm{carry}}$ 的 carry 事件，并且：
 
 $$
 \operatorname{value}(\operatorname{producer}(m))=m.
-\tag{GD-13}
+\tag{A-5.6b}
 $$
 
 若 $m\notin\mathcal M_B^\partial$，则要求：
@@ -1646,7 +1674,7 @@ $$
 
 $$
 \operatorname{arrival}(m)<_\Theta\beta_{B+L},
-\tag{GD-14}
+\tag{A-5.6c}
 $$
 
 则 $m\in\operatorname{dom}(\operatorname{consumer})$。若：
@@ -1657,7 +1685,7 @@ $$
 
 则 $m\notin\operatorname{dom}(\operatorname{consumer})$，并进入右边界在途消息集合。
 
-式 GD-14 使用右切面 $\beta_{B+L}$，所以在轮次 $R(B+L)$ 的到达、计算、提交、读出与采样阶段发生的事件仍属于当前窗口；只有下一次注入 $x_{B+L}$ 及其以后不属于当前窗口。
+式 A-5.6c 使用右切面 $\beta_{B+L}$，所以在轮次 $R(B+L)$ 的到达、计算、提交、读出与采样阶段发生的事件仍属于当前窗口；只有下一次注入 $x_{B+L}$ 及其以后不属于当前窗口。
 
 ### 定义 5.7：状态依赖、读出依赖与事件 DAG
 
@@ -1719,7 +1747,7 @@ $$
 \operatorname{stateInput}(\operatorname{value}(e'))
 =
 (\mathtt{boundaryState},\widetilde S_{\operatorname{loc}(e')}^B).
-\tag{GD-15}
+\tag{A-5.7a}
 $$
 
 若 $\mathcal C_{e'}^{\mathrm{state}}\neq\varnothing$，要求存在唯一 $(e,q)\in\mathcal C_{e'}^{\mathrm{state}}$ 使 $q$ 的提交键最大，并要求：
@@ -1728,10 +1756,10 @@ $$
 \operatorname{stateInput}(\operatorname{value}(e'))
 =
 (\mathtt{commitState},q).
-\tag{GD-16}
+\tag{A-5.7b}
 $$
 
-定义部分函数 $\operatorname{stateProducer}:\mathcal E_{\mathrm{state}}\rightharpoonup\mathcal E_{\mathrm{state}}$：当式 GD-16 适用时，$\operatorname{stateProducer}(e')=e$。
+定义部分函数 $\operatorname{stateProducer}:\mathcal E_{\mathrm{state}}\rightharpoonup\mathcal E_{\mathrm{state}}$：当式 A-5.7b 适用时，$\operatorname{stateProducer}(e')=e$。
 
 定义消息依赖关系：
 
@@ -1797,7 +1825,7 @@ $$
 D_{\mathscr X}=(\mathcal E,\mathcal A).
 $$
 
-### 定义 5.8：窗口执行记录与右边界构造
+### 定义 5.8：窗口执行记录
 
 一次给定序列窗口执行记录是七元组：
 
@@ -1876,7 +1904,7 @@ $$
 
 2. 对每个 $m\in\mathcal M_B^\partial$，$\mathcal E$ 中存在唯一头为 $h_m^{\mathrm{carry}}$ 的事件。
 3. 对每个 $t\in\mathbb I_{B,L}$，$\mathcal E$ 中存在唯一头为 $h_t^{\mathrm{in}}$ 的输入事件和唯一头为 $h_t^{\mathrm{out}}$ 的读出事件。
-4. 给定序列执行不包含 $\mathtt{sample}$ 事件；自回归扩展可在定义 1.5 的基础上加入采样事件。
+4. 给定序列执行不包含 $\mathtt{sample}$ 事件；自回归扩展可在定义 1.6 的基础上加入采样事件。
 5. 若 $e\in\mathcal E_{\mathrm{state}}$ 且 $v=\operatorname{loc}(e)$，则其路由记录与出站消息满足以下四个条件。第一，对每个 $r\in\operatorname{elem}(\operatorname{routes}(\operatorname{value}(e)))$：
 
 $$
@@ -1941,21 +1969,21 @@ $$
 $$
 \operatorname{frontier}(e)\leq
 a_{R,B,L}(\operatorname{time}(e)).
-\tag{GD-16a}
+\tag{A-5.8a}
 $$
 
 并且对每个 $t\in\operatorname{support}(e)$，都有：
 
 $$
 t\leq\operatorname{frontier}(e).
-\tag{GD-16b}
+\tag{A-5.8b}
 $$
 
 8. 若 $e\in\mathcal E_{\mathrm{state}}$ 且 $q\in\operatorname{elem}(\operatorname{commits}(\operatorname{value}(e)))$，则 $q\in\mathcal Q_{\operatorname{loc}(e),B,L}$，并且：
 
 $$
 \operatorname{ckey}(q)=\operatorname{stateKey}(e).
-\tag{GD-16c}
+\tag{A-5.8c}
 $$
 
 并且：
@@ -1964,14 +1992,14 @@ $$
 \operatorname{frontier}(\operatorname{version}(q))
 \leq
 \operatorname{frontier}(e).
-\tag{GD-16d}
+\tag{A-5.8d}
 $$
 
 9. 对每个 $e\in\mathcal E_{\mathrm{state}}$，若 $q,q'\in\operatorname{elem}(\operatorname{commits}(\operatorname{value}(e)))$，则：
 
 $$
 q=q'.
-\tag{GD-16e}
+\tag{A-5.8e}
 $$
 
 因此每个输入事件或节点事件在当前模型中至多产生一个状态提交记录。若未来需要一个事件提交多个互不相同的状态位置，应把 $\mathcal S_v$ 拆成多个由不同节点持有的状态集合，或把提交键扩展为包含状态子坐标。
@@ -1979,6 +2007,8 @@ $$
 10. 对每个 $t\in\mathbb I_{B,L}$，读出值为 $y_t=\operatorname{value}(e_t^{\mathrm{out}})\in Y$。
 
 定义执行记录集合 $\mathfrak X_{B,L}^P$ 为所有满足上述条件的七元组集合。
+
+### 定义 5.9：右边界构造
 
 给定 $\mathscr X_{B,L}^P\in\mathfrak X_{B,L}^P$，定义右边界在途消息集合：
 
@@ -1989,7 +2019,7 @@ $$
 m\notin\operatorname{dom}(\operatorname{consumer})
 \text{ 且 }
 \beta_{B+L}<_\Theta\operatorname{arrival}(m)\}.
-\tag{GD-17}
+\tag{D-5.9a}
 $$
 
 对每个节点 $v$，令：
@@ -2027,18 +2057,18 @@ $$
 C_{B+L}(\mathscr X_{B,L}^P)
 =
 (\mathbf S^{B+L},\mathcal M_{B+L}^\partial).
-\tag{GD-18}
+\tag{D-5.9b}
 $$
 
 这是当前窗口交给下一个窗口的延续状态；它不是冲刷后最终状态。
 
-### 引理 5.8a：右边界构造给出合法延续状态
+### 引理 5.10：右边界构造给出合法延续状态
 
-若 $\mathscr X_{B,L}^P\in\mathfrak X_{B,L}^P$，则式 GD-18 定义的 $C_{B+L}(\mathscr X_{B,L}^P)$ 属于 $\mathsf{Cont}_{B+L}$。
+若 $\mathscr X_{B,L}^P\in\mathfrak X_{B,L}^P$，则式 D-5.9b 定义的 $C_{B+L}(\mathscr X_{B,L}^P)$ 属于 $\mathsf{Cont}_{B+L}$。
 
 **证明。**
 
-先看状态部分。对每个 $v\in V$，式 GD-18 定义了唯一 $\widetilde S_v^{B+L}\in\widetilde{\mathcal S}_v$，所以 $\mathbf S^{B+L}$ 是从 $V$ 到 $\bigsqcup_{v\in V}\widetilde{\mathcal S}_v$ 的函数，且第 $v$ 个值属于第 $v$ 个带标签分支。
+先看状态部分。对每个 $v\in V$，式 D-5.9b 定义了唯一 $\widetilde S_v^{B+L}\in\widetilde{\mathcal S}_v$，所以 $\mathbf S^{B+L}$ 是从 $V$ 到 $\bigsqcup_{v\in V}\widetilde{\mathcal S}_v$ 的函数，且第 $v$ 个值属于第 $v$ 个带标签分支。
 
 若 $\widetilde S_v^{B+L}=\widetilde S_v^B$，则由 $C_B\in\mathsf{Cont}_B$：
 
@@ -2050,7 +2080,7 @@ $$
 \operatorname{prev}(B+L).
 $$
 
-若 $\widetilde S_v^{B+L}=\operatorname{version}(q_v^\star)$，则 $q_v^\star$ 由某个状态事件 $e$ 产生，且 $\operatorname{ctime}(q_v^\star)<_\Theta\beta_{B+L}$。由式 GD-16d：
+若 $\widetilde S_v^{B+L}=\operatorname{version}(q_v^\star)$，则 $q_v^\star$ 由某个状态事件 $e$ 产生，且 $\operatorname{ctime}(q_v^\star)<_\Theta\beta_{B+L}$。由式 A-5.8d：
 
 $$
 \operatorname{frontier}(\widetilde S_v^{B+L})
@@ -2058,7 +2088,7 @@ $$
 \operatorname{frontier}(e).
 $$
 
-事件前沿满足式 GD-16a，所以：
+事件前沿满足式 A-5.8a，所以：
 
 $$
 \operatorname{frontier}(e)
@@ -2076,7 +2106,7 @@ $$
 
 因此状态部分满足 $\mathsf{Cont}_{B+L}$ 的前沿条件。
 
-再看消息部分。$\mathcal M_{B+L}^\partial$ 是有限集合 $\mathcal M$ 的子集，所以有限。若 $m\in\mathcal M_{B+L}^\partial$，由式 GD-17：
+再看消息部分。$\mathcal M_{B+L}^\partial$ 是有限集合 $\mathcal M$ 的子集，所以有限。若 $m\in\mathcal M_{B+L}^\partial$，由式 D-5.9a：
 
 $$
 \beta_{B+L}<_\Theta\operatorname{arrival}(m).
@@ -2102,7 +2132,7 @@ $$
 
 <div class="qed" aria-label="证毕">∎</div>
 
-### 定义 5.9：事件值依赖完备性
+### 定义 5.11：事件值依赖完备性
 
 对 $e\in\mathcal E$，定义直接前驱集合：
 
@@ -2169,7 +2199,7 @@ $$
 
 $$
 \operatorname{value}(e)=F_e(\operatorname{head}(e),g_e,b_e).
-\tag{GD-19}
+\tag{D-5.11}
 $$
 
 该定义只允许事件值读取事件头、直接前驱值和已类型化边界参数。模型权重、拓扑和固定超参数被视为函数 $F_e$ 本身的一部分，不作为隐藏输入通道。
@@ -2376,12 +2406,12 @@ $$
 (\mathbf\Sigma_v^P,\mathbf H_v^P,\mathbf Q_v^P,
 \mathbf R_v^P,\mathbf M_{v,\mathrm{out}}^P,
 \widetilde S_v^{P,+}).
-\tag{GD-20}
+\tag{D-6.2}
 $$
 
 六个坐标分别是状态输入记录序列、局部输出记录序列、状态提交记录序列、路由记录序列、出站消息序列和右侧局部状态。
 
-本页不强制规定 $\operatorname{Ref}_{v,B,L}^P$ 内部必须是 O、J 或 F 的哪种具体计算。配置 $P$ 的含义由事件头形状、事件值、路由记录和实现给出的相等性测试共同确定。若实现声称某个联合或融合 kernel 等价于逐 `owner` 折叠，必须另外证明它在式 GD-20 的六个坐标上完全相等。
+本页不强制规定 $\operatorname{Ref}_{v,B,L}^P$ 内部必须是 O、J 或 F 的哪种具体计算。配置 $P$ 的含义由事件头形状、事件值、路由记录和实现给出的相等性测试共同确定。若实现声称某个联合或融合 kernel 等价于逐 `owner` 折叠，必须另外证明它在式 D-6.2 的六个坐标上完全相等。
 
 ### 定义 6.3：节点分块算子契约
 
@@ -2402,10 +2432,10 @@ $$
 \mathcal C_{v,B,L}^P(\mathbf U_v,\widetilde S_v^B)
 =
 \operatorname{Ref}_{v,B,L}^P(\mathbf U_v,\widetilde S_v^B).
-\tag{GD-21}
+\tag{A-6.3}
 $$
 
-该等式比较式 GD-20 的全部六个坐标。只比较最终状态、最终读出或总消息数不构成精确节点分块契约。
+该等式比较式 D-6.2 的全部六个坐标。只比较最终状态、最终读出或总消息数不构成精确节点分块契约。
 
 ## 7. 有限性与事件 DAG
 
@@ -2433,7 +2463,7 @@ $$
 
 ### 引理 7.2：窗口事件图是有限 DAG
 
-若执行记录满足定义 5.6--5.9，则事件图 $D_{\mathscr X}=(\mathcal E,\mathcal A)$ 是有限 DAG。
+若执行记录满足定义 5.6、定义 5.7 与定义 5.8，则事件图 $D_{\mathscr X}=(\mathcal E,\mathcal A)$ 是有限 DAG。
 
 **证明。**
 
@@ -2485,7 +2515,7 @@ $$
 \operatorname{ckey}(q)<_{\mathsf{CKey}}\operatorname{stateKey}(e').
 $$
 
-而 $q$ 由事件 $e$ 产生，由式 GD-16c 可得 $\operatorname{stateKey}(e)=\operatorname{ckey}(q)$，所以 $\lambda(e)<\lambda(e')$。
+而 $q$ 由事件 $e$ 产生，由式 A-5.8c 可得 $\operatorname{stateKey}(e)=\operatorname{ckey}(q)$，所以 $\lambda(e)<\lambda(e')$。
 
 对任意读出边 $(e,e_t^{\mathrm{out}})\in\mathcal A_{\mathrm{read}}$，由定义 5.7，存在提交记录 $q_t^{\mathrm{read}}$ 使 $(e,q_t^{\mathrm{read}})\in\mathcal C_t^{\mathrm{read}}$，且：
 
@@ -2493,7 +2523,7 @@ $$
 \operatorname{ctime}(q_t^{\mathrm{read}})<_\Theta\theta_t^{\mathrm{out}}.
 $$
 
-由式 GD-16c，$\lambda(e)=\operatorname{ckey}(q_t^{\mathrm{read}})$。因此：
+由式 A-5.8c，$\lambda(e)=\operatorname{ckey}(q_t^{\mathrm{read}})$。因此：
 
 $$
 \lambda(e)<\lambda(e_t^{\mathrm{out}}).
@@ -2536,7 +2566,7 @@ $$
 
 并且若 $(v_i,v_j)\in E$，则 $i<j$。
 
-### 引理 8.2a：有限 DAG 存在拓扑序
+### 引理 8.3：有限 DAG 存在拓扑序
 
 定义 2.1 的每个有限空间 DAG 都至少存在一个定义 8.2 意义下的拓扑序。
 
@@ -2548,7 +2578,7 @@ $$
 
 <div class="qed" aria-label="证毕">∎</div>
 
-### 定义 8.3：节点拓扑序分块调度
+### 定义 8.4：节点拓扑序分块调度
 
 给定拓扑序 $\pi=(v_0,\ldots,v_{|V|-1})$ 和执行记录 $\mathscr X_{B,L}^P$。节点拓扑序分块调度按 $\pi$ 处理空间节点。
 
@@ -2572,16 +2602,15 @@ $$
 
 该调用产物中的出站消息被放入后继节点的待处理输入。若消息到达时间晚于 $\beta_{B+L}$，则它不在当前窗口内被消费，而进入右边界在途消息集合。
 
-### 定理 8.4：全局窗口 general DAG 调度等价定理
+### 定理 8.5：全局窗口 general DAG 调度等价定理
 
 固定 $B,L,R,G,C_B,x_{B:B+L}$ 与语义配置 $P$。假设：
 
 1. $G=(V,E)$ 满足定义 2.1 的有限空间 DAG 条件。
-2. $R=d_{\min}$，且时间阶段满足式 GD-1。
+2. $R=d_{\min}$ 满足式 A-2.4，且时间阶段满足式 A-1.3。
 3. $C_B\in\mathsf{Cont}_B$。
-4. 执行记录 $\mathscr X_{B,L}^P\in\mathfrak X_{B,L}^P$ 满足定义 5.1--5.9。
-5. 事件图 $D_{\mathscr X}$ 事件值依赖完备。
-6. 对每个 $v\in V$，分块算子 $\mathcal C_{v,B,L}^P$ 满足式 GD-21。
+4. 执行记录 $\mathscr X_{B,L}^P\in\mathfrak X_{B,L}^P$ 满足定义 5.1--5.8，右边界延续状态按定义 5.9 构造，且事件值满足定义 5.11 的依赖完备性。
+5. 对每个 $v\in V$，分块算子 $\mathcal C_{v,B,L}^P$ 满足式 A-6.3。
 
 则绝对时间流式调度与节点拓扑序分块调度产生相同的以下对象：
 
@@ -2613,7 +2642,7 @@ $$
 \mathbf U_s^{\mathrm{block}}.
 $$
 
-由式 GD-21，两种调度对 $s$ 得到相同的式 GD-20 六类产物，特别是相同的出站消息序列。
+由式 A-6.3，两种调度对 $s$ 得到相同的式 D-6.2 六类产物，特别是相同的出站消息序列。
 
 假设结论对 $v_0,\ldots,v_{i-1}$ 成立。考虑 $v_i$。由拓扑序定义，所有指向 $v_i$ 的空间前驱都属于 $\{v_0,\ldots,v_{i-1}\}$。根据归纳假设，这些前驱在两种调度中产生相同的出站消息序列。再加上两种调度共同拥有的左边界在途消息，可知 $v_i$ 的全部入站消息相同。若 $v_i=s$，当前注入记录也相同。因此：
 
@@ -2623,15 +2652,15 @@ $$
 \mathbf U_{v_i}^{\mathrm{block}}.
 $$
 
-再由式 GD-21，两种调度在 $v_i$ 上产生相同的六类产物。归纳完成，故所有节点产物相同。
+再由式 A-6.3，两种调度在 $v_i$ 上产生相同的六类产物。归纳完成，故所有节点产物相同。
 
-对每个 $t\in\mathbb I_{B,L}$，读出事件 $e_t^{\mathrm{out}}$ 的事件头相同。若 $\mathcal C_t^{\mathrm{read}}\neq\varnothing$，则两种调度具有相同的最大提交记录 $q_t^{\mathrm{read}}$ 和相同的读出直接前驱事件值；若 $\mathcal C_t^{\mathrm{read}}=\varnothing$，则两种调度具有相同的读出边界参数 $\widetilde S_z^B$。由定义 5.9 的事件值依赖完备性，每个 $y_t$ 相同。
+对每个 $t\in\mathbb I_{B,L}$，读出事件 $e_t^{\mathrm{out}}$ 的事件头相同。若 $\mathcal C_t^{\mathrm{read}}\neq\varnothing$，则两种调度具有相同的最大提交记录 $q_t^{\mathrm{read}}$ 和相同的读出直接前驱事件值；若 $\mathcal C_t^{\mathrm{read}}=\varnothing$，则两种调度具有相同的读出边界参数 $\widetilde S_z^B$。由定义 5.11 的事件值依赖完备性，每个 $y_t$ 相同。
 
-右边界状态由式 GD-18 定义，只读取各节点在 $\beta_{B+L}$ 前的最大提交记录和未消费且到达晚于 $\beta_{B+L}$ 的消息。两种调度的提交轨迹、消息集合和消费函数相同，所以 $C_{B+L}$ 相同。
+右边界状态由式 D-5.9b 定义，只读取各节点在 $\beta_{B+L}$ 前的最大提交记录和未消费且到达晚于 $\beta_{B+L}$ 的消息。两种调度的提交轨迹、消息集合和消费函数相同，所以 $C_{B+L}$ 相同。
 
 <div class="qed" aria-label="证毕">∎</div>
 
-### 推论 8.5：从中间开始的 `prefill == decode` 形式
+### 定义 8.6：单窗口转移关系
 
 定义单窗口转移关系：
 
@@ -2661,7 +2690,7 @@ $$
 ((x,C),(y,C'))\in\mathcal T_{B,L}^P
 $$
 
-当且仅当存在满足定理 8.4 前提的执行记录：
+当且仅当存在满足定理 8.5 前提的执行记录：
 
 $$
 \mathscr X_{B,L}^P
@@ -2690,7 +2719,11 @@ X^{\mathbb I_{B,L}}\times\mathsf{Cont}_B
 Y^{\mathbb I_{B,L}}\times\mathsf{Cont}_{B+L}.
 $$
 
-在该单值条件和节点分块契约成立的情况下，节点拓扑序分块执行与定义 8.1 的同一窗口绝对时间流式执行得到同一 $(y,C_{B+L})$。若还要把该窗口执行拆成 $L$ 个长度为 $1$ 的相邻窗口转移：
+### 推论 8.7：从中间开始的 `prefill == decode` 形式
+
+若关系 $\mathcal T_{B,L}^P$ 对第一坐标单值，并且定理 8.5 的节点分块契约成立，则节点拓扑序分块执行与定义 8.1 的同一窗口绝对时间流式执行得到同一 $(y,C_{B+L})$。
+
+若还要把该窗口执行拆成 $L$ 个长度为 $1$ 的相邻窗口转移：
 
 $$
 \mathcal T_{B,1}^P,\mathcal T_{B+1,1}^P,\ldots,\mathcal T_{B+L-1,1}^P,
@@ -2700,11 +2733,11 @@ $$
 
 **证明。**
 
-定理 8.4 已证明定义 8.1 的窗口流式调度与节点拓扑序分块调度在当前窗口上产生相同读出函数 $y\in Y^{\mathbb I_{B,L}}$ 与右边界延续状态 $C_{B+L}$。若 $\mathcal T_{B,L}^P$ 单值，则这个关系值可无歧义地写成部分函数值。
+定理 8.5 已证明定义 8.1 的窗口流式调度与节点拓扑序分块调度在当前窗口上产生相同读出函数 $y\in Y^{\mathbb I_{B,L}}$ 与右边界延续状态 $C_{B+L}$。若 $\mathcal T_{B,L}^P$ 单值，则这个关系值可无歧义地写成部分函数值。
 
 <div class="qed" aria-label="证毕">∎</div>
 
-### 推论 8.6：窗口局部性
+### 推论 8.8：窗口局部性
 
 给定两个全局输入流：
 
@@ -2778,11 +2811,11 @@ $$
 2. 联合但保留归属：联合计算后仍产生多个 $(t,z_t)$。
 3. 融合输出：产生一个或少数记录 $(t^\star,z^\star)$，其中 $z^\star\neq\bot$，且 $t^\star$ 是节点转导器明确写出的 `owner`；常见选择是 $t^\star=\operatorname{frontier}_v^{\mathcal Z}(z^\star)$。
 
-三者都可以进入定理 8.4，但它们是不同参考语义。若一个节点把多个输入压成不可逆充分统计量，那么后续执行只需保持这个参考语义；若它声称等价于分别输出的参考语义，就必须证明式 GD-21 的完整产物相等。
+三者都可以进入定理 8.5，但它们是不同参考语义。若一个节点把多个输入压成不可逆充分统计量，那么后续执行只需保持这个参考语义；若它声称等价于分别输出的参考语义，就必须证明式 A-6.3 的完整产物相等。
 
 ### 9.3 general DAG 能从中间开始，但不自动低 span
 
-定理 8.4 只依赖空间拓扑序，不依赖所有路径等长。历史长路径消息通过 $\mathcal M_B^\partial$ 进入当前窗口；当前长路径消息通过 $\mathcal M_{B+L}^\partial$ 离开当前窗口。这样，有限窗口执行可以从任意 $B$ 开始。
+定理 8.5 只依赖空间拓扑序，不依赖所有路径等长。历史长路径消息通过 $\mathcal M_B^\partial$ 进入当前窗口；当前长路径消息通过 $\mathcal M_{B+L}^\partial$ 离开当前窗口。这样，有限窗口执行可以从任意 $B$ 开始。
 
 但高性能还需要额外性质。对每个节点 $v$，可以给出一个实现操作 DAG：
 
@@ -2852,7 +2885,7 @@ $$
 4. 每条消息的八元组。
 5. 每条消息的生产者与消费者。
 6. 每个节点的规范输入序列 $\mathbf U_v$。
-7. 每个节点的式 GD-20 六类产物。
+7. 每个节点的式 D-6.2 六类产物。
 8. 每个读出 $y_t$。
 9. 右边界状态 $\widetilde S_v^{B+L}$。
 10. 右边界在途消息集合 $\mathcal M_{B+L}^\partial$。
