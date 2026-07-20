@@ -551,8 +551,8 @@ $$
 固定两个不同元素：
 
 $$
-s,z\in V,
-\qquad s\neq z,
+v_{\mathrm{in}},v_{\mathrm{out}}\in V,
+\qquad v_{\mathrm{in}}\neq v_{\mathrm{out}},
 $$
 
 分别称为输入节点与输出节点。
@@ -567,9 +567,9 @@ $$
 
 本文进一步要求：
 
-1. 没有边指向 $s$，即不存在 $u\in V$ 使 $(u,s)\in E$。
-2. 对每个 $v\in V$，存在从 $s$ 到 $v$ 的有向路径。
-3. 对每个 $v\in V$，存在从 $v$ 到 $z$ 的有向路径。
+1. 没有边指向 $v_{\mathrm{in}}$，即不存在 $u\in V$ 使 $(u,v_{\mathrm{in}})\in E$。
+2. 对每个 $v\in V$，存在从 $v_{\mathrm{in}}$ 到 $v$ 的有向路径。
+3. 对每个 $v\in V$，存在从 $v$ 到 $v_{\mathrm{out}}$ 的有向路径。
 
 这些条件只排除与输入输出无关的孤立节点，不要求路径等长。
 
@@ -613,14 +613,14 @@ $$
 
 ### 定义 2.4：空间深度与固定周期
 
-定义 2.1 保证 $\mathsf{Path}_G(s,z)$ 非空；引理 2.3 保证相关路径集合有限，所以本定义中的 $d_{\min}$ 与 $D$ 都存在。
+定义 2.1 保证 $\mathsf{Path}_G(v_{\mathrm{in}},v_{\mathrm{out}})$ 非空；引理 2.3 保证相关路径集合有限，所以本定义中的 $d_{\min}$ 与 $D$ 都存在。
 
 定义最短输入输出距离：
 
 $$
 d_{\min}
 =
-\min\{|p|\mid p\in\mathsf{Path}_G(s,z)\}.
+\min\{|p|\mid p\in\mathsf{Path}_G(v_{\mathrm{in}},v_{\mathrm{out}})\}.
 $$
 
 定义全图最大路径长度：
@@ -798,7 +798,7 @@ $$
 $$
 \mathcal B_{\mathrm{in}}^{B,L}
 =
-\{(t,\theta_t^{\mathrm{in}},s,x)\mid t\in\mathbb I_{B,L},\ x\in X\}.
+\{(t,\theta_t^{\mathrm{in}},v_{\mathrm{in}},x)\mid t\in\mathbb I_{B,L},\ x\in X\}.
 $$
 
 对输入 $x_{B:B+L}$ 与 $t\in\mathbb I_{B,L}$，定义实际注入记录：
@@ -806,7 +806,7 @@ $$
 $$
 b_t^{\mathrm{in}}
 =
-(t,\theta_t^{\mathrm{in}},s,x_t)
+(t,\theta_t^{\mathrm{in}},v_{\mathrm{in}},x_t)
 \in\mathcal B_{\mathrm{in}}^{B,L}.
 $$
 
@@ -1001,6 +1001,8 @@ $$
 =
 \mathbb P_{B,L}\times\mathcal Z_v.
 $$
+
+本小节中的 $z$ 只是 $\mathcal Z_v$ 的元素变量，不表示空间输出节点；空间输出节点始终记为 $v_{\mathrm{out}}$。
 
 若 $\ell=(t,z)\in\mathcal L_{v,B,L}$，定义：
 
@@ -1342,17 +1344,17 @@ $$
 定义输入事件值集合：
 
 $$
-\mathcal W_{s,B,L}^{\mathrm{in}}
+\mathcal W_{v_{\mathrm{in}},B,L}^{\mathrm{in}}
 =
 \mathcal B_{\mathrm{in}}^{B,L}
 \times
-\mathcal{SI}_{s}^{C_B}
+\mathcal{SI}_{v_{\mathrm{in}}}^{C_B}
 \times
-\mathcal L_{s,B,L}^{\star}
+\mathcal L_{v_{\mathrm{in}},B,L}^{\star}
 \times
-\mathcal Q_{s,B,L}^{\star}
+\mathcal Q_{v_{\mathrm{in}},B,L}^{\star}
 \times
-\mathcal{RR}_{s,B,L}^{\star}
+\mathcal{RR}_{v_{\mathrm{in}},B,L}^{\star}
 \times
 \mathcal R_{B,L}^{\star}.
 $$
@@ -1374,7 +1376,7 @@ $$
 =
 \mathcal W_{B,L}^{\mathrm{carry}}
 \cup
-\mathcal W_{s,B,L}^{\mathrm{in}}
+\mathcal W_{v_{\mathrm{in}},B,L}^{\mathrm{in}}
 \cup
 \bigcup_{v\in V}\mathcal W_{v,B,L}^{\mathrm{node}}
 \cup X\cup Y.
@@ -1396,12 +1398,12 @@ $$
 \begin{cases}
 \mathcal W_{B,L}^{\mathrm{carry}},
 &\kappa=\mathtt{carry},\ \ell\in V,\\
-\mathcal W_{s,B,L}^{\mathrm{in}},
-&\kappa=\mathtt{inject},\ \ell=s,\\
+\mathcal W_{v_{\mathrm{in}},B,L}^{\mathrm{in}},
+&\kappa=\mathtt{inject},\ \ell=v_{\mathrm{in}},\\
 \mathcal W_{v,B,L}^{\mathrm{node}},
 &\kappa=\mathtt{node}_P,\ \ell=v\in V,\\
 Y,
-&\kappa=\mathtt{readout},\ \ell=z,\\
+&\kappa=\mathtt{readout},\ \ell=v_{\mathrm{out}},\\
 X,
 &\kappa=\mathtt{sample},\ \ell=\mathtt{external},\\
 \varnothing,
@@ -1495,13 +1497,13 @@ $$
 $$
 h_t^{\mathrm{in}}
 =
-(\eta^{\mathrm{in}}(t),\mathtt{inject},s,\theta_t^{\mathrm{in}},\{t\},t),
+(\eta^{\mathrm{in}}(t),\mathtt{inject},v_{\mathrm{in}},\theta_t^{\mathrm{in}},\{t\},t),
 $$
 
 $$
 h_t^{\mathrm{out}}
 =
-(\eta^{\mathrm{out}}(t),\mathtt{readout},z,\theta_t^{\mathrm{out}},\{t\},t),
+(\eta^{\mathrm{out}}(t),\mathtt{readout},v_{\mathrm{out}},\theta_t^{\mathrm{out}},\{t\},t),
 $$
 
 $$
@@ -1789,7 +1791,7 @@ $$
 \ \middle|\
 \begin{array}{l}
 e\in\mathcal E_{\mathrm{state}},\
-\operatorname{loc}(e)=z,\\
+\operatorname{loc}(e)=v_{\mathrm{out}},\\
 q\in\operatorname{elem}(\operatorname{commits}(\operatorname{value}(e))),\\
 \operatorname{ctime}(q)<_\Theta\theta_t^{\mathrm{out}}
 \end{array}
@@ -2163,7 +2165,7 @@ $$
 \begin{cases}
 X,&\operatorname{kind}(e)=\mathtt{inject},\\
 \mathcal R_{B,L},&\operatorname{kind}(e)=\mathtt{carry},\\
-\widetilde{\mathcal S}_z,&\operatorname{kind}(e)=\mathtt{readout},\\
+\widetilde{\mathcal S}_{v_{\mathrm{out}}},&\operatorname{kind}(e)=\mathtt{readout},\\
 \{\mathtt{unit}\},&\text{其他情形},
 \end{cases}
 $$
@@ -2172,7 +2174,7 @@ $$
 
 1. 若 $e=e_t^{\mathrm{in}}$，则 $b_e=x_t$。
 2. 若 $e$ 是 carry 事件且 $\operatorname{value}(e)=m$，则 $b_e=m$。
-3. 若 $e=e_t^{\mathrm{out}}$，则 $b_e=\widetilde S_z^B$。
+3. 若 $e=e_t^{\mathrm{out}}$，则 $b_e=\widetilde S_{v_{\mathrm{out}}}^B$。
 4. 其他情形下，$b_e=\mathtt{unit}$。
 
 因此，当 $\mathcal C_t^{\mathrm{read}}=\varnothing$ 时，读出事件仍可通过参数 $b_{e_t^{\mathrm{out}}}$ 读取左边界输出节点状态；当 $\mathcal C_t^{\mathrm{read}}\neq\varnothing$ 时，读出事件还可通过 $\mathcal A_{\mathrm{read}}$ 读取窗口内最新提交事件的值。
@@ -2252,11 +2254,11 @@ $$
 =
 \begin{cases}
 \{\mathtt{group}\}\times\Theta\times\mathcal G_{v,B,L},
-&v\neq s,\\
-\bigl(\{\mathtt{group}\}\times\Theta\times\mathcal G_{s,B,L}\bigr)
+&v\neq v_{\mathrm{in}},\\
+\bigl(\{\mathtt{group}\}\times\Theta\times\mathcal G_{v_{\mathrm{in}},B,L}\bigr)
 \cup
 \bigl(\{\mathtt{injectRecord}\}\times\Theta\times\mathcal B_{\mathrm{in}}^{B,L}\bigr),
-&v=s.
+&v=v_{\mathrm{in}}.
 \end{cases}
 $$
 
@@ -2266,7 +2268,7 @@ $$
 \operatorname{utime}((\mathtt{group},\theta,g))=\theta,
 $$
 
-若 $v=s$，还定义：
+若 $v=v_{\mathrm{in}}$，还定义：
 
 $$
 \operatorname{utime}((\mathtt{injectRecord},\theta,b))=\theta.
@@ -2308,13 +2310,13 @@ u_{v,\tau}^{\mathrm{grp}}
 \in\mathcal U_{v,B,L}^{\mathrm{rec}}.
 $$
 
-若 $v=s$ 且 $t\in\mathbb I_{B,L}$，定义注入输入记录：
+若 $v=v_{\mathrm{in}}$ 且 $t\in\mathbb I_{B,L}$，定义注入输入记录：
 
 $$
 u_t^{\mathrm{inj}}
 =
 (\mathtt{injectRecord},\theta_t^{\mathrm{in}},b_t^{\mathrm{in}})
-\in\mathcal U_{s,B,L}^{\mathrm{rec}}.
+\in\mathcal U_{v_{\mathrm{in}},B,L}^{\mathrm{rec}}.
 $$
 
 定义有限集合：
@@ -2327,14 +2329,14 @@ $$
 \tau\in\mathcal T_v^{\mathrm{grp}}(\mathscr X_{B,L}^P)\}
 $$
 
-若 $v\neq s$；若 $v=s$，定义：
+若 $v\neq v_{\mathrm{in}}$；若 $v=v_{\mathrm{in}}$，定义：
 
 $$
-\mathsf{USet}_s(\mathscr X_{B,L}^P)
+\mathsf{USet}_{v_{\mathrm{in}}}(\mathscr X_{B,L}^P)
 =
-\{u_{s,\tau}^{\mathrm{grp}}
+\{u_{v_{\mathrm{in}},\tau}^{\mathrm{grp}}
 \mid
-\tau\in\mathcal T_s^{\mathrm{grp}}(\mathscr X_{B,L}^P)\}
+\tau\in\mathcal T_{v_{\mathrm{in}}}^{\mathrm{grp}}(\mathscr X_{B,L}^P)\}
 \cup
 \{u_t^{\mathrm{inj}}\mid t\in\mathbb I_{B,L}\}.
 $$
@@ -2592,7 +2594,7 @@ $$
 
 1. 左边界在途消息中目标为 $v$ 且到达当前窗口内的消息分组。
 2. 已经处理完的空间前驱节点派发到 $v$ 且到达当前窗口内的消息分组。
-3. 当 $v=s$ 时的当前窗口注入记录 $b_t^{\mathrm{in}}$。
+3. 当 $v=v_{\mathrm{in}}$ 时的当前窗口注入记录 $b_t^{\mathrm{in}}$。
 
 然后调用：
 
@@ -2632,19 +2634,19 @@ $$
 
 边界在途消息集合 $\mathcal M_B^\partial$ 和边界状态 $\widetilde S_v^B$ 是两种调度的共同输入。因此，对任何节点 $v$，来自左边界且目标为 $v$ 的消息在两种调度中相同。
 
-若 $i=0$，则 $v_0=s$。理由如下：定义 2.1 要求每个节点都从 $s$ 可达；若 $u\neq s$，则存在从 $s$ 到 $u$ 的长度大于 $0$ 的有向路径，所以任意拓扑序都把 $s$ 放在 $u$ 之前。因此拓扑序第一项只能是 $s$。
+若 $i=0$，则 $v_0=v_{\mathrm{in}}$。理由如下：定义 2.1 要求每个节点都从 $v_{\mathrm{in}}$ 可达；若 $u\neq v_{\mathrm{in}}$，则存在从 $v_{\mathrm{in}}$ 到 $u$ 的长度大于 $0$ 的有向路径，所以任意拓扑序都把 $v_{\mathrm{in}}$ 放在 $u$ 之前。因此拓扑序第一项只能是 $v_{\mathrm{in}}$。
 
-节点 $s$ 没有空间前驱，故其规范输入只由左边界目标为 $s$ 的在途消息和当前注入记录 $b_t^{\mathrm{in}}$ 构成。这些对象在两种调度中相同，所以：
+节点 $v_{\mathrm{in}}$ 没有空间前驱，故其规范输入只由左边界目标为 $v_{\mathrm{in}}$ 的在途消息和当前注入记录 $b_t^{\mathrm{in}}$ 构成。这些对象在两种调度中相同，所以：
 
 $$
-\mathbf U_s^{\mathrm{stream}}
+\mathbf U_{v_{\mathrm{in}}}^{\mathrm{stream}}
 =
-\mathbf U_s^{\mathrm{block}}.
+\mathbf U_{v_{\mathrm{in}}}^{\mathrm{block}}.
 $$
 
-由式 A-6.3，两种调度对 $s$ 得到相同的式 D-6.2 六类产物，特别是相同的出站消息序列。
+由式 A-6.3，两种调度对 $v_{\mathrm{in}}$ 得到相同的式 D-6.2 六类产物，特别是相同的出站消息序列。
 
-假设结论对 $v_0,\ldots,v_{i-1}$ 成立。考虑 $v_i$。由拓扑序定义，所有指向 $v_i$ 的空间前驱都属于 $\{v_0,\ldots,v_{i-1}\}$。根据归纳假设，这些前驱在两种调度中产生相同的出站消息序列。再加上两种调度共同拥有的左边界在途消息，可知 $v_i$ 的全部入站消息相同。若 $v_i=s$，当前注入记录也相同。因此：
+假设结论对 $v_0,\ldots,v_{i-1}$ 成立。考虑 $v_i$。由拓扑序定义，所有指向 $v_i$ 的空间前驱都属于 $\{v_0,\ldots,v_{i-1}\}$。根据归纳假设，这些前驱在两种调度中产生相同的出站消息序列。再加上两种调度共同拥有的左边界在途消息，可知 $v_i$ 的全部入站消息相同。若 $v_i=v_{\mathrm{in}}$，当前注入记录也相同。因此：
 
 $$
 \mathbf U_{v_i}^{\mathrm{stream}}
@@ -2654,7 +2656,7 @@ $$
 
 再由式 A-6.3，两种调度在 $v_i$ 上产生相同的六类产物。归纳完成，故所有节点产物相同。
 
-对每个 $t\in\mathbb I_{B,L}$，读出事件 $e_t^{\mathrm{out}}$ 的事件头相同。若 $\mathcal C_t^{\mathrm{read}}\neq\varnothing$，则两种调度具有相同的最大提交记录 $q_t^{\mathrm{read}}$ 和相同的读出直接前驱事件值；若 $\mathcal C_t^{\mathrm{read}}=\varnothing$，则两种调度具有相同的读出边界参数 $\widetilde S_z^B$。由定义 5.11 的事件值依赖完备性，每个 $y_t$ 相同。
+对每个 $t\in\mathbb I_{B,L}$，读出事件 $e_t^{\mathrm{out}}$ 的事件头相同。若 $\mathcal C_t^{\mathrm{read}}\neq\varnothing$，则两种调度具有相同的最大提交记录 $q_t^{\mathrm{read}}$ 和相同的读出直接前驱事件值；若 $\mathcal C_t^{\mathrm{read}}=\varnothing$，则两种调度具有相同的读出边界参数 $\widetilde S_{v_{\mathrm{out}}}^B$。由定义 5.11 的事件值依赖完备性，每个 $y_t$ 相同。
 
 右边界状态由式 D-5.9b 定义，只读取各节点在 $\beta_{B+L}$ 前的最大提交记录和未消费且到达晚于 $\beta_{B+L}$ 的消息。两种调度的提交轨迹、消息集合和消费函数相同，所以 $C_{B+L}$ 相同。
 
