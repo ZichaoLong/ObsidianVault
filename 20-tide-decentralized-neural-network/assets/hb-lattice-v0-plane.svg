@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1120" viewBox="0 0 1560 1120">
+  <defs>
+    <style>
+      .title { font: 700 34px "Noto Sans CJK SC", sans-serif; fill: #17232b; }
+      .subtitle { font: 400 18px "Noto Sans CJK SC", sans-serif; fill: #55636b; }
+      .label { font: 600 16px "Noto Sans CJK SC", sans-serif; fill: #17232b; }
+      .small { font: 400 14px "Noto Sans CJK SC", sans-serif; fill: #526068; }
+      .tiny { font: 400 12px "Noto Sans CJK SC", sans-serif; fill: #526068; }
+      .region { fill: #f7f2e7; stroke: #b9ad95; stroke-width: 2; stroke-dasharray: 8 6; rx: 18; ry: 18; }
+      .cell { fill: #fdfbf5; stroke: #83929a; stroke-width: 2; rx: 14; ry: 14; }
+      .selectedCell { fill: #fff1df; stroke: #d26a22; stroke-width: 4; rx: 14; ry: 14; }
+      .carrier { fill: #2a7187; stroke: #184d5e; stroke-width: 2; }
+      .leaf { fill: #d8e4e9; stroke: #6e858f; stroke-width: 1.4; }
+      .active { fill: #e6782d; stroke: #944214; stroke-width: 2; }
+      .candidate { fill: #f6c58d; stroke: #b76b23; stroke-width: 1.5; }
+      .hub { fill: #e4cf8c; stroke: #8e6f13; stroke-width: 2; }
+      .fixedEdge { fill: none; stroke: #9ba4a7; stroke-width: 2; stroke-dasharray: 7 6; }
+      .activeEdge { fill: none; stroke: #d26a22; stroke-width: 4; }
+      .hubEdge { fill: none; stroke: #9a7720; stroke-width: 2.5; }
+      .note { fill: #fffdf7; stroke: #b7aea1; stroke-width: 1.5; rx: 14; ry: 14; }
+    </style>
+    <g id="leafGrid">
+      <circle cx="38" cy="58" r="7" class="leaf"/><circle cx="66" cy="58" r="7" class="leaf"/><circle cx="94" cy="58" r="7" class="leaf"/><circle cx="122" cy="58" r="7" class="leaf"/>
+      <circle cx="38" cy="86" r="7" class="leaf"/><circle cx="66" cy="86" r="7" class="leaf"/><circle cx="94" cy="86" r="7" class="leaf"/><circle cx="122" cy="86" r="7" class="leaf"/>
+      <circle cx="38" cy="114" r="7" class="leaf"/><circle cx="66" cy="114" r="7" class="leaf"/><circle cx="94" cy="114" r="7" class="leaf"/><circle cx="122" cy="114" r="7" class="leaf"/>
+      <circle cx="38" cy="142" r="7" class="leaf"/><circle cx="66" cy="142" r="7" class="leaf"/><circle cx="94" cy="142" r="7" class="leaf"/><circle cx="122" cy="142" r="7" class="leaf"/>
+    </g>
+    <marker id="arrowOrange" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d26a22"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9ba4a7"/>
+    </marker>
+  </defs>
+
+  <rect width="1560" height="1120" fill="#f3efe5"/>
+  <text x="65" y="58" class="title">HB-Lattice-v0：P5/P6 稀疏平面的 4×4 Cell 俯视图</text>
+  <text x="65" y="91" class="subtitle">每个 cell 固定映射一张 Ascend 卡；每格包含 1 个 cell carrier 与 4×4 leaf sites。图中只画一组实际激活路径。</text>
+
+  <!-- Global and region hubs -->
+  <rect x="55" y="140" width="145" height="55" rx="14" ry="14" class="hub"/>
+  <text x="127" y="173" text-anchor="middle" class="label">Global Hub</text>
+
+  <rect x="55" y="270" width="145" height="48" rx="12" ry="12" class="hub"/><text x="127" y="300" text-anchor="middle" class="label">Region Hub R0</text>
+  <rect x="55" y="460" width="145" height="48" rx="12" ry="12" class="hub"/><text x="127" y="490" text-anchor="middle" class="label">Region Hub R1</text>
+  <rect x="55" y="650" width="145" height="48" rx="12" ry="12" class="hub"/><text x="127" y="680" text-anchor="middle" class="label">Region Hub R2</text>
+  <rect x="55" y="840" width="145" height="48" rx="12" ry="12" class="hub"/><text x="127" y="870" text-anchor="middle" class="label">Region Hub R3</text>
+
+  <path d="M127 195 L127 270" class="hubEdge"/>
+  <path d="M127 195 C215 270, 210 435, 127 460" class="hubEdge"/>
+  <path d="M127 195 C250 340, 250 610, 127 650" class="hubEdge"/>
+  <path d="M127 195 C280 430, 270 800, 127 840" class="hubEdge"/>
+
+  <!-- Region bands -->
+  <rect x="225" y="225" width="1265" height="175" class="region"/>
+  <rect x="225" y="415" width="1265" height="175" class="region"/>
+  <rect x="225" y="605" width="1265" height="175" class="region"/>
+  <rect x="225" y="795" width="1265" height="175" class="region"/>
+
+  <!-- 16 cells -->
+  <g transform="translate(245 235)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C00 / A0</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(555 235)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C01 / A1</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(865 235)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C02 / A2</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(1175 235)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C03 / A3</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+
+  <g transform="translate(245 425)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C10 / A4</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(555 425)"><rect width="280" height="155" class="selectedCell"/><text x="12" y="23" class="label">C11 / A5 · selected</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/><circle cx="66" cy="86" r="9" class="active"/><circle cx="94" cy="114" r="9" class="active"/></g>
+  <g transform="translate(865 425)"><rect width="280" height="155" class="selectedCell"/><text x="12" y="23" class="label">C12 / A6 · selected</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/><circle cx="38" cy="86" r="9" class="candidate"/><circle cx="66" cy="114" r="9" class="active"/></g>
+  <g transform="translate(1175 425)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C13 / A7</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+
+  <g transform="translate(245 615)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C20 / A8</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(555 615)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C21 / A9</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(865 615)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C22 / A10</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(1175 615)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C23 / A11</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+
+  <g transform="translate(245 805)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C30 / A12</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(555 805)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C31 / A13</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(865 805)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C32 / A14</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+  <g transform="translate(1175 805)"><rect width="280" height="155" class="cell"/><text x="12" y="23" class="label">C33 / A15</text><rect x="210" y="18" width="48" height="28" rx="7" class="carrier"/><text x="234" y="38" text-anchor="middle" fill="#fff" class="tiny">B</text><use href="#leafGrid"/></g>
+
+  <!-- Region hub to cells -->
+  <path d="M200 294 L245 294" class="hubEdge"/>
+  <path d="M200 484 L245 484" class="hubEdge"/>
+  <path d="M200 674 L245 674" class="hubEdge"/>
+  <path d="M200 864 L245 864" class="hubEdge"/>
+
+  <!-- Example fixed adjacency and active route -->
+  <path d="M621 511 C720 475, 810 475, 903 511" class="fixedEdge" marker-end="url(#arrowGray)"/>
+  <path d="M649 539 C760 585, 850 585, 931 539" class="activeEdge" marker-end="url(#arrowOrange)"/>
+  <text x="790" y="468" text-anchor="middle" class="tiny">固定邻接：候选消息/状态更新</text>
+  <text x="790" y="602" text-anchor="middle" class="tiny">实际激活：只有橙色路径继续重计算与发送</text>
+
+  <!-- Legend -->
+  <rect x="225" y="1005" width="1265" height="80" class="note"/>
+  <rect x="255" y="1027" width="42" height="24" rx="6" class="carrier"/><text x="308" y="1044" class="small">cell backbone B</text>
+  <circle cx="500" cy="1039" r="8" class="leaf"/><text x="520" y="1044" class="small">候选 leaf site</text>
+  <circle cx="705" cy="1039" r="9" class="active"/><text x="726" y="1044" class="small">被激活 leaf</text>
+  <line x1="900" y1="1039" x2="945" y2="1039" class="fixedEdge"/><text x="958" y="1044" class="small">固定局部边</text>
+  <line x1="1160" y1="1039" x2="1205" y2="1039" class="activeEdge"/><text x="1218" y="1044" class="small">实际传播</text>
+</svg>

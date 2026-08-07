@@ -13,6 +13,9 @@ tags:
 
 # 一般 DAG 中携带 `token` 归属信息的消息路由
 
+> [!note] 当前定位
+> 本页已从正向主线降为增强语义参考。当前最低层一般 DAG / allocator 主线见 [[explicit-allocator-general-dag-model]]；本页继续保留 `owner / frontier / support`、同刻融合、读出归因与 token 因果性等更细约束。
+
 > [!summary] 本页定位
 > 本页给出一个从全局流中间开始执行的 general DAG 参考模型。给定全局起点 $B$、长度 $L$ 和左边界延续状态 $C_B$，当前输入变量只有 $x_{B:B+L}$；历史 $x_0,\ldots,x_{B-1}$ 的影响只能通过 $C_B$ 中的节点状态与边界在途消息出现。本文把一个有限窗口执行定义为从左切面 $\beta_B$ 到右切面 $\beta_{B+L}$ 的事件系统，并证明：在空间图为有限单位时延 DAG、消息带 `owner/frontier/arrival`、状态由唯一节点持有、节点分块算子精确实现节点参考转导器时，绝对时间流式调度可以等价重排为节点拓扑序分块调度，且得到同一读出 $y_{B:B+L}$ 与同一右边界延续状态 $C_{B+L}$。
 

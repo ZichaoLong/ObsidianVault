@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1040" viewBox="0 0 1800 1040">
+  <defs>
+    <style>
+      .title { font: 700 34px "Noto Sans CJK SC", sans-serif; fill: #17232b; }
+      .subtitle { font: 400 18px "Noto Sans CJK SC", sans-serif; fill: #55636b; }
+      .stage { font: 700 17px "Noto Sans CJK SC", sans-serif; fill: #22323b; }
+      .label { font: 600 17px "Noto Sans CJK SC", sans-serif; fill: #17232b; }
+      .small { font: 400 14px "Noto Sans CJK SC", sans-serif; fill: #526068; }
+      .tiny { font: 400 13px "Noto Sans CJK SC", sans-serif; fill: #526068; }
+      .box { stroke-width: 2; rx: 14; ry: 14; }
+      .carrier { fill: #dcecf2; stroke: #2a7187; }
+      .compute { fill: #e7eefb; stroke: #426ea8; }
+      .merge { fill: #e4f1df; stroke: #54864c; }
+      .sparse { fill: #fae3cd; stroke: #c66d2c; }
+      .hub { fill: #f0e6c8; stroke: #9a7720; }
+      .note { fill: #fffdf7; stroke: #b7aea1; }
+      .stagebg { fill: #f8f5ed; stroke: #ded7ca; stroke-width: 1; }
+      .fast { fill: none; stroke: #28758e; stroke-width: 4; }
+      .slow { fill: none; stroke: #d26a22; stroke-width: 4; }
+      .hubline { fill: none; stroke: #9a7720; stroke-width: 3; }
+      .context { fill: none; stroke: #9a7720; stroke-width: 2.5; stroke-dasharray: 8 7; }
+      .broadcast { fill: none; stroke: #8d9599; stroke-width: 2.5; stroke-dasharray: 7 7; }
+      .wait { fill: none; stroke: #28758e; stroke-width: 4; stroke-dasharray: 12 8; }
+    </style>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#28758e"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d26a22"/>
+    </marker>
+    <marker id="arrowGold" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#9a7720"/>
+    </marker>
+    <marker id="arrowGray" markerWidth="12" markerHeight="12" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8d9599"/>
+    </marker>
+  </defs>
+
+  <rect width="1800" height="1040" fill="#f3efe5"/>
+  <text x="70" y="62" class="title">HB-Lattice-v0：一个可重复的八平面 Superblock</text>
+  <text x="70" y="94" class="subtitle">Level-0/1 hub 与 cell backbone 常亮；P4-P7 是有固定 deadline 的两级稀疏慢路径。第一版按 P0→P7 同步推进。</text>
+
+  <!-- Stage backgrounds -->
+  <g>
+    <rect x="70" y="125" width="185" height="720" class="stagebg"/>
+    <rect x="265" y="125" width="185" height="720" class="stagebg"/>
+    <rect x="460" y="125" width="185" height="720" class="stagebg"/>
+    <rect x="655" y="125" width="185" height="720" class="stagebg"/>
+    <rect x="850" y="125" width="185" height="720" class="stagebg"/>
+    <rect x="1045" y="125" width="185" height="720" class="stagebg"/>
+    <rect x="1240" y="125" width="185" height="720" class="stagebg"/>
+    <rect x="1435" y="125" width="185" height="720" class="stagebg"/>
+    <text x="162" y="153" text-anchor="middle" class="stage">P0 Entry</text>
+    <text x="357" y="153" text-anchor="middle" class="stage">P1 Attention</text>
+    <text x="552" y="153" text-anchor="middle" class="stage">P2 Add-A</text>
+    <text x="747" y="153" text-anchor="middle" class="stage">P3 FFN</text>
+    <text x="942" y="153" text-anchor="middle" class="stage">P4 Fast/Fork</text>
+    <text x="1137" y="153" text-anchor="middle" class="stage">P5 Sparse-L2</text>
+    <text x="1332" y="153" text-anchor="middle" class="stage">P6 Sparse-L3</text>
+    <text x="1527" y="153" text-anchor="middle" class="stage">P7 Deadline</text>
+  </g>
+
+  <!-- Hierarchical hubs -->
+  <text x="26" y="230" class="small" transform="rotate(-90 26 230)">层级 backbone</text>
+  <rect x="95" y="185" width="135" height="62" class="box hub"/>
+  <text x="162" y="213" text-anchor="middle" class="label">Global Hub</text>
+  <text x="162" y="235" text-anchor="middle" class="tiny">1 个，小状态</text>
+  <rect x="1460" y="185" width="135" height="62" class="box hub"/>
+  <text x="1527" y="213" text-anchor="middle" class="label">Global Hub'</text>
+  <text x="1527" y="235" text-anchor="middle" class="tiny">写入下一块</text>
+  <path d="M230 216 C600 160, 1110 160, 1460 216" class="hubline" marker-end="url(#arrowGold)"/>
+  <text x="840" y="176" text-anchor="middle" class="small">Level-0：cheap SSM / residual carrier，始终存在</text>
+
+  <rect x="95" y="280" width="135" height="62" class="box hub"/>
+  <text x="162" y="308" text-anchor="middle" class="label">Region Hubs</text>
+  <text x="162" y="330" text-anchor="middle" class="tiny">4 个，每行一组</text>
+  <rect x="1460" y="280" width="135" height="62" class="box hub"/>
+  <text x="1527" y="308" text-anchor="middle" class="label">Region Hubs'</text>
+  <text x="1527" y="330" text-anchor="middle" class="tiny">固定槽位聚合</text>
+  <path d="M230 311 C590 270, 1115 270, 1460 311" class="hubline" marker-end="url(#arrowGold)"/>
+  <path d="M162 247 L162 280" class="context" marker-end="url(#arrowGold)"/>
+  <path d="M1527 342 L1527 247" class="context" marker-end="url(#arrowGold)"/>
+
+  <!-- Cell fast path -->
+  <text x="26" y="510" class="small" transform="rotate(-90 26 510)">Cell fast path ×16</text>
+  <rect x="90" y="400" width="145" height="82" class="box carrier"/>
+  <text x="162" y="430" text-anchor="middle" class="label">Cell Carrier</text>
+  <text x="162" y="453" text-anchor="middle" class="small">bₛ,c + shared state</text>
+  <text x="162" y="474" text-anchor="middle" class="tiny">注入 hub context</text>
+
+  <rect x="285" y="400" width="145" height="82" class="box compute"/>
+  <text x="357" y="430" text-anchor="middle" class="label">PreNorm Attn</text>
+  <text x="357" y="453" text-anchor="middle" class="small">常亮 Level-1</text>
+  <text x="357" y="474" text-anchor="middle" class="tiny">读 cell KV/SSM</text>
+
+  <rect x="480" y="400" width="145" height="82" class="box merge"/>
+  <text x="552" y="430" text-anchor="middle" class="label">Residual Add-A</text>
+  <text x="552" y="453" text-anchor="middle" class="small">u = b + Δattn</text>
+  <text x="552" y="474" text-anchor="middle" class="tiny">固定双槽 merge</text>
+
+  <rect x="675" y="400" width="145" height="82" class="box compute"/>
+  <text x="747" y="430" text-anchor="middle" class="label">PreNorm FFN</text>
+  <text x="747" y="453" text-anchor="middle" class="small">常亮 Level-1</text>
+  <text x="747" y="474" text-anchor="middle" class="tiny">产生 Δffn</text>
+
+  <rect x="870" y="400" width="145" height="82" class="box merge"/>
+  <text x="942" y="428" text-anchor="middle" class="label">Add-F + Fork</text>
+  <text x="942" y="451" text-anchor="middle" class="small">f = u + Δffn</text>
+  <text x="942" y="474" text-anchor="middle" class="tiny">完整 GPT-like 快结果</text>
+
+  <rect x="1455" y="400" width="145" height="82" class="box merge"/>
+  <text x="1527" y="428" text-anchor="middle" class="label">Deadline Merge</text>
+  <text x="1527" y="451" text-anchor="middle" class="small">bₛ₊₁,c = f + δslow</text>
+  <text x="1527" y="474" text-anchor="middle" class="tiny">进入下一 superblock</text>
+
+  <path d="M235 441 L285 441" class="fast" marker-end="url(#arrowBlue)"/>
+  <path d="M430 441 L480 441" class="fast" marker-end="url(#arrowBlue)"/>
+  <path d="M625 441 L675 441" class="fast" marker-end="url(#arrowBlue)"/>
+  <path d="M820 441 L870 441" class="fast" marker-end="url(#arrowBlue)"/>
+  <path d="M1015 418 C1160 350, 1360 350, 1455 418" class="wait" marker-end="url(#arrowBlue)"/>
+  <text x="1240" y="344" text-anchor="middle" class="small">快路径在 P4 已完成非平凡计算；v0 仍等待 P7 deadline</text>
+
+  <!-- Explicit bypasses for residual branches -->
+  <path d="M235 466 C320 535, 435 535, 480 466" class="fast" marker-end="url(#arrowBlue)"/>
+  <text x="357" y="548" text-anchor="middle" class="tiny">Attention identity bypass</text>
+  <path d="M625 466 C710 535, 825 535, 870 466" class="fast" marker-end="url(#arrowBlue)"/>
+  <text x="747" y="548" text-anchor="middle" class="tiny">FFN identity bypass</text>
+
+  <!-- Sparse slow path -->
+  <text x="26" y="700" class="small" transform="rotate(-90 26 700)">两级稀疏慢路径</text>
+  <rect x="1065" y="620" width="145" height="94" class="box sparse"/>
+  <text x="1137" y="648" text-anchor="middle" class="label">Leaf L2</text>
+  <text x="1137" y="671" text-anchor="middle" class="small">256 候选 site</text>
+  <text x="1137" y="693" text-anchor="middle" class="tiny">每选中 cell 激活 K₂</text>
+
+  <rect x="1260" y="620" width="145" height="94" class="box sparse"/>
+  <text x="1332" y="648" text-anchor="middle" class="label">Leaf L3</text>
+  <text x="1332" y="671" text-anchor="middle" class="small">局部跨 cell 传播</text>
+  <text x="1332" y="693" text-anchor="middle" class="tiny">每目标 cell 激活 K₃</text>
+
+  <path d="M1015 461 C1050 500, 1090 555, 1120 620" class="broadcast" marker-end="url(#arrowGray)"/>
+  <text x="1055" y="560" class="tiny">固定邻接广播：收到即更新</text>
+  <path d="M1210 667 L1260 667" class="slow" marker-end="url(#arrowOrange)"/>
+  <path d="M1405 667 C1450 630, 1490 560, 1512 482" class="slow" marker-end="url(#arrowOrange)"/>
+  <text x="1320" y="744" text-anchor="middle" class="small">只有 selector 激活的 leaf 执行重计算并继续发送</text>
+
+  <!-- Context injection and summary -->
+  <path d="M162 342 C190 365, 205 382, 215 400" class="context" marker-end="url(#arrowGold)"/>
+  <path d="M1527 482 L1527 280" class="context" marker-end="url(#arrowGold)"/>
+  <text x="1750" y="365" text-anchor="end" class="tiny">cell delta → region/global summary</text>
+
+  <!-- Metadata note -->
+  <rect x="70" y="865" width="1050" height="125" class="box note"/>
+  <text x="95" y="895" class="label">该具体实例的 branch 声明</text>
+  <text x="95" y="924" class="small">• Attention branch：entry=P0，merge=P2，寿命 2 个宏平面，gate=1。</text>
+  <text x="95" y="950" class="small">• FFN branch：entry=P2，merge=P4，寿命 2 个宏平面，gate=1。</text>
+  <text x="95" y="976" class="small">• Sparse branch：entry=P4，merge=P7，最长寿命 3；region active≤2，P5 cell active≤2，固定消息度数≤9，P6 cell active≤2。</text>
+
+  <!-- Legend -->
+  <rect x="1150" y="865" width="470" height="125" class="box note"/>
+  <rect x="1175" y="890" width="32" height="22" class="carrier"/><text x="1218" y="906" class="small">backbone carrier</text>
+  <rect x="1370" y="890" width="32" height="22" class="compute"/><text x="1413" y="906" class="small">常亮计算分支</text>
+  <rect x="1175" y="930" width="32" height="22" class="sparse"/><text x="1218" y="946" class="small">稀疏分支</text>
+  <rect x="1370" y="930" width="32" height="22" class="merge"/><text x="1413" y="946" class="small">merge / barrier</text>
+  <line x1="1175" y1="972" x2="1210" y2="972" class="broadcast"/><text x="1218" y="978" class="small">状态更新广播</text>
+  <line x1="1370" y1="972" x2="1405" y2="972" class="slow"/><text x="1413" y="978" class="small">实际激活传播</text>
+</svg>
