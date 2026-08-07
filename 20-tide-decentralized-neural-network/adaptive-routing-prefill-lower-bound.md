@@ -11,13 +11,13 @@ tags:
   - math
 ---
 
-# Adaptive Routing Prefill Impossibility
+# Adaptive Routing Prefill Lower Bound
 
 > [!summary] 本页定位
 > 本页研究一个证否问题：当较早输入位置产生的晚期控制结果以不可预知的方式决定后续输入位置的 routing 时，是否存在对整个模型类别都有效的、精确且 work-efficient 的高性能 chunk prefill。正文先给出自足的黑盒查询模型，再证明自适应路由链的并行轮数下界，最后说明该结论如何嵌入局部通信、超稀疏的 Tide Graph。
 
 > [!note] 与构造性主线的关系
-> [[step-transition-mathematical-specification]] 主要给出 chunk correctness 的构造性充分条件；本页给出一般动态 routing 的反向边界。它不证明每一个跨 token routing 模型都无法并行，而是证明：只要模型类别允许任意、不可组合的 pointer-chasing 式 routing，就不存在对该类别所有实例都有效的通用高性能 exact prefill。
+> [[tide-mathematical-foundations]] 主要给出 chunk correctness 的构造性充分条件；本页给出一般动态 routing 的反向边界。它不证明每一个跨 token routing 模型都无法并行，而是证明：只要模型类别允许任意、不可组合的 pointer-chasing 式 routing，就不存在对该类别所有实例都有效的通用高性能 exact prefill。
 
 > [!warning] 结论强度
 > “早期 token 可以影响后续 routing”本身不足以推出不可能性。若影响可表示为 prefix sum、affine scan、有限且紧凑的函数复合，仍可能并行。本页下界依赖四个明确条件：exactness、自适应地址依赖、黑盒 transition、以及不枚举整个 routing state space 的 work budget。
@@ -1084,7 +1084,7 @@ MoE 的 active expert graph 在执行 router 前同样未知，但一层中所�
 
 ## 11. 逃离下界的结构化特例
 
-基于一般 unit-delay 空间 DAG、带 `owner/frontier` 的消息和局部输出记录、显式节点上下文、三种同刻/融合语义与无未收缩跨输入位置 selector state 的正向候选设计，见 [[token-owned-general-dag-routing]]。
+基于一般空间 DAG、显式 allocator、可选 `owner/support/frontier` 证书和三种同刻融合语义的正向候选设计，见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|显式 allocator 的一般空间 DAG]] 与 [[tide-mathematical-foundations#第三部分：可选的归属与因果证书|归属与因果证书]]。
 
 ### 11.1 Token-local routing
 
@@ -1129,7 +1129,7 @@ $$
 
 定理 6.1 是黑盒查询模型中的无条件结论。它不需要假设任何尚未解决的复杂度理论命题。
 
-编译器、数据流与并行执行的相关背景见 [[logical-event-dag-related-theories]]；本节只说明本页定理的边界，不把外部理论当作证明步骤。
+编译器、数据流与并行执行的相关背景见 [[tide-background-history-and-references#第一部分：ISA、编译器与 dataflow 理论谱系|ISA、编译器与 dataflow 理论谱系]]；本节只说明本页定理的边界，不把外部理论当作证明步骤。
 
 如果不把 node/kernel transition 看作 oracle，而要求对任意显式给出的程序证明“绝不存在 polynomial-work、polylog-depth 的等价实现”，问题会更困难。
 

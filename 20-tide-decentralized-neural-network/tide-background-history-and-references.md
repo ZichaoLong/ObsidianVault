@@ -1,6 +1,668 @@
-# 人脑皮层、皮质柱与全脑信号传播路径
+---
+type: background-and-references
+status: reference
+tags:
+  - tide
+  - compiler-semantics
+  - dataflow
+  - neuroscience
+  - references
+---
 
-## 从感觉输入到思考、记忆、情绪与运动的调查报告
+# Tide 背景、历史谱系与参考资料
+
+> [!summary] 本页定位
+> 本页只提供研究谱系、工程类比、设计启发和外部参考，不承担 Tide 数学定义或证明。正式对象必须在 [[tide-mathematical-foundations]] 或 [[adaptive-routing-prefill-lower-bound]] 中重新声明，不能从本页隐式导入。
+
+> [!warning] 类比边界
+> ISA、编译器、SSA、MemorySSA、dataflow 与人脑网络都能提供有价值的结构性启发，但它们不是 Tide 正确性或可训练性的证据。特别是，脑科学调查描述真实生物网络，并不要求数字模型直接复制反馈环、皮质柱或脑区连接。
+
+## 第一部分：ISA、编译器与 dataflow 理论谱系
+
+
+
+### Position
+
+> [!summary] 本页定位
+> 本部分是 [[tide-mathematical-foundations]] 的外部理论与工程谱系参考。读者不需要预先掌握 CPU ISA、编译器、SSA 或分布式数据流；每节只提炼对 Tide 有用的最小概念、适用边界与原始参考。类比本身不构成 Tide 定理的证明。dynamic event DAG 与 zero-delay 的 Tide-specific 规则见 [[tide-mathematical-foundations#第四部分：有限事件展开与 zero-delay 边界|有限事件与 zero-delay 边界]]。
+
+`Logical Event DAG Theorem` is not meant to be a mathematically novel theorem. Its core is a specialization of several mature ideas:
+
+- deterministic evaluation of a DAG is independent of the chosen topological order;
+- logical time matters more than physical arrival time;
+- deterministic dataflow systems can be scheduled asynchronously when their semantic dependencies are preserved;
+- high-performance prefill requires additional kernel algebra, such as batched maps, masked matmul, or associative scan.
+
+The value in Tide is the specialization:
+
+```text
+autoregressive model / graph neural runtime
++ external input position and boundary contract
++ internal round tick
++ phase
++ spatial graph + dynamic event/message instances
++ chunk prefill correctness
+```
+
+The theorem separates two questions:
+
+- Correctness: does chunk execution compute the same logical event graph as decode fold?
+- Performance: do the kernels in that graph admit known high-throughput implementations?
+
+### Theory Map
+
+| Theory | Core idea | Relation to Tide | Boundary |
+| --- | --- | --- | --- |
+| ISA contract and out-of-order execution | Hardware may execute instructions out of program order, but must retire results as if the ISA program order had been respected. | Strong analogy for separating reference semantic contract from physical execution schedule. Tide's decode fold / logical event DAG plays the role of architectural semantics; chunk runtime is the optimized micro-execution. | CPU instructions have a mature fixed ISA and precise exception model; Tide kernels, state, provenance, and quotient boundaries are still research objects. |
+| Compiler IR and SSA | Make data dependencies, definitions, and control/dataflow easier to analyze and transform. | Suggests that Tide needs an explicit IR: logical event ids, state namespaces, read/write sets, phase barriers, and provenance tags. | SSA makes analysis tractable; it does not solve aliasing, memory ordering, floating point, or arbitrary semantic equivalence. |
+| Static cyclic IR and dynamic unrolling | CFG loops, SSA phi nodes, and loop-carried dependencies can be cyclic statically while each finite dynamic execution advances iteration/time. | Supports allowing cyclic Tide topology while requiring a finite dependency-complete logical event DAG for each terminating execution over a finite chunk. | Finite input does not imply termination; event generation still needs a bound or well-founded rank. |
+| Abstract interpretation | Replace concrete semantics with a sound abstract semantics through abstraction maps. | Direct analogy for `alpha`, semantic quotient, sufficient statistics, and safe aggregation. | Usually gives useful sufficient conditions, not complete conditions for all optimizations. |
+| Translation validation | Validate a specific optimized program against a source program instead of proving the whole optimizer correct. | Practical route for Tide lowerings: fusion, packed/crossbatch layout, backend-specific kernels, and phase rewrites. | The validator needs a precise IR semantics; hard cases remain floats, memory/state effects, undefined behavior, and solver scalability. |
+| Verified compiler | Mechanically prove that a compiler preserves source semantics. | Long-term analogy for a verified Tide core subset. | High assurance but expensive; probably realistic only for a small core, not the whole experimental runtime at first. |
+| Memory models and alias analysis | Define which reads/writes may be reordered or optimized without changing observable behavior. | Maps to Tide state namespaces, mailbox lifetime, commit order, selector side effects, and provenance-sensitive aggregation. | Memory models are notoriously subtle even in mature systems; Tide should avoid implicit state semantics. |
+| DAG topological evaluation | A deterministic DAG can be evaluated in any topological order with the same result. | This is the proof core of `C_L = Fold_T^L` when chunk execution preserves the same logical event DAG. | It proves correctness only, not high performance. |
+| Causality analysis and algebraic loops | Instantaneous dependency cycles have no ordinary topological schedule and need delay, rejection, or fixed-point semantics. | Gives a verifier rule for same-rank SCCs and separates ordinary recurrence from optional implicit kernels. | Fixed-point existence, uniqueness, convergence, cost, and differentiation are separate obligations. |
+| Lamport logical time | Logical ordering of events is more fundamental than wall-clock completion order. | `message_id / owner / absolute_round / phase / spatial_node` must remain separate metadata; only the declared timestamp/order fields determine logical time. | Logical clocks do not by themselves define model kernels or state semantics. |
+| Kahn process networks | Deterministic processes communicate over channels; results can be independent of scheduling. | Supports the intuition that asynchronous graph execution can be deterministic if communication semantics are disciplined. | KPN assumes specific blocking stream semantics; LH/Tide message aggregation may not satisfy them. |
+| Synchronous dataflow | A static graph can be scheduled predictably when production/consumption rates are known. | Useful for fixed internal rounds, phases, and graph schedules. | Tide may have selectors, sparse event instantiation, or data-dependent routing beyond static SDF. |
+| Timely dataflow / Naiad | Messages carry logical timestamps; operators reason over partially ordered logical time. | Very close to separating message identity, owner labels, profile-specific timestamps, and spatial location. | It is a distributed dataflow execution model, not an autoregressive-model proof by itself. |
+| Parallel prefix / scan | Sequential recurrences can be parallelized when updates compose associatively. | This is the high-performance proof path for Mamba / SSM / linear attention accumulators. | It applies only to recurrences with suitable algebraic structure. |
+| Database provenance | Query results can carry provenance explaining which inputs contributed. | Closest analogy for why untagged aggregation can destroy message-instance and input influence relations. | Provenance frameworks are usually for databases, not neural runtime kernels. |
+| CALM / confluence | Order-independent distributed results require monotonic or coordination-safe structure. | Supports the distinction between safe aggregation and arrival-order-dependent kernels. | CALM is about distributed consistency, not chunk prefill directly. |
+| Differential Dataflow | Collections carry timestamps and differences; incremental operators preserve logical time. | Strong analogy for timestamped collections and trace/arrangement maintenance. | It assumes dataflow collection semantics, not arbitrary neural state mutation. |
+
+### 0. Architecture And Compiler Semantics Lineage
+
+The closest analogy is not that Tide is a CPU or a compiler. The useful analogy is the mature discipline around:
+
+```text
+reference semantics
+high-performance implementation
+semantic preservation proof or validation
+```
+
+This lineage is valuable because it shows a pattern that appears repeatedly:
+
+```text
+do not optimize against intuition;
+optimize against an explicit semantic contract.
+```
+
+#### 0.1 ISA Contract And Out-Of-Order Execution
+
+For a CPU, the architectural contract is the ISA-level program behavior. A high-performance implementation may pipeline, speculate, rename registers, reorder instructions, and execute many operations in parallel. Correctness means the committed architectural state is the same as if the program had executed according to the ISA's reference order.
+
+For Tide, the corresponding separation is:
+
+```text
+reference semantic contract = transition / decode fold / logical event DAG
+physical execution = chunk runtime / packed layout / parallel kernels / out-of-order messages
+```
+
+The same deep issue appears in a different concrete form:
+
+```text
+Can the implementation change physical order
+without changing the reference-visible state and output?
+```
+
+In CPU terms, this is handled by architectural state, dependency tracking, reorder buffers, commit order, and precise exceptions. In Tide terms, the corresponding tools are logical event ids, profile-specific timestamps, separate `owner/frontier` labels, explicit message production/consumption relations, semantic quotients, output / final-state extraction, and step simulation.
+
+This analogy clarifies why the reference semantic contract matters. If the architectural contract only observes a coarse state, then the implementation only needs to reproduce that coarse state. If the contract exposes fine-grained provenance, then an implementation cannot freely erase it.
+
+Relevant sources:
+
+- Robert M. Tomasulo, "An Efficient Algorithm for Exploiting Multiple Arithmetic Units", IBM Journal of Research and Development, 1967. DOI: https://doi.org/10.1147/rd.111.0025
+- John L. Hennessy and David A. Patterson, "Computer Architecture: A Quantitative Approach".
+
+#### 0.2 Compiler Optimization As Semantics-Preserving Translation
+
+A compiler optimization pass usually does not preserve every internal detail of the source program. It preserves the source language or IR's observable behavior:
+
+```text
+source program
+  -> optimization / lowering
+target program
+```
+
+Correctness is judged against the chosen semantics:
+
+```text
+same observable output
+same required memory/state behavior
+same permitted nondeterminism / undefined behavior boundary
+```
+
+This is directly useful for Tide. A Tide lowering pass may fuse kernels, pack sparse rows, batch tokens, reorder graph evaluation, or lower to a device backend. It does not need to preserve every temporary mailbox or workspace representation. It must preserve the reference semantic contract: outputs and persistent state, up to explicitly declared abstraction maps and numeric tolerances.
+
+The warning is also direct. If the contract is vague, optimization becomes ungrounded. In C/LLVM, undefined behavior, poison values, aliasing, and floating-point flags shape which transformations are legal. In Tide, the analogous danger points are provenance loss, selector side effects, phase visibility, state namespace aliasing, commit order, and floating-point reordering.
+
+Relevant sources:
+
+- LLVM Language Reference Manual: https://llvm.org/docs/LangRef.html
+- LLVM MemorySSA documentation: https://llvm.org/docs/MemorySSA.html
+
+#### 0.3 IR, SSA, And Explicit Def-Use Structure
+
+Static Single Assignment form makes each variable definition syntactically unique and exposes def-use structure. Its value is not that hardware works this way. Its value is that optimization and analysis become tractable.
+
+The Tide analogue is a disciplined IR:
+
+```text
+logical event id
+state namespace
+read set / write set
+phase barrier
+message production / consumption relation
+declared provenance fields
+value type / quotient boundary
+```
+
+SSA suggests a design principle:
+
+```text
+make dependencies explicit before optimizing them.
+```
+
+For Tide, this means a chunk runtime should not rely on implicit physical arrival order or hidden mutation if we later want to prove prefill/decode equivalence. Values that matter for future kernels should have explicit names, timestamps, or state slots. If a value is intentionally compressed, the compression should be represented as a quotient, not as an accidental implementation detail.
+
+MemorySSA is especially relevant because ordinary SSA handles scalar values more cleanly than mutable memory. Tide has the same issue: numerical node activation values are comparatively easy; persistent state, mailbox mutation, selector counters, caches, and readout memory need a separate read/write model.
+
+SSA does not make an entire program statically acyclic. CFG loop back edges remain, and a loop-header phi may select a value produced by the previous dynamic iteration. MemorySSA likewise uses `MemoryPhi` at control-flow joins and loops. Once a finite execution is indexed by dynamic iteration or memory version, those dependencies point from an earlier instance to a later instance and can be represented as a finite logical event DAG. This static/dynamic distinction is the relevant lesson for Tide.
+
+Relevant sources:
+
+- Ron Cytron et al., "Efficiently Computing Static Single Assignment Form and the Control Dependence Graph", ACM TOPLAS 1991. DOI: https://doi.org/10.1145/115372.115320
+- LLVM MemorySSA documentation: https://llvm.org/docs/MemorySSA.html
+
+#### 0.4 Abstract Interpretation And Semantic Quotients
+
+Abstract interpretation gives a disciplined way to reason about abstraction:
+
+```text
+concrete semantics
+  -- alpha -->
+abstract semantics
+```
+
+The abstract semantics does not recover concrete details. It is useful only if it soundly preserves the properties being asked.
+
+This is the closest mature theory to Tide's `alpha` / quotient idea. If a runtime aggregates several messages into a summary, correctness is not obtained by reconstructing the lost provenance. Correctness is obtained only when the summary is a sufficient abstract value for every downstream kernel and final-state extraction required by the reference contract.
+
+This also explains why a universal necessary-and-sufficient condition is unlikely to be the first practical target. Mature abstract interpretation often builds useful abstract domains that give sound sufficient conditions. Completeness is domain-specific and usually expensive.
+
+Relevant source:
+
+- Patrick Cousot and Radhia Cousot, "Abstract Interpretation: A Unified Lattice Model for Static Analysis of Programs by Construction or Approximation of Fixpoints", POPL 1977. Paper page: https://www.di.ens.fr/~cousot/COUSOTpapers/POPL77.shtml
+
+#### 0.5 Translation Validation And Alive2
+
+Verified compilers try to prove the optimizer correct once and for all. Translation validation takes a more local route:
+
+```text
+given source IR and optimized IR,
+check this transformation instance is semantics-preserving.
+```
+
+This is probably the most practical near-term analogy for Tide. Instead of trying to prove every future Tide optimizer correct, we can define a small IR and validate each transformation class:
+
+- topological reorder of a logical event DAG;
+- token-wise map fusion;
+- associative scan lowering;
+- packed / crossbatch layout change;
+- backend kernel replacement;
+- phase rewrite or barrier movement;
+- semantics-preserving aggregation quotient.
+
+For a Tide implementation, this maps to:
+
+```text
+reference artifacts
+optimized artifacts
+state equivalence relation
+step simulation
+random differential tests
+SMT / Lean / specialized checker where feasible
+```
+
+Alive2 is a useful modern example because it checks LLVM optimizations against LLVM IR semantics. It also demonstrates the hard parts: precise IR semantics, memory model details, poison/undef behavior, floating-point flags, and solver bounds.
+
+Relevant sources:
+
+- Amir Pnueli, Michael Siegel, Eli Singerman, "Translation Validation", TACAS 1998. DOI: https://doi.org/10.1007/BFb0054170
+- Alive2 online checker: https://alive2.llvm.org/ce/
+- Nuno P. Lopes et al., "Alive2: Bounded Translation Validation for LLVM", PLDI 2021. DOI: https://doi.org/10.1145/3453483.3454030
+
+#### 0.6 Verified Compiler As A Long-Term Upper Bar
+
+CompCert shows that a realistic compiler can be mechanically verified to preserve semantics for a substantial C subset. This is the high-assurance end of the spectrum.
+
+For Tide, this suggests a realistic long-term split:
+
+```text
+small verified core
+larger experimentally validated runtime
+backend-specific differential tests
+```
+
+The verified core might include:
+
+- transition / fold semantics;
+- logical event DAG evaluation;
+- topological-order independence;
+- semantic quotient conditions;
+- step simulation;
+- a few kernel families such as token-wise maps and affine scan.
+
+The full Tide runtime, including selectors, sparse routing, device lowering, and mixed-precision kernels, is unlikely to be fully verified early. A smaller verified core plus validation tools is more realistic.
+
+Relevant sources:
+
+- CompCert project: https://compcert.org/
+- Xavier Leroy, "Formal Verification of a Realistic Compiler", CACM 2009. PDF: https://xavierleroy.org/publi/compcert-CACM.pdf
+
+#### 0.7 Memory Models, Alias Analysis, And Floating-Point Boundaries
+
+Memory models show how hard it is to specify what reorderings are allowed. Even mature CPU and language ecosystems still need careful definitions for relaxed memory, data races, atomics, undefined behavior, and floating-point transformations.
+
+The Tide equivalent is not one single memory model yet, but a cluster of semantic questions:
+
+- Which state namespace does a kernel read?
+- Which state namespace does it write?
+- Is a mailbox step-local, round-local, or persistent across input positions?
+- Can two writes commute?
+- Does a selector update affect future routing?
+- Is provenance observable by later kernels?
+- Are floating-point reorderings allowed, and under what tolerance?
+
+This suggests a strong design rule:
+
+```text
+state and visibility rules must be explicit before optimization.
+```
+
+Otherwise, a packed or parallel implementation may appear correct on final logits while silently changing selector state, cache state, provenance, or future behavior.
+
+Relevant sources:
+
+- Peter Sewell et al., "x86-TSO: A Rigorous and Usable Programmer's Model for x86 Multiprocessors", CACM 2010. DOI: https://doi.org/10.1145/1785414.1785443
+- LLVM Language Reference Manual: https://llvm.org/docs/LangRef.html
+
+#### 0.8 Practical Lessons For Tide
+
+The mature lesson is not "find one perfect theorem and finish the problem." The practical pattern is:
+
+1. Define a precise semantic contract.
+2. Design an IR that exposes the dependencies needed for optimization.
+3. Prove reusable sufficient conditions for important transformation families.
+4. Validate concrete transformations when global proof is too expensive.
+5. Keep backend implementation below the semantic layer.
+
+For Tide, the corresponding stack should be:
+
+```text
+reference semantic contract
+-> logical event DAG / B-family IR
+-> sufficient transformation rules
+-> validation / simulation layer
+-> CPU / Ascend / packed backend
+```
+
+This is why a useful theory does not need to solve all necessary-and-sufficient conditions. Compiler and architecture history suggests that a well-chosen IR plus sound sufficient rules plus validation tools can be both scientifically meaningful and practically useful.
+
+### 1. DAG Evaluation And Topological Order
+
+The minimal mathematical fact is simple: if every event-vertex value in a deterministic logical event DAG is a function of its predecessor event values, then any topological order computes the same event-vertex values. This use of “vertex” is distinct from a reusable spatial node in the Tide graph.
+
+For Tide, a step-complete decode fold gives one legal order:
+
+```text
+for input position t:
+  for logical event e in the declared step-local reference order:
+    compute e
+```
+
+Chunk prefill may use another order:
+
+```text
+batch many token-wise maps
+run masked attention
+run scan
+fuse kernels
+pack sparse rows
+```
+
+Correctness follows only if both procedures compute the same logical event DAG with the same equations and same final-state extraction.
+
+This is why preserving logical dependency matters more than preserving physical execution order.
+
+Relevant source:
+
+- A. B. Kahn, "Topological sorting of large networks", Communications of the ACM, 1962. DOI: https://doi.org/10.1145/368996.369025
+
+### Static Cycles, Dynamic Unrolling, And Zero-Delay SCCs
+
+#### Static loop is not an instantaneous algebraic loop
+
+A compiler CFG may contain a back edge, and a scheduling representation for a loop may contain recurrence edges. These edges normally carry an iteration distance: an operation in iteration $i+1$ depends on a value from iteration $i$. Adding the dynamic iteration index turns the finite execution into an acyclic event relation.
+
+This is also how Tide should interpret ordinary recurrence:
+
+```text
+static graph cycle
++ token / round / iteration delay
+-> finite dynamic logical event DAG
+```
+
+The same idea appears in modulo scheduling. The static loop dependence graph may be cyclic, but recurrence distance constrains the legal initiation interval; it does not mean that two operations in the same dynamic instant recursively require each other's result.
+
+#### Zero-delay algebraic loop
+
+A zero-delay loop has dependencies in the same logical instant:
+
+```text
+x = F(y, u)
+y = G(x, u)
+```
+
+There is no topological order unless the strongly connected component is given additional simultaneous-equation or fixed-point semantics. Related systems handle this in different ways:
+
+- hardware synthesis usually rejects unintended combinational loops;
+- synchronous languages perform causality or constructiveness checks and use explicit delay operators for stateful feedback;
+- synchronous dataflow cycles need initial tokens/delays to fire productively;
+- Simulink / Modelica identify algebraic loops and invoke equation solvers;
+- deep equilibrium models deliberately define an implicit fixed point and pay the solver/training cost.
+
+For Tide, the near-term rule should be conservative: strict event execution rejects same-rank SCCs. A future implicit family may collapse such an SCC into an explicit `FixedPointKernel`, but then existence, uniqueness, fixed-point selection, finite execution, cost, and differentiation become part of that kernel's contract.
+
+#### SCC condensation
+
+Every finite directed graph can be condensed by strongly connected components into a DAG. This does not solve the semantics of a nontrivial SCC; it only localizes the problem. A Tide verifier can classify each SCC as:
+
+1. ordinary acyclic event;
+2. delayed recurrence whose edges advance logical rank;
+3. same-rank zero-delay SCC requiring rejection or an explicit implicit-kernel contract.
+
+Relevant sources:
+
+- B. R. Rau, "Iterative Modulo Scheduling", MICRO 1994. DOI: https://doi.org/10.1145/192724.192731
+- LLVM MemorySSA documentation: https://llvm.org/docs/MemorySSA.html
+- Edward A. Lee and David G. Messerschmitt, "Synchronous Data Flow", Proceedings of the IEEE, 1987. DOI: https://doi.org/10.1109/PROC.1987.13876
+- MathWorks, "Algebraic Loop Concepts": https://www.mathworks.com/help/simulink/ug/algebraic-loops.html
+- Shaojie Bai, J. Zico Kolter, Vladlen Koltun, "Deep Equilibrium Models", NeurIPS 2019: https://arxiv.org/abs/1909.01377
+
+### 2. Lamport Logical Time
+
+Lamport's key point is that distributed systems need an event ordering relation that is not merely physical clock time. If event `a` can causally affect event `b`, then `a` must be logically before `b`.
+
+This maps directly to Tide:
+
+```text
+wall-clock completion order != logical dependency order
+```
+
+一个 `owner` 较大的消息可以在墙钟时间上先完成或先写入缓冲区，但它必须携带足够的逻辑元数据：
+
+```text
+(message_id, owner_index, absolute_round, phase_id, source_spatial_node)
+```
+
+接收空间节点随后按逻辑时间戳分桶、排序、掩码或缓冲。这里 `owner_index` 是归属字段，`absolute_round + phase_id` 才构成逻辑时间；二者不能合并。
+
+This is the conceptual basis for allowing out-of-order packed / parallel execution while still proving `C_L = Fold_T^L`.
+
+Relevant source:
+
+- Leslie Lamport, "Time, Clocks, and the Ordering of Events in a Distributed System", 1978. PDF: https://lamport.azurewebsites.net/pubs/time-clocks.pdf
+
+### 3. Kahn Process Networks And Deterministic Dataflow
+
+Kahn process networks show that a network of deterministic processes communicating through channels can have deterministic semantics even when execution scheduling is asynchronous.
+
+The connection to Tide is useful but not exact:
+
+- Similarity: asynchronous physical execution can still produce deterministic semantic results.
+- Similarity: communication structure matters.
+- Difference: KPN channels preserve stream order; LH-like aggregation may merge many messages into one value.
+- Difference: Tide has token ticks, internal rounds, phases, state commits, and model-specific kernels.
+
+This highlights the main risk for LH-like runtime:
+
+```text
+if messages are irreversibly aggregated without provenance,
+the logical event relation may no longer be reconstructible.
+```
+
+Relevant source:
+
+- Gilles Kahn, "The semantics of a simple language for parallel programming", IFIP Congress, 1974.
+
+### 4. Synchronous Dataflow
+
+Synchronous Dataflow studies graphs whose nodes consume and produce fixed numbers of data items. This enables static scheduling and predictable execution.
+
+The connection to Tide is strongest when the runtime has:
+
+- fixed external input boundaries;
+- fixed internal round count;
+- fixed phase order;
+- fixed graph topology;
+- fixed mailbox lifecycle.
+
+This resembles the cleanest version of B0/B2:
+
+```text
+for external input step:
+  for internal round:
+    for phase:
+      compute fixed graph operations
+```
+
+The limitation is that Tide/LH may introduce selectors, sparse event instantiation, and data-dependent routing. Once routing changes dynamically, SDF is no longer enough; logical event DAG semantics still apply, but static scheduling may not.
+
+Relevant source:
+
+- Edward A. Lee and David G. Messerschmitt, "Synchronous Data Flow", Proceedings of the IEEE, 1987. DOI: https://doi.org/10.1109/PROC.1987.13876
+
+### 5. Timely Dataflow / Naiad
+
+Naiad is especially relevant because messages carry logical timestamps, and computation proceeds over a partially ordered logical time domain.
+
+This is close to what Tide needs for LH-like chunk prefill:
+
+```text
+message = message_id + value + owner + logical_timestamp + spatial_location
+logical_timestamp = profile-specific rank fields
+```
+
+其中 `owner` 不是时间戳，空间位置也不是时间字段。保留这些相互独立的元数据后，物理交付可以乱序，而逻辑可见性仍可保持。
+
+This is the closest existing system-level analogy to `Logical Event DAG Theorem`.
+
+Relevant sources:
+
+- Derek G. Murray et al., "Naiad: A Timely Dataflow System", SOSP 2013. PDF: https://www.cs.princeton.edu/courses/archive/fall22/cos418/papers/naiad.pdf
+- Microsoft Research page: https://www.microsoft.com/en-us/research/publication/naiad-a-timely-dataflow-system/
+
+### 6. Parallel Prefix / Scan
+
+The logical event DAG theorem proves correctness if the chunk execution computes the same graph. It does not explain why chunk execution is faster.
+
+The performance side comes from specific kernel families.
+
+For recurrence:
+
+```text
+h_{t+1} = A_t h_t + b_t
+```
+
+we can represent the update as an affine map:
+
+```text
+g_t(h) = A_t h + b_t
+```
+
+and use associative composition:
+
+```text
+g_2 . g_1
+```
+
+This gives parallel prefix / scan, which is the core reason Mamba / SSM / linear attention accumulators can have high-performance prefill.
+
+Relevant sources:
+
+- Guy E. Blelloch, "Prefix Sums and Their Applications", 1990/1993. PDF: https://www.cs.cmu.edu/~guyb/papers/Ble93.pdf
+- Mark Harris et al., "Parallel Prefix Sum (Scan) with CUDA", GPU Gems 3. NVIDIA: https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-39-parallel-prefix-sum-scan-cuda
+
+### 7. Provenance And Safe Aggregation
+
+The aggregation issue in Tide is close to database provenance.
+
+If several logical events contribute to one aggregate, then later kernels may need to know:
+
+```text
+which token?
+which round?
+which phase?
+which source node?
+```
+
+Tagged aggregation keeps that information. Untagged aggregation discards it.
+
+This does not mean untagged aggregation is always invalid. It is valid if the aggregate is a sufficient statistic for all downstream kernels and final extraction. In mathematical terms, the runtime must provide a semantics-preserving quotient:
+
+```text
+reference event values -> aggregate value
+```
+
+and every downstream kernel must factor through that quotient.
+
+Examples:
+
+- Safe: summing same-event messages when the reference kernel only uses the sum.
+- Safe: max aggregation when downstream only uses the max.
+- Safe: histogram aggregation when downstream only uses bucket counts.
+- Unsafe: merging token `t` and token `t+1` into one untagged vector when later output/state needs token-specific effects.
+- Unsafe: physical first-arrival aggregation when reference semantics depends on logical order.
+
+This maps to the database-provenance intuition: once provenance is dropped, some downstream questions become unanswerable unless the query is invariant to the dropped information.
+
+Relevant sources:
+
+- Todd J. Green, Gregory Karvounarakis, Val Tannen, "Provenance Semirings", PODS 2007. DOI: https://doi.org/10.1145/1265530.1265535
+- Peter Buneman, Sanjeev Khanna, Wang-Chiew Tan, "Why and Where: A Characterization of Data Provenance", ICDT 2001. DOI: https://doi.org/10.1007/3-540-44503-X_20
+
+### 8. CALM, Confluence, And Coordination
+
+The CALM theorem says, roughly, that monotonic programs can be eventually consistent without coordination. The analogy to Tide is not exact, but it is useful.
+
+Tide's equivalent question is:
+
+```text
+Can physical execution order vary without changing the logical result?
+```
+
+If aggregation is associative / commutative / idempotent and downstream kernels only depend on that aggregate, then reordering or batching may be safe.
+
+If a kernel depends on:
+
+```text
+first arrived message
+arrival order
+unlabeled mix of different logical times
+```
+
+then physical schedule can affect semantics, and chunk prefill correctness is not generally provable.
+
+Relevant source:
+
+- Neil Conway et al., "Logic and Lattices for Distributed Programming", SoCC 2012. DOI: https://doi.org/10.1145/2391229.2391230
+- Technical report PDF: https://db.cs.berkeley.edu/papers/UCB-lattice-tr.pdf
+- Joe Hellerstein, "The CALM Theorem and Program Analysis for Distributed Consistency", CACM article: https://cacm.acm.org/research/keeping-calm/
+
+### 9. Differential Dataflow
+
+Differential Dataflow maintains collections indexed by logical time and differences. Its relevance is the same design pressure:
+
+```text
+keep timestamped structure long enough
+to support correct incremental / out-of-order computation
+```
+
+For Tide, this suggests:
+
+- message collections should preserve message identity, owner labels, logical timestamps, and required source relations;
+- arrangements / indexes can be derived views, not semantic replacements;
+- aggregation is safe only when it is a semantics-preserving quotient;
+- physical compaction must preserve the queries future kernels need.
+
+Relevant source:
+
+- Frank McSherry et al., "Differential Dataflow", CIDR 2013. PDF: https://www.cidrdb.org/cidr2013/Papers/CIDR13_Paper111.pdf
+
+### Implications For Tide
+
+The current theoretical stack should be read as:
+
+1. `Unified Contract-DAG-Quotient Theorem` composes transition-level semantic abstraction, logical event evaluation, and event-level quotient into one correctness gate.
+2. `Non-Degenerate Chunk Certificate` prevents a vacuous one-node `RunFold` proof by requiring uniform primitives, explicit lowering, and a complete cost ledger.
+3. Transformer / Mamba prove that important standard kernels can instantiate the correctness gate.
+4. Their high performance comes from known kernel structures: matmul, causal masked attention, fused attention, prefix scan.
+5. Compiler / architecture history suggests the right engineering shape: semantic contract, explicit IR, sufficient transformation rules, validation, then backend lowering.
+6. General graph support requires preserving logical event provenance, or proving the lost information is a semantics-preserving quotient.
+7. LH is a mechanism pool and golden reference, not a mandatory final contract. Mechanisms that block strict prefill may be modified, isolated, or replaced while retaining the local-communication and ultra-sparsity goals.
+8. Static Tide topology may be cyclic, but each terminating strict execution over a finite chunk should admit a dependency-complete logical event DAG indexed by a profile-specific well-founded rank such as external step/internal round/phase/microstep or absolute round/phase/semantic tie.
+9. Same-rank zero-delay SCCs are not ordinary scheduling problems; they require delay, rejection, or an explicit fixed-point contract.
+
+The design pressure for Tide is therefore:
+
+```text
+reference semantic contract
++ explicit Tide IR
++ logical event metadata
++ deterministic visibility / commit order
++ tagged or provably safe aggregation
++ non-degenerate lowering certificate
++ work / span / memory / communication ledger
++ transformation validation
++ kernel-family-specific high-performance implementations
+```
+
+### Boundary Statement
+
+The theorem does not say:
+
+```text
+any graph runtime has efficient prefill
+```
+
+The unified theorem says:
+
+```text
+if contract abstraction, logical event evaluation,
+and event quotient all commute,
+then chunk correctness holds for the chosen contract.
+```
+
+The compiler/architecture analogy adds:
+
+```text
+if a lowering changes representation or execution schedule,
+it must either preserve the reference IR semantics directly
+or pass through an explicitly declared semantic quotient.
+```
+
+Efficiency is a second proof obligation. It must be supplied by a non-degenerate certificate and the actual kernel family, not inferred from correctness alone.
+
+Likewise, finite logical event DAG representability is a proposed Tide design gate, not yet a global theorem about all computation. It becomes useful only together with a declared event granularity, admissible primitive family, complete dependency relation, termination condition, and cost model.
+
+---
+
+## 第二部分：人脑信号传播调查
+
+
+### 从感觉输入到思考、记忆、情绪与运动的调查报告
 
 - **报告日期**：2026-07-22
 - **范围**：正常成人脑的一般组织原则；重点讨论新皮层六层结构、皮质柱、丘脑-皮层与皮层下环路，以及视觉、听觉、躯体感觉、思考、电脑工作和体育运动。
@@ -9,7 +671,7 @@
 
 ---
 
-## 摘要：先直接回答核心问题
+### 摘要：先直接回答核心问题
 
 1. **“大脑皮层总共六层”只对典型新皮层大体成立。** 人类大部分大脑半球表面的新皮层通常分为 I 到 VI 层；但海马所属的古皮层、梨状嗅皮层以及小脑皮层并不是六层。运动皮层的 IV 层很不明显，初级视觉皮层的 IV 层则异常发达。
 
@@ -33,7 +695,7 @@
 
 ---
 
-## 1. 先统一几个概念
+### 1. 先统一几个概念
 
 | 概念 | 本文含义 | 容易混淆之处 |
 |---|---|---|
@@ -49,9 +711,9 @@
 
 ---
 
-## 2. 神经信号究竟是什么，怎样传播
+### 2. 神经信号究竟是什么，怎样传播
 
-### 2.1 一个典型神经元链条
+#### 2.1 一个典型神经元链条
 
 神经信号不是类似网线中的连续数字包，而是电活动、化学突触传递和群体状态的结合：
 
@@ -63,7 +725,7 @@
 
 皮层长程投射神经元绝大多数是谷氨酸能兴奋性锥体细胞；GABA 能中间神经元多数在局部调节时序、增益、竞争和稳定性，但也存在少量长程抑制投射。化学突触占主导，电突触主要见于某些细胞之间的缝隙连接。
 
-### 2.2 信息不只由“是否放电”表示
+#### 2.2 信息不只由“是否放电”表示
 
 神经系统可能同时利用：
 
@@ -76,7 +738,7 @@
 
 “通信子空间”和“通过同步实现通信”分别有实验和理论支持，但它们不是已经穷尽脑通信机制的唯一答案。[48,49]
 
-### 2.3 发散、汇聚和递归
+#### 2.3 发散、汇聚和递归
 
 - **发散**：一个视网膜事件可同时影响外侧膝状体、上丘、顶盖前区和视交叉上核；一个皮层神经元的轴突也可出现侧支。
 - **汇聚**：一个皮层锥体细胞整合来自局部细胞、丘脑、其他皮层区和神经调质系统的大量输入。
@@ -85,7 +747,7 @@
 
 因此，一个感觉事件没有唯一的“数据包路径”；更像同时激活一组相互耦合、不断回看和校正的网络。
 
-### 2.4 时间尺度
+#### 2.4 时间尺度
 
 | 过程 | 典型量级 | 说明 |
 |---|---:|---|
@@ -98,15 +760,15 @@
 
 这些量级用于建立直觉，不应当被理解为每次任务都有相同的固定时间表。fMRI 的血氧信号通常在秒尺度变化，不能直接显示毫秒级神经传播顺序。
 
-### 2.5 神经调质：改变“网络工作模式”
+#### 2.5 神经调质：改变“网络工作模式”
 
 多巴胺、去甲肾上腺素、乙酰胆碱和血清素等系统往往不是逐像素传递感觉内容，而是改变神经元增益、可塑性、探索/利用权衡、警觉、睡眠-清醒状态及奖励学习。它们可让同一套结构连接在不同状态下产生不同的信息流。[47]
 
 ---
 
-## 3. 新皮层六层怎样工作
+### 3. 新皮层六层怎样工作
 
-### 3.1 六层不是六级流水线
+#### 3.1 六层不是六级流水线
 
 新皮层从表面软脑膜到深部白质通常分为：
 
@@ -120,7 +782,7 @@
 
 这个表描述的是**连接偏好**，不是排他规则。丘脑可以直接影响 I、III、V、VI 层；II/III 层也能投射纹状体；V 层也可投射其他皮层；同层和跨层复发连接遍布各层。[2-4,12]
 
-### 3.2 一个有用但必须加警告的“典型微回路”
+#### 3.2 一个有用但必须加警告的“典型微回路”
 
 ~~~mermaid
 flowchart TB
@@ -138,7 +800,7 @@ flowchart TB
 
 这张图遗漏了大量真实连接。更准确的说法是：经典顺序给出了初级感觉皮层中较显著的一组连接倾向，但每一步都处在复发兴奋、局部抑制和长程反馈之中。[2,3]
 
-### 3.3 抑制性微回路为什么重要
+#### 3.3 抑制性微回路为什么重要
 
 皮层不是只有兴奋信号逐级放大。三类常用的中间神经元概括是：
 
@@ -148,7 +810,7 @@ flowchart TB
 
 这是功能倾向而非严格的一一对应；真实细胞类型远多于三类，人和鼠的细胞类型、形态及基因表达也不完全相同。[15]
 
-### 3.4 不同脑区的六层差别很大
+#### 3.4 不同脑区的六层差别很大
 
 - **V1 初级视觉皮层**：IV 层非常发达，并进一步细分；适合接收密集的外侧膝状体输入。
 - **初级运动皮层 M1**：传统上称“无颗粒皮层”，IV 层较弱，V 层大型输出神经元突出。
@@ -157,9 +819,9 @@ flowchart TB
 
 ---
 
-## 4. 皮质柱到底是什么
+### 4. 皮质柱到底是什么
 
-### 4.1 这个概念为什么出现
+#### 4.1 这个概念为什么出现
 
 皮质柱通常指垂直贯穿多层、具有共同输入或相似反应特征的一组神经元。经典例子包括：
 
@@ -169,7 +831,7 @@ flowchart TB
 
 Mountcastle 将柱状组织推广为新皮层的一般原则，产生了深远影响。[5]
 
-### 4.2 为什么“标准皮质柱”有争议
+#### 4.2 为什么“标准皮质柱”有争议
 
 研究者所说的柱可能分别指几十微米尺度的微柱、几百微米尺度的功能柱、超柱或解剖模块。它们的边界常不清晰，功能属性可重叠，也并非每个脑区都显示同样的周期性柱状图案。[6,7]
 
@@ -183,7 +845,7 @@ Mountcastle 将柱状组织推广为新皮层的一般原则，产生了深远�
 | 所有新皮层由相同尺寸、相同算法的标准柱平铺组成 | 证据不足且有争议 |
 | 信号必须先在一根柱内走完六层，再跳到下一根柱 | 不正确 |
 
-### 4.3 信号怎样离开“柱”
+#### 4.3 信号怎样离开“柱”
 
 局部锥体细胞和中间神经元可在数百微米至毫米范围内水平连接；II/III、V、VI 层的锥体细胞还可通过白质投向远处。功能活动因此会：
 
@@ -197,15 +859,15 @@ Mountcastle 将柱状组织推广为新皮层的一般原则，产生了深远�
 
 ---
 
-## 5. 跨脑区传播的总体架构
+### 5. 跨脑区传播的总体架构
 
-### 5.1 三类长程白质连接
+#### 5.1 三类长程白质连接
 
 1. **联络纤维**：连接同一半球不同皮层区。短 U 形纤维连接相邻脑回，长束连接额、顶、颞、枕叶。
 2. **连合纤维**：以胼胝体为主，连接左右半球相关或互补区域。
 3. **投射纤维**：连接皮层与丘脑、纹状体、脑干、脊髓等，许多纤维通过内囊。
 
-### 5.2 前馈与反馈有统计性的层分布
+#### 5.2 前馈与反馈有统计性的层分布
 
 灵长类皮层解剖显示：
 
@@ -216,7 +878,7 @@ Mountcastle 将柱状组织推广为新皮层的一般原则，产生了深远�
 
 反馈落到 I 层时，可接触深层锥体细胞长达皮层表面的顶树突，因此“高层情境”可以直接改变较低区神经元如何响应当前输入，而不必等它重新走完六层。
 
-### 5.3 丘脑参与区间通信
+#### 5.3 丘脑参与区间通信
 
 丘脑核团大致可区分为：
 
@@ -226,7 +888,7 @@ Mountcastle 将柱状组织推广为新皮层的一般原则，产生了深远�
 
 因此，皮层 A 到皮层 B 既可走直接皮层-皮层轴突，也可走 A→丘脑→B 的“跨丘脑”路线。[12-14]
 
-### 5.4 一个通用但非唯一的任务模板
+#### 5.4 一个通用但非唯一的任务模板
 
 ~~~mermaid
 flowchart LR
@@ -251,9 +913,9 @@ flowchart LR
 
 ---
 
-## 6. 视觉：从眼睛到视觉皮层、识别与动作
+### 6. 视觉：从眼睛到视觉皮层、识别与动作
 
-### 6.1 视网膜已经在做计算
+#### 6.1 视网膜已经在做计算
 
 光线经过角膜、晶状体后落到视网膜：
 
@@ -263,7 +925,7 @@ flowchart LR
 
 因此，传入大脑的不是逐像素复制的照片，而是已经被分成多种并行特征通道的活动模式。[1,16]
 
-### 6.2 主要解剖路线
+#### 6.2 主要解剖路线
 
 **视网膜→视神经→视交叉→视束→外侧膝状体 LGN→视辐射→V1。**
 
@@ -272,14 +934,14 @@ flowchart LR
 - 灵长类 LGN 的主要驱动输入在 V1 偏向 IV 层，尤其 IV-C；随后影响 II/III、IV-B、V、VI 等局部回路。
 - V1 的 II/III 等层向 V2 及其他视觉区前馈；VI 层大量反馈 LGN；高阶视觉区又反馈 V1 的浅层和深层。
 
-### 6.3 同时存在的皮层下分支
+#### 6.3 同时存在的皮层下分支
 
 - **上丘**：快速定向、眼跳和头眼协调。
 - **顶盖前区**：瞳孔光反射。
 - **视交叉上核**：昼夜节律校时。
 - **上丘-枕核-皮层通路**：可支持注意和部分无意识视觉功能；V1 损伤后的“盲视”提示视觉并非只有 LGN→V1 一条路。
 
-### 6.4 V1 之后不是一条直线
+#### 6.4 V1 之后不是一条直线
 
 视觉皮层由许多相互连接的区域组成，常用的宏观概括是：
 
@@ -288,7 +950,7 @@ flowchart LR
 
 两条流不是完全分离的管道，会相互交换信息，也都接受注意、目标和记忆反馈。[17-19]
 
-### 6.5 看见杯子并伸手拿起的整合过程
+#### 6.5 看见杯子并伸手拿起的整合过程
 
 1. 视网膜和 LGN/V1 建立位置、边缘、对比、颜色和时间变化的早期表征。
 2. 腹侧视觉系统帮助识别“这是杯子”及其类别和意义。
@@ -303,9 +965,9 @@ flowchart LR
 
 ---
 
-## 7. 听觉：从声波到声音、语言和定向
+### 7. 听觉：从声波到声音、语言和定向
 
-### 7.1 外周与脑干
+#### 7.1 外周与脑干
 
 **声波→鼓膜/听小骨→耳蜗基底膜→毛细胞→螺旋神经节→耳蜗神经核。**
 
@@ -316,7 +978,7 @@ flowchart LR
 
 由于脑干以上听觉通路高度双侧化，单侧中央通路损伤通常不像单侧耳蜗/听神经损伤那样造成同侧耳完全失聪。
 
-### 7.2 丘脑与听觉皮层
+#### 7.2 丘脑与听觉皮层
 
 **下丘→内侧膝状体 MGN→听辐射→初级听觉皮层 A1。**
 
@@ -326,7 +988,7 @@ flowchart LR
 
 听觉皮层同样存在多条并行流，而不是 A1 完成后才把成品交给语言区。[20,21]
 
-### 7.3 听到有人叫自己的名字
+#### 7.3 听到有人叫自己的名字
 
 1. 脑干和 A1 提取频谱、起止、时间结构和声源方向。
 2. 上颞叶网络形成语音/声音类别表征。
@@ -338,9 +1000,9 @@ flowchart LR
 
 ---
 
-## 8. 触觉、本体感觉、痛温觉和内感受
+### 8. 触觉、本体感觉、痛温觉和内感受
 
-### 8.1 精细触觉与有意识本体感觉
+#### 8.1 精细触觉与有意识本体感觉
 
 身体机械感受器→背根神经节→同侧脊髓后索→延髓薄束核/楔束核→延髓交叉→内侧丘系→丘脑 VPL→S1。
 
@@ -351,13 +1013,13 @@ flowchart LR
 
 [23,24]
 
-### 8.2 痛温觉与粗触觉
+#### 8.2 痛温觉与粗触觉
 
 伤害感受器/温度感受器→背根神经节→脊髓背角→多在入髓后较早交叉→前外侧系统→丘脑及脑干多个靶点→S1/S2、岛叶、扣带、前额叶等。
 
 同时还有到网状结构、臂旁核、杏仁核、下丘脑和导水管周围灰质等路线，分别影响唤醒、情绪、自主反应和下行镇痛。所谓“疼痛矩阵”中的许多区域也会响应非疼痛但显著的事件，因此疼痛不是由一个固定中心或一个专属矩阵简单读出。[25]
 
-### 8.3 为什么手碰到烫物会先缩回
+#### 8.3 为什么手碰到烫物会先缩回
 
 1. 脊髓背角局部回路可在信号到达大脑前激活屈肌撤退反射，并抑制对侧或拮抗肌群。
 2. 上行痛温通路随后支持对位置、强度、厌恶和情境的较完整体验。
@@ -366,11 +1028,11 @@ flowchart LR
 
 反射不是“脑没有参与”，而是脊髓先完成一部分时间紧迫的控制，脑随后接管更复杂的评估和行为。
 
-### 8.4 本体感觉和小脑
+#### 8.4 本体感觉和小脑
 
 肌梭、腱器官和关节/皮肤感受器的信息一部分进入有意识的后索-丘脑-皮层通路，另一部分经脊髓小脑束、楔小脑束等更直接地进入小脑。后者为姿势、时序和在线误差校正提供高速状态信息，不必先形成有意识感觉。
 
-### 8.5 其他刺激的主要路线
+#### 8.5 其他刺激的主要路线
 
 | 模态 | 主要路线概要 | 特点 |
 |---|---|---|
@@ -381,9 +1043,9 @@ flowchart LR
 
 ---
 
-## 9. “思考一个问题”时信息怎样传播
+### 9. “思考一个问题”时信息怎样传播
 
-### 9.1 思考不是从一个起点沿固定线路前进
+#### 9.1 思考不是从一个起点沿固定线路前进
 
 “思考”至少可分为维持目标、注意选择、工作记忆、语义检索、情景回忆、心理模拟、价值比较、错误监控和动作选择。不同问题调用不同网络。例如：
 
@@ -393,7 +1055,7 @@ flowchart LR
 - 默读和内部语言会调用语言网络与听觉/运动表征；
 - 开放式自我思考常更多涉及默认网络，但仍会与控制网络交互。
 
-### 9.2 前额叶的真实角色
+#### 9.2 前额叶的真实角色
 
 前额叶不是存放全部思想的“CPU”。较可靠的概括是：
 
@@ -404,7 +1066,7 @@ flowchart LR
 
 具体内容可以主要存在于后部感觉和联合皮层。例如记住一个方向时，视觉/顶叶区域仍可携带方向信息；前额叶更多表示规则、优先级和控制状态。[27-30]
 
-### 9.3 一个问题从读入到回答的可能流程
+#### 9.3 一个问题从读入到回答的可能流程
 
 以“读到一道需要回忆和推理的问题”为例：
 
@@ -421,19 +1083,19 @@ flowchart LR
 
 这个顺序只是一种任务分解。真实活动会反复返回先前步骤，多个步骤也会同时进行。
 
-### 9.4 意识问题仍未解决
+#### 9.4 意识问题仍未解决
 
 再入处理、丘脑-皮层循环、额顶“全局广播”、感觉皮层局部复发处理等理论都得到部分证据，但“某一神经活动为何及何时成为主观体验”没有公认的完整机制。报告可以描述信息可用性、报告和行为控制的神经通路，不能把它们直接等同于已经解释了意识本身。
 
 ---
 
-## 10. 海马：从当前经历到记忆重建
+### 10. 海马：从当前经历到记忆重建
 
-### 10.1 海马不是六层新皮层
+#### 10.1 海马不是六层新皮层
 
 海马属于古皮层/海马结构，其主细胞层组织与六层新皮层不同。它通过内嗅皮层、海马旁皮层和广泛联合皮层交换信息。
 
-### 10.2 常用的海马回路骨架
+#### 10.2 常用的海马回路骨架
 
 ~~~mermaid
 flowchart LR
@@ -451,7 +1113,7 @@ flowchart LR
 - 还存在内嗅皮层直达 CA1/下托、CA3 复发连接及多条旁路。
 - 齿状回常被认为有助于区分相似经历；CA3 复发网络常与模式补全联系；CA1 比较和整合多路输入。这些是有支持的功能概括，不是每个细胞的唯一职责。[31,32]
 
-### 10.3 编码、检索和巩固
+#### 10.3 编码、检索和巩固
 
 - **编码**：海马快速绑定“人物-地点-时间-事件”等分布式皮层信息。
 - **检索**：部分线索触发海马活动，再在原有感觉和联合皮层中重建较完整模式。
@@ -460,7 +1122,7 @@ flowchart LR
 
 ---
 
-## 11. 情绪和杏仁核：不是单一“恐惧中心”
+### 11. 情绪和杏仁核：不是单一“恐惧中心”
 
 杏仁核是多个核团的集合：
 
@@ -474,9 +1136,9 @@ flowchart LR
 
 ---
 
-## 12. 从决定到运动：皮层、基底节、小脑、脑干和脊髓
+### 12. 从决定到运动：皮层、基底节、小脑、脑干和脊髓
 
-### 12.1 动作形成是多层闭环
+#### 12.1 动作形成是多层闭环
 
 ~~~mermaid
 flowchart LR
@@ -497,7 +1159,7 @@ flowchart LR
     TH --> M1
 ~~~
 
-### 12.2 皮层运动系统
+#### 12.2 皮层运动系统
 
 - 后顶叶把视觉、触觉、本体和身体坐标转换为行动相关状态。
 - 前运动区更受外界线索和动作目标影响，SMA 更常参与内部序列、双侧协调和动作组织，但二者高度重叠。
@@ -508,13 +1170,13 @@ flowchart LR
 
 M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向。动作由神经群体的动态轨迹和与脊髓/肌肉系统的共同状态产生。[40]
 
-### 12.3 基底节：选择、门控和学习
+#### 12.3 基底节：选择、门控和学习
 
 皮层→纹状体→苍白球/黑质→丘脑→皮层形成多条运动、认知和边缘环路。直接、间接和超直接通路有助于解释促进、抑制和快速停止，但“直接通路是油门、间接通路是刹车”过于简单：两类纹状体群体可共同活动，作用取决于具体动作、时间和回路。[41]
 
 多巴胺信号参与奖励预测误差、行动价值和可塑性；基底节也参与习惯、工作记忆更新和认知选择，不只控制肢体运动。
 
-### 12.4 小脑：预测、时序、校准和学习
+#### 12.4 小脑：预测、时序、校准和学习
 
 小脑皮层只有三层：分子层、浦肯野细胞层和颗粒层。
 
@@ -527,7 +1189,7 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 13. 人在电脑前工作时，全脑怎样协作
+### 13. 人在电脑前工作时，全脑怎样协作
 
 以“阅读屏幕上的代码，找出错误并修改”为例：
 
@@ -551,7 +1213,7 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 14. 体育运动时，全脑怎样协作
+### 14. 体育运动时，全脑怎样协作
 
 以“接高速来球并回击”为例：
 
@@ -575,7 +1237,7 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 15. 各主要脑区在信息流中的位置
+### 15. 各主要脑区在信息流中的位置
 
 | 结构 | 主要贡献 | 不是 |
 |---|---|---|
@@ -595,7 +1257,7 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 16. 为什么同一刺激在不同情境会走出不同结果
+### 16. 为什么同一刺激在不同情境会走出不同结果
 
 解剖线路相对稳定，功能线路却随状态变化。决定实际传播的因素包括：
 
@@ -611,41 +1273,41 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 17. 常见但误导性的说法
+### 17. 常见但误导性的说法
 
-### 17.1 “感觉先传到一个中心，处理完再去下一个中心”
+#### 17.1 “感觉先传到一个中心，处理完再去下一个中心”
 
 不准确。存在并行支路、早期皮层下行为、双向皮层连接和持续反馈。
 
-### 17.2 “每个信号都从 IV 层依次走到 II/III、V、VI 层”
+#### 17.2 “每个信号都从 IV 层依次走到 II/III、V、VI 层”
 
 这是经典微回路简图，不是必经顺序。直达、跨层、同层和回返连接都很常见。
 
-### 17.3 “每根皮质柱执行同一个标准算法”
+#### 17.3 “每根皮质柱执行同一个标准算法”
 
 存在重复主题，但通用标准柱的边界、尺寸和统一算法没有定论。
 
-### 17.4 “前额叶产生思想，后部脑区只是输入设备”
+#### 17.4 “前额叶产生思想，后部脑区只是输入设备”
 
 思想内容和计算广泛分布；前额叶是控制与选择的重要节点，不是全部内容所在地。
 
-### 17.5 “海马存储记忆，杏仁核产生恐惧，小脑负责平衡”
+#### 17.5 “海马存储记忆，杏仁核产生恐惧，小脑负责平衡”
 
 这三个说法都把网络功能压缩成单标签。三者均参与多种行为，并通过闭环与皮层协作。
 
-### 17.6 “看到某区在 fMRI 亮起，就说明信号先后走到那里”
+#### 17.6 “看到某区在 fMRI 亮起，就说明信号先后走到那里”
 
 血氧信号是间接、缓慢的群体代谢指标。确定方向和因果需要结合解剖示踪、电生理、刺激、病损和具有时间分辨率的方法。
 
-### 17.7 “左脑逻辑、右脑创造”
+#### 17.7 “左脑逻辑、右脑创造”
 
 两半球确有统计性偏侧化，例如多数人的语言网络偏左，但复杂任务通常需要双侧和跨胼胝体网络，不能按人格二分。
 
 ---
 
-## 18. 目前较确定、较可能和仍不确定的内容
+### 18. 目前较确定、较可能和仍不确定的内容
 
-### 较确定
+#### 较确定
 
 - 动作电位、化学突触、兴奋/抑制和髓鞘轴突是快速神经通信的物质基础。
 - 新皮层一般具有六层及明显的层特异连接倾向。
@@ -653,14 +1315,14 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 - 视觉、听觉、躯体感觉等有明确的外周-脑干/丘脑-皮层主干通路。
 - 皮层之间存在统计性的前馈/反馈层分布。
 
-### 较可能但不能过度统一
+#### 较可能但不能过度统一
 
 - 某些局部连接主题可作为“典型皮层微回路”复用。
 - 振荡同步、通信子空间和增益控制是选择性脑区通信的重要机制。
 - 小脑在不同任务中可能重复使用某些预测/校准计算。
 - 海马通过索引和重放帮助分布式皮层记忆形成与检索。
 
-### 仍有重要争议或空白
+#### 仍有重要争议或空白
 
 - 是否存在适用于所有新皮层的统一皮质柱和统一算法。
 - 不同脑区、物种和发育阶段是否共享同一“典型微回路”。
@@ -672,7 +1334,7 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 19. 最简洁的统一模型
+### 19. 最简洁的统一模型
 
 对一个外界刺激，可以用下面的循环理解：
 
@@ -686,7 +1348,7 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 20. 参考文献与延伸阅读
+### 20. 参考文献与延伸阅读
 
 以下优先列综述、经典解剖研究和开放教材；序号与正文引用对应。
 
@@ -744,6 +1406,6 @@ M1 神经元通常不是一根神经元对应一块肌肉或一个简单方向�
 
 ---
 
-## 21. 阅读这份报告时最重要的一句话
+### 21. 阅读这份报告时最重要的一句话
 
 **脑信号不是沿一串皮质柱或六层皮层单向传递，而是在层间局部微回路、跨区白质连接、丘脑-皮层回路和多个皮层下闭环中并行、递归、按任务状态动态路由；感觉、思考、记忆、情绪和运动是这些网络在不同时间尺度上的共同结果。**

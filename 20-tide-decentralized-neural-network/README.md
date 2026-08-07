@@ -9,54 +9,84 @@ tags:
 # TIDE / 去中心化神经网络
 
 > [!summary] 本页定位
-> 本页是 TIDE 线的唯一入口，负责给出当前命题、研究方法、文档职责与阅读顺序。基础 transition 数学以 [[step-transition-mathematical-specification]] 为准；当前一般 DAG / allocator 正向主线以 [[explicit-allocator-general-dag-model]] 为准；代码完成度以 [[current-architecture-state]] 为准。
+> 本页是 Tide 线的唯一入口，只负责当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；模型候选见 [[tide-model-architecture-and-training]]；工程完成度见 [[tide-runtime-validation-and-status]]。
 
 ## 一页版结论
 
-TIDE 是 `Token Inference Decentralized Engine`。
+TIDE 是 `Token Inference Decentralized Engine`。总体目标是研究同时具有下列性质的自回归神经系统：
 
-- TIDE 的核心目标是构建前向隐藏态只做有界度局部通信的自回归神经动力系统。
-- 当前第一主线不是继续扩张 runtime surface，而是严格研究 `prefill / decode` 等价性：先固定 reference semantic contract，再证明 chunk implementation 保持该 contract。
-- 长期 Tide static graph 可以研究有环或动态路径；当前显式 allocator 正向主线先限制为空间 DAG。更一般的候选约束是：每次对有限 chunk 的终止 execution 应能展开为有限 logical event DAG，并显式给出所有会改变事件值、状态、路由或读出的直接依赖关系。
-- 隐式 dynamic selector 暂不进入正向主线。若后续重新引入动态 selector，必须先给出一个有序元组集合 $\mathcal K$、其上的严格次序 $<_{\mathcal K}$ 和事件映射 $\lambda:\mathcal E\to\mathcal K$，再要求每条事件依赖 $e\to e'$ 满足 $\lambda(e)<_{\mathcal K}\lambda(e')$。元组坐标可以是外部输入步、内部轮次和阶段，或绝对轮次与阶段；`owner` 本身不自动成为时间坐标。同一元组值内尚未定义求解语义的 zero-delay SCC 默认不进入 strict core。
-- `~/llm/tide` 的 CPU 路径已经不只是 LH phase runtime 骨架；独立 Tide kernels 已在当前覆盖配置和 hidden/cache mode 上与 native LH 对齐，并已有 phase artifact 与压力测试入口。
-- 当前仍没有得到 strict model-level `prefill()`、一般 graph 的高性能 chunk prefill 定理或 Ascend backend。
-- 对允许任意黑盒自适应 routing 的模型类别，[[adaptive-routing-prefill-impossibility]] 已证明：若 prefill 保持 exact、工作量接近实际 route chain 且不枚举整个 routing state space，则 adaptive depth 至少随 token 数线性增长。该结论尚未自动覆盖每个具体 LH selector 配置。
-- 当前正向候选 [[explicit-allocator-general-dag-model]] 把最低层模型收缩为有限空间 DAG、单位边时延、节点持有状态、带到达轮次的消息、边界延续状态、显式 allocator 节点和节点级 artifact equality。它已经证明空间方向的结论：给定精确的窗口级节点契约后，不等长路径的一般空间 DAG 可以按节点拓扑序唯一构造，每个节点只需调用一次并批量处理当前 chunk 内到达本节点的时间桶。它同时明确证明该结论尚不自动推出时间分块组合律；完整 `prefill = decode` 还需定义逐轮节点转移并证明窗口折叠。[[token-owned-general-dag-routing]] 保留为增强语义版本，用于 `owner/frontier`、同刻融合、token 因果性和更细读出约束。
-- 数学上以 `transition -> fold -> semantic contract -> logical event DAG -> quotient -> simulation` 为主路径；CPU/编译器/数据流谱系只提供可借鉴的成熟方法，不替代证明。
-- 稀疏性、动态 selector、异步执行与 NPU lowering 后置，避免在 reference semantics 尚未稳定时混入新的不可辨识变量。
+1. 空间通信保持局部、有界度。
+2. 每个输入位置只激活全部潜在计算中的稀疏子集。
+3. `prefill` 与逐位置 `decode` 保持同一 reference semantics。
+4. 有限 chunk 的执行能暴露完整的数据、状态、控制、可见性和提交依赖。
+5. 经证明可批量化的 node、kernel 或 subgraph 可以获得低 span 实现；无法批量化的部分显式承担顺序成本。
 
-## 研究推进与写作约定
+当前结论分为四层：
 
-后续主数学线按数学教科书方式推进：
+- **Kernel 正向结果**：token-local、causal attention、affine scan、linear attention accumulator，以及由这些 kernel 组成的有限 Transformer/Mamba chain，已有 chunk correctness 证明路线。
+- **一般空间 DAG 正向结果**：显式 allocator、节点状态、带到达轮次的消息、边界在途消息和不等长路径可以按空间拓扑序构造；每个节点可一次处理窗口内属于它的时间桶，空间节点遍历次数不随 chunk 长度增长。
+- **尚缺的正向结果**：空间拓扑序构造不自动推出时间分块组合律。完整 model-level `prefill = decode` 仍需从逐绝对轮次节点转移证明窗口折叠，并为各 node/subgraph 给出低-span execution witness。
+- **反向结果**：若模型类别允许任意、不可组合的 pointer-chasing 式自适应 routing，则不存在对该类别所有实例都有效的 exact、work-efficient、次线性 adaptive-depth prefill。该下界不能未经 embedding 证明就直接套到每个具体 selector。
 
-- 所有符号和概念先定义后使用；定义、例子、引理、定理、证明和边界按依赖顺序出现。
-- 一个概念一旦进入正式定义、命题、定理或证明，就必须已经被声明为集合、集合元素、函数、部分函数、关系、有限序列、多重集、有限元组，或由这些对象定义的性质；不能只靠一个听起来精确的工程名词承担数学含义。
-- 函数必须给出定义域和值域，关系必须给出所在笛卡尔积，有限元组必须给出各坐标所属集合；同一符号若在不同类型上重载，必须能由实参类型唯一确定分支。
-- 编写或修改一个定义时，不只检查证明里使用的对象，也检查定义正文中的每个名词：它要么已经数学化，要么只是无需额外术语即可理解的普通语言说明。
-- 直观说明可以不形式化，但必须真正直白，并明确不承担后续推理前提。禁止用一串未定义的抽象词模拟精确性，形成“既不直观、也不可类型检查”的表述。
-- 正式数学文档默认自足：其他文档可以提供历史、例子或研究关系，但不能成为本页定义或定理成立所必需的隐式先修。若需要外部结果，必须在本页重新陈述准确前提与结论。
-- 抽象定义优先配简单例子与反例，再进入 Transformer、Mamba 或 LH 风格图。
-- 明确区分定义性等价、充分条件、必要条件、充要条件、工程验证与历史类比。
-- CPU ISA、编译器、SSA、内存模型、翻译验证等概念首次出现时，先给出自足解释，不假设读者具备体系结构或编译器背景。
-- 中英文术语统一参见 [[token-owned-general-dag-routing#术语约定与中英文对照|术语约定与中英文对照]]；`token`、`prefill`、`decode`、`logits` 以及模型名、固定缩写和接口字段保留英文，其余解释性正文优先使用中文。
-- $t$ 表示输入位置，$x_t$ 表示输入值；`token` 不表示消息、事件或计算轨迹。核心一般 DAG 消息至少区分 `message_id`、到达轮次、源节点、目标节点和载荷；若进入 token 因果增强层，再用 `owner` 表示当前归属，用 `frontier` 表示输入前缀依赖上界。
-- 空间图中的可复用计算位置称为空间节点，逻辑事件 DAG 的顶点称为事件顶点；空间边、消息产生/消费边和事件依赖边不得简称成同一种“边”。
-- “激活”必须限定为隐藏激活值、事件实例化或发送激活；其中发送激活严格指某节点在某绝对轮次至少产生一条出站消息。“聚合”必须限定为同归属消息聚合、跨归属联合计算或语义融合；“输出”必须限定为局部输出记录或外部读出。
-- 外部谱系负责回答“是什么、解决什么、不解决什么、在 Tide 中对应什么”；正式结论仍落在转移、DAG、商、模拟与折叠上。
-- 如果一个证明必须依赖尚未定义的工程对象，先补最小先修小节，而不是把实现术语直接带入数学证明。
-- 新概念首次出现时必须声明其身份：正式数学对象、语义 profile 名称、实现字段、历史用语，或尚待定义的研究占位词。实现字段和历史类比不能在没有显式映射时充当定理对象。
-- 同一个英文词若在外部领域已有多种含义，先给出 Tide 本文含义和不包含的含义，再继续推导；不能依赖“读者大概知道”来省略定义。
+LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden reference，不是理论必须完整复刻的终点。若 LH 的 selector、状态副作用或交错控制链破坏高性能 prefill，可以在不放弃总体目标的前提下简化、替代或移出 strict family。
 
-审阅数学文档时使用以下最低检查表：
+当前模型候选 HB-Lattice-v0 使用层级 backbone、有限生命周期的稀疏分支和固定 merge deadline。它已有结构 reference 和 `chunk == repeated decode` toy 验证，但尚未证明可训练、可扩展或优于 Transformer/Mamba/MoE。
 
-1. 每个定义只使用此前已声明或在本定义中先声明的对象。
-2. 每个显示公式都能逐项回答“这个符号属于哪个集合”。
-3. 每个函数、部分函数、关系、序列和元组都具有可检查的类型。
-4. 每个证明引用的依赖都能回到编号定义、显式前提或证明内局部定义。
-5. 每段非形式化文字都明确只是直观说明，并且删掉未定义术语后不会损失其核心意思。
+## 文档地图
 
-数学主文档采用以下固定模板：
+当前只保留六个 Markdown 职责文件：
+
+| 文档 | 职责 | 结论类型 |
+| --- | --- | --- |
+| 本页 | 入口、术语、阅读顺序、主张边界 | 导航 |
+| [[tide-mathematical-foundations]] | StepTransition、fold、kernel theorem、logical event DAG、显式 allocator general DAG、归属证书和 zero-delay 边界 | 正式定义与正向定理 |
+| [[adaptive-routing-prefill-lower-bound]] | 黑盒自适应路由链的 parallel-query 下界及局部稀疏 Graph 嵌入 | 正式反向定理 |
+| [[tide-model-architecture-and-training]] | HB-Lattice、selector capability、work/span、训练风险与实验顺序 | 架构候选与研究备忘 |
+| [[tide-runtime-validation-and-status]] | Runtime contract、LH 映射、artifact equality、CPU 对齐、性能和 backend 状态 | 实现规范与动态快照 |
+| [[tide-background-history-and-references]] | ISA/编译器/dataflow 谱系与人脑传播调查 | 外部背景，不承担证明 |
+
+建议阅读顺序：
+
+1. 数学主线：本页 -> [[tide-mathematical-foundations]] -> [[adaptive-routing-prefill-lower-bound]]。
+2. 模型设计：[[tide-model-architecture-and-training]]。
+3. 工程实现：[[tide-runtime-validation-and-status]]。
+4. 外部概念：遇到 ISA、SSA、MemorySSA、dataflow、fixed point 或脑科学类比时查 [[tide-background-history-and-references]]。
+
+## 核心术语
+
+| 术语 | 本文含义 | 不表示 |
+| --- | --- | --- |
+| `token` | 输入序列中的离散输入单位；数学上通常由位置 $t$ 和输入值 $x_t$ 分开表示 | 消息、事件或计算轨迹 |
+| 输入位置 | 全局流中的自然数下标 $t$ | 内部 round 或物理完成时间 |
+| 空间节点 | 静态 Graph 中可复用的计算与状态持有位置 | 一次执行中的事件实例 |
+| 消息 | 一次发送产生的有限记录，至少含消息标识符、源、目标、到达轮次和载荷 | 空间边或完整轨迹 |
+| 事件 | 某次有限执行中实际发生的一次计算、状态、控制、消息或提交动作 | 可复用空间节点 |
+| `owner` | 可选的消息或输出归属位置标签 | 消息身份、路径身份或逻辑时间 |
+| `support` | 某个值可能依赖的有限输入位置集合 | 物理收件箱 |
+| `frontier` | 输入支撑位置的保守上界 | 调度 wavefront 或消息到达时间 |
+| 边界延续状态 | 从位置 $B$ 开始执行所需的节点状态与在途消息 | 仅由 chunk 长度决定的缓存 |
+| 发送激活 | 节点在某逻辑轮次实际产生至少一条出站消息 | hidden activation tensor |
+| logical event DAG | 一次有限执行的事件集合及其直接语义依赖关系 | 静态空间 Graph 本身 |
+| `prefill = decode` | 任意合法 chunk 切分与逐位置 reference fold 产生相同可观察输出和边界状态 | 只比较最终 logits 或只允许从位置 0 开始 |
+
+`token`、`prefill`、`decode`、`logits`、模型名、固定缩写、接口名和代码字段保留英文；其余解释性正文优先使用中文。
+
+## 数学写作规则
+
+Tide 正式数学文档遵守以下规则：
+
+1. 一个对象进入定义、命题、定理或证明前，必须声明为集合、集合元素、函数、部分函数、关系、有限序列、多重集、有限元组，或由这些对象定义的性质。
+2. 函数给出定义域和值域，关系给出所在笛卡尔积，元组给出各坐标所属集合。
+3. 定义正文和证明正文都不能依赖未定义的工程名词。
+4. 直观说明可以不形式化，但必须真正直白，并且不得暗中承担后续证明前提。
+5. 每个显示公式都应能逐项回答“该符号属于哪个集合”。
+6. 定义、例、反例、引理、定理、证明、适用边界和工程含义按依赖顺序出现。
+7. 正式数学文件自足；外部文档只能提供历史、例子和参考，不能成为隐式定义来源。
+8. 明确区分定义性等价、充分条件、必要条件、充要条件、工程验证和历史类比。
+9. 同一个英文词有多种含义时，先给出 Tide 本文含义与排除含义。
+10. 新概念首次出现时，声明它是数学对象、语义 profile、实现字段、历史用语或待定义研究占位词。
+
+推荐章节模板：
 
 ```text
 动机问题
@@ -69,165 +99,87 @@ TIDE 是 `Token Inference Decentralized Engine`。
 -> 对实现与实验的约束
 ```
 
-## 文档结构
+## 当前研究顺序
 
-文档按“规范、状态、研究、历史”分层。只有规范层定义当前语义；状态层只报告代码事实；研究与历史层不能反向覆盖规范。
+### 数学
 
-| 层级 | 文档 | 职责 |
-| --- | --- | --- |
-| 入口 | 本页 | 当前命题、阅读顺序、主张边界与历史动机 |
-| 规范 | [[step-transition-mathematical-specification]] | transition、fold、semantic contract、DAG、quotient、simulation 与主力 kernel 定理 |
-| 规范 | [[step-transition-implementation-specification]] | graph/state/workspace/schedule/kernel/Event IR 接口与验证约束 |
-| 规范候选 | [[explicit-allocator-general-dag-model]] | 当前一般 DAG 正向主线：显式 allocator、边界在途消息、不等长路径、节点拓扑序 chunk 调度与 artifact equality |
-| 状态 | [[current-architecture-state]] | `~/llm/tide` 当前代码、测试、完成度与目标架构缺口 |
-| 研究 | [[adaptive-routing-prefill-impossibility]] | Exact、work-efficient 自适应 routing 的 parallel-query 下界及 Tide Graph 嵌入 |
-| 研究 | [[token-owned-general-dag-routing]] | `owner/frontier` 增强语义：token 归属、因果前沿、同刻/融合语义、读出归因与更细粒度调试 |
-| 研究 | [[selector-and-chunk-prefill-performance-memo]] | Selector、reference/execution DAG、capability contraction 与 work/span 设计备忘 |
-| 研究 | [[finite-event-dag-and-zero-delay-loops-memo]] | dynamic execution、finite logical event DAG、zero-delay SCC 与后续定理候选 |
-| 参考 | [[logical-event-dag-related-theories]] | ISA、编译器、SSA/MemorySSA、数据流、provenance、scan 与 fixed-point 谱系 |
-| 历史 | [[prefill-decode-equivalence-context]] | 从 LH、`tide.old` 到当前抽象的早期探索过程 |
+1. 为显式 allocator 一般空间 DAG 定义逐绝对轮次节点参考转移。
+2. 从该转移证明窗口时间分块组合律，而不是把 node chunk contract 直接作为前提。
+3. 给每类 node/subgraph 声明 `token-local`、`scan-composable`、`causal-bulk`、`ready-set-local` 或 `sequential-fallback`，并分别证明 lowering contract。
+4. 把 correctness 与 work、span、memory、communication cost ledger 分开。
+5. 对具体 stateful selector 判断它落入结构化可并行特例，还是能嵌入自适应路由下界。
 
-建议阅读顺序：
+### 模型与训练
 
-1. 研究语义：本页 -> [[step-transition-mathematical-specification]] 第 1-3 节 -> [[adaptive-routing-prefill-impossibility]] -> [[explicit-allocator-general-dag-model]] -> [[token-owned-general-dag-routing]] -> [[finite-event-dag-and-zero-delay-loops-memo]]。
-2. 工程实现：[[step-transition-implementation-specification]] -> [[current-architecture-state]]。
-3. 外部先修：遇到 ISA、SSA、MemorySSA、dataflow、fixed-point 等概念时查 [[logical-event-dag-related-theories]]。
-4. 历史追溯：只有需要理解 LH、`tide.old` 与 StepTransition 的来源时才读 [[prefill-decode-equivalence-context]]。
+1. 先验证 always-on backbone 和固定均衡稀疏路径。
+2. 再加入 token-local learned routing。
+3. 随后加入慢更新、逐序列隔离的负载偏置。
+4. 最后才研究严格逐位置递推的 stateful selector。
+5. 分别记录 route churn、负载、梯度覆盖、状态数值和 chunk/decode artifact equality。
 
-## 当前研究主线
+### Runtime
 
-### LH 在研究中的位置
-
-LH 提供的是一组围绕“局部通信 + 超稀疏”形成的复杂机制候选：分层局部图、双 cortex、bridge phase、selector、local hidden/KV、multi-tick readout 与 pronounce。这些机制具有三种价值：
-
-- 提供早期研究动机与可运行的复杂样本。
-- 暴露跨空间节点计算、空间边通信的并行与稀疏，以及状态生命周期需要面对的问题。
-- 作为 native golden oracle，帮助检查 Tide 的 graph/phase/state 抽象是否足以表达真实复杂计算。
-
-但 LH 不是唯一机制集合，也不是数学主线必须完整复刻的终点。既有 LH 把多种机制混合在同一个 transition 中，不能因此预设它自然满足 chunk prefill correctness。当前裁决原则是：
-
-> 总体目标保持“局部通信 + 超稀疏”；当前优先约束保持 `prefill / decode` 等价性，以获得 model-level prefill 与序列并行；若某个 LH 机制破坏这一目标，可以在不违背总体目标的前提下简化、替代或暂时放弃，而不是无限复杂化理论和 runtime 去迁就它。
-
-### 已完成的工程基座
-
-- 从 LH C++ 中提取 role-aware graph、phase、state namespace、selector、local hidden 与 pronounce 语义。
-- 建立 native LH golden path 和独立 Tide CPU path。
-- 对齐当前覆盖配置下的 end-to-end logits、phase schedule、message/hidden artifacts、selector count artifacts 与主要 hidden/cache mode；历史代码中的 `signal` 是数值张量命名，不表示独立计算轨迹。
-- 建立 CPU stress benchmark；其结果是性能测量入口，不是 chunk prefill correctness 证明。
-
-### 当前数学任务
-
-1. 固定 reference semantic contract，明确输出、持久状态、workspace 与允许的 abstraction。
-2. 用 B0 覆盖 GPT-style Transformer、Mamba/SSM 与主力 kernel family。
-3. 在已有 Unified Contract-DAG-Quotient Theorem 上，补 finite dynamic execution 到 logical event DAG 的 representation lemma。
-4. 证明 dependency completeness + local refinement / quotient 足以推出 chunk correctness，并明确这只是工程可用的充分条件体系。
-5. 给出 zero-delay cycle dichotomy：增加 delay/state boundary、封装为 fixed-point kernel，或判定非法。
-6. 用 non-degenerate chunk certificate 排除单事件顶点 oracle 与隐藏恢复计算，并把 correctness 与 work/span performance witness 分开。
-7. 把 mailbox、phase、selector、readout、pronounce 与 LH-like roles 视为候选机制，逐个检查、简化或替代，而不是默认全部加入 strict family。
-8. 以 [[explicit-allocator-general-dag-model]] 为一般 DAG 正向主线，把 selector 显式化为 allocator 节点或 allocator 子图，并逐步研究负载历史、quota、容量分配和 learned scoring。
-9. 在 [[adaptive-routing-prefill-impossibility]] 的模型类别下，继续证明具体 LH selector 是否能够嵌入 pointer chasing；对不能嵌入的受限子类，寻找 token-local、scan、causal-bulk 或有限 chunk-wide routing stage 结构。
-10. 在 [[token-owned-general-dag-routing]] 中继续研究 `owner/frontier` 增强层，明确 absolute-time event order 与 token-prefix order 的关系，并把 output readout 的 autoregressive causality 写入 contract。
-
-### 下一工程阶段
-
-1. 定义 `EventId / LogicalTimestamp / Dependency / StateVersion / CommitEvent`，并为每种语义配置显式给出事件到有序时间元组的映射，使 static executor 与未来 dynamic executor 共用一个 event contract。
-2. 增加 memory-state 级 per-phase artifact equality。
-3. 依据数学 contract 设计第一版 model-level `prefill()`，而不是仅在调用端循环 `think()`。
-4. 先证明并实现 token-wise、causal attention、affine scan 等 kernel-level chunk paths。
-5. 再做 dynamic event generation、并行 executor、packed/crossbatch fusion 与 layout 优化。
-6. CPU semantic gate 稳定后，再推进 Ascend lowering、device placement 与 graph-node affinity。
+1. 固定 model-level `prefill()` 的输入、读出和 boundary-state contract。
+2. 让 Event IR 显式表示事件标识符、逻辑时间、状态版本、依赖与提交。
+3. 先完成 CPU semantic gate 和逐阶段 artifact equality。
+4. 再进行 packed/crossbatch lowering、并行 executor 与 Ascend backend。
 
 ## 当前主张边界
 
 当前可以主张：
 
-- Tide 的 role-aware phase abstraction 能承载当前覆盖范围内的 LH C++ 计算过程。
-- 独立 Tide CPU kernels 在当前覆盖配置上可数值复刻 native LH。
-- 数学文档已经给出 Transformer/Mamba 的 B0 chunk correctness 路线，以及一般 logical event DAG / quotient correctness gate。
-- 数学文档已经在明确的 black-box parallel-query 模型下，证明任意自适应路由链不存在通用 exact、work-efficient、次线性 adaptive-depth prefill。
-- 正向设计已经给出显式 allocator 的一般空间 DAG 拓扑序构造定理：不等长路径通过到达轮次与边界在途消息处理，allocator 的路由记录、出站消息和发送激活可作为节点 artifact 显式验证。该定理是空间调度结论，不冒充尚未证明的时间分块组合律。
+- Tide 的 role-aware phase abstraction 能承载当前覆盖范围内的 LH C++ 计算。
+- 独立 Tide CPU kernels 在当前覆盖配置和 hidden/cache mode 上数值对齐 native LH。
+- Transformer/Mamba 主力 kernel family 已有构造性 chunk correctness 证明路线。
+- 显式 allocator 的一般空间 DAG 已证明常数次空间拓扑遍历，但没有自动证明时间分块组合律。
+- 自适应路由下界已在明确的 deterministic exact black-box query model 中证明。
+- HB-Lattice reference 已验证 toy 语义下 `chunk == repeated decode`。
 
 当前不能主张：
 
-- 任意一般 graph 都有高性能 chunk prefill。
-- 可以不经额外 selector embedding 或不可组合性分析，就把模型类别下界直接套用于每一个具体 LH/Tide selector 实例。
-- 当前完整 LH 自动满足 strict `prefill = decode fold`。
-- CPU 数值对齐已经证明训练可行性、scaling 或性能优势。
-- 通用高性能 packed/crossbatch lowering、异步执行或 Ascend backend 已经完成。
-- finite dynamic execution 的 DAG representation、zero-delay SCC theorem 与 causality verifier 已经完成；它们当前仍是 [[finite-event-dag-and-zero-delay-loops-memo]] 中的候选扩展。
+- 任意一般 Graph 都有高性能 chunk prefill。
+- 当前完整 LH 自动满足 strict model-level `prefill = decode`。
+- 任意具体 selector 已经落入自适应路由下界。
+- CPU 数值对齐证明了模型可训练性、scaling 或性能优势。
+- HB-Lattice 已经稳定训练或优于现有 Transformer、Mamba、MoE。
+- 通用 packed/crossbatch lowering、异步执行或 Ascend backend 已经完成。
+- Zero-delay algebraic loop 可以由普通 Graph 调度器自动解释。
 
-## 历史动机：从链表、星型到去中心化 Graph 神经网络
+## 整合记录
 
-> [!summary] 核心动机
-> MoE 让参数计算稀疏化，但 expert dispatch、全局路由与同步仍可能形成集中式通信压力。TIDE 想探索有界度局部通信的 Graph 神经网络，研究是否能获得不同的计算与通信扩展路径。
+当前六文件结构由 2026-08-07 的文档整合产生。整合前的逐文件版本保存在 Git 提交 `d27819f`。其中：
 
-本节保留研究方向形成时的直觉，不承担当前 `prefill / decode` correctness 证明；规范性结论仍以上述数学与实现文档为准。
+- `step-transition-mathematical-specification`、`explicit-allocator-general-dag-model` 和 `token-owned-general-dag-routing` 进入数学基础。
+- `adaptive-routing-prefill-impossibility` 改名为更准确的 lower-bound 文档。
+- HB-Lattice、selector capability 和训练稳定性进入模型架构与训练。
+- 实现规范、当前状态和 LH/tide.old 历史进入 runtime 文档。
+- 编译器/dataflow 谱系和脑科学调查进入背景参考。
 
-为降低 dense Transformer 每个 token 激活全部 FFN 参数的成本，MoE（Mixture of Experts）只激活少量 experts，并已在大模型中证明这种参数稀疏路线具有工程可行性。
+已降级文档中的重复定义和过时状态没有继续复制；若需要考古其逐行推导，以提交 `d27819f` 为准。
 
-但参数激活稀疏不等于通信天然局部。MoE 仍需要路由、dispatch/combine、负载均衡与跨设备同步；在某些部署形态中，这些操作会形成新的集中式或 all-to-all 通信压力。
+## 历史动机
 
-具体来说：
+MoE 让参数计算稀疏化，但 expert dispatch、全局路由、负载均衡和跨设备同步仍可能形成集中式或 all-to-all 通信压力。Tide 的早期问题是：能否用长期稳定的有界度局部通信替代一部分全局 dispatch，同时保留自回归序列执行和可训练性。
 
-- 标准 dense Transformer block 可以抽象成顺序链：attention -> FFN -> attention -> FFN。
-- MoE block 可以抽象成带全局 router / expert dispatch 的星型阶段。
-- 这只是帮助形成研究问题的概念图，不是对所有 Transformer、MoE 实现和通信后端的精确描述。
-- TIDE 的问题是：能否把一部分全局 dispatch 压力替换为长期稳定的有界度局部通信，同时保持可训练性和高效序列执行。
+概念上，可以把 dense Transformer block 看作 attention/FFN 顺序链，把标准 MoE block 看作带全局 router 的星型阶段，再把 Tide 的候选看作局部连接、分层且稀疏激活的 Graph。下图只表达研究动机，不是对所有实现的精确通信模型。
 
 ![[assets/images/linked-list-transformer-star-moe-decentralized-graph-nn-01.png|48%]] ![[assets/images/linked-list-transformer-star-moe-decentralized-graph-nn-02.png|48%]]
 
-自然想法是把拓扑变成去中心化 Graph，从而消除 All-to-One 通信瓶颈，接近榨干物理极限。
-
-### 要点一：节点激活也要去中心化
-
-这里的“节点激活”是历史用语，指由局部选择器决定哪些空间边产生消息、哪些后继节点事件会实例化，不是神经网络张量中的 activation value。如果这种选择依赖复杂模块输入输出状态，路由与事件实例化控制也应去中心化。
-
-Graph 神经网络仍需保持 token 进、token 出的自回归工作方式，并具有明确的先后时序关系。
-
-后续可以设置多个输入节点与多个输出节点；当前主流 LLM 则是单输入、单输出。
-
-### 要点二：Graph 需要输入到输出的固定路由路径
-
-早期假设是：Graph 至少包含一条从输入到输出的稳定可达路径，其他路径作为局部支线。它是保证消息或隐藏表示影响可传播的候选充分条件，不是已经证明的必要条件。
-
-满足这两个要点后，就可以设计 Graph 神经网络，使 token 一个接一个输入网络，一个接一个输出。
-
-通过 LibTorch C++、gather、scatter 等实现，可以支持：
-
-- 空间并行：不同节点并行执行。
-- batch 并行：同一节点内处理 batch。
-- 自动构图与梯度反传：借助 LibTorch。
-
-原始伪代码：
+最早的流式原型按输入位置和内部 round 双重循环：
 
 ```python
 for token in input_tokens:
     input_signal = embed(token)
-    for i in range(route_len_from_input_node_to_output_node):
-        for node in graph: # C++ 中用 openmp 并行执行
-            emit(node_signal)
-        for node in graph: # C++ 中用 openmp 并行执行
-            receive(node_signal)
-    output_token = output(output_node)
+    for internal_round in range(route_length):
+        parallel_emit(graph)
+        parallel_receive(graph)
+    output_token = readout(output_node)
 ```
 
-### 要点三：时间锚点与序列并行
-
-早期吞吐结果没有实现序列并行，这对训练不友好。
-
-问题暴露在两层循环：
-
-```python
-for token in input_tokens:
-    for i in range(route_len_from_input_node_to_output_node):
-```
-
-要实现序列并行，关键是加入时间戳：
+它适合 streaming/decode，却没有自动获得序列方向的高性能 prefill。后来引入：
 
 ```text
-absolute_round = input_position * period + internal_round
+absolute_round = input_position * external_period + internal_round
 ```
 
-这是早期时间锚点直觉；当前规范进一步把完整时间戳写成“绝对轮次 + 阶段”，且周期不再由变量名隐式推断。每个节点（attention + ffn 块）处理信息时，应感知接收到的上游消息的逻辑时间戳。对 FFN 这较好处理；对 attention 或 linear attention 则要尤为小心。消息的 `owner` 归属索引与逻辑时间戳是不同字段。
-
-早期实现的原始吞吐表已经移入 [[prefill-decode-equivalence-context#原始吞吐记录（历史）]]，避免与当前 `~/llm/tide` stress benchmark 混淆。
+作为时间锚点，并进一步区分输入位置、绝对轮次、阶段、消息到达时间和可选 `owner`。这条演化最终形成当前的有限事件 DAG、窗口边界状态、显式 allocator 和自适应控制下界两条数学主线。早期 LH 吞吐记录与实现演化见 [[tide-runtime-validation-and-status#第三部分：LH 与 tide.old 历史上下文|LH 与 tide.old 历史上下文]]。
