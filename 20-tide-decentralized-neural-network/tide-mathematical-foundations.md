@@ -14,10 +14,10 @@ tags:
 # Tide 数学基础
 
 > [!summary] 本页定位
-> 本页是 Tide 正向数学主线的唯一正式入口。它依次定义单步 transition、顺序 fold、kernel 级 chunk 正确性、有限 logical event DAG，以及显式 allocator 的一般空间 DAG。自适应路由的通用下界独立见 [[adaptive-routing-prefill-lower-bound]]。
+> 本页是 Tide 正向数学主线的唯一正式入口。它依次定义单步 transition、顺序 fold、kernel 级 chunk 正确性、有限 logical event DAG、显式 allocator 的一般空间 DAG，以及 checkpoint 函数保持生长与有限 DAG 节点细化。自适应路由的通用下界独立见 [[adaptive-routing-prefill-lower-bound]]。
 
 > [!important] 证明状态
-> StepTransition、B0 kernel family 与一般空间 DAG 的既有定理按原证明保留。显式 allocator 的拓扑序构造只证明空间遍历次数不随 chunk 长度增长；时间分块组合律仍是额外义务，不能由空间 DAG 自动推出。
+> StepTransition、B0 kernel family 与一般空间 DAG 的既有定理按原证明保留。第五部分新增的精确状态嵌入、DAG 节点细化和 token-local 固定 merge 闭包只在各自明示前提下成立。显式 allocator 的拓扑序构造只证明空间遍历次数不随 chunk 长度增长；时间分块组合律仍是额外义务，不能由空间 DAG 自动推出。
 
 ## 第一部分：StepTransition、kernel 与 logical event DAG
 
@@ -36,7 +36,7 @@ tags:
 > 本页区分输入位置、输入值、空间节点与逻辑事件：$t$ 是输入位置，$x_t$ 是输入值，二者都不是计算轨迹；空间图的节点是可复用计算位置，逻辑事件 DAG 的顶点是一次有限执行中的事件。数学符号 $\mathcal S$ 表示在相邻 transition 调用之间传递的 **transition-state 容器**；其中只有旧值能够影响下一步语义的分量才称为**持久上下文**。B0 为统一表达而把会被 `Init` 无条件覆盖的当前步 activation slot 也放进 $\mathcal S$，但它不承载跨步历史。临时工作区、局部输出记录、消息和事件值若不属于返回的 $\mathcal S$，则不自动成为 transition state 或持久上下文。本页需要的这些区分均在本页相应定义中重新给出，不以其他文档为定义来源。
 
 > [!roadmap] 当前形式化边界
-> 第一部分定义顺序折叠、分块正确性、语义商、有限 logical event DAG、主力 kernel family 与步骤模拟；第二部分定义可从任意全局位置开始的一般空间 DAG 窗口执行；第三部分给出可选归属与因果证书；第四部分规定有限事件展开和 zero-delay 强连通分量的 strict-core 边界。一般动态事件生成、任意有环拓扑和定点 kernel 仍未形成统一的高性能 prefill 定理。
+> 第一部分定义顺序折叠、分块正确性、语义商、有限 logical event DAG、主力 kernel family 与步骤模拟；第二部分定义可从任意全局位置开始的一般空间 DAG 窗口执行；第三部分给出可选归属与因果证书；第四部分规定有限事件展开和 zero-delay 强连通分量的 strict-core 边界；第五部分定义 checkpoint transition 的精确状态嵌入、有限 DAG 节点细化和 token-local 固定 merge 分支的 chunk 闭包。一般动态事件生成、任意有环拓扑和定点 kernel 仍未形成统一的高性能 prefill 定理。
 
 > [!important] 证否边界
 > 本页以构造性 correctness 为主。任意黑盒自适应 routing 在 exact、work-efficient 前提下为何不能获得次线性 adaptive-depth prefill，见独立数学文档 [[adaptive-routing-prefill-lower-bound]]。该下界不自动等价于具体 LH selector 的不可能性结论。
@@ -4589,3 +4589,881 @@ $$
 
 > [!important] 当前边界
 > 第四部分给出有限事件 DAG 与 zero-delay 的 strict-core 规则，不把任意动态 runtime 自动提升为高性能 prefill。高性能还需要各节点声明并证明 token-local、scan、causal bulk 或其他低-span 实现见证；无法收缩的自适应控制链受 [[adaptive-routing-prefill-lower-bound]] 约束。
+
+---
+
+## 第五部分：函数保持生长与有限 DAG 节点细化
+
+> [!summary] 本部分定位
+> 本部分为 checkpoint 生长线给出最低限度的正式桥梁。它回答四个问题：扩展模型何时精确包含原 transition，单步包含关系为何能推广到任意长度序列，节点内部递归展开何时仍保持 DAG，以及哪些固定 merge 分支可以直接继承 chunk correctness。本部分不证明继续训练后的模型仍等于原 checkpoint，也不证明 stateful selector、节点删除或任意递归分支天然具有低 span。
+
+### 0. 本部分使用的对象
+
+本部分沿用定义 0.1、定义 0.2、定义 1.1 和定义 1.2 中的自然数、有限序列、单步 transition 与顺序 fold。为避免“复用参数”和“复用函数”混淆，本部分只对已经实例化的 transition 函数建立数学关系；state-dict 中有多少参数张量被装载，是另行检查的工程性质。
+
+### 定义 E.1：单步 transition 的精确状态嵌入
+
+给定非空集合 $X$、$Y$、$\mathcal S$ 与 $\widehat{\mathcal S}$。给定两个单步 transition：
+
+$$
+\mathcal T:X\times\mathcal S\to Y\times\mathcal S,
+$$
+
+$$
+\widehat{\mathcal T}:
+X\times\widehat{\mathcal S}
+\to
+Y\times\widehat{\mathcal S}.
+$$
+
+给定单射：
+
+$$
+\iota:\mathcal S\to\widehat{\mathcal S}.
+$$
+
+称三元组 $(\widehat{\mathcal T},\mathcal T,\iota)$ 满足**单步精确状态嵌入**，当且仅当对每个 $x\in X$、$S\in\mathcal S$、$y\in Y$ 与 $S'\in\mathcal S$，若
+
+$$
+\mathcal T(x,S)=(y,S'),
+$$
+
+则
+
+$$
+\widehat{\mathcal T}(x,\iota(S))
+=
+(y,\iota(S')).
+\tag{E.1}
+$$
+
+这里 $\iota$ 必须同时嵌入所有会跨单步边界延续的状态坐标。对 Transformer，这些坐标可以包含每层 KV cache 与位置状态；对 Mamba/SSM，它们可以包含 recurrent state。若只比较 $y$ 而不比较 $\iota(S')$，就没有满足定义 E.1。
+
+### 定理 E.2：单步精确状态嵌入推出任意长度 fold 等价
+
+假设 $(\widehat{\mathcal T},\mathcal T,\iota)$ 满足定义 E.1。取任意 $L\in\mathbb N$、任意 $x_{0:L}\in X^L$ 与任意 $S_0\in\mathcal S$。定义 $y_{0:L}\in Y^L$ 与 $S_L\in\mathcal S$ 为满足下式的唯一对象：
+
+$$
+\operatorname{Fold}_{\mathcal T}^L
+(x_{0:L},S_0)
+=
+(y_{0:L},S_L),
+$$
+
+则有：
+
+$$
+\operatorname{Fold}_{\widehat{\mathcal T}}^L
+(x_{0:L},\iota(S_0))
+=
+(y_{0:L},\iota(S_L)).
+\tag{E.2}
+$$
+
+**证明。**
+
+对 $L$ 作数学归纳。
+
+当 $L=0$ 时，由定义 1.2：
+
+$$
+\operatorname{Fold}_{\mathcal T}^0((),S_0)
+=((),S_0),
+$$
+
+且
+
+$$
+\operatorname{Fold}_{\widehat{\mathcal T}}^0
+((),\iota(S_0))
+=
+((),\iota(S_0)).
+$$
+
+因此式 E.2 成立。
+
+假设式 E.2 对长度 $L$ 成立。取任意长度为 $L+1$ 的序列 $x_{0:L+1}\in X^{L+1}$。由定义 1.2，存在唯一的 $y_{0:L}\in Y^L$、$S_L\in\mathcal S$、$y_L\in Y$ 和 $S_{L+1}\in\mathcal S$，满足：
+
+$$
+\operatorname{Fold}_{\mathcal T}^L(x_{0:L},S_0)
+=(y_{0:L},S_L),
+$$
+
+以及
+
+$$
+\mathcal T(x_L,S_L)=(y_L,S_{L+1}).
+$$
+
+由归纳假设：
+
+$$
+\operatorname{Fold}_{\widehat{\mathcal T}}^L
+(x_{0:L},\iota(S_0))
+=
+(y_{0:L},\iota(S_L)).
+$$
+
+再由式 E.1：
+
+$$
+\widehat{\mathcal T}(x_L,\iota(S_L))
+=
+(y_L,\iota(S_{L+1})).
+$$
+
+按定义 1.2 拼接前 $L$ 步和最后一步，即得到长度 $L+1$ 的式 E.2。由数学归纳法，结论对所有 $L\in\mathbb N$ 成立。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+定理 E.2 给出 checkpoint 函数保持测试应覆盖连续序列与最终状态的原因。定义 E.1 只约束当前给定的函数 $\widehat{\mathcal T}$；参数继续训练并改变该函数后，新的 transition 不一定仍满足式 E.1。
+
+### 定义 E.3：固定加法 merge 与中性分支
+
+令 $Z$ 是有限维实向量空间，$0_Z\in Z$ 是其加法单位元。令 $J$ 是有限集合。给定函数：
+
+$$
+B:Z\to Z,
+$$
+
+并对每个 $j\in J$ 给定：
+
+$$
+\Delta_j:Z\to Z,
+\qquad
+g_j:Z\to\mathbb R.
+$$
+
+给定 selector 函数：
+
+$$
+\sigma:Z\to\mathcal P(J),
+$$
+
+其中 $\mathcal P(J)$ 是 $J$ 的幂集。定义扩展函数：
+
+$$
+\widehat B:Z\to Z
+$$
+
+为：
+
+$$
+\widehat B(z)
+=
+B(z)
++
+\sum_{j\in\sigma(z)}g_j(z)\Delta_j(z).
+\tag{E.3}
+$$
+
+称分支族 $(\Delta_j,g_j)_{j\in J}$ 是**中性的**，当且仅当对每个 $z\in Z$ 与每个 $j\in\sigma(z)$：
+
+$$
+g_j(z)\Delta_j(z)=0_Z.
+\tag{E.4}
+$$
+
+式 E.3 中的 merge 位置和加法算子固定；selector 输出集合可以随 $z$ 变化。若 $\sigma(z)=\varnothing$，式 E.3 中的空和按定义等于 $0_Z$。式 E.4 可以由 $g_j(z)=0$、$\Delta_j(z)=0_Z$ 或二者乘积为零实现。
+
+### 引理 E.4：中性 residual 分支保持原函数
+
+在定义 E.3 的前提下，若分支族满足式 E.4，则：
+
+$$
+\widehat B=B.
+\tag{E.5}
+$$
+
+**证明。**
+
+取任意 $z\in Z$。由式 E.4，式 E.3 中每个求和项都等于 $0_Z$。有限个 $0_Z$ 之和仍为 $0_Z$，所以：
+
+$$
+\widehat B(z)=B(z)+0_Z=B(z).
+$$
+
+由于 $z$ 任意，式 E.5 成立。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+引理 E.4 只处理当前 block 的输出函数。若新增分支还会修改 KV cache、SSM state、selector state 或其他持久状态，则这些状态分量也必须满足定义 E.1；“输出乘零”不能自动消除隐藏状态副作用。
+
+### 定义 E.5：有限 DAG 的单节点细化
+
+令 $G=(V,E)$ 是有限 DAG，并取节点 $v\in V$。令 $H=(W,F)$ 是另一个有限 DAG，满足：
+
+$$
+V\cap W=\varnothing.
+$$
+
+指定 $a,b\in W$，分别称为细化子图的入口节点和出口节点。定义新节点集合：
+
+$$
+V'
+=
+(V\setminus\{v\})\cup W.
+\tag{E.6}
+$$
+
+定义与 $v$ 不相接的旧边集合：
+
+$$
+E_{\mathrm{keep}}
+=
+\{(p,q)\in E\mid p\ne v,\ q\ne v\}.
+$$
+
+定义入口重接边集合与出口重接边集合：
+
+$$
+E_{\mathrm{in}}
+=
+\{(p,a)\mid (p,v)\in E\},
+$$
+
+$$
+E_{\mathrm{out}}
+=
+\{(b,q)\mid (v,q)\in E\}.
+$$
+
+定义：
+
+$$
+E'
+=
+E_{\mathrm{keep}}
+\cup F
+\cup E_{\mathrm{in}}
+\cup E_{\mathrm{out}}.
+\tag{E.7}
+$$
+
+称 $G'=(V',E')$ 是用 $(H,a,b)$ 对节点 $v$ 作出的**单节点细化**。该定义只规定依赖拓扑，没有给 $v$ 或 $W$ 中的节点指定输入集合、输出集合或计算函数。因此，定义 E.5 本身不蕴含细化前后的输出相等；若需要该结论，必须另行定义两侧函数并证明它们相等。
+
+### 定理 E.6：有限 DAG 的单节点细化仍为 DAG
+
+定义 E.5 得到的 $G'=(V',E')$ 是有限 DAG。
+
+**证明。**
+
+由 $V$ 与 $W$ 有限，式 E.6 表明 $V'$ 有限。
+
+反设 $G'$ 不是 DAG。则存在 $k\in\mathbb N_{>0}$ 和序列 $(c_0,\ldots,c_k)\in(V')^{k+1}$，满足：
+
+$$
+c_0=c_k,
+\qquad
+(c_i,c_{i+1})\in E'\quad(i\in[k]).
+\tag{E.7a}
+$$
+
+若所有 $c_i$ 都属于 $W$，则式 E.7a 也给出 $H$ 中的非空闭合有向序列，与 $H$ 是 DAG 矛盾。若所有 $c_i$ 都属于 $V\setminus\{v\}$，则式 E.7a 也给出 $G$ 中的非空闭合有向序列，与 $G$ 是 DAG 矛盾。
+
+剩下的情形是序列同时包含 $W$ 和 $V\setminus\{v\}$ 中的元素。因为序列是闭合的，可以循环移动下标，使 $c_0\in V\setminus\{v\}$。由式 E.7，从 $V\setminus\{v\}$ 进入 $W$ 的边只能以 $a$ 为终点，从 $W$ 离开的边只能以 $b$ 为起点。因此，把序列中每个从 $a$ 开始、到 $b$ 结束且中间全部属于 $W$ 的连续子序列替换为单个节点 $v$ 后，得到一个正整数 $m$ 和序列 $(d_0,\ldots,d_m)\in V^{m+1}$，满足：
+
+$$
+d_0=d_m,
+\qquad
+(d_i,d_{i+1})\in E\quad(i\in[m]).
+$$
+
+这给出 $G$ 中的非空闭合有向序列，与 $G$ 是 DAG 矛盾。因此 $G'$ 是 DAG。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+定理 E.6 说明，一个 HB-Sliced 宏节点可以在拓扑上被有限的串并联递归 DAG 替换，而不会仅因这次替换产生空间环。它不说明细化后的子图与原 kernel 等价，也不说明细化后路径长度、work 或 span 保持不变。
+
+### 定义 E.7：Token-local selector 下的固定 merge transition
+
+令 $X$ 是非空集合。取不属于 $X$ 的对象 $\bot$，并定义：
+
+$$
+\overline X=X\cup\{\bot\}.
+$$
+
+令 $Z$ 是有限维实向量空间，$0_Z$ 是其加法单位元。令 $J$ 是有限集合。给定非空状态集合 $\mathcal S_0$，并对每个 $j\in J$ 给定非空状态集合 $\mathcal S_j$。定义乘积状态集合：
+
+$$
+\widehat{\mathcal S}
+=
+\mathcal S_0
+\times
+\prod_{j\in J}\mathcal S_j.
+\tag{E.8}
+$$
+
+给定 always-on transition：
+
+$$
+\mathcal T_0:X\times\mathcal S_0
+\to
+Z\times\mathcal S_0.
+$$
+
+对每个 $j\in J$，给定候选分支 transition：
+
+$$
+\mathcal T_j:\overline X\times\mathcal S_j
+\to
+Z\times\mathcal S_j,
+$$
+
+并要求对每个 $S_j\in\mathcal S_j$：
+
+$$
+\mathcal T_j(\bot,S_j)=(0_Z,S_j).
+\tag{E.9}
+$$
+
+给定只读取当前输入值的 selector：
+
+$$
+\sigma:X\to\mathcal P(J),
+$$
+
+并对每个 $j\in J$ 给定当前输入值上的权重函数：
+
+$$
+g_j:X\to\mathbb R.
+$$
+
+定义复合 transition：
+
+$$
+\mathcal T_{\mathrm{merge}}:
+X\times\widehat{\mathcal S}
+\to
+Z\times\widehat{\mathcal S}
+\tag{E.10}
+$$
+
+如下。对任意：
+
+$$
+x\in X,
+\qquad
+(S_0,(S_j)_{j\in J})\in\widehat{\mathcal S},
+$$
+
+先令：
+
+$$
+(z_0,S_0')=\mathcal T_0(x,S_0).
+$$
+
+对每个 $j\in J$，定义：
+
+$$
+\overline x_j
+=
+\begin{cases}
+x,&j\in\sigma(x),\\
+\bot,&j\notin\sigma(x),
+\end{cases}
+\tag{E.11}
+$$
+
+并令：
+
+$$
+(z_j,S_j')=\mathcal T_j(\overline x_j,S_j).
+$$
+
+最后定义：
+
+$$
+y
+=
+z_0
++
+\sum_{j\in J}g_j(x)z_j,
+\tag{E.12}
+$$
+
+以及：
+
+$$
+\mathcal T_{\mathrm{merge}}
+(x,(S_0,(S_j)_{j\in J}))
+=
+(y,(S_0',(S_j')_{j\in J})).
+\tag{E.13}
+$$
+
+由式 E.9，未被选择的分支产生 $0_Z$，并保持自身状态不变。式 E.10--E.13 因此把动态激活集合变成固定输出槽上的中性输入，而 merge 仍是预先声明的有限和。
+
+### 定义 E.8：固定 merge transition 的分支级 chunk implementation
+
+取 $L\in\mathbb N$。给定函数：
+
+$$
+\mathcal C_0^L:
+X^L\times\mathcal S_0
+\to
+Z^L\times\mathcal S_0,
+$$
+
+并对每个 $j\in J$ 给定函数：
+
+$$
+\mathcal C_j^L:
+\overline X^L\times\mathcal S_j
+\to
+Z^L\times\mathcal S_j.
+$$
+
+假设它们分别满足：
+
+$$
+\mathcal C_0^L
+=
+\operatorname{Fold}_{\mathcal T_0}^L,
+\tag{E.14}
+$$
+
+以及对每个 $j\in J$：
+
+$$
+\mathcal C_j^L
+=
+\operatorname{Fold}_{\mathcal T_j}^L.
+\tag{E.15}
+$$
+
+对任意 $x_{0:L}\in X^L$，为每个 $j\in J$ 定义掩码序列：
+
+$$
+\overline x_{j,0:L}
+\in
+\overline X^L
+$$
+
+为对每个 $t\in[L]$：
+
+$$
+\overline x_{j,t}
+=
+\begin{cases}
+x_t,&j\in\sigma(x_t),\\
+\bot,&j\notin\sigma(x_t).
+\end{cases}
+\tag{E.16}
+$$
+
+定义复合 chunk implementation：
+
+$$
+\mathcal C_{\mathrm{merge}}^L:
+X^L\times\widehat{\mathcal S}
+\to
+Z^L\times\widehat{\mathcal S}
+\tag{E.17}
+$$
+
+如下。先计算：
+
+$$
+\mathcal C_0^L(x_{0:L},S_0)
+=
+(z_{0,0:L},S_0'),
+$$
+
+以及对每个 $j\in J$：
+
+$$
+\mathcal C_j^L(\overline x_{j,0:L},S_j)
+=
+(z_{j,0:L},S_j').
+$$
+
+再对每个 $t\in[L]$ 定义：
+
+$$
+y_t
+=
+z_{0,t}
++
+\sum_{j\in J}g_j(x_t)z_{j,t}.
+\tag{E.18}
+$$
+
+最后令：
+
+$$
+\mathcal C_{\mathrm{merge}}^L
+(x_{0:L},(S_0,(S_j)_{j\in J}))
+=
+(y_{0:L},(S_0',(S_j')_{j\in J})).
+\tag{E.19}
+$$
+
+### 定理 E.9：Token-local selector 与固定 merge 的 chunk-correctness 闭包
+
+在定义 E.7 和定义 E.8 的全部前提下：
+
+$$
+\mathcal C_{\mathrm{merge}}^L
+=
+\operatorname{Fold}_{\mathcal T_{\mathrm{merge}}}^L.
+\tag{E.20}
+$$
+
+**证明。**
+
+取任意 $x_{0:L}\in X^L$ 和任意初始状态：
+
+$$
+(S_0,(S_j)_{j\in J})\in\widehat{\mathcal S}.
+$$
+
+逐位置执行 $\mathcal T_{\mathrm{merge}}$ 时，always-on 状态坐标只按 $\mathcal T_0$ 更新。因此，该坐标的输出序列与最终状态等于：
+
+$$
+\operatorname{Fold}_{\mathcal T_0}^L(x_{0:L},S_0).
+$$
+
+对固定 $j\in J$，式 E.11 在位置 $t$ 给该分支的输入恰好是式 E.16 的 $\overline x_{j,t}$；其他分支状态不进入 $\mathcal T_j$。因此，第 $j$ 个状态坐标的输出序列与最终状态等于：
+
+$$
+\operatorname{Fold}_{\mathcal T_j}^L
+(\overline x_{j,0:L},S_j).
+$$
+
+由式 E.14 和式 E.15，$\mathcal C_0^L$ 与每个 $\mathcal C_j^L$ 分别产生上述相同的输出序列和最终状态。对每个位置 $t$，顺序 fold 使用式 E.12 合并这些分支输出，复合 chunk implementation 使用式 E.18 合并同一组输出；二者相等。最终乘积状态的每个坐标也分别相等，故式 E.20 成立。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+### 定义 E.10：Transition 的无操作输入扩展
+
+给定非空集合 $X$、非空状态集合 $\mathcal S$、有限维实向量空间 $Z$，以及 transition：
+
+$$
+\mathcal T:X\times\mathcal S\to Z\times\mathcal S.
+$$
+
+取 $\bot\notin X$，令 $\overline X=X\cup\{\bot\}$。定义无操作输入扩展：
+
+$$
+\overline{\mathcal T}:
+\overline X\times\mathcal S
+\to
+Z\times\mathcal S
+\tag{E.21}
+$$
+
+为：
+
+$$
+\overline{\mathcal T}(a,S)
+=
+\begin{cases}
+\mathcal T(a,S),&a\in X,\\
+(0_Z,S),&a=\bot.
+\end{cases}
+\tag{E.22}
+$$
+
+因此，任意输出空间为 $Z$ 的 transition 都可以通过式 E.21--E.22 变成满足式 E.9 的候选分支 transition。相应 chunk implementation 还必须正确处理含 $\bot$ 的掩码序列；定义 E.10 只定义 reference transition，不自动提供其高性能实现。
+
+### 定义 E.11：无操作输入扩展的 pack/scatter chunk implementation
+
+沿用定义 E.10 的 $X$、$\overline X$、$Z$、$\mathcal S$、$\mathcal T$ 与 $\overline{\mathcal T}$。给定 $L\in\mathbb N$，并假设对每个 $K\in[L+1]$ 已给定正确的 chunk implementation：
+
+$$
+\mathcal C^K:
+X^K\times\mathcal S
+\to
+Z^K\times\mathcal S,
+$$
+
+$$
+\mathcal C^K
+=
+\operatorname{Fold}_{\mathcal T}^K.
+\tag{E.23}
+$$
+
+取任意掩码输入序列 $\overline x_{0:L}\in\overline X^L$。定义其活动位置集合：
+
+$$
+I(\overline x_{0:L})
+=
+\{t\in[L]\mid \overline x_t\in X\}.
+\tag{E.24}
+$$
+
+令：
+
+$$
+K=\lvert I(\overline x_{0:L})\rvert.
+$$
+
+因为 $I(\overline x_{0:L})$ 是自然数有序集 $[L]$ 的有限子集，存在唯一序列：
+
+$$
+p_{0:K}\in[L]^K
+$$
+
+满足：
+
+$$
+I(\overline x_{0:L})
+=
+\{p_i\mid i\in[K]\},
+$$
+
+且对每个满足 $i+1\in[K]$ 的 $i\in[K]$：
+
+$$
+p_i<p_{i+1}.
+$$
+
+当 $K=0$ 时，$p_{0:K}=()$。定义活动子序列 $x^{\mathrm{act}}_{0:K}\in X^K$ 为：
+
+$$
+x^{\mathrm{act}}_i=\overline x_{p_i},
+\qquad i\in[K].
+\tag{E.25}
+$$
+
+对任意 $S\in\mathcal S$，令：
+
+$$
+\mathcal C^K(x^{\mathrm{act}}_{0:K},S)
+=
+(u_{0:K},S').
+\tag{E.26}
+$$
+
+定义 $z_{0:L}\in Z^L$。对每个 $t\in[L]$：
+
+$$
+z_t
+=
+\begin{cases}
+u_i,&\text{存在 }i\in[K]\text{ 使 }t=p_i,\\
+0_Z,&t\notin I(\overline x_{0:L}).
+\end{cases}
+\tag{E.27}
+$$
+
+式 E.27 第一种情形中的 $i$ 由 $p_{0:K}$ 严格递增而唯一。定义：
+
+$$
+\overline{\mathcal C}^{L}:
+\overline X^L\times\mathcal S
+\to
+Z^L\times\mathcal S
+$$
+
+为：
+
+$$
+\overline{\mathcal C}^{L}
+(\overline x_{0:L},S)
+=
+(z_{0:L},S').
+\tag{E.28}
+$$
+
+### 引理 E.12：Pack/scatter implementation 对无操作输入扩展正确
+
+定义 E.11 得到的函数满足：
+
+$$
+\overline{\mathcal C}^{L}
+=
+\operatorname{Fold}_{\overline{\mathcal T}}^L.
+\tag{E.29}
+$$
+
+**证明。**
+
+取任意 $\overline x_{0:L}\in\overline X^L$ 与 $S\in\mathcal S$，并沿用定义 E.11 得到的 $I(\overline x_{0:L})$、$K$、$p_{0:K}$ 和 $x^{\mathrm{act}}_{0:K}$。由定义 1.2 与式 E.23，存在状态序列：
+
+$$
+S^{\mathrm{act}}_0,S^{\mathrm{act}}_1,\ldots,S^{\mathrm{act}}_K\in\mathcal S
+$$
+
+满足 $S^{\mathrm{act}}_0=S$，并对每个 $i\in[K]$：
+
+$$
+\mathcal T(x^{\mathrm{act}}_i,S^{\mathrm{act}}_i)
+=
+(u_i,S^{\mathrm{act}}_{i+1}).
+\tag{E.30}
+$$
+
+特别地，式 E.26 中的 $S'$ 等于 $S^{\mathrm{act}}_K$。
+
+令 $\overline S_0,\ldots,\overline S_L\in\mathcal S$ 和 $\overline z_{0:L}\in Z^L$ 是 $\operatorname{Fold}_{\overline{\mathcal T}}^L(\overline x_{0:L},S)$ 的状态序列与输出序列。对每个 $t\in[L+1]$，定义：
+
+$$
+k_t
+=
+\left\lvert I(\overline x_{0:L})\cap[t]\right\rvert.
+\tag{E.31}
+$$
+
+下面对 $t\in[L+1]$ 归纳证明：
+
+$$
+\overline S_t=S^{\mathrm{act}}_{k_t},
+\tag{E.32}
+$$
+
+并且前 $t$ 个输出 $\overline z_{0:t}$ 等于式 E.27 定义的 $z_{0:t}$。
+
+当 $t=0$ 时，$k_0=0$，两侧状态都等于 $S$，两个输出前缀都是空序列。
+
+假设结论对某个 $t\in[L]$ 成立。若 $t\notin I(\overline x_{0:L})$，则 $\overline x_t=\bot$，且 $k_{t+1}=k_t$。由式 E.22：
+
+$$
+(\overline z_t,\overline S_{t+1})
+=
+(0_Z,\overline S_t)
+=
+(0_Z,S^{\mathrm{act}}_{k_t}).
+$$
+
+这与式 E.27 在位置 $t$ 的第二种情形一致，并且式 E.32 对 $t+1$ 成立。
+
+若 $t\in I(\overline x_{0:L})$，则存在唯一 $i\in[K]$ 使 $t=p_i$。严格递增枚举给出 $i=k_t$ 和 $k_{t+1}=k_t+1$。由式 E.22、式 E.25、归纳假设与式 E.30：
+
+$$
+(\overline z_t,\overline S_{t+1})
+=
+\mathcal T(x^{\mathrm{act}}_i,S^{\mathrm{act}}_i)
+=
+(u_i,S^{\mathrm{act}}_{i+1}).
+$$
+
+这与式 E.27 在位置 $t$ 的第一种情形一致，并且式 E.32 对 $t+1$ 成立。
+
+因此归纳结论对 $t=L$ 成立。此时 $k_L=K$，所以 $\overline S_L=S^{\mathrm{act}}_K=S'$，全部输出也满足 $\overline z_{0:L}=z_{0:L}$。由式 E.28 得到式 E.29。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+引理 E.12 是 correctness 构造：先抽取活动位置，执行长度为 $K$ 的原 chunk implementation，再把结果放回原位置。它不自动证明抽取、数据搬运、padding、分桶或分支 kernel 在具体设备上具有低 work、低 span 或高利用率。
+
+### 定义 E.13：有限深度固定 merge 模块集合
+
+固定 $L\in\mathbb N$、非空集合 $X$、对象 $\bot\notin X$ 和有限维实向量空间 $Z$。令 $\overline X=X\cup\{\bot\}$。一个**长度上界为 $L$ 的模块记录**是三元组：
+
+$$
+M
+=
+(\mathcal S_M,\mathcal T_M,\mathbf C_M),
+\tag{E.33}
+$$
+
+其中 $\mathcal S_M$ 是非空集合，
+
+$$
+\mathcal T_M:
+X\times\mathcal S_M
+\to
+Z\times\mathcal S_M,
+$$
+
+且：
+
+$$
+\mathbf C_M
+=
+(\mathcal C_M^q)_{q\in[L+1]}
+$$
+
+是一个以有限集合 $[L+1]$ 为索引的函数族；对每个 $q\in[L+1]$：
+
+$$
+\mathcal C_M^q:
+X^q\times\mathcal S_M
+\to
+Z^q\times\mathcal S_M.
+$$
+
+称记录 $M$ **正确**，当且仅当对每个 $q\in[L+1]$：
+
+$$
+\mathcal C_M^q
+=
+\operatorname{Fold}_{\mathcal T_M}^q.
+\tag{E.34}
+$$
+
+给定一个由正确模块记录组成的有限集合 $\mathfrak B_L$。递归定义模块记录集合 $\mathfrak M_{n,L}$。先令：
+
+$$
+\mathfrak M_{0,L}=\mathfrak B_L.
+\tag{E.35}
+$$
+
+假设 $\mathfrak M_{n,L}$ 已定义。一个记录 $M$ 属于 $\mathfrak M_{n+1,L}$，当且仅当满足以下两种情形之一：
+
+1. $M\in\mathfrak M_{n,L}$。
+2. 存在 $K\in\mathbb N$、一个 always-on 记录 $M^{(0)}\in\mathfrak M_{n,L}$、候选记录族 $(M^{(j)})_{j\in[K]}\in(\mathfrak M_{n,L})^{[K]}$、selector $\sigma:X\to\mathcal P([K])$，并且对每个 $j\in[K]$ 存在权重函数 $g_j:X\to\mathbb R$，使 $M$ 由这些对象按下列步骤构造：使用本定义固定的同一个 $\bot$，对每个候选记录应用定义 E.10 得到定义域为 $\overline X$ 的无操作输入扩展；对每个 $q\in[L+1]$ 应用定义 E.11 得到扩展的 chunk implementation；最后以 $[K]$ 为定义 E.7--E.8 中的分支索引集合 $J$，构造 $\mathcal S_M$、$\mathcal T_M$ 与 $\mathbf C_M$。
+
+定义有限深度构造得到的模块记录集合：
+
+$$
+\mathfrak M_{\mathrm{fin},L}
+=
+\bigcup_{n\in\mathbb N}\mathfrak M_{n,L}.
+\tag{E.36}
+$$
+
+式 E.35--E.36 是递归结构的数学定义。$n$ 是构造深度上界，不是 token 位置、Graph 深度或物理调度轮次；每个具体记录属于某个有限的 $\mathfrak M_{n,L}$。
+
+### 定理 E.14：有限深度固定 merge 模块的 chunk correctness
+
+定义 E.13 中每个 $M\in\mathfrak M_{\mathrm{fin},L}$ 都是正确模块记录。
+
+**证明。**
+
+对 $n\in\mathbb N$ 归纳证明 $\mathfrak M_{n,L}$ 中每个记录都正确。
+
+当 $n=0$ 时，式 E.35 和 $\mathfrak B_L$ 的前提直接给出结论。
+
+假设 $\mathfrak M_{n,L}$ 中每个记录都正确。取任意 $M\in\mathfrak M_{n+1,L}$。若 $M\in\mathfrak M_{n,L}$，则由归纳假设，$M$ 正确。
+
+否则，$M$ 由定义 E.13 的第二种情形构造。取任意 $q\in[L+1]$。always-on 记录和每个候选记录都属于 $\mathfrak M_{n,L}$，所以由归纳假设，它们在长度 $0,\ldots,q$ 上的 chunk implementation 正确。由引理 E.12，每个候选记录的无操作输入扩展在长度 $q$ 上正确。于是定义 E.8 的式 E.14--E.15 对该 $q$ 成立；由定理 E.9：
+
+$$
+\mathcal C_M^q
+=
+\operatorname{Fold}_{\mathcal T_M}^q.
+$$
+
+因为 $q\in[L+1]$ 任意，式 E.34 成立，故 $M$ 正确。因此结论对 $\mathfrak M_{n+1,L}$ 成立。
+
+由数学归纳法，结论对每个 $n\in\mathbb N$ 成立。再由式 E.36，每个 $M\in\mathfrak M_{\mathrm{fin},L}$ 都属于某个 $\mathfrak M_{n,L}$，所以都正确。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+有限串联模块可以先按定理 3.13 构造成一个正确的基础模块记录，再放入 $\mathfrak B_L$。定义 E.13 要求同一层固定 merge 的各模块具有共同边界集合 $X$ 与 $Z$；内部串联层可以使用不同的中间集合。
+
+### 适用边界
+
+定理 E.9、引理 E.12 与定理 E.14 使用了以下关键前提：
+
+1. selector $\sigma$ 只读取当前输入值 $x$，没有自己的跨位置可变状态。
+2. 未选择分支的 transition 明确返回 $(0_Z,S_j)$，没有隐藏状态副作用。
+3. merge 权重 $g_j(x)$ 只依赖当前输入值；若它读取持久状态，该状态必须进入新的复合 transition 并重新证明。
+4. 每个基础模块在所研究的有限长度范围内都具有正确的 chunk implementation。
+5. 每个 merge 的候选分支数有限，并且每个具体模块由有限层构造得到。
+
+因此，本定理不自动覆盖：
+
+- 逐 token 更新历史负载的 stateful selector。
+- selector 读取某个候选分支本次尚未完成的输出后，再决定是否执行该分支。
+- 未选分支仍更新 KV、SSM 或其他长期状态的语义。
+- 短分支先向外发送、长分支稍后修改同一父模块输出的异步 merge。
+- 节点删除、非精确蒸馏、量化误差或浮点重排。
+
+固定 merge 本身只提供清晰的组合边界。高性能还要求分支的 chunk implementation 具有可接受的 work/span，并要求掩码序列能够通过 packed、segmented scan 或 causal-bulk kernel 实现，而不是物理执行所有未选分支再乘零。
+
+> [!important] 与两条战略路线的关系
+> Graph 收缩线可以用定理 E.6、定理 E.9 和定理 E.14 构造不含本文所述跨位置 stateful selector 链的受限模型；这使 routing 部分不直接落入一般自适应路由下界，但不自动证明全部 kernel 具有低 span。Checkpoint 生长线可以用定理 E.2 和引理 E.4 建立扩展初始点的严格 equality gate。两组结果存在共同接口，但没有证明两条设计路线最终必须汇合；一旦 checkpoint 后代删除节点或采用本部分未覆盖的 stateful routing，就必须建立新的 transition、simulation 和 chunk-correctness 证明。

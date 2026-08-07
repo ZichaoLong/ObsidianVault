@@ -17,6 +17,9 @@ tags:
 > [!warning] 类比边界
 > ISA、编译器、SSA、MemorySSA、dataflow 与人脑网络都能提供有价值的结构性启发，但它们不是 Tide 正确性或可训练性的证据。特别是，脑科学调查描述真实生物网络，并不要求数字模型直接复制反馈环、皮质柱或脑区连接。
 
+> [!note] 与两条战略路线的关系
+> 编译器、dataflow 和 logical-time 谱系主要帮助 Graph 收缩线把一般执行还原为可验证依赖、状态版本和等价 lowering；编译器的 semantics-preserving transformation、translation validation 与逐级优化也直接启发 checkpoint 生长线的函数保持扩展和变异验证。人脑传播调查主要为局部通信、层级分支和快慢路径提供问题来源。任何一条外部谱系都没有证明两条 Tide 设计路线最终应当汇合。
+
 ## 第一部分：ISA、编译器与 dataflow 理论谱系
 
 

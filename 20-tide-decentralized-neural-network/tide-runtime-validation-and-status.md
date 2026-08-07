@@ -6,13 +6,14 @@ tags:
   - runtime
   - validation
   - lh-compatibility
+  - checkpoint-growth
   - backend
 ---
 
 # Tide Runtime、验证与工程状态
 
 > [!summary] 本页定位
-> 本页统一保存三类工程信息：稳定的 runtime/StepTransition 实现契约、带日期的当前架构与数值验证快照，以及 LH/tide.old 的历史迁移记录。数学定义和证明只以 [[tide-mathematical-foundations]] 为准；本页中的历史性能数字不构成当前性能承诺。
+> 本页统一保存三类工程信息：稳定的 runtime/StepTransition 实现契约、带日期的当前架构与数值验证快照，以及 LH/tide.old 的历史迁移记录。它同时规定 Graph 收缩线和 checkpoint 生长线共享的 state-dict、transition、artifact 与 backend 验证接口，但不假设两条模型路线最终汇合。数学定义和证明只以 [[tide-mathematical-foundations]] 为准；本页中的历史性能数字不构成当前性能承诺。
 
 > [!important] 阅读顺序
 > 第一部分回答“runtime 应实现什么”；第二部分回答“当前已经实现并验证了什么”；第三部分解释“这些接口为何从 LH 演化而来”。后两部分不得反向修改第一部分的规范含义。
@@ -390,16 +391,16 @@ phase pronounce:
 
 这里最容易出错的点是：`iobridge` 在当前 LH 语义中读取 tick start 时的旧 `iacts`，不是 `input_cortex_update` 后的新 `iacts`。如果统一 graph runtime 没有这个 read view 约束，就会改变 LH 语义。
 
-### 两条实现路线
+### 两类 runtime support family
 
-这两条路线不是同等地位的最终竞争架构：
+这里的两类 family 是 runtime 需要承载的 reference family，不是 [[README#两条战略路线|两条模型设计路线]]：
 
-- LH compatibility 路线负责提取复杂机制、提供 golden oracle、暴露 state/phase/selector 问题。
-- strict prefill 路线负责建立最小、可理解、可证明、可高性能实现的数学与 runtime 主线。
+- LH compatibility family 负责提取复杂机制、提供 golden oracle、暴露 state/phase/selector 问题。
+- strict prefill family 负责建立最小、可理解、可证明、可高性能实现的数学与 runtime 核心。
 
 总体目标是“局部通信 + 超稀疏”，不是逐行复刻 LH。若某个 LH 机制无法满足或严重阻碍 model-level prefill、序列并行与 non-degenerate chunk certificate，可以简化、替换或留在 non-strict compatibility family。
 
-#### 路线 A：LH 机制提取与 compatibility
+#### Family L：LH 机制提取与 compatibility
 
 目标：
 
@@ -411,7 +412,7 @@ Typed Graph
 + KernelRegistry
 ```
 
-这条路线保留 LH 的 phase、selector、readout、pronounce 和 memory 语义。
+这个 family 保留 LH 的 phase、selector、readout、pronounce 和 memory 语义。
 
 优势：
 
@@ -425,7 +426,7 @@ Typed Graph
 - 需要显式 state scope、selector scope、workspace lifetime。
 - 证明不能只靠普通 graph，需要依赖 phase schedule 与 state contract。
 
-#### 路线 B：strict prefill core
+#### Family S：strict prefill core
 
 目标：
 
@@ -436,7 +437,7 @@ for round:
 logits = Readout(State)
 ```
 
-这条路线选择更简单的通用 graph recurrent runtime，并承担当前数学与 model-level prefill 主线。
+这个 family 选择更简单的通用 graph recurrent runtime，并承担当前数学与 model-level prefill 主线。
 
 优势：
 
@@ -547,14 +548,15 @@ same parameters
 
 ### 当前建议
 
-短期应保持四层协同：
+短期应保持五类工作协同：
 
 1. 用数学规范定义 transition、fold、chunk correctness 与 simulation。
 2. 用 Event IR 与实现规范约束 logical rank、dependency、graph/state/workspace/phase/kernel 边界。
 3. 工程上保留 native LH golden path，并用独立 Tide CPU path 做 translation-validation-style 对齐。
-4. 用更简单的 strict B-family 建立 model-level prefill，再把结果逐层推广到 LH-like mechanisms。
+4. 建立 native pretrained model 到 Tide baseline、再到中性扩展模型的 checkpoint golden path。
+5. 用更简单的 strict transition family 建立 model-level prefill，再分别检验哪些结果能推广到 LH-like mechanisms 和 checkpoint-derived branches。
 
-四层都由 `prefill / decode` 等价性反过来裁决 graph、state、schedule 与 kernel 设计。
+五类工作都由各自 reference contract 下的 `prefill / decode` 等价性反过来裁决 graph、state、schedule 与 kernel 设计；它们共享验证接口，但不要求两条模型路线最终统一。
 
 第一批最小可检查对象：
 
@@ -565,6 +567,8 @@ StateStore Spec
 Workspace Lifetime Spec
 Phase Read/Write Scope Spec
 Kernel Equivalence Spec
+Backend-Neutral State-Dict Mapping Spec
+Function-Preserving Growth Equality Test
 Prefill = Decode Fold Test
 Chunk Prefill Correctness Test
 ```
@@ -608,6 +612,8 @@ Chunk Prefill Correctness Test
 
 尚未完成：
 
+- 原生预训练 Transformer/Mamba 到 Tide baseline 的 100% parameter mapping、logits、cache/state 和训练梯度验证链。
+- 零 residual、clone-and-split 与递归固定 merge 等 checkpoint growth operator 的实现和 equality report。
 - strict model-level `prefill()` API 与 `prefill = decode fold` 证明。
 - 通用 `EventId / LogicalRank / Dependency / StateVersion / CommitEvent` IR、dynamic event generation 与 causality verifier。
 - zero-delay SCC detection，以及可选 implicit/fixed-point kernel contract。
@@ -640,6 +646,9 @@ flowchart TB
   LHSpec["LH-compatible role-aware family"]
   TideCPU["Independent Tide CPU kernels"]
   Native["Native LH golden oracle"]
+  NativeModel["Native pretrained model oracle"]
+  TideBase["Tide checkpoint-compatible baseline"]
+  Growth["Function-preserving growth operators"]
   Validate["End-to-end + per-phase validation"]
   Optimize["Prefill / parallel / packed lowering"]
   Backend["CPU / Ascend backend"]
@@ -652,15 +661,21 @@ flowchart TB
   Strict --> Optimize
   Native --> Validate
   TideCPU --> Validate
+  NativeModel --> TideBase
+  TideBase --> Growth
+  TideBase --> Validate
+  Growth --> Validate
   Validate --> Optimize
   Optimize --> Backend
 ```
 
-这套分层刻意把三件事分开：
+这套分层刻意把下列对象分开：
 
 - 数学文档规定什么叫正确。
 - strict prefill family 是 model-level prefill 与序列并行的目标主线，当前尚未形成完整实现。
 - LH-compatible family 提供一个复杂但具体的 reference transition。
+- checkpoint-compatible baseline 提供成熟预训练模型的第二条 golden chain；当前尚未实现。
+- growth operator 只在指定中性参数点要求函数保持，继续训练或结构变异后必须建立新的模型 contract。
 - Event IR 是下一层目标接口，当前代码尚未完整实现；图中出现它不表示完成状态。
 - Tide CPU / packed / Ascend 只是该语义的不同实现或 lowering。
 
@@ -731,6 +746,8 @@ pronounce
 | Hidden/cache modes | 已有组件级覆盖 | `CROSSBATCH / LOOP / PACKED / CACHEDMATMUL / CACHEDPACKED / CACHEDATTENTION` |
 | Add hidden / norm / heterogeneous config | 已覆盖 | TensorHidden、RMSNorm、LayerNorm、Identity、mixed CHAL bands |
 | Strict chunk prefill | 未完成 | 当前模型入口仍是 decode-style `think()` |
+| Native checkpoint baseline | 未完成 | 尚无预训练 Transformer/Mamba 到 Tide 的完整 parameter/state/gradient equality chain |
+| Checkpoint growth | 未完成 | 尚未实现函数保持分支、递归 merge 与结构变异谱系记录 |
 | Ascend/NPU | 未实现 | 目前只有 adaptation/lowering 调查与设计 |
 
 ### Golden Reference Chain
@@ -750,6 +767,25 @@ native LH whole think
 - 训练时反向传播等价。
 - 浮点重排后的所有 backend 都等价。
 - 当前 LH transition 本身具有理想的可训练性或高性能 prefill 结构。
+
+Checkpoint 生长线需要建立另一条彼此独立的目标验证链：
+
+```text
+native pretrained model
+  == Tide baseline with 100% parameter mapping
+  == Tide baseline prefill/decode artifacts
+  == neutral expanded model at its function-preserving point
+```
+
+这条目标链中的等号应分层报告：
+
+1. state-dict key、shape、dtype、tied-weight 与参数值映射。
+2. embedding、每层 residual、Attention、FFN 和最终 logits。
+3. KV/SSM state、position/RoPE 输入和 continuation state。
+4. prefill、逐 token decode 与不同 chunk 切分的 artifact。
+5. 训练模式 loss 与主要参数梯度。
+
+函数保持 growth operator 只需在声明的中性参数 $\phi_0$ 上满足该链。继续训练后，验证目标改为新模型自身的 `prefill = decode`、训练稳定性和 matched-baseline 质量，而不是继续与旧 checkpoint 输出相等。若后续删除旧节点或改变 state layout，则必须登记为新的 checkpoint-derived model version，并提供参数迁移函数和独立 golden artifacts。
 
 ### CPU Mode 与性能状态
 
@@ -783,15 +819,24 @@ Step(input_token, State) -> logits, State'
 
 ### 当前下一步
 
-建议顺序：
+建议把工作拆成两个可并行但共享验证接口的顺序链。
+
+Graph/LH support chain：
 
 1. 保持 native LH 为 golden oracle，补 memory-state per-phase artifacts。
 2. 从现有 phase event log 提取最小 `EventId / LogicalRank / StateVersion / CommitEvent` schema，并先支持 fixed schedule。
 3. 以 [[tide-mathematical-foundations#第一部分：StepTransition、kernel 与 logical event DAG|数学基础第一部分]] 的 B0 contract 为基准定义 model-level `prefill()` 输入、输出与 state contract。
-4. 先实现并验证 token-wise map、causal attention、affine scan 的 chunk paths。
-5. 为每条 chunk path 给出 non-degenerate certificate 与 work/span/memory/communication ledger，再增加 dynamic event generation、parallel executor、batch memory、packed selector 与 crossbatch fusion。
-6. 把 LH-specific config mapping 收敛为 backend-neutral state-dict API。
-7. CPU semantic parity 与 prefill proof gate 稳定后，再做 Ascend lowering。
+4. 实现并验证 token-wise map、causal attention、affine scan 的 chunk paths。
+
+Checkpoint growth chain：
+
+1. 选择一个 pre-norm decoder-only 原生 checkpoint 和对应实现作为 oracle。
+2. 先完成 backend-neutral parameter/state mapping 与 Tide baseline equality，不加入任何分支。
+3. 实现单个零 residual growth operator，并按 [[tide-mathematical-foundations#定理 E.2：单步精确状态嵌入推出任意长度 fold 等价|定理 E.2]] 检查连续序列和最终状态。
+4. 再实现 clone-and-split、平铺兄弟分支、共享 token-local selector 和两层递归固定 merge。
+5. 只有兼容阶段的消融稳定后，才实现节点删除、合并或 kernel 替换，并为后代模型建立独立 contract。
+
+两条 chain 共同需要：为每条 chunk path 给出 non-degenerate certificate 与 work/span/memory/communication ledger，再增加 dynamic event generation、parallel executor、batch memory、packed selector 与 crossbatch fusion；CPU semantic gate 稳定后再做 Ascend lowering。
 
 工程判断应始终保持：
 

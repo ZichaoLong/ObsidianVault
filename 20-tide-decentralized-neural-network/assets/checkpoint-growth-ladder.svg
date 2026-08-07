@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760">
+  <defs>
+    <style>
+      .title { font: 700 34px "Noto Sans CJK SC", sans-serif; fill: #182a31; }
+      .subtitle { font: 400 18px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .stage { fill: #fffdf8; stroke: #558b8d; stroke-width: 2; rx: 16; ry: 16; }
+      .mutation { fill: #fff6e8; stroke: #b77a21; stroke-width: 2; rx: 16; ry: 16; }
+      .stageId { font: 700 20px "Noto Sans CJK SC", sans-serif; fill: #1e5559; }
+      .stageTitle { font: 700 17px "Noto Sans CJK SC", sans-serif; fill: #263b42; }
+      .small { font: 400 13px "Noto Sans CJK SC", sans-serif; fill: #5b6d73; }
+      .gate { fill: #edf3e7; stroke: #6d874b; stroke-width: 1.5; rx: 12; ry: 12; }
+      .gateText { font: 600 12px "Noto Sans CJK SC", sans-serif; fill: #40552d; }
+      .arrow { fill: none; stroke: #558b8d; stroke-width: 3; }
+      .breakArrow { fill: none; stroke: #b77a21; stroke-width: 3; stroke-dasharray: 8 5; }
+      .line { fill: none; stroke: #98a5a6; stroke-width: 2; }
+      .backbone { fill: #287f85; stroke: #15565b; stroke-width: 2; }
+      .branch { fill: #d58a31; stroke: #925717; stroke-width: 2; }
+      .merge { fill: #718b4c; stroke: #485e2c; stroke-width: 2; }
+    </style>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#558b8d"/></marker>
+    <marker id="breakArrow" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#b77a21"/></marker>
+  </defs>
+
+  <rect width="1600" height="760" fill="#f3efe6"/>
+  <text x="64" y="58" class="title">Checkpoint 生长阶梯：每次只增加一种主要自由度</text>
+  <text x="64" y="91" class="subtitle">P0-P5 保留可追溯的原模型主干；P6 开始允许删除、合并或替换旧结构，并转入 checkpoint-derived descendant。</text>
+
+  <path d="M100 270 H1490" class="line"/>
+
+  <g transform="translate(55,145)">
+    <rect width="195" height="250" class="stage"/>
+    <text x="20" y="36" class="stageId">P0</text>
+    <text x="20" y="68" class="stageTitle">原生基线</text>
+    <circle cx="55" cy="126" r="17" class="backbone"/>
+    <path d="M72 126 H142" class="line"/>
+    <circle cx="160" cy="126" r="17" class="backbone"/>
+    <text x="20" y="181" class="small">100% 参数装载</text>
+    <text x="20" y="204" class="small">logits / cache / 梯度对齐</text>
+    <rect x="14" y="216" width="167" height="24" class="gate"/>
+    <text x="98" y="233" text-anchor="middle" class="gateText">原生 oracle equality</text>
+  </g>
+
+  <g transform="translate(270,145)">
+    <rect width="195" height="250" class="stage"/>
+    <text x="20" y="36" class="stageId">P1</text>
+    <text x="20" y="68" class="stageTitle">单零分支</text>
+    <path d="M35 126 H160" class="line"/>
+    <circle cx="50" cy="126" r="17" class="backbone"/>
+    <circle cx="145" cy="126" r="17" class="merge"/>
+    <path d="M50 109 C75 78 118 78 145 109" class="line"/>
+    <circle cx="98" cy="82" r="14" class="branch"/>
+    <text x="20" y="181" class="small">residual delta 初始为 0</text>
+    <text x="20" y="204" class="small">transition 初始等价</text>
+    <rect x="14" y="216" width="167" height="24" class="gate"/>
+    <text x="98" y="233" text-anchor="middle" class="gateText">函数保持 gate</text>
+  </g>
+
+  <g transform="translate(485,145)">
+    <rect width="195" height="250" class="stage"/>
+    <text x="20" y="36" class="stageId">P2</text>
+    <text x="20" y="68" class="stageTitle">平铺兄弟分支</text>
+    <circle cx="42" cy="126" r="15" class="backbone"/>
+    <circle cx="151" cy="126" r="15" class="merge"/>
+    <path d="M57 126 H136 M42 111 C70 82 112 82 151 111 M42 141 C70 170 112 170 151 141" class="line"/>
+    <circle cx="96" cy="86" r="13" class="branch"/>
+    <circle cx="96" cy="166" r="13" class="branch"/>
+    <text x="20" y="181" class="small">固定 merge，多条候选</text>
+    <text x="20" y="204" class="small">先 all-on 或固定选择</text>
+    <rect x="14" y="216" width="167" height="24" class="gate"/>
+    <text x="98" y="233" text-anchor="middle" class="gateText">matched-compute 对照</text>
+  </g>
+
+  <g transform="translate(700,145)">
+    <rect width="195" height="250" class="stage"/>
+    <text x="20" y="36" class="stageId">P3</text>
+    <text x="20" y="68" class="stageTitle">共享 Selector</text>
+    <rect x="63" y="79" width="70" height="30" class="gate"/>
+    <text x="98" y="99" text-anchor="middle" class="gateText">Top-K</text>
+    <circle cx="42" cy="142" r="15" class="backbone"/>
+    <circle cx="151" cy="142" r="15" class="merge"/>
+    <path d="M57 142 H136 M98 109 V122 M42 127 C70 112 118 112 151 127 M42 157 C70 172 118 172 151 157" class="line"/>
+    <text x="20" y="181" class="small">兄弟共享决策与预算</text>
+    <text x="20" y="204" class="small">先 token-local，再 stateful</text>
+    <rect x="14" y="216" width="167" height="24" class="gate"/>
+    <text x="98" y="233" text-anchor="middle" class="gateText">route artifact equality</text>
+  </g>
+
+  <g transform="translate(915,145)">
+    <rect width="195" height="250" class="stage"/>
+    <text x="20" y="36" class="stageId">P4</text>
+    <text x="20" y="68" class="stageTitle">两层递归</text>
+    <circle cx="38" cy="126" r="14" class="backbone"/>
+    <circle cx="155" cy="126" r="14" class="merge"/>
+    <circle cx="90" cy="88" r="12" class="branch"/>
+    <circle cx="90" cy="164" r="12" class="branch"/>
+    <circle cx="125" cy="68" r="9" class="branch"/>
+    <circle cx="125" cy="104" r="9" class="branch"/>
+    <path d="M52 126 H141 M38 112 C55 92 68 88 78 88 M102 88 H141 M38 140 C55 160 68 164 78 164 M102 164 C125 164 132 140 141 136 M102 82 L116 71 M102 94 L116 103" class="line"/>
+    <text x="20" y="181" class="small">前缀闭合 active subtree</text>
+    <text x="20" y="204" class="small">有界深度与最长路径</text>
+    <rect x="14" y="216" width="167" height="24" class="gate"/>
+    <text x="98" y="233" text-anchor="middle" class="gateText">梯度与路径稳定性</text>
+  </g>
+
+  <g transform="translate(1130,145)">
+    <rect width="195" height="250" class="stage"/>
+    <text x="20" y="36" class="stageId">P5</text>
+    <text x="20" y="68" class="stageTitle">HB 空间化</text>
+    <path d="M40 105 H155 M40 145 H155 M62 88 V162 M98 88 V162 M134 88 V162" class="line"/>
+    <circle cx="62" cy="105" r="10" class="backbone"/><circle cx="98" cy="105" r="10" class="branch"/><circle cx="134" cy="105" r="10" class="backbone"/>
+    <circle cx="62" cy="145" r="10" class="branch"/><circle cx="98" cy="145" r="10" class="backbone"/><circle cx="134" cy="145" r="10" class="branch"/>
+    <text x="20" y="181" class="small">Line / Plane 局部连接</text>
+    <text x="20" y="204" class="small">通信、放置与稀疏 work</text>
+    <rect x="14" y="216" width="167" height="24" class="gate"/>
+    <text x="98" y="233" text-anchor="middle" class="gateText">端到端收益 gate</text>
+  </g>
+
+  <g transform="translate(1345,145)">
+    <rect width="195" height="250" class="mutation"/>
+    <text x="20" y="36" class="stageId" style="fill:#8c5518">P6</text>
+    <text x="20" y="68" class="stageTitle">结构变异</text>
+    <circle cx="42" cy="126" r="15" class="backbone"/>
+    <circle cx="96" cy="92" r="13" class="branch"/>
+    <circle cx="151" cy="126" r="15" class="merge"/>
+    <path d="M57 126 H136 M42 111 C65 90 76 92 83 92 M109 92 C130 92 137 110 151 111" class="line"/>
+    <path d="M91 144 L101 164 M101 144 L91 164" stroke="#aa684c" stroke-width="4"/>
+    <text x="20" y="181" class="small">删除、合并、替换旧节点</text>
+    <text x="20" y="204" class="small">不再承诺结构兼容</text>
+    <rect x="14" y="216" width="167" height="24" class="gate"/>
+    <text x="98" y="233" text-anchor="middle" class="gateText">独立模型 contract</text>
+  </g>
+
+  <path d="M250 270 H258" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M465 270 H473" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M680 270 H688" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M895 270 H903" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M1110 270 H1118" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M1325 270 H1333" class="breakArrow" marker-end="url(#breakArrow)"/>
+
+  <rect x="55" y="455" width="1485" height="235" class="gate"/>
+  <text x="82" y="493" class="stageTitle">贯穿所有阶段的证据账本</text>
+  <text x="82" y="530" class="small">语义：输出、cache/state、route 和 chunk/decode artifact equality</text>
+  <text x="82" y="563" class="small">训练：continued-pretraining baseline、等参数 dense、等 active-FLOPs MoE/branch 对照</text>
+  <text x="82" y="596" class="small">性能：active work、critical-path span、memory、通信、packing 效率和真实设备吞吐</text>
+  <text x="82" y="629" class="small">谱系：源 checkpoint、参数迁移函数、冻结/解冻策略、训练数据和每次非函数保持变化</text>
+  <text x="82" y="662" class="small">P6 之后可以继续从旧知识生长，但“由 checkpoint 派生”不再等于“与 checkpoint 完全兼容”。</text>
+</svg>

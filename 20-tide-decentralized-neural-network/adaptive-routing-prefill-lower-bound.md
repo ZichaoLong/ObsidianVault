@@ -19,6 +19,9 @@ tags:
 > [!note] 与构造性主线的关系
 > [[tide-mathematical-foundations]] 主要给出 chunk correctness 的构造性充分条件；本页给出一般动态 routing 的反向边界。它不证明每一个跨 token routing 模型都无法并行，而是证明：只要模型类别允许任意、不可组合的 pointer-chasing 式 routing，就不存在对该类别所有实例都有效的通用高性能 exact prefill。
 
+> [!note] 与两条战略路线的关系
+> 本页首先约束 Graph 收缩线：一般 Graph 若保留任意自适应控制链，就不能承诺通用低-depth prefill。它也可以检查 checkpoint 生长线中新加入的 selector，但不能因为某个模型“由 Transformer 生长”就自动套用下界；必须先证明该具体 selector 能嵌入本文 oracle family。反过来，checkpoint 生长线采用 token-local selector 并把分支限制在固定 merge 内，或者采用已证明可组合的控制状态时，正是在构造本文第 11 节列出的结构化逃离条件。两条路线是否最终汇合不属于本页结论。
+
 > [!warning] 结论强度
 > “早期 token 可以影响后续 routing”本身不足以推出不可能性。若影响可表示为 prefix sum、affine scan、有限且紧凑的函数复合，仍可能并行。本页下界依赖四个明确条件：exactness、自适应地址依赖、黑盒 transition、以及不枚举整个 routing state space 的 work budget。
 

@@ -4,6 +4,8 @@ status: active-candidate
 tags:
   - tide
   - hierarchical-backbone
+  - checkpoint-growth
+  - recursive-branching
   - sparse-routing
   - training-stability
   - prefill-decode
@@ -12,12 +14,276 @@ tags:
 # Tide 模型架构与训练
 
 > [!summary] 本页定位
-> 本页统一记录 Tide 当前的正向模型候选、selector/allocator 能力契约、训练风险和实验顺序。第一部分先定义 HB-Sliced 架构族，再用 HB-Line-v0 给出可运行但尚未证明可训练的最小实例；第二、三部分是设计与验证约束，不是数学定理。一般空间 DAG 的正式定义见 [[tide-mathematical-foundations]]，自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
+> 本页统一记录 Tide 的两条战略路线、当前正向模型候选、selector/allocator 能力契约、训练风险和实验顺序。第一部分定义 Graph 收缩线、checkpoint 生长线及其可能但不保证发生的汇合；第二部分定义 HB-Sliced 并用 HB-Line-v0 给出结构 reference；第三、四部分记录训练和执行约束。一般空间 DAG 见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|数学基础第二部分]]；函数保持生长与固定 merge 闭包见 [[tide-mathematical-foundations#第五部分：函数保持生长与有限 DAG 节点细化|数学基础第五部分]]；自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
 
 > [!important] 语义边界
 > `prefill`、`decode`、batch 组合和物理调度不得改变单序列 reference semantics。CPU selector、加速卡 packing、设备放置和通信流水只属于实现；若历史负载进入语义，它必须是逐序列隔离、可延续且可重放的正式状态。
 
-## 第一部分：HB-Sliced 与 HB-Line-v0
+## 第一部分：两条设计路线与递归固定 merge 分支
+
+> [!summary] 本部分定位
+> Tide 同时保留一条从一般 Graph 向下收缩的理论/架构路线，以及一条从预训练模型向外生长的实现/实验路线。两条路线互相提供约束和证据，但本文不把它们最终汇合当作前提。递归固定 merge 分支只是当前最值得共同研究的候选交界面。
+
+### 1. 两条路线承担不同职责
+
+#### 1.1 Graph 收缩线
+
+Graph 收缩线从表达力较强的机制集合出发：
+
+```text
+一般 Graph / LH mechanism pool
+-> 有限、dependency-complete logical event DAG
+-> 显式 allocator 的一般空间 DAG
+-> HB-Lattice 的几何与层级直觉
+-> HB-Sliced / HB-Line / HB-Plane
+-> 有界递归、固定 merge 的结构化分支族
+```
+
+它的主要产物不是一个必须完整训练的“最大模型”，而是：
+
+1. correctness、因果性和 chunk composition 的边界。
+2. work、span、memory 和 communication 的成本约束。
+3. 对 selector、状态副作用、反馈边和不等长路径的可接受条件。
+4. 仍然保留局部通信与超稀疏目标的结构化候选。
+
+LH 在这条路线中是复杂机制样本、CPU golden reference 和早期动机。若某个 LH 机制阻碍高性能 `prefill` 或训练稳定性，它可以被修改、替代或留在 compatibility family；Graph 收缩线不以复刻 LH 为完成条件。历史 HB-Lattice 承担从一般空间 DAG 到层级局部结构的中间直觉，但旧 v0 混合了空间平面、模型阶段和 runtime lowering；当前正式继承者是 HB-Sliced，而不是恢复旧八平面语义。
+
+#### 1.2 Checkpoint 生长线
+
+Checkpoint 生长线从已有成熟训练、部署事实和高性能 `prefill` 实现的模型出发：
+
+```text
+原生预训练 Transformer / Mamba
+-> Tide baseline 完全等价装载
+-> 函数保持的 residual branch
+-> 共享 selector 的平铺兄弟分支
+-> 有界递归分支
+-> 可选的局部空间化、节点删除和结构变异
+```
+
+这条路线在早期追求严格归因：每一步只增加一种结构自由度，并保留一个可直接继续训练的 checkpoint。它的价值是让质量、训练稳定性和性能变化能够与具体设计对应，而不是一次从随机初始化训练一个同时改变拓扑、状态、selector 和 kernel 的大模型。
+
+这条路线不要求永远与原 Transformer 兼容。随着实验积累，后期可以删除冗余节点、合并分支、改变状态表示、替换 kernel 或形成不同拓扑；但从发生非函数保持变异的阶段起，必须把模型称为 checkpoint-derived descendant，而不能继续声称完全 checkpoint-compatible。
+
+#### 1.3 当前优先级不对称
+
+两条路线都有独立价值，但当前执行优先级不同：
+
+- Graph 收缩线继续负责理论边界、结构候选和反例。
+- Checkpoint 生长线优先负责第一个真实可训练模型和逐级实验。
+- Runtime 同时保留 LH golden path 和预训练模型原生实现两个 oracle；它们是支持设施，不构成第三条模型设计路线。
+
+### 2. 何谓“完整复用 checkpoint”
+
+“完整复用”至少包含三个彼此不同的要求。
+
+| 要求 | 可检查含义 | 后续是否必须一直保持 |
+| --- | --- | --- |
+| 参数覆盖 | 原 checkpoint 的每个参数张量都映射到新模型的声明位置，没有静默丢弃 | 兼容阶段必须；结构变异后可不保持 |
+| transition 等价 | 在指定新增参数和状态初始化下，原模型与扩展模型产生相同输出和下一状态 | 函数保持阶段必须；继续训练后不要求 |
+| 新分支初始化复用 | 新分支使用随机参数、旧模块副本、拆分后的旧参数或共享主体加 adapter | 是实验变量，不是“参数覆盖”的同义词 |
+
+设原模型的一步 transition 为
+
+$$
+\mathcal T_\theta:X\times\mathcal S\to Y\times\mathcal S,
+$$
+
+扩展模型的一步 transition 为
+
+$$
+\widehat{\mathcal T}_{\theta,\phi}:
+X\times\widehat{\mathcal S}
+\to
+Y\times\widehat{\mathcal S}.
+$$
+
+这里 $\theta$ 是完整装载的旧参数，$\phi$ 是新增参数。还需要一个把旧 cache/state 放入扩展状态的映射
+
+$$
+\iota_{\mathcal S}:\mathcal S\to\widehat{\mathcal S}.
+$$
+
+函数保持初始点要求存在 $\phi_0$，使得对所有合法 $x\in X$ 和 $s\in\mathcal S$，若
+
+$$
+\mathcal T_\theta(x,s)=(y,s'),
+$$
+
+则
+
+$$
+\widehat{\mathcal T}_{\theta,\phi_0}
+(x,\iota_{\mathcal S}(s))
+=
+(y,\iota_{\mathcal S}(s')).
+$$
+
+因此 equality gate 必须比较 logits、KV/SSM state、位置状态和其他边界状态；只比较一个短输入的最终 logits 不足以证明完整复用。
+
+### 3. 四种 checkpoint 谱系阶段
+
+下面的 C0-C3 描述模型与源 checkpoint 的谱系关系；第 8 节的 P0-P6 描述实验逐级增加自由度的顺序。二者不是同一编号系统。
+
+#### 3.1 阶段 C0：原生基线装载
+
+Tide 用自己的模块和 state-dict API 表达一个既有预训练模型，但不增加分支。原生实现与 Tide baseline 必须对齐：
+
+- 参数张量与 tied-weight 关系。
+- 单 token decode 与多 token prefill 输出。
+- 每层 residual、Attention、FFN artifact。
+- KV/SSM state、position/RoPE 输入和 continuation state。
+- 训练模式下的 loss 与主要参数梯度。
+
+为比较两条路线，可以把一个 pre-norm decoder-only Transformer 的 block chain 视为单 site、always-on、无空间 selector 的退化切片链；每个宏节点执行一个原 block。这个解释只提供共同的 Graph 记法，不是 C0 的实现要求，也不表示原模型已经采用 HB-Sliced。当前 HB-Line 形式上要求至少两个 site；若后续确实需要该退化 profile，应单独命名，而不是强行把它叫作 Line。
+
+#### 3.2 阶段 C1：函数保持扩展
+
+第一类 growth operator 是零 residual 分支：
+
+$$
+\widehat B(x)
+=
+B_\theta(x)+\alpha\,\Delta_\phi(x),
+\qquad
+\alpha_{\mathrm{init}}=0.
+$$
+
+它在 $\alpha=0$ 的初始点精确保持原函数，适合验证架构装载和 runtime，但必须区分三种训练方式：
+
+1. 若 $\alpha$ 是固定常数 $0$，则损失对全部分支参数 $\phi$ 的梯度都精确为零，分支不会自行开始学习。
+2. 若 $\alpha$ 是可训练标量且初始化为 $0$，则 $\alpha$ 本身可以先获得梯度；分支内部参数通常要等 $\alpha$ 离开零后才获得非零梯度。
+3. 若不使用固定的零门，而把 $\Delta_\phi$ 的末端线性投影初始化为零，则该末端投影第一步可以获得梯度，投影之前的分支参数通常在后续步骤才开始获得梯度。
+
+因此，C1 必须把“函数保持条件”和“分支如何获得第一批梯度”作为两个独立配置与测试项。
+
+第二类 growth operator 是 clone-and-split：复制原有子模块，并把其最终线性贡献拆成若干份，使各份之和仍等于原输出。这可以同时保持函数并让多个副本获得梯度，但完全相同的副本具有对称性，需要通过数据、selector、adapter 或受控扰动打破。
+
+#### 3.3 阶段 C2：兼容结构训练
+
+原模型主路径仍是 always-on，新增 selector 只控制新增 residual 分支。此阶段可以逐步加入：
+
+1. 单 block 的一个附加分支。
+2. 一个父模块下多个并列兄弟分支。
+3. 兄弟分支共享的一套 selector、预算和 merge。
+4. 两层有界递归分支。
+5. 模块级或 Attention head-group 级稀疏化。
+
+旧 state-dict 始终可装载，旧路径也始终存在；但模型继续训练后不再与原 checkpoint 函数相同。“checkpoint-compatible”在这里表示参数和结构映射仍存在，不表示行为永远不变。
+
+#### 3.4 阶段 C3：Checkpoint-derived 结构变异
+
+当消融已经表明某些旧节点、head、FFN 通道或完整 block 长期冗余时，可以研究：
+
+- 删除或合并节点。
+- 把平铺分支重写为递归分支。
+- 将 dense block 蒸馏到 SSM、Linear Attention 或其他 kernel。
+- 改变 state layout、缓存方式和外层空间拓扑。
+- 让 selector 真正跳过旧主路径的一部分。
+
+这些操作可能改善推理性能，也可能使模型不再能直接装载原 state-dict。每次变异必须声明 teacher/checkpoint 来源、参数迁移函数、变异前后计算预算和继续训练数据；不能只用“从旧模型生长”掩盖不可归因的架构跳变。
+
+### 4. 当前候选交界面：递归固定 merge 分支
+
+令一个父模块的输入为 $x$，原始或 always-on 主分支为 $B_r$，候选分支的有限索引集合为 $J_r$。父模块共享的 selector 输出激活集合
+
+$$
+A_r(x)\subseteq J_r
+$$
+
+以及可选权重 $g_{r,j}(x)$。一种最直接的固定 merge 为
+
+$$
+\widehat B_r(x)
+=
+B_r(x)
++
+\sum_{j\in A_r(x)}
+g_{r,j}(x)\Delta_{r,j}(x).
+$$
+
+这里“固定”表示 merge 位置、输入槽和算子预先声明；$A_r(x)$ 可以随输入变化，未选择分支等价于向对应槽提供加法单位元 $0$。所有已选分支在父模块出口前完成，因此短分支不能先向外层空间后继发送、长分支再追赶修改同一输出。
+
+每个 $\Delta_{r,j}$ 可以是：
+
+- 单个 Attention、FFN、SSM、Linear Attention 或 DSA 类模块。
+- `Attention -> FFN`、`SSM -> FFN` 等有限串联模块。
+- 另一个满足同样单入口、单出口和固定 merge 契约的递归模块。
+
+递归结构必须有有限最大深度、每层 fan-out 上界、每次选择的 Top-K 上界和最长串行路径上界。一个孙分支只有在其父分支已激活时才允许激活，因此实际激活子树是前缀闭合的。
+
+![[assets/tide-two-route-convergence.svg]]
+
+### 5. Selector scope 与空间连接分层
+
+至少要区分三种 selector，不能把它们隐藏成一个全局控制器。
+
+| 层次 | selector 读取和选择的对象 | 固定 merge 或提交点 |
+| --- | --- | --- |
+| 空间层 | 一个 cell/region 中哪些 HB site 执行并继续发送 | 下游节点入站汇聚或声明的空间收拢点 |
+| 模块层 | 一个父模块下哪些短/长兄弟分支执行 | 父模块唯一出口 |
+| Attention 内部 | 哪些 head 或 head group 执行 | Attention 输出投影之前 |
+
+一个父模块分出的兄弟分支应共享一套 selector、预算和 selector state，而不是每个分支独立决定自己是否激活。嵌套 selector 的状态 namespace 属于相应父模块；不同序列、深度、空间 site 和父分支不能因物理共置而隐式共享可变语义状态。
+
+第一版应让所有内部兄弟分支先在宏节点内部固定 merge，再由宏节点统一 `Emit` 到 $d+1$。这样外层空间连接仍由 HB-Sliced 的候选边定义。若一个内部分支可以独立向不同空间后继发送，它已经成为外层空间 DAG 的一部分，必须显式增加消息类型、分支来源、路由 artifact 和状态依赖，不能继续作为纯 `ActiveKernel` 配置处理。
+
+### 6. Head-wise MoE 是嵌套固定 merge 的特例
+
+对 $H$ 个 Attention heads，标准输出可以写成
+
+$$
+\operatorname{MHA}(x)
+=
+\operatorname{Concat}(h_1(x),\ldots,h_H(x))W_O
+=
+\sum_{i=1}^{H}h_i(x)W_O^{(i)}.
+$$
+
+因此 routed head 或 head-group 可以定义为
+
+$$
+\operatorname{RoutedMHA}(x)
+=
+\sum_{i\in A_{\mathrm{head}}(x)}
+g_i(x)h_i(x)W_O^{(i)}.
+$$
+
+它仍在 Attention 内部固定回拢，再进入 block residual merge。实现可以保留固定 head 槽并让未选槽为零，也可以直接累加选中 head 的输出投影贡献；动态改变输出维度的拼接不应泄漏到 block 接口。
+
+较稳妥的起点是少量 always-on core heads 加若干 routed head groups，而不是立即让每个微小 head 独立竞争。还必须单独选择状态语义：所有候选 head 是否都更新 K/V，还是只有选中 head 更新。前者更接近“收到即更新、激活才 readout”，状态更连续但节省不了全部 KV 成本；后者更稀疏，却会让未来 Attention state 依赖历史路由。
+
+### 7. 两条路线如何交换证据
+
+递归固定 merge 分支只是候选交界面，不保证两条路线最终重合。应分别记录三种关系：
+
+| 关系 | 判定方式 |
+| --- | --- |
+| 结构汇合 | 两条路线得到同构或可由节点展开/收缩互相转换的 Graph family |
+| 契约汇合 | 拓扑不同，但共享固定 merge、selector scope、状态所有权和 chunk correctness contract |
+| 经验迁移 | 一条路线得到的训练、kernel 或 routing 结论能改善另一条路线，但模型仍不同 |
+
+Graph 收缩线可以否决包含隐藏反向控制依赖、不可组合跨 token selector 或未定义状态提交的 growth operator。Checkpoint 生长线则可以通过消融说明某些 Graph 自由度没有收益，或发现固定 merge、always-on backbone 之外仍有稳定结构。若最终不汇合，两条路线仍分别产生理论边界和可部署模型，不构成研究失败。
+
+### 8. Checkpoint 生长实验阶梯
+
+![[assets/checkpoint-growth-ladder.svg]]
+
+| 阶段 | 唯一主要新增变量 | 必须通过的 gate |
+| --- | --- | --- |
+| P0 原生基线 | Tide 装载与执行接口 | 参数、logits、cache/state、prefill/decode 和梯度对齐 |
+| P1 单零分支 | 一个 residual delta | 初始 transition 等价；继续训练不劣于 matched baseline |
+| P2 平铺分支 | 多个兄弟分支和固定 merge | 相同 active FLOPs 下的质量、吞吐和梯度覆盖 |
+| P3 共享 selector | token-local soft/hard 选择 | route artifact equality、负载和 checkpoint 漂移 |
+| P4 两层递归 | 有界递归与两级 selector | 信用分配、激活子树、最长路径和训练稳定性 |
+| P5 空间化 | HB-Line/Plane 局部连接和设备放置 | 局部通信、稀疏 work 与端到端收益 |
+| P6 结构变异 | 删除、合并或替换旧节点 | 迁移方法、质量恢复曲线和新模型独立 contract |
+
+每个阶段至少保留 continued-pretraining 原模型、等参数 dense 扩展、等 active-FLOPs 平铺 MoE/branch 三类对照。不能同时改变 tokenizer、数据配比、优化器、selector、空间拓扑和 kernel，再把结果归因于“递归结构”。
+
+---
+
+## 第二部分：HB-Sliced 与 HB-Line-v0
 
 > [!summary] 本部分定位
 > 本部分只回答五个架构问题：静态空间节点是什么，静态候选边是什么，一个深度切片如何执行，selector 在哪里发生，以及有限 chunk 为什么只需固定次数的空间推进。HB-Line-v0 是用于看清这些对象的最小实例；HB-Plane 与 HB-Cube 只替换空间基图，不能反过来改变这些对象的含义。
@@ -470,7 +736,7 @@ HB-Line-v0 当前固定：空间 DAG 无环、只使用相邻切片边、所有�
 
 ---
 
-## 第二部分：Selector 与训练稳定性
+## 第三部分：Selector 与训练稳定性
 
 
 
@@ -478,7 +744,7 @@ HB-Line-v0 当前固定：空间 DAG 无环、只使用相邻切片边、所有�
 > 本部分记录 HB-Sliced 候选架构中，CPU 侧严格时间递推 selector、加速卡侧节点计算、稀疏路径和节点持久状态共同带来的训练问题，以及从公开 MoE 研究和先进开源模型技术报告中可借鉴的稳定化方法。本文是研究备忘，不是数学定理、最终架构规范或已经验证的训练方案。
 
 > [!example] 具体架构实例
-> 本部分讨论一般训练风险；当前最小架构实例、节点契约和四张分离图见本页第一部分。历史八平面 superblock 只保留在附录 A，不再作为本部分的默认模型。
+> 本部分讨论一般训练风险；当前最小 HB 架构实例、节点契约和四张分离图见本页第二部分。历史八平面 superblock 只保留在附录 A，不再作为本部分的默认模型。第一部分的 checkpoint 生长模型也必须逐级接受本部分的 selector、路径漂移和信用分配检查。
 
 本部分沿用较直观的中文名称：“节点”指一个 site，“格子”指一个 cell，“区域”指一个 region。若引用旧研究时出现“叶节点”，它只表示某次层级划分中最细、可被 selector 激活的 site，不为 HB-Line-v0 增加新的节点类型。
 
@@ -1095,6 +1361,8 @@ $$
 
 ### 10. 建议的训练推进顺序
 
+下面 A-D 是 selector 复杂度阶梯，与第一部分的 P0-P6 checkpoint 生长阶梯正交。第一版实验应先固定某个 P 阶段，再只改变 A-D 中的一项；不能把“增加递归深度”和“加入 stateful selector”作为同一次实验变化。
+
 #### 阶段 A：固定均衡路由
 
 使用静态 hash、固定局部路径或预生成均衡路由，不训练 selector。
@@ -1204,7 +1472,7 @@ $$
 
 ---
 
-## 第三部分：执行能力与成本模型
+## 第四部分：执行能力与成本模型
 
 ### 1. Tide 的进一步设计目标
 

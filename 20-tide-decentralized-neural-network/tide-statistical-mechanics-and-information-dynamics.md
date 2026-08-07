@@ -14,6 +14,9 @@ tags:
 > [!summary] 本页定位
 > 本页审视 [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|从希尔伯特第六问题到普利高津：AI 熵增与耗散结构类比]] 与 Tide 主线的关系。它是一份研究备忘，不是正式数学文档，不向 [[tide-mathematical-foundations]] 导入定义、引理或定理。凡是尚未给出概率空间、函数、关系、极限过程或误差界的物理对应，均只视为类比或待检验假设。
 
+> [!note] 与两条战略路线的关系
+> Graph 收缩线提供更丰富的局部路径、汇聚和状态对象，适合提出路径相关性与宏观极限问题；checkpoint 生长线提供稳定基线和逐级增加分支的实验阶梯，更适合判断这些统计量是否真的预测质量、梯度或训练稳定性。两条路线可以共享测量方法，但统计相似性不能证明架构汇合。
+
 ## 一页版结论
 
 原文最有价值的部分不是“熵增可以证明 AI”，而是提出了三个适合 Tide 继续追问的问题：
@@ -382,11 +385,12 @@ $H_{route}$ 较高通常表示激活分布更均匀，但它不自动表示：
 1. 把 KV、SSM、node memory、selector load state 分别写成 reference contract 的状态坐标。
 2. 对每种聚合或压缩声明 exact quotient、approximate simulation 或不作保证。
 3. 保持 `prefill = decode`、artifact equality 和 adaptive-depth 分析不变。
+4. 对 checkpoint 生长实验记录源模型、growth operator 与结构变异边界，不把不同谱系模型的统计量直接混合。
 
 ### 第二阶段：先测量，不预设物理理论
 
 1. 为 HB-Sliced/HB-Line 增加 route entropy、语义互信息、route churn 和层级负载统计。
-2. 为 branch/merge 增加来源数、support overlap、delta 夹角和 gradient attribution。
+2. 沿 checkpoint 生长 P0-P6 阶梯，为 branch/merge 增加来源数、support overlap、delta 夹角和 gradient attribution。
 3. 在固定参数、数据与 schedule 下检查这些量是否能预测训练不稳定或质量变化。
 
 ### 第三阶段：构造最小随机模型
