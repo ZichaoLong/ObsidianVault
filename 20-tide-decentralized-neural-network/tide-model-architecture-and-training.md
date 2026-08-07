@@ -12,735 +12,461 @@ tags:
 # Tide 模型架构与训练
 
 > [!summary] 本页定位
-> 本页统一记录 Tide 当前的正向模型候选、selector/allocator 能力契约、训练风险和实验顺序。第一部分的 HB-Lattice-v0 是可运行但尚未证明可训练的候选实例；第二、三部分是设计与验证约束，不是数学定理。一般空间 DAG 的正式定义见 [[tide-mathematical-foundations]]，自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
+> 本页统一记录 Tide 当前的正向模型候选、selector/allocator 能力契约、训练风险和实验顺序。第一部分先定义 HB-Sliced 架构族，再用 HB-Line-v0 给出可运行但尚未证明可训练的最小实例；第二、三部分是设计与验证约束，不是数学定理。一般空间 DAG 的正式定义见 [[tide-mathematical-foundations]]，自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
 
 > [!important] 语义边界
 > `prefill`、`decode`、batch 组合和物理调度不得改变单序列 reference semantics。CPU selector、加速卡 packing、设备放置和通信流水只属于实现；若历史负载进入语义，它必须是逐序列隔离、可延续且可重放的正式状态。
 
-## 第一部分：HB-Lattice-v0 候选架构
+## 第一部分：HB-Sliced 与 HB-Line-v0
 
+> [!summary] 本部分定位
+> 本部分只回答五个架构问题：静态空间节点是什么，静态候选边是什么，一个深度切片如何执行，selector 在哪里发生，以及有限 chunk 为什么只需固定次数的空间推进。HB-Line-v0 是用于看清这些对象的最小实例；HB-Plane 与 HB-Cube 只替换空间基图，不能反过来改变这些对象的含义。
 
+> [!important] 当前主张
+> HB-Line-v0 已有结构 reference，可验证 depth-major chunk、token-major decode 和任意两段 chunk continuation 的输出、route artifact 与完整状态相同。该结果证明的是当前 toy semantics 和两种 schedule 的一致性，不证明真实 Attention/SSM kernel、selector 低 span、模型可训练性或端到端吞吐。
 
-> [!summary] 本页定位
-> 本页给出一个可以直接讨论、实现和否定的具体 Tide Graph 候选。它不是最终架构，也不是已经证明可训练的模型。它把层级 backbone、pre-norm residual、快慢路径、格子级专门化、节点级负载均衡、收到即更新、激活才发送以及 16 张 Ascend 卡映射，收缩成一个可重复的八平面 superblock。
+### 1. 五类坐标不得混用
 
-> [!important] 与其他文档的关系
-> 数学上，一般空间 DAG、显式 allocator、不等长路径和窗口拓扑序执行以 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|显式 allocator 的一般空间 DAG]] 为准。训练风险和 MoE 参考已整合到本页第二部分。本部分只实例化一个正向架构，不替代数学定义。
-
-### 一页版
-
-HB-Lattice-v0 使用四级嵌套结构：
-
-~~~text
-Level-0：1 个 Global Hub
-    -> Level-1：4 个 Region Hubs
-        -> Level-2：16 个 Cell Backbones
-            -> Level-3：每个 cell 16 个 Leaf Sites，共 256 个
-~~~
-
-一个 superblock 有八个宏平面：
-
-~~~text
-P0  Cell/Hub Entry
-P1  常亮 PreNorm Attention
-P2  Attention Residual Merge
-P3  常亮 PreNorm FFN
-P4  FFN Residual Merge，形成快路径结果并 fork
-P5  第一级稀疏 leaf 计算
-P6  第二级稀疏、局部跨 cell 传播
-P7  固定 deadline merge，写回下一 superblock backbone
-~~~
-
-P0-P4 是 GPT-like 快路径；P4-P7 是可被 selector 真正短路的慢路径。第一版物理执行仍严格按 P0 到 P7 推进，所以快路径暂时不提前输出，但 P5/P6 未激活 kernel 可以不执行。
-
-![[assets/hb-lattice-v0-superblock.svg]]
-
-### 代码导读：从 GPT block 到 HB-Lattice
-
-本节只把后文的数学对象改写成连续程序，不增加新的模型语义。先看一个标准的 pre-norm GPT block：
-
-~~~python
-def pre_norm_gpt_block(x, state):
-    # Attention 分支：读取并更新本 block 的因果状态。
-    attention_delta, state.attention = causal_attention(
-        norm(x),
-        state.attention,
-    )
-    u = x + attention_delta
-
-    # FFN 分支：没有跨 token 持久状态。
-    ffn_delta = ffn(norm(u))
-    y = u + ffn_delta
-    return y, state
-~~~
-
-这里的 `x -> u -> y` 是常亮 backbone；Attention 和 FFN 都只产生 residual delta。若两个 delta 都为零，则 `y == x`。
-
-HB-Lattice-v0 保留这个 block 作为 P0-P4 快路径，再从快路径结果 `fast[cell]` fork 出有界的 P5-P6 稀疏慢路径：
-
-~~~python
-def hb_lattice_superblock(token_chunk, state):
-    # P0：一个 token chunk 扩展成 16 个 cell carrier。
-    cell_input = inject_hub_and_cell_context(token_chunk, state)
-
-    # P1-P4：每个 cell 都执行同一种 pre-norm GPT-like 快路径。
-    fast = {}
-    score_view = {}
-    for cell in CELLS:
-        fast[cell], score_view[cell], state.cell[cell] = pre_norm_gpt_block_chunk(
-            cell_input[cell],
-            state.cell[cell],
-        )
-
-    # P4：score_view[t] 只含位置 t 当时可见的因果状态，不能读取
-    #     整个 chunk 提交后的最终 state.cell。
-    cell_score = score_cells(fast, score_view)
-    selected_cells, state.region_load = region_allocator.scan(
-        cell_score,
-        state.region_load,
-    )
-
-    # P5：被选中 cell 的全部 leaf 收到消息并更新状态；
-    #     只有每个 cell 中被选中的 leaf 执行重 kernel。
-    p5_inbox = send_fast_carrier_to_all_leaves(fast, selected_cells)
-    p5_emit, state.p5 = run_sparse_leaf_plane(
-        inbox=p5_inbox,
-        state=state.p5,
-        budget_per_cell=2,
-    )
-
-    # P6：P5 active leaf 只沿固定局部边发送；收件者仍是收到即更新。
-    p6_inbox = fixed_local_fanout(p5_emit)
-    slow_delta, state.p6 = run_sparse_leaf_plane(
-        inbox=p6_inbox,
-        state=state.p6,
-        budget_per_cell=2,
-    )
-
-    # P7：按固定 source slot 合并；没有慢路径输出时 slow_delta 为零。
-    output = deadline_residual_merge(fast, slow_delta)
-    return output, state
-~~~
-
-稀疏平面的关键不是一个不透明的“路由算子”，而是下面五个可分别观测的步骤：
-
-~~~python
-def run_sparse_leaf_plane(inbox, state, budget_per_cell):
-    payload = merge_each_inbox_in_fixed_source_order(inbox)
-
-    # 只要收到消息就执行，不能被 hard selector 跳过。
-    for leaf in payload:
-        state[leaf].observer = update_observer(
-            state[leaf].observer,
-            payload[leaf],
-        )
-
-    score = cheap_score(payload, state)
-    active, state.load = allocator_scan(score, state.load, budget_per_cell)
-
-    # 未激活 leaf 到此结束；它已经提交 observer/load 状态。
-    output = {}
-    for leaf in active:
-        output[leaf] = heavy_leaf_kernel(payload[leaf], state[leaf])
-    return output, state
-~~~
-
-因此，程序中的对象可以直接对应到八个平面：
-
-| 程序变量或调用 | 平面 | 含义 |
-| --- | --- | --- |
-| `cell_input` | P0 | 注入 Global/Region context 后的 cell carrier |
-| `causal_attention` | P1 | 常亮 Attention residual delta |
-| `u = x + attention_delta` | P2 | Attention 固定双槽 merge |
-| `ffn` | P3 | 常亮 FFN residual delta |
-| `fast`、`region_allocator.scan` | P4 | 快路径结果与第一级 cell 选择 |
-| 第一次 `run_sparse_leaf_plane` | P5 | cell 内稀疏 leaf 计算 |
-| 第二次 `run_sparse_leaf_plane` | P6 | 局部跨 cell 稀疏传播 |
-| `deadline_residual_merge` | P7 | 固定截止点写回 cell backbone |
-
-可运行的结构 reference 见 [hb_lattice_v0_reference.py](examples/hb_lattice_v0_reference.py)。它仅使用 Python 标准库，以小向量 toy kernels 展示 P0-P7、状态生命周期、route artifact 和 `chunk == repeated decode`；它不实现真实 Attention、训练或设备并行。
-
-在 Vault 根目录可直接运行：
-
-~~~bash
-python 20-tide-decentralized-neural-network/examples/hb_lattice_v0_reference.py
-~~~
-
-> [!important] reference 中的两个显式状态约束
-> 1. P1 为每个位置返回当时可见的 `score_view`；P4 selector 不得让早期位置读取处理完整个 chunk 后的 Attention/KV/SSM 最终状态。
-> 2. P5 与 P6 使用两个 stage-local 的 observer/load state namespace。即使它们物理上位于同一 leaf site 或同一张卡，也不能默认共享可变状态。若未来要求共享，必须另行证明两个平面的状态更新可交换、可 scan，或改变执行 schedule；否则 `P5(all tokens) -> P6(all tokens)` 与逐 token 的 `P5(t) -> P6(t)` 一般不等价。
-
-### 1. 固定实例参数
-
-下表不是永久约束，而是为了让第一次实现和实验有唯一对象。
-
-| 参数 | v0 取值 | 含义 |
-| --- | ---: | --- |
-| $R_x\times R_y$ | $1\times4$ | 4 个 region，每个覆盖一行 cell |
-| $C_x\times C_y$ | $4\times4$ | 每个稀疏平面有 16 个 cell |
-| $N_x\times N_y$ | $4\times4$ | 每个 cell 有 16 个 leaf site |
-| Leaf 总数 | 256 | 一个 P5 或 P6 平面的叶节点槽位数 |
-| Superblock 平面数 | 8 | P0-P7 |
-| Region 慢路径预算 | 2 cells/region | 一个 token 在一个 region 中最多选择 2 个 cell 进入慢路径 |
-| P5 叶节点预算 | 2 leaves/selected cell | 每个选中 cell 最多激活 2 个 leaf |
-| P6 叶节点预算 | 2 leaves/destination cell | 收到候选消息后，每个目标 cell 最多继续激活 2 个 leaf |
-| Leaf 固定消息度数 | 不超过 9 | 同点、cell 内四邻接及相邻 cell 对应点 |
-| 慢路径最长寿命 | 3 宏平面 | 从 P4 fork 到 P7 merge |
-| Ascend 映射 | 1 cell/card | 16 个 cell 静态映射到 16 张卡 |
-
-Superblock 数量记为 $S$，由 scaling experiment 决定。v0 不预设必须像 GPT 一样使用 96 个 block。
-
-### 2. 三个互不等同的坐标
-
-#### 2.1 拓扑平面
-
-P0-P7 只表示一个 superblock 内的执行先后。平面不是神经生物学层，也不是语义专门化等级。
-
-#### 2.2 层级
-
-Global、Region、Cell、Leaf 表示状态与路由的包含关系。一个 Leaf 慢路径可以跨 P5 和 P6 两个平面；同一 P4 平面同时包含 Cell backbone、Region selector 和 Global/Region carrier。
-
-#### 2.3 几何位置
-
-每个 cell 有二维坐标 $(i,j)$，每个 leaf 有 cell 内坐标 $(u,v)$。几何位置决定固定邻接和设备放置，不自动决定语义专门化。
-
-因此，`plane`、`hierarchy level` 和 `spatial coordinate` 必须在代码中使用不同字段。
-
-### 3. 平面不要求同构
-
-八个平面使用同一个 4x4 cell 坐标模板，便于静态设备放置，但实际节点角色不同：
-
-| 平面 | 主要角色 | 逻辑宽度 |
-| --- | --- | ---: |
-| P0 | Global/Region/Cell Carrier | 1 + 4 + 16 |
-| P1 | Cell Attention Compute | 16 |
-| P2 | Cell Residual Merge-A | 16 |
-| P3 | Cell FFN Compute | 16 |
-| P4 | Cell Residual Merge-F、Region/Cell Selector | 16 + selector state |
-| P5 | Leaf StateUpdate/Compute | 256 候选，少量激活 |
-| P6 | Leaf StateUpdate/Compute | 256 候选，少量激活 |
-| P7 | Cell Deadline Merge、Region/Global Summary | 16 + 4 + 1 |
-
-数学图不要求这些平面同构。实现可以为每个 cell 保留统一静态槽位，再使用 `role mask` 指示本平面哪些槽位承担何种角色。
-
-### 4. Node role 与 kernel kind
-
-外层空间图只使用少量稳定角色。
-
-| Node role | 状态 | 输入 | 输出 |
+| 对象 | 符号 | 数学类型 | 直观含义 |
 | --- | --- | --- | --- |
-| `Carrier` | Global/Region/Cell 神经状态 | 固定父级 context、上一个 superblock 状态 | 下一 carrier 或 branch 输入 |
-| `Compute` | 可有 KV/SSM/observer state | 固定输入槽或带时间的消息集合 | residual delta 或传播消息 |
-| `Merge` | 通常无长期状态 | 固定来源槽位 | 单一 carrier state |
-| `Allocator` | 单序列负载和 quota 状态 | 语义 score、静态候选和历史负载 | activation mask/weight |
-| `DelayBuffer` | 在途消息 | 固定时延输入 | 指定逻辑时间的输出 |
-| `Input/Output` | 输入/读出状态 | token 或最终 carrier | embedding 或 logits |
+| 深度切片 | $d$ | 有限整数集合中的元素 | 网络从输入到输出推进到第几步 |
+| 空间位置 | $u$ | 有限集合 $U$ 的元素 | 当前切片中哪个可复用计算位置 |
+| 输入位置 | $t$ | 自然数 | 全局 token 流中的位置 |
+| 层级尺度 | $j$ | 有限整数集合中的元素 | site、cell、region、global 中哪一级分组 |
+| 微阶段 | $p$ | 固定有限集合中的元素 | Receive、Update、Allocate、Compute 等切片内部步骤 |
 
-具体算子由独立的 `KernelKind` 指定，例如 Attention、FFN、SSM、Linear、Adapter、Add、WeightedSum。
+这里的“堆叠线段”只画 $(d,u)$。输入位置 $t$ 属于每条消息和每次状态转移；它不是第三条空间轴。微阶段 $p$ 属于 runtime lowering；它也不是新的空间平面。
 
-Identity 默认用直接边或 tensor alias 表达，不建立独立空间节点。只有需要固定时延、跨设备缓存或 artifact 观测时，才使用 `DelayBuffer`。
+### 2. 空间基图
 
-#### 4.1 Merge 不等于任意 Aggregate
+#### 2.1 定义
 
-v0 优先使用固定来源槽位：
-
-~~~text
-Residual Merge-A:
-    slot 0 = backbone bypass
-    slot 1 = attention delta
-
-Residual Merge-F:
-    slot 0 = attention-merged carrier
-    slot 1 = FFN delta
-
-Deadline Merge:
-    slot 0 = fast-path carrier
-    slot 1..K = bounded sparse deltas ordered by source id
-~~~
-
-缺失稀疏 delta 以零元素填充。v0 不使用“物理到达多少条就临时聚合多少条”的无界 Aggregate。
-
-### 5. 四级 backbone
-
-#### 5.1 Global Hub
-
-Global Hub 持有维度较小的全局 carrier $g_s$。v0 可先使用恒等或小型 SSM：
+令 $U$ 是非空有限集合。令
 
 $$
-g_s^{\mathrm{base}}=P_s^{G}(g_s).
+F
+\subseteq
+\bigl\{\{u,v\}\mid u,v\in U,\ u\ne v\bigr\}.
 $$
 
-它不是完整 hidden tensor 的集中副本，而是低带宽全局 context。
-
-#### 5.2 Region Hub
-
-四个 Region Hub 分别覆盖一行四个 cell。region 状态记为 $r_{s,q}$，其中 $q\in\{0,1,2,3\}$。
+$F$ 的元素是无序二元子集。二元组
 
 $$
-r_{s,q}^{\mathrm{base}}
+H=(U,F)
+$$
+
+称为空间基图。对 $u\in U$，定义其空间邻居集合
+
+$$
+N_H(u)
 =
-P_{s,q}^{R}(r_{s,q})
-+
-W_{s,q}^{G\to R}g_s.
+\{v\in U\mid \{u,v\}\in F\}.
 $$
 
-#### 5.3 Cell Backbone
+$F$ 只说明“哪些空间位置彼此局部邻接”。它本身不是同一深度切片内的计算依赖边。
 
-16 个 cell backbone 是 v0 的主要语义专门化尺度。cell $c$ 的输入 carrier 为：
+#### 2.2 Line、Plane 与 Cube
+
+取整数 $n\ge 2$。HB-Line 使用
 
 $$
-x_{s,c}
+U_{\mathrm{line}}=\{0,1,\ldots,n-1\},
+\qquad
+F_{\mathrm{line}}
 =
-b_{s,c}
-+
-W_{s,c}^{R\to C}r_{s,\rho(c)}
-+
-W_{s,c}^{G\to C}g_s,
+\bigl\{\{i,i+1\}\mid 0\le i<n-1\bigr\}.
 $$
 
-其中 $\rho(c)$ 给出 cell 所属 region。
-
-每个 cell 持有自己的共享神经状态 $Q_{s,c}$，第一版可以选择：
-
-- cell-local KV cache；
-- cell-local SSM state；
-- linear-attention accumulator；
-- 上述状态的一个明确组合。
-
-#### 5.4 Leaf Site
-
-每个 cell 有 16 个 leaf site。v0 中 leaf 主要承担稀疏 residual compute，不首先让每个 leaf 持有无界独立 KV。
-
-每个 leaf 可持有：
-
-- 有界 observer state；
-- node-specific adapter 参数；
-- 由所属 cell allocator 维护的激活计数；
-- 可选的小型固定维度 SSM state。
-
-昂贵 Attention 若需要长历史，优先读取 cell 共享状态 $Q_{s,c}$。这是为了让格子级专门化与格子内负载均衡可以同时成立。
-
-### 6. 八个平面的逐步语义
-
-#### P0：Entry 与层级 context 注入
-
-输入为上一个 superblock 的 $g_s$、$r_{s,q}$、$b_{s,c}$，以及当前 token 在各层级的输入消息和左边界持久状态。
-
-操作：
-
-1. 更新 Global/Region cheap backbone。
-2. 将 Global/Region context 投影到 16 个 cell carrier。
-3. 得到每个 cell 的 $x_{s,c}$。
-
-输出 P1 Attention 分支输入，以及到 P2 的 identity bypass。
-
-#### P1：常亮 PreNorm Attention
-
-每个 cell 执行：
+对 $k\in\{2,3\}$ 和正整数 $n_1,\ldots,n_k$，定义坐标集合
 
 $$
-a_{s,c}
+U_k
 =
-A_{s,c}
-\left(
-\operatorname{Norm}(x_{s,c}),
-Q_{s,c}
-\right).
+\prod_{j=1}^{k}\{0,\ldots,n_j-1\}
 $$
 
-这是 GPT-like Level-1 分支，v0 中 gate 恒为 1。Attention 只读取本 cell 状态，不直接做全图 all-to-all。
-
-若当前消息需要写入 cell KV/SSM，状态更新与 Attention readout 的先后关系必须由 kernel contract 明确声明。
-
-#### P2：Attention residual merge
-
-固定双槽 merge：
+以及
 
 $$
-u_{s,c}=x_{s,c}+a_{s,c}.
-$$
-
-P2 是 Attention branch 的 merge point。
-
-#### P3：常亮 PreNorm FFN
-
-$$
-f_{s,c}^{\Delta}
+F_k
 =
-F_{s,c}
-\left(
-\operatorname{Norm}(u_{s,c})
-\right).
+\left\{
+\{a,b\}
+\ \middle|\
+a,b\in U_k,
+\sum_{j=1}^{k}|a_j-b_j|=1
+\right\}.
 $$
 
-#### P4：FFN merge、快路径完成与慢路径 fork
+HB-Plane 取 $k=2$，HB-Cube 取 $k=3$。这个条件表示两个坐标恰有一个分量相差 $1$，其余分量相同。第一版均不使用环状边界；若以后加入周期边界，只改变 $F$，不改变后面的切片接口。
+
+![[assets/hb-sliced-spatial-base-graphs.svg]]
+
+维度变化不是纯粹的画图差异。若总 site 数为 $n$，规则线段、近似方形平面和近似立方体的典型直径分别为 $O(n)$、$O(n^{1/2})$ 和 $O(n^{1/3})$；内部最大邻居数分别为 $2$、$4$ 和 $6$。因此它们共享语义接口，但达到全局感受野所需深度、消息度数、路径数和训练难度不同。
+
+### 3. 从空间基图生成前向计算 DAG
+
+#### 3.1 静态节点与候选边
+
+取整数 $D\ge 2$，并定义深度集合
 
 $$
-f_{s,c}=u_{s,c}+f_{s,c}^{\Delta}.
+\mathcal D=\{0,1,\ldots,D-1\}.
 $$
 
-$f_{s,c}$ 是一个完整 GPT-like cell block 的输出。它通过 bypass 直接送往 P7，形成最短非平凡路径。
-
-P4 同时产生慢路径 score：
+HB-Sliced 的静态计算节点集合为
 
 $$
-\sigma_{s,c}
+V_H=\mathcal D\times U.
+$$
+
+元素 $(d,u)$ 表示深度 $d$ 中空间位置 $u$ 的逻辑节点。候选消息边集合定义为
+
+$$
+E_H
 =
-\operatorname{CellScore}
-\left(
-f_{s,c},Q_{s,c},r_{s,\rho(c)}
-\right).
+\left\{
+\bigl((d,u),(d+1,v)\bigr)
+\ \middle|\
+0\le d<D-1,
+\ v\in\{u\}\cup N_H(u)
+\right\}.
 $$
 
-Region selector 在每个 region 的四个 cell 中最多选择两个进入 P5。
+其中 $v=u$ 是同位置前向边；$v\in N_H(u)$ 是局部扩散边。是否真的沿候选边发送，由当前输入位置的激活决定。
 
-#### P5：第一级稀疏 leaf
+#### 3.2 DAG 性质
 
-选中 cell 的 16 个 leaf 候选收到来自 $f_{s,c}$ 的固定消息。所有收到消息的 leaf：
-
-1. 更新有界 observer state。
-2. 计算 cheap leaf score。
-3. 把 score 与单序列历史负载交给 cell allocator。
-
-每个选中 cell 最多激活两个 leaf。只有被激活 leaf 执行：
+定义函数
 
 $$
-m_{s,c,j}^{(2)}
+r:V_H\to\mathcal D,
+\qquad
+r(d,u)=d.
+$$
+
+对任意 $(x,y)\in E_H$，都有 $r(y)=r(x)+1$。若存在有向环，沿环每经过一条边，$r$ 都严格增加 $1$，回到起点时却必须恢复原值，矛盾。因此 $(V_H,E_H)$ 是 DAG。
+
+这个证明与 $H$ 是线、平面、立方体或其他有限有界度图无关。即使无向空间基图 $H$ 含环，它也不会自动成为同一逻辑时刻的 zero-delay 计算环。
+
+#### 3.3 为什么不直接加入同切片计算边
+
+若把 $(d,u)\to(d,v)$ 直接加入计算图，则必须另外给出边方向和层内顺序。双向邻接会立即形成环；单向邻接也会增加与位置数有关的层内传播深度。HB-Line-v0 因而禁止这种边。
+
+group allocator 确实会读取同一切片中多个节点的 score，但它在展开图中是独立微阶段：
+
+```text
+all Receive/Update/Score at depth d
+    -> allocator(d, group)
+    -> selected ActiveCompute/Emit at depth d
+    -> messages for depth d+1
+```
+
+该展开只增加固定数量的微阶段，不等于允许节点沿 $F$ 在同一切片中反复传播。
+
+### 4. HB-Line-v0 的具体实例
+
+结构 reference 使用下面唯一的一组小参数，以便人工逐项核验：
+
+| 参数 | v0 值 | 含义 |
+| --- | ---: | --- |
+| $U$ | $\{0,\ldots,7\}$ | 每个切片 8 个 site |
+| $D$ | $6$ | 从 $d=0$ 到 $d=5$ 共 6 个切片 |
+| 空间邻接 | 无回绕的一维半径 1 | $i$ 只邻接 $i-1$ 与 $i+1$ |
+| cell partition | $\{0,1,2,3\}$、$\{4,5,6,7\}$ | 两个连续 cell |
+| always-on sites | $1$、$5$ | 每个 cell 一个固定 backbone site |
+| active budget | 每 cell 每位置最多 2 个 site | 一个 backbone 加最多一个稀疏 site |
+| 输入扩展 | 向 $d=0$ 的 8 个 site 注入 | reference 的简化，不是最终通信方案 |
+| 读出 | 合并 $d=5$ 发出的边界消息，再平均输出槽 $1$、$5$ | reference 的简化固定读出 |
+
+![[assets/hb-line-v0-spatial-dag.svg]]
+
+这张图只画静态架构：
+
+1. 每一条横向线段对应固定 $d$ 下的空间基图副本。
+2. 横向虚线表示 $F$，不是运行时消息边。
+3. 淡色竖线和斜线是 $E_H$ 中的候选边。
+4. 青色纵向路径是 always-on backbone 的一个实例。
+5. 橙色路径只示意某个输入位置实际选择的稀疏子图。
+
+图中只画 5 个切片和 6 个位置以减少线条；reference 仍使用 $D=6$ 和 $U=\{0,\ldots,7\}$。
+
+### 5. 层级分组与 backbone
+
+#### 5.1 层级分组是什么
+
+集合 $U$ 的一个 partition 是一族非空子集，满足任意两个子集不相交，且所有子集的并集等于 $U$。取整数 $h\ge 1$，层级分组是有限序列
+
+$$
+(\mathcal P_0,\mathcal P_1,\ldots,\mathcal P_h),
+$$
+
+其中 $\mathcal P_0=\{\{u\}\mid u\in U\}$，$\mathcal P_h=\{U\}$，并且对每个 $0\le j<h$，$\mathcal P_j$ 中每个集合都包含于 $\mathcal P_{j+1}$ 的唯一集合。
+
+site、cell、region、global 只是这组 partitions 的工程名称。它们不是额外空间维度，也不是深度切片。HB-Line-v0 具体取
+
+$$
+\mathcal P_0=\bigl\{\{u\}\mid u\in U\bigr\},
+\qquad
+\mathcal P_1=\bigl\{\{0,1,2,3\},\{4,5,6,7\}\bigr\},
+\qquad
+\mathcal P_2=\{U\}.
+$$
+
+未来可以增加更多尺度。
+
+#### 5.2 always-on 与稀疏激活
+
+选定 $j\in\{1,\ldots,h\}$，并令当前 allocator 的 group 集合为 $\mathcal G=\mathcal P_j$；因此 $\mathcal G$ 中的 group 两两不相交。对每个 $G\in\mathcal G$，静态指定非空 backbone 子集 $B_G\subseteq G$ 和正整数预算 $k_G$，并要求 $|B_G|\le k_G$。对深度 $d$、输入位置 $t$，令 $R_{d,G,t}\subseteq G$ 是实际收到消息的 site。allocator 输出激活集合
+
+$$
+A_{d,G,t}\subseteq R_{d,G,t},
+$$
+
+并满足
+
+$$
+B_G\cap R_{d,G,t}
+\subseteq
+A_{d,G,t},
+\qquad
+|A_{d,G,t}|\le k_G.
+$$
+
+因此，backbone site 只要收到消息就必须激活；其他接收 site 由 selector 决定。当 $d<D-1$ 时，一个激活 site 向下一切片中由 $\{u\}\cup N_H(u)$ 指定的全部候选后继发送；最后切片只沿单独声明的输出收拢边发送。未激活 site 已经完成状态更新，但不执行重 kernel，也不发送。
+
+若使用多个层级 allocator，则每个层级分别选择一个 partition，并把前一级输出作为后一级候选；各级的次序和状态 namespace 必须显式声明。所有 allocator 依次位于 `Score` 与 `ActiveCompute` 之间。allocator 不得读取更深切片在当前 chunk 中刚产生的可变状态，也不得回头改变已经提交的上游激活。
+
+### 6. 消息、节点状态与切片 transition
+
+#### 6.1 消息
+
+令 $\mathcal X$ 是有限维实向量空间。对 $0\le d<D-1$、输入位置 $t$ 和非负整数 source slot $\iota$，一条从 $(d,u)$ 发往 $(d+1,v)$ 的消息是有限记录
+
+$$
+m=(t,d,u,v,\iota,p),
+$$
+
+其中 $p\in\mathcal X$。五元组 $(t,d,u,v,\iota)$ 是消息标识符；HB-Line-v0 每条候选边至多发送一条消息，因而恒取 $\iota=0$。位置 $t$ 是消息字段，不表示 token、消息和轨迹是同一个对象。输入扩展消息和最后切片的输出收拢消息使用各自独立声明的边界记录类型。
+
+令 $I_{d,u,t}$ 表示位置 $t$ 到达节点 $(d,u)$ 的有限消息序列。序列按 $(d-1,u_{\mathrm{source}},\iota)$ 的字典序排列；若 kernel 声明 merge 可交换、可结合，也可以使用相应的等价 reduce。物理到达顺序不进入 reference semantics。
+
+#### 6.2 状态
+
+对每个 $(d,u)\in V_H$，令 $\mathcal Q_{d,u}$ 是节点状态集合，并令 $q_{d,u,t}\in\mathcal Q_{d,u}$ 是输入位置 $t$ 处理前的单序列持久状态。对每个 $d\in\mathcal D$ 和 $G\in\mathcal G$，令 $\mathcal L_{d,G}$ 是 allocator 状态集合，并令 $\ell_{d,G,t}\in\mathcal L_{d,G}$。不同深度使用不同 state namespace：即使 $(d,u)$ 和 $(d+1,u)$ 放在同一张卡上，它们也不因此共享可变状态。
+
+batch 中不同序列也不共享 $q$ 或 $\ell$。设备实时负载可以改变物理调度，但不能写入这些语义状态。
+
+HB-Line-v0 只在一个输入位置已经通过全部 $D$ 个切片、且最终出站消息已经被读出后提交模型边界。因此位置 $B$ 的 continuation state 是下一个输入位置 $B$、全部 $q_{d,u,B}$ 和全部 $\ell_{d,G,B}$ 的有限元组，不含在途消息。若未来允许 pipeline 在消息尚未到达最终读出时返回，边界状态就必须另外携带这些在途消息，不能继续使用本简化。
+
+#### 6.3 切片内固定步骤
+
+对每个 $(d,u)\in V_H$，令 $\mathcal Z_{d,u}$ 是合并后节点输入的集合。`ObserveUpdate` 是一个确定函数，它把有限消息序列和节点状态映射到 $\mathcal Z_{d,u}\times\mathcal Q_{d,u}$；`Score` 是从 $\mathcal Z_{d,u}\times\mathcal Q_{d,u}$ 到 $\mathbb R$ 的确定函数。对每个非空 $I_{d,u,t}$，节点先执行
+
+$$
+(z_{d,u,t},q_{d,u,t+1})
 =
-L_{s,c,j}^{(2)}
-\left(
-f_{s,c},Q_{s,c},o_{s,c,j}
-\right),
+\operatorname{ObserveUpdate}_{d,u}
+(I_{d,u,t},q_{d,u,t}),
 $$
 
-并向 P6 的固定局部邻接发送消息。
-
-#### P6：第二级稀疏与局部跨 cell 传播
-
-P6 候选 leaf 根据 P5 实际激活消息到达。所有收到消息者更新状态；每个目标 cell 最多继续激活两个 leaf。
-
-被激活 leaf 计算：
+再计算 cheap score
 
 $$
-m_{s,c,j}^{(3)}
+\sigma_{d,u,t}
 =
-L_{s,c,j}^{(3)}
-\left(
-I_{s,c,j}^{(3)},Q_{s,c},o_{s,c,j}
-\right).
+\operatorname{Score}_{d,u}
+(z_{d,u,t},q_{d,u,t+1}).
 $$
 
-输出被标记固定 `merge_cell`，表示它在 P7 写回哪个 cell backbone。
-
-#### P7：固定 deadline merge
-
-对 cell $c$，将所有合法且有界的慢路径 delta 按 source id 放入固定槽位：
+每个 group allocator 是确定函数：它读取有限映射 $\{(u,\sigma_{d,u,t})\mid u\in R_{d,G,t}\}$、静态配置和 $\ell_{d,G,t}$，输出 $A_{d,G,t}$ 与 $\ell_{d,G,t+1}\in\mathcal L_{d,G}$。只有 $u\in A_{d,G,t}$ 时才执行
 
 $$
-\delta_{s,c}^{\mathrm{slow}}
+y_{d,u,t}
 =
-\operatorname{MergeSlow}_c
-\left(
-\{m_{s,\cdot,\cdot}^{(3)}\to c\}
-\right).
+\operatorname{ActiveKernel}_{d,u}
+(z_{d,u,t},q_{d,u,t+1})
 $$
 
-最终 cell carrier：
+其中 `ActiveKernel` 是从 $\mathcal Z_{d,u}\times\mathcal Q_{d,u}$ 到预先声明的输出集合的确定函数；随后 `Emit` 把该输出映射为有限消息序列。若 $I_{d,u,t}$ 为空，v0 令节点状态保持不变，且该 site 不是候选。
+
+![[assets/hb-sliced-node-transition.svg]]
+
+该接口明确区分：
+
+- `ObserveUpdate` 决定收到消息后必须提交的神经状态。
+- `Score` 只产生紧凑控制输入，不能偷跑完整重 kernel。
+- `Allocator` 决定激活和负载状态。
+- `ActiveKernel` 才承载 Attention、FFN、SSM readout 或其他主要数值计算。
+- `Emit` 在中间切片只沿 $E_H$ 中预先存在的后继发送，在最后切片只沿静态输出收拢边发送。
+
+### 7. 一个 token 的直观路径
+
+![[assets/hb-line-v0-token-route.svg]]
+
+图中的橙色折线表示固定输入位置 $t$ 的一组消息依赖。它不是一个“token 对象在图里游走”：token 值 $x_t$、消息记录、节点事件和整条轨迹是四种不同对象。多个来自位置 $t$ 的消息可以在同一节点汇合；节点状态也可以把更早位置的信息带入位置 $t$ 的计算。
+
+浅橙 site 已收到位置 $t$ 的消息并更新状态，但本次未继续激活。深橙 site 执行重 kernel 并发送。青色 site 是固定 backbone；它保证 selector 不会切断全部结构性前向路径和反向梯度通路，但不保证梯度数值不会衰减。
+
+### 8. 连续伪代码
+
+下面程序只展开架构语义，不指定 CPU、NPU 或线程调度：
+
+```python
+def hb_sliced_chunk(tokens, boundary_state):
+    inbox_by_token = input_expand(tokens)
+
+    for depth in range(D):
+        next_inbox_by_token = empty_inboxes(tokens)
+
+        # 位置顺序是 stateful selector 的 reference semantics。
+        for t in token_positions(tokens):
+            observed = parallel_map_receivers(
+                observe_update_score,
+                inbox_by_token[t],
+                boundary_state.node[depth],
+            )
+            active = hierarchical_allocator(
+                observed.scores,
+                boundary_state.allocator[depth],
+            )
+            outgoing = parallel_map(
+                active_compute_and_emit,
+                active,
+                observed,
+            )
+            next_inbox_by_token[t].append(outgoing)
+
+        inbox_by_token = next_inbox_by_token
+
+    return fixed_readout(inbox_by_token), boundary_state
+```
+
+实际实现不能在每个 token 上做一次 host/device 往返。合理 lowering 是：加速卡批量完成一个切片的 Observe/Update/Score，CPU 对紧凑 score 做每序列 scan，再把整批 route list 交回加速卡执行 packed ActiveKernel/Emit。
+
+### 9. 架构节点与 kernel lowering
+
+第一张空间图中的一个 $(d,u)$ 可以承载完整 node transition，不要求把 Attention、residual add 和 FFN 画成三个空间节点。例如 active kernel 可以是：
+
+```python
+def pre_norm_gpt_active_kernel(z, state):
+    attention_delta = causal_attention(norm(z), state.kv)
+    u = z + attention_delta
+    ffn_delta = ffn(norm(u))
+    return u + ffn_delta
+```
+
+如果两个 residual delta 都为零，结果精确退化为 $z$。对稀疏节点，可把 K/V projection 放在 `ObserveUpdate`，把 query、packed Attention、输出投影和 FFN 放在 `ActiveKernel`。Mamba/SSM 可把因果状态递推放在 `ObserveUpdate`，把较昂贵 readout 和发送放在 `ActiveKernel`。
+
+这里存在两个表示层级：
+
+| 表示层级 | 节点表示什么 | 用途 |
+| --- | --- | --- |
+| 架构层 | 一个完整 $(d,u)$ transition | 看空间 DAG、局部通信、激活和分支 |
+| lowering 层 | Merge、KV update、Attention、FFN、allocator、Emit 等微阶段 | 实现、artifact equality 与性能优化 |
+
+历史 HB-Lattice-v0 把 lowering 层的 P0-P7 同时画成“平面”，导致它们容易被误解为模型空间。HB-Sliced 不再使用这种主表示；只有确实产生跨节点依赖时，微阶段才在 expanded event DAG 中显式出现。
+
+### 10. 输入扩展与输出收拢
+
+完整模型不要求输入节点直接广播到所有 site。生产候选应使用只向前的层级 DAG：
+
+```text
+v_in
+  -> global carrier
+  -> region expansion
+  -> cell expansion
+  -> depth slice 0
+  -> ...
+  -> depth slice D-1
+  -> cell contraction
+  -> region contraction
+  -> global readout
+  -> v_out
+```
+
+扩展树和收拢树的深度、fan-out 与 merge 规则都属于静态图。HB-Line reference 为减少代码，直接向 $d=0$ 的全部 site 注入；在 $d=D-1$ 完成后，它把出站消息视为输出边界槽，按来源固定合并，并平均槽 $1$、$5$。这些规则不是最终通信设计。
+
+### 11. Prefill、decode 与固定空间遍历次数
+
+取整数 $B\ge0$ 和 $L\ge1$，当前 chunk 的全局输入位置集合为 $\{B,B+1,\ldots,B+L-1\}$。对其中固定输入位置 $t$ 和深度 $d$，把该切片的固定微阶段整体记为单元 $(d,t)$。HB-Line-v0 只有两类跨单元依赖：
 
 $$
-b_{s+1,c}
-=
-f_{s,c}
-+
-\delta_{s,c}^{\mathrm{slow}}.
+(d,t)\longrightarrow(d+1,t)
 $$
 
-若慢路径未激活，则 $\delta_{s,c}^{\mathrm{slow}}=0$，结果精确退化为 P4 快路径。
-
-Region 和 Global summary 在 P7 更新：
+其中 $0\le d<D-1$；它来自同一位置沿空间 DAG 前进。第二类依赖是
 
 $$
-r_{s+1,q}
-=
-r_{s,q}^{\mathrm{base}}
-+
-\sum_{c:\rho(c)=q}
-W_{s,c}^{C\to R}b_{s+1,c},
+(d,t)\longrightarrow(d,t+1)
 $$
 
-$$
-g_{s+1}
-=
-g_s^{\mathrm{base}}
-+
-\sum_q
-W_{s,q}^{R\to G}r_{s+1,q}.
-$$
-
-为了控制通信量，$g$ 与 $r$ 的维度应明显小于 cell hidden width。
-
-### 7. Branch 声明
-
-#### 7.1 Attention branch
-
-| 字段 | 值 |
-| --- | --- |
-| Parent | Cell backbone |
-| Entry | P0 cell carrier |
-| Compute | P1 |
-| Merge | P2 Add-A |
-| 最大寿命 | 2 宏平面 |
-| Gate | v0 恒为 1 |
-| 输出 | Attention residual delta |
-
-#### 7.2 FFN branch
-
-| 字段 | 值 |
-| --- | --- |
-| Parent | P2 cell carrier |
-| Entry | P2 |
-| Compute | P3 |
-| Merge | P4 Add-F |
-| 最大寿命 | 2 宏平面 |
-| Gate | v0 恒为 1 |
-| 输出 | FFN residual delta |
+其中 $0\le d<D$、$t\ge0$；它来自节点和 allocator 的单序列持久状态。不存在 $(d+1,t)\to(d,t+1)$ 之类的反向隐藏依赖。
 
-#### 7.3 Sparse spatial branch
-
-| 字段 | 值 |
-| --- | --- |
-| Parent | P4 fast cell carrier |
-| Entry/Fork | P4 |
-| Compute | P5、P6 |
-| Merge | P7 Deadline Merge |
-| 最大寿命 | 3 宏平面 |
-| Region active fan-out | 最多 2 cells/region |
-| Cell active fan-out | 最多 2 leaves |
-| Leaf child fan-out | 一个 P5 leaf 最多向 9 个固定邻接发送消息；实际 P6 激活由每个目标 cell 的预算 2 约束 |
-| 输出 | 写回指定 cell 的 residual delta |
-
-### 8. 稀疏平面固定邻接
+token-major decode 按
 
-一个 leaf 用四元组 $(i,j,u,v)$ 标识：
+```text
+(0,0),(1,0),...,(D-1,0),(0,1),(1,1),...
+```
 
-- $(i,j)$：4x4 cell 坐标；
-- $(u,v)$：cell 内 4x4 leaf 坐标。
-
-P5 到 P6 的固定候选后继包括：
-
-1. 同一 cell 的同坐标 $(u,v)$。
-2. 同一 cell 内按环状边界计算的上、下、左、右四邻接。
-3. 上、下、左、右相邻 cell 中的对应坐标 $(u,v)$。
-
-因此固定消息度数不超过 9。cell 和 cell 内坐标都可以采用环状边界，使多次局部传播后全平面任意位置之间存在路径。
-
-固定邻接只决定谁可以收到消息。selector 另外决定谁真正执行昂贵计算并继续发送。
+执行；depth-major chunk 按
 
-![[assets/hb-lattice-v0-plane.svg]]
+```text
+(0,0),(0,1),...,(0,L-1),(1,0),(1,1),...
+```
 
-### 9. 具体 selector
+执行。两者都保持上述两类依赖的先后关系。若每个 transition 是确定函数，并且不同深度的状态 namespace 不共享，则两种顺序只是同一个有限 event DAG 的两种合法拓扑序，因此产生相同输出、route artifact 和最终状态。
 
-#### 9.1 Region selector
-
-对 region $q$ 内四个 cell，计算：
-
-$$
-\pi_{s,c}
-=
-\sigma_{s,c}
--
-\lambda_R
-\left(
-\ell_{s,c}^{R}
--
-\bar\ell_{s,q}^{R}
-\right).
-$$
+上面两个序列为节省字符写成了 $B=0$；一般 $B$ 只需把每个位置 $s\in\{0,\ldots,L-1\}$ 替换为 $B+s$，论证不变。
 
-最多选择两个 cell。v0 建议先比较：
+这给出两个不同强度的结论：
 
-1. 纯语义 Top-2。
-2. 语义 Top-3 后按负载选 2。
-3. 联合 score Top-2。
-
-#### 9.2 Cell leaf allocator
-
-在选中 cell 内：
-
-$$
-\pi_{s,c,j}^{L}
-=
-\sigma_{s,c,j}^{L}
--
-\lambda_L
-\left(
-\ell_{s,c,j}^{L}
--
-\bar\ell_{s,c}^{L}
-\right).
-$$
-
-最多选择两个 leaf。由于 v0 的长历史主要属于 cell shared state，leaf 更接近计算 shard，可以比独立有状态专家使用更强负载均衡。
-
-#### 9.3 控制状态
-
-所有 $\ell$ 都是单序列状态：
-
-$$
-\ell_{t+1}
-=
-\beta\ell_t
-+
-(1-\beta)\mathbf 1[\text{selected at }t].
-$$
-
-不同 batch 中的序列不能共享该状态。物理设备实时负载不得写入语义 selector。
-
-### 10. 节点执行契约
-
-![[assets/hb-lattice-v0-node-contract.svg]]
-
-对收到消息的 leaf，执行顺序固定为：
-
-~~~text
-Receive
-    -> UpdateState
-    -> CheapScore
-    -> Selector
-        -> inactive: commit state, no heavy kernel, no emit
-        -> active: ActiveCompute, commit output, emit
-~~~
+1. 空间推进次数为 $D$ 乘以固定微阶段数，与 chunk 长度 $L$ 无关。
+2. 若 stateful selector 只能逐位置扫描，节点内部时间 span 仍可能是 $O(L)$；要达到 Transformer/Mamba 意义上的低 span，还需把 selector 声明为 token-local、scan-composable、causal-bulk，或显式承担 sequential fallback 成本。
 
-因此，hard route 的物理短路边界是：
+可运行 reference 位于 [hb_line_v0_reference.py](examples/hb_line_v0_reference.py)：
 
-- `UpdateState` 和 `CheapScore` 不短路；
-- `ActiveCompute` 和 `Emit` 可真实跳过；
-- 若某个 kernel 同时负责状态更新和昂贵输出，实现必须先拆分后才能短路。
-
-### 11. 一个 token 的具体路径示例
-
-设 token $t$ 到达 superblock $s$：
+```bash
+python 20-tide-decentralized-neural-network/examples/hb_line_v0_reference.py
+```
 
-1. P0：Global/Region context 注入全部 16 个 cell carrier。
-2. P1-P4：16 个 cell 都执行 cell-local Attention 和 FFN，得到快路径 $f_{s,c}$。
-3. Region R1 的 selector 从 C10-C13 中选中 C11、C12。
-4. C11 在 P5 激活 leaf $(1,1)$、$(2,2)$；C12 激活 leaf $(0,1)$、$(1,2)$。
-5. 四个 P5 leaf 向 P6 固定局部邻接广播；所有实际收件 leaf 更新 observer state。
-6. P6 每个目标 cell 最多选择两个 leaf 继续计算。
-7. P6 delta 分别标记要写回 C11、C12 或邻接 cell。
-8. P7 将这些 delta 与各 cell 的 $f_{s,c}$ 相加，产生 $b_{s+1,c}$。
-9. 四个 Region Hub 和 Global Hub 更新小维度 summary。
-
-未选中的 region/cell/leaf 不执行慢路径重 kernel，但其 cell GPT-like 快路径仍然存在。
-
-### 12. 输入扩展与输出收拢
-
-整个模型最外侧使用层级树：
-
-~~~text
-Input token
-    -> Global Hub
-        -> 4 Region Hubs
-            -> 16 Cell Backbones
-                -> S 个 HB-Lattice superblocks
-            -> 4 Region readout summaries
-        -> Global readout
-    -> Final Norm + LM Head
-~~~
-
-输入扩展和输出收拢都使用固定槽位和固定投影，不使用无界动态 Aggregate。
-
-若所有 Attention、FFN 和 sparse residual delta 都为零，并且 hub/cell cheap backbone 取 identity，则整个 hidden carrier 退化为层级直通。若 hub/cell 使用小型 SSM，则退化为一个廉价 always-on recurrent backbone。
-
-### 13. Prefill / decode 执行
-
-第一版不做异步 early exit。对一个 chunk，在每个 superblock 内执行：
-
-~~~text
-P0：批量 context inject
-P1：16 cells × batch × tokens 的 packed Attention
-P2：批量 fixed-slot Add
-P3：16 cells × batch × tokens 的 packed FFN
-P4：批量 score；CPU 按序列扫描 selector
-P5：按 route list packed 执行选中 leaf
-P6：按固定邻接构造 inbox；CPU 扫描；packed 执行
-P7：批量 fixed-slot deadline merge
-~~~
-
-空间阶段数固定为 $8S$，不随 chunk 长度 $L$ 增长。节点内部是否能高效处理时间维度，仍分别取决于 Attention、SSM、selector scan 和 ragged state kernel。
-
-要满足 `prefill = decode`，至少要求：
-
-1. 所有 selector 状态按单序列隔离。
-2. selector 不读取 chunk 长度、batch 同伴或设备实时负载。
-3. 同一逻辑时间的消息采用固定 source order 或可交换 merge。
-4. Attention 使用相同 causal mask、位置和 KV 可见性。
-5. P7 是当前 token 的固定读出 deadline。
-6. P5/P6 packing 只改变物理布局，不改变消息、选择、状态和 delta。
-7. P4 对位置 $t$ 的 score 只读取位置 $t$ 可见的因果状态视图，不读取 chunk 末尾状态。
-8. P5/P6 的可变状态要么使用不同 namespace，要么其跨平面更新已经证明对两种 schedule 等价。
-
-### 14. 16 张 Ascend 卡映射
-
-4x4 cell 与 16 张卡静态一一对应：
-
-~~~text
-A0  A1  A2  A3
-A4  A5  A6  A7
-A8  A9  A10 A11
-A12 A13 A14 A15
-~~~
-
-每张卡持有对应 cell 在所有 superblock 中的：
-
-- Cell Attention/FFN 参数与 cell shared state。
-- 16 个 leaf site 的 adapter/observer state。
-- P5/P6 packed workspace。
-- 相邻 cell 的发送和接收 buffer。
-
-Region Hub 可放在每行第一张卡，Global Hub 可放在 A0，或把小维度 hub state 复制到四个 region owner。该选择属于 backend placement，不改变语义图。
-
-跨卡消息只沿上下左右相邻 cell 发送；Global/Region 小维度 summary 另走固定树形通信。
-
-### 15. 为什么这是一个有用的第一版
-
-它包含了当前讨论中的重要性质：
-
-- pre-norm residual backbone。
-- Global、Region、Cell、Leaf 四级层次。
-- GPT-like 常亮 Attention/FFN 作为一级扩展。
-- 真正可以不执行 kernel 的两级稀疏慢路径。
-- 快路径和慢路径在固定 deadline merge。
-- 分支 fan-out、最长寿命和 merge point 均有界且可记录。
-- cell 级语义专门化与 leaf 级负载均衡可以分离。
-- 收到消息即更新，激活才重计算和继续发送。
-- 固定局部通信与 16 卡静态映射。
-- chunk 物理 packing 不进入模型语义。
-
-它也故意没有包含：
-
-- 反馈环或 zero-delay loop。
-- `late-context update`。
-- 任意长度、没有 deadline 的游走信号。
-- leaf-local 无界 KV。
-- 依赖 batch 同伴的 expert-choice routing。
-- 任意来源、任意数量、按物理到达顺序求值的 Aggregate。
-- 真正提前返回的 wall-clock fast path。
-
-### 16. 最需要审视的设计选择
-
-1. 16 个 cell 全部运行 GPT-like Attention/FFN 是否仍然太昂贵？
-2. Cell 是正确的专门化尺度，还是 Region/Leaf 更自然？
-3. P5-P6 两级慢路径是否足够表达空间局部计算，还是需要更多级？
-4. 每个 superblock 都更新 Global/Region summary 是否过强或带宽过高？
-5. cell shared KV 是否损失了 leaf-local memory 的表达力？
-6. 固定 P7 deadline 是否过度限制不同计算时延？
-7. 慢路径最终 residual add 是否足以表达希望的复杂处理？
-8. 环状几何邻接是否合理，还是应改为 Delaunay、learned static topology 或其他结构？
-9. Region 先做语义选择、Cell 内做负载选择是否符合预期？
-10. 第一版应使用 Attention、SSM，还是二者混合构成 cell backbone？
-
-这些问题可以逐项改变，而不需要推翻本页的四层对象和八平面执行骨架。
+它同时检查：
+
+- 一个完整 chunk 的 depth-major 执行等于逐 token 的 token-major decode。
+- 一个完整 chunk 等于从任意中间边界拆成两次 chunk 执行。
+- 比较对象包括输出向量、每个 $(t,d)$ 的 receiving/active site、消息数、节点状态和 allocator 状态。
+
+### 12. 当前设计边界与下一步
+
+HB-Line-v0 当前固定：空间 DAG 无环、只使用相邻切片边、所有消息时延为一个深度步、每个 group 至少一个 always-on site、收到即更新、激活才重计算和发送、固定最终读出。
+
+它尚未决定：
+
+1. 最终使用多少 site、多少深度和多少层级 partition。
+2. backbone 是恒等、轻量 SSM、共享 GPT block，还是多级嵌套组合。
+3. selector 先按语义筛候选还是先按负载给 quota。
+4. 是否允许只向前的跨切片 shortcut 和固定 deadline branch。
+5. line 的训练结果是否足以支持升级到 plane/cube。
+6. 一个 site、一个 cell 或一个 region 应如何映射到本机 16 张 Ascend 卡。
+
+升级到 HB-Plane/HB-Cube 前，应先在 HB-Line 上分别验证：局部通信度数、激活稀疏度、route artifact equality、状态增长、selector span、节点梯度覆盖和层级负载均衡。维度升级不能替代这些验证。
+
+---
+
+## 附录 A：历史 HB-Lattice-v0 索引
+
+> [!warning] 历史材料，不是当前主模型
+> 2026-08-07 的 HB-Lattice-v0 曾把 GPT-like 快路径、P5/P6 稀疏分支、P7 deadline merge、二维 cell/leaf 几何和 16 卡放置收缩成八个“宏平面”。这种表示混合了空间架构与 runtime lowering，现已由 HB-Sliced/HB-Line-v0 取代。
+
+历史材料仍可从以下文件和 Git 版本追溯：
+
+- [hb_lattice_v0_reference.py](examples/hb_lattice_v0_reference.py)：旧 toy semantics 与 `chunk == repeated decode` reference。
+- [hb-lattice-v0-superblock.svg](assets/hb-lattice-v0-superblock.svg)：旧八阶段总图。
+- [hb-lattice-v0-plane.svg](assets/hb-lattice-v0-plane.svg)：旧 4x4 cell/leaf 俯视图。
+- [hb-lattice-v0-node-contract.svg](assets/hb-lattice-v0-node-contract.svg)：旧 CPU/NPU 节点 lowering 图。
+- Git 提交 `bd035c7`：压缩前的完整逐段说明。
+
+这些材料只用于回答“当前抽象从何而来”，不再定义当前节点、切片、selector、证明对象或实现顺序。
 
 ---
 
@@ -749,24 +475,26 @@ Region Hub 可放在每行第一张卡，Global Hub 可放在 A0，或把小维�
 
 
 > [!summary] 本页定位
-> 本页记录分层点阵 Tide 候选架构中，CPU 侧严格时间递推 selector、加速卡侧节点计算、稀疏路径和节点持久状态共同带来的训练问题，以及从公开 MoE 研究和先进开源模型技术报告中可借鉴的稳定化方法。本文是研究备忘，不是数学定理、最终架构规范或已经验证的训练方案。
+> 本部分记录 HB-Sliced 候选架构中，CPU 侧严格时间递推 selector、加速卡侧节点计算、稀疏路径和节点持久状态共同带来的训练问题，以及从公开 MoE 研究和先进开源模型技术报告中可借鉴的稳定化方法。本文是研究备忘，不是数学定理、最终架构规范或已经验证的训练方案。
 
 > [!example] 具体架构实例
-> 本部分讨论一般训练风险；把这些约束收缩成四级 backbone、八平面 superblock、16 卡映射和三张结构图的具体候选见本页第一部分。
+> 本部分讨论一般训练风险；当前最小架构实例、节点契约和四张分离图见本页第一部分。历史八平面 superblock 只保留在附录 A，不再作为本部分的默认模型。
+
+本部分沿用较直观的中文名称：“节点”指一个 site，“格子”指一个 cell，“区域”指一个 region。若引用旧研究时出现“叶节点”，它只表示某次层级划分中最细、可被 selector 激活的 site，不为 HB-Line-v0 增加新的节点类型。
 
 ### 1. 当前候选架构
 
-当前讨论的平面点阵首先是一个最低复杂度实例，不应被理解为最终只能有“平面、格子、节点”三个固定层次。更一般的候选架构可概括为：
+当前讨论的 HB-Line 是最低几何复杂度实例，不应被理解为最终只能有“线段、cell、site”三个固定层次。HB-Sliced 候选架构可概括为：
 
-1. 空间图由有限个前向计算阶段组成；最简单实例是顺序堆叠 32 或 96 个平面。
-2. 每个平面包含规则点阵；最低层计算单元暂称节点，若干节点组成格子。
-3. 节点之上还可以有 hub、区域、格子组或更高层 backbone。后续实现不应把层次数写死，而应允许配置多个路由与聚合尺度。
-4. 为了使第一版理论和实现可控，层级区域优先采用嵌套或互不相交的层次划分。任意重叠区域会使状态归属、selector 读写范围和负载统计明显复杂化，可后置研究。
-5. 每个节点只连接拓扑后继中的少量节点，因而通信度数有界。最低复杂度实例只允许相邻平面连接；后续可加入只向前的跨平面 shortcut。
-6. 上游已激活节点向所有邻接后继发送消息。收到消息的节点总是执行状态更新；是否执行昂贵计算并继续发送，由本节点所属层级的 selector 或其他激活机制决定。
-7. selector 可以存在于节点、格子或更高区域层级。不同层级可以使用不同策略，例如高层 always-on、格子级语义选择、格子内节点级负载分配。
+1. 空间图由固定有限个深度切片组成；每个切片中的位置集合是同一空间基图 $H=(U,F)$ 的副本。
+2. 当前最小实例令 $H$ 为线段。升级到平面或立方体时，只替换 $U$ 与 $F$，不改变 node/allocator 接口。
+3. site 之上可以配置 cell、region、hub 或更高尺度 backbone；这些尺度由 $U$ 上的嵌套 partition 定义，层次数不能写死。
+4. 第一版只采用嵌套或互不相交的 partition。任意重叠区域会使状态归属、allocator 读写范围和负载统计明显复杂化，后置研究。
+5. 普通消息边只从深度 $d$ 指向 $d+1$ 的同位置或空间邻居。allocator 作为 `Score -> Allocate -> Compute` 的显式固定微阶段，不允许节点沿同切片邻接反复传播。
+6. 上游已激活节点向所有固定邻接后继发送消息。收到消息的节点总是执行状态更新；是否执行昂贵计算并继续发送，由本节点所属层级的 selector 或其他激活机制决定。
+7. selector 可以存在于 site、cell 或更高区域尺度。不同尺度可以使用不同策略，例如高层 always-on、cell 级语义选择、cell 内 site 级负载分配。
 8. selector 预期主要在 CPU 上处理紧凑控制数据；节点的大批量数值计算预期由加速卡处理。
-9. 4x4 个格子可以静态映射到本机 16 张加速卡；每张卡负责一个格子在多个平面中的节点，跨格子通信只发生在几何相邻设备之间。
+9. 设备放置不进入 HB-Line 定义。line 可把连续 site/cell 分片到设备；未来 HB-Plane 可再研究把 4x4 cell 静态映射到本机 16 张 Ascend 卡。
 
 这里需要区分三个相互独立的层次概念：
 
@@ -780,10 +508,10 @@ Region Hub 可放在每行第一张卡，Global Hub 可放在 A0，或把小维�
 
 这个候选架构的主要吸引力是：
 
-- 空间计算图保持 DAG，可按平面推进。
+- 空间计算图保持 DAG，可按深度切片推进。
 - 空间局部性限制单次通信范围。
 - 稀疏发送激活限制昂贵节点计算和后续传播规模。
-- 一个平面内可以把多个 batch、多个 token 和多个节点的工作打包后交给加速卡。
+- 一个切片内可以把多个 batch、多个 token 和多个节点的工作打包后交给加速卡。
 - 小规模、顺序敏感的控制递推可以交给擅长复杂控制流的 CPU。
 
 但计算放置本身不能解决训练问题。hard selector 是否稳定、节点是否获得充分梯度、路由变化是否改变未来状态分布，仍由模型语义和训练方法决定。
@@ -803,9 +531,9 @@ $$
 | Dense Transformer | 固定计算图，所有激活参数连续参与前向和反向 | attention logit、低精度数值、优化器和大规模系统稳定性 |
 | Mamba / SSM | 固定且连续可微的递推，通常可用 scan 并行 | 递推状态数值稳定性、长程梯度、稳定参数化和高性能 scan kernel |
 | 标准 MoE | hard Top-K 改变每个 token 的计算子图，只有选中专家获得主要任务梯度 | 路由漂移、专家饥饿、负载不均衡、selected-only feedback 和分布式通信 |
-| 分层点阵 Tide | hard routing 可改变后续多个平面的完整传播路径，并可与节点状态和历史负载状态耦合 | 标准 MoE 风险之外，还增加长路径信用分配、路径分布漂移和状态/路径耦合 |
+| HB-Sliced Tide | hard routing 可改变后续多个深度切片的完整传播路径，并可与节点状态和历史负载状态耦合 | 标准 MoE 风险之外，还增加长路径信用分配、路径分布漂移和状态/路径耦合 |
 
-因此，Mamba 不一定在优化意义上比 Transformer 更难，MoE 也不必然产生 loss spike。但 hard routing 确实引入了一组 dense Transformer 和连续 SSM 没有的训练风险。若 Tide 的一次选择会改变后续几十个平面的路径，其训练问题一般比单层 MoE 更强。
+因此，Mamba 不一定在优化意义上比 Transformer 更难，MoE 也不必然产生 loss spike。但 hard routing 确实引入了一组 dense Transformer 和连续 SSM 没有的训练风险。若 Tide 的一次选择会改变后续几十个深度切片的路径，其训练问题一般比单层 MoE 更强。
 
 ### 3. 公开研究对路由漂移的结论
 
@@ -907,15 +635,15 @@ Tide 应禁止第三类变化进入模型语义。这是硬约束，而不是一
 
 hard Top-K 的离散索引通常不直接求导。任务梯度主要经过被选中的节点和被选中 gate weight；未被选择的节点无法告诉 router：“选择我是否会更好”。
 
-在标准 MoE 中，这已经会造成未选专家缺少任务反馈。在多平面 Tide 中，一个早期阶段的选择还会改变后续多个层级的输入，未选路径的反事实质量更难获得。
+在标准 MoE 中，这已经会造成未选专家缺少任务反馈。在 HB-Sliced Tide 中，一个较早深度的选择还会改变后续多个切片的输入，未选路径的反事实质量更难获得。
 
 #### 5.2 路径级分布漂移
 
-第 $p$ 个平面的路由变化会改变第 $p+1$ 个平面的输入分布；第 $p+1$ 个平面的 router 和节点参数随之变化，又会继续改变更深平面。若有 96 个平面，这种变化可以沿整条路径放大。
+第 $d$ 个深度切片的路由变化会改变第 $d+1$ 个切片的输入分布；第 $d+1$ 个切片的 router 和节点参数随之变化，又会继续改变更深切片。若有 96 个切片，这种变化可以沿整条路径放大。
 
 #### 5.3 长路径信用分配
 
-若只在最终输出处计算损失，早期平面 selector 收到的学习信号要经过许多 hard choice、节点状态和局部 kernel。即使数值梯度仍能传播，信号也可能很弱且方差很大。
+若只在最终输出处计算损失，较早深度的 selector 收到的学习信号要经过许多 hard choice、节点状态和局部 kernel。即使数值梯度仍能传播，信号也可能很弱且方差很大。
 
 路径级分布漂移与长路径信用分配相互放大，但不是同一个问题：
 
@@ -953,7 +681,7 @@ hard Top-K 的离散索引通常不直接求导。任务梯度主要经过被选
 
 #### 5.6 层级发散与收拢
 
-标准 MoE 的稀疏分支通常在一个 block 内立即求和并返回共同 residual stream，因此一次路由决定的生命周期很短。Tide 若让分支连续穿过许多平面而长期不收拢，路径分布漂移和信用分配都会更强。
+标准 MoE 的稀疏分支通常在一个 block 内立即求和并返回共同 residual stream，因此一次路由决定的生命周期很短。Tide 若让分支连续穿过许多深度切片而长期不收拢，路径分布漂移和信用分配都会更强。
 
 建议把层级化 backbone 设计为反复出现的有限生命周期结构：
 
@@ -1113,7 +841,7 @@ CPU 按 token 逻辑顺序更新负载状态并产生紧凑 route list。它只�
 
 #### 7.3 `ActiveCompute / Emit`
 
-加速卡根据 route list 对选中节点执行 packed Attention、FFN、SSM 或其他昂贵 kernel，并产生向下一平面的传播消息。
+加速卡根据 route list 对选中节点执行 packed Attention、FFN、SSM 或其他昂贵 kernel，并产生向下一深度切片的传播消息。
 
 这种拆分的关键收益是：hard selector 主要控制昂贵残差和传播，而不是直接控制节点是否进行任何状态更新。收到消息并更新状态不等于一定获得有效任务梯度；只有该状态在当前或未来被读出并影响损失，梯度才会到达相应更新。
 
@@ -1121,7 +849,7 @@ CPU 按 token 逻辑顺序更新负载状态并产生紧凑 route list。它只�
 
 #### 8.1 层级化 always-on backbone
 
-always-on backbone 不应只理解为“每个平面一个 shared expert”。它可以形成多个嵌套层级：
+always-on backbone 不应只理解为“每个深度切片一个 shared expert”。它可以形成多个嵌套层级：
 
 - 少量最短、最高激活率的核心路径。
 - 从核心路径生长出的一级残差分支。
@@ -1150,9 +878,9 @@ always-on backbone 不应只理解为“每个平面一个 shared expert”。�
 
 shared expert 不是已被所有模型证明最优的固定答案。这里保留 always-on 路径的主要目的，是防止路由变化同时切断信息流和训练梯度，而不是预先规定知识必须存入某个共享专家。
 
-##### 8.1.1 前向跨平面 shortcut 与不等长路径
+##### 8.1.1 前向跨切片 shortcut 与不等长路径
 
-若一条跨平面边始终从较早阶段指向较晚阶段，它仍属于空间 DAG，不会因为“跨越多个平面”自动破坏 `prefill`。固定非负整数时延可以：
+若一条跨切片边始终从较早深度指向较晚深度，它仍属于空间 DAG，不会因为“跨越多个切片”自动破坏 `prefill`。固定非负整数时延可以：
 
 - 直接写入消息的逻辑到达时间；
 - 或展开成若干只做延迟的中间节点。
@@ -1169,7 +897,7 @@ shared expert 不是已被所有模型证明最优的固定答案。这里保留
 
 - 同 token、同内部时刻的反向边会重新引入空间环和 zero-delay 求解问题，暂不进入高性能主线。
 - 带正时延、从 token $t$ 的高层状态影响 token $t+1$ 或更晚低层状态的反馈，可以在有限 chunk 上展开成 event DAG，但会引入时间递推，需要单独证明是否 scan-composable。
-- 若只需要“先高层处理，再回到低层细化”的效果，可以在更晚平面复制一个低层类型节点，用前向 DAG 表达 refinement，而不必首先引入真实空间环。
+- 若只需要“先高层处理，再回到低层细化”的效果，可以在更晚深度切片复制一个低层类型节点，用前向 DAG 表达 refinement，而不必首先引入真实空间环。
 
 因此，第一版可保留接口上的反馈能力，但 reference 配置优先采用前向 shortcut、延迟状态和后置 refinement。
 
@@ -1188,7 +916,7 @@ Tide 的自回归接口仍需要在固定外部周期提取或输出 token。不
 
 late-context update 也不自动得到高性能 `prefill`。若慢分支只通过可结合 scan、固定 SSM 更新或其他可组合状态影响未来，它仍可能批量执行；若慢分支不可预测地改变下一个 token 的 hard routing，则会重新形成跨 token 控制链。
 
-##### 8.1.4 小词表与减少平面数
+##### 8.1.4 小词表与减少深度切片数
 
 “用 byte 级词表让简单词主要由 backbone 学会，复杂长句扩散到更深分支”是有价值的研究假设，但当前没有理论保证。
 
@@ -1199,10 +927,10 @@ byte tokenization 的收益包括更小 embedding/output vocabulary、无 OOV �
 1. 纯 byte token。
 2. 常规 BPE/SentencePiece token。
 3. byte 输入后先做局部 patch/compression，再进入层级 backbone。
-4. 固定平面数但允许 conditional depth。
-5. 减少平面数、提高每平面节点容量或状态表达力。
+4. 固定深度切片数但允许 conditional depth。
+5. 减少深度切片数、提高每切片节点容量或状态表达力。
 
-平面数不应直接类比 GPT block 数。若层级 backbone、局部状态和分支计算已经提供足够有效深度，减少平面数完全可能；但应由 scaling experiment 决定。
+深度切片数不应直接类比 GPT block 数。若层级 backbone、局部状态和分支计算已经提供足够有效深度，减少切片数完全可能；但应由 scaling experiment 决定。
 
 #### 8.2 长期状态采用与本节点激活无关的更新
 
@@ -1243,7 +971,7 @@ N_{\mathrm{KV}}
 \sum_{i,t}|I_{i,t}|.
 $$
 
-当每个已激活上游节点向 $d$ 个邻接后继发送时，单步新增记录量约与“激活发送数乘以 $d$”同阶。它仍受稀疏激活和有界度控制，但可能在长序列、多平面下成为主要内存成本。固定大小的 SSM 或 linear-attention state 在这一维度更容易控制。
+当每个已激活上游节点向 $c$ 个邻接后继发送时，单步新增记录量约与“激活发送数乘以 $c$”同阶。它仍受稀疏激活和有界度控制，但可能在长序列、多切片下成为主要内存成本。固定大小的 SSM 或 linear-attention state 在这一维度更容易控制。
 
 对于 Attention，节点在一个 chunk 内收到的消息数一般不同，因此需要按 `(batch, node, logical time)` 整理 ragged KV。可先把所有 K/V projection 合并为大矩阵计算，再按节点写入 packed offset；被激活 query 再调用支持可变长度的 packed attention。
 
@@ -1268,7 +996,7 @@ $$
 4. 逐渐减小 $K$ 和 fan-out，增加 hard routing 比例。
 5. 最后再加入历史负载状态和较强的时间均衡。
 
-这与 EvoMoE 的 dense-to-sparse 思路一致，但 Tide 还需要同时控制多平面路径和节点状态。
+这与 EvoMoE 的 dense-to-sparse 思路一致，但 Tide 还需要同时控制多切片路径和节点状态。
 
 #### 8.4 降低 checkpoint 路由漂移
 
@@ -1297,7 +1025,7 @@ hysteresis 和 margin 都会减少探索，不能从训练开始就过强；应�
 
 #### 8.6 缩短长路径信用分配
 
-可在少量中间平面加入训练期辅助读出或 teacher representation matching。辅助损失应在训练后期衰减，避免强行要求每个平面都形成完整语言模型表示。
+可在少量中间深度切片加入训练期辅助读出或 teacher representation matching。辅助损失应在训练后期衰减，避免强行要求每个切片都形成完整语言模型表示。
 
 #### 8.7 利用空间邻接进行平滑初始化
 
@@ -1317,16 +1045,16 @@ hysteresis 和 margin 都会减少探索，不能从训练开始就过强；应�
 
 ### 9. CPU 与加速卡的建议执行边界
 
-在只有相邻平面边的最低复杂度模型中，合理的单平面执行流程是：
+在只有相邻深度切片边的最低复杂度模型中，合理的单切片执行流程是：
 
 ```text
-前一平面完成当前 chunk
+前一深度切片完成当前 chunk
     -> 加速卡批量执行 Observe / Update / Score
     -> 一次传输紧凑候选分数和标识符到 CPU
     -> CPU 按 token 顺序扫描 selector 状态并生成 route list
     -> 一次传输 route list 到加速卡
     -> 加速卡按节点/格子打包 ActiveCompute / Emit
-    -> 进入下一平面
+    -> 进入下一深度切片
 ```
 
 必须避免：
@@ -1341,7 +1069,7 @@ hysteresis 和 margin 都会减少探索，不能从训练开始就过强；应�
 
 后者会把 host/device 同步延迟放入长度为 $L$ 的关键路径。
 
-若加入只向前的跨平面 shortcut，调度单位应从“相邻平面”推广为“拓扑阶段”：
+若加入只向前的跨切片 shortcut，调度单位应从“相邻深度切片”推广为“拓扑阶段”：
 
 1. 一个阶段等待其所有拓扑前驱产生当前窗口所需的消息桶。
 2. scheduler 按目标节点和逻辑到达时间合并相邻边与 shortcut 消息。
@@ -1354,15 +1082,15 @@ hysteresis 和 margin 都会减少探索，不能从训练开始就过强；应�
 即使 selector 每个事件只处理少量标量，总事件数仍约为：
 
 $$
-O(PBL),
+O(DBL),
 $$
 
-其中 $P$ 是平面数，$B$ 是 batch size，$L$ 是 chunk 长度。随着节点计算越来越稀疏，CPU selector 反而可能成为 Amdahl 瓶颈。因此需要：
+其中 $D$ 是深度切片数，$B$ 是 batch size，$L$ 是 chunk 长度。随着节点计算越来越稀疏，CPU selector 反而可能成为 Amdahl 瓶颈。因此需要：
 
 - 候选度数保持常数且较小。
-- 每个平面批量扫描多个 batch 和 token。
+- 每个深度切片批量扫描多个 batch 和 token。
 - 使用紧凑连续内存和预分配 route buffer。
-- CPU 选择与其他平面的加速卡计算双缓冲或流水重叠。
+- CPU 选择与其他深度切片的加速卡计算双缓冲或流水重叠。
 - 对 selector 单独测量每秒决策数，而不是只看其数据体积。
 
 ### 10. 建议的训练推进顺序
@@ -1371,7 +1099,7 @@ $$
 
 使用静态 hash、固定局部路径或预生成均衡路由，不训练 selector。
 
-目标是验证：点阵拓扑、节点 kernel、状态更新和稀疏梯度覆盖本身能否训练。若这一阶段失败，问题不应归因于学习式 router。
+目标是验证：HB-Line 拓扑、节点 kernel、状态更新和稀疏梯度覆盖本身能否训练。若这一阶段失败，问题不应归因于学习式 router。
 
 #### 阶段 B：token-local learned routing
 
@@ -1391,7 +1119,7 @@ $$
 
 目标是判断精细时间均衡是否带来超过额外串行控制、路由变化和训练困难的收益。
 
-不建议直接从阶段 D 开始训练完整 96 平面模型。否则一旦训练不稳定，很难区分根因。
+不建议直接从阶段 D 开始训练完整 96 切片模型。否则一旦训练不稳定，很难区分根因。
 
 ### 11. 必须记录的训练指标
 
@@ -1401,11 +1129,11 @@ $$
 - 每个 token 最后一次改变目标节点发生在训练的什么位置。
 - 第 $K$ 与第 $K+1$ 个候选之间的 score margin。
 - 邻近 checkpoint 的路径编辑距离。
-- 不同平面的 route saturation 速度。
+- 不同深度切片的 route saturation 速度。
 
 #### 11.2 负载与死亡节点
 
-- 每平面、每格子和每节点的激活次数。
+- 每深度切片、每 cell 和每 site 的激活次数。
 - load coefficient of variation、Gini coefficient 和最大/平均负载比。
 - 连续多个窗口未被激活的 dead node 比例。
 - 节点收到状态更新但未执行昂贵 kernel 的比例。
@@ -1448,13 +1176,13 @@ $$
 
 1. `Observe / Update` 是否对所有局部候选执行，还是只对收到实际消息的节点执行？
 2. 未激活节点的神经状态应该如何更新，才能兼顾训练覆盖、计算稀疏和长期状态语义？
-3. 每个平面的 always-on backbone 应是统一共享块、每格子共享块、SSM，还是只保留轻量残差？
+3. 每个深度切片的 always-on backbone 应是统一共享块、每 cell 共享块、SSM，还是只保留轻量残差？
 4. 历史负载状态应在序列边界重置，还是作为可延续的单序列 boundary state？
 5. 负载修正只作为 Top-K tie-breaker，还是允许在更大的语义候选集合内重新排序？
 6. 是否需要训练期 shadow route，以及允许多少额外计算预算？
-7. 中间平面辅助损失如何设计，才不会把所有节点强制训练成相同表示？
+7. 中间深度切片的辅助损失如何设计，才不会把所有节点强制训练成相同表示？
 8. 节点和格子到 16 张 Ascend 卡的静态映射，是否足以吸收剩余负载波动，减少 selector 对模型语义的干预？
-9. selector 的逐 token CPU scan 在多大 $B$、$L$ 和 $P$ 下开始成为关键路径？
+9. selector 的逐 token CPU scan 在多大 $B$、$L$ 和 $D$ 下开始成为关键路径？
 
 ### 14. 主要参考
 
@@ -1478,7 +1206,7 @@ $$
 
 ## 第三部分：执行能力与成本模型
 
-### 9. Tide 的进一步设计目标
+### 1. Tide 的进一步设计目标
 
 前面的讨论可以收敛为一个比“让一般 Graph 支持 prefill”更严格的目标：
 
@@ -1486,7 +1214,7 @@ $$
 
 这里不要求整个 Graph 都能 scan。不同 node 或 subgraph 可以依靠不同理由获得并行性；无法并行化的区域仍可顺序执行，但必须显式暴露其 span 成本。
 
-#### 9.1 Reference event DAG
+#### 1.1 Reference event DAG
 
 给定全局起始位置 $B\in\mathbb N$、长度 $L\in\mathbb N_{>0}$、左边界延续状态 $C_B$，以及输入 chunk：
 
@@ -1528,7 +1256,7 @@ $$
 
 因此，$\mathcal A_{\mathrm{ref}}$ 必须包含 data、state、control、visibility 与 commit dependencies。Graph schema 本身可以有环，只要对任意有限 $B,L$、合法 $C_B$ 和有限 internal rounds，实际执行可以展开成有限、dependency-complete 的 event DAG。所有 feedback edge 必须严格推进语义 profile 声明的逻辑秩，例如 step/round/phase/microstep 或 absolute-round/phase/iteration；消息 `owner` 本身不是默认时间秩。未定义的 zero-delay algebraic loop 不进入这一执行模型。
 
-#### 9.2 Certified contraction 与 execution DAG
+#### 1.2 Certified contraction 与 execution DAG
 
 把 reference DAG 划分为若干互不重叠的 event regions：
 
@@ -1565,7 +1293,7 @@ $$
 
 > reference DAG 能否被划分成具有局部等价证书的 regions，并使收缩后的 execution DAG 具有较低 span。
 
-### 10. 五类 Execution Capability
+### 2. 五类 Execution Capability
 
 这些 capability 是 sub-DAG 的 lowering contract，不是没有验证义务的提示标签。
 
@@ -1577,7 +1305,7 @@ $$
 | `ready-set-local` | 同一就绪事件集合内没有相互依赖或可见写冲突 | wavefront packing | message-passing round、MoE routing |
 | `sequential-fallback` | 尚无可用的并行等价 lowering | exact sequential execution | 当前 LH persistent selector |
 
-#### 10.1 Token-local
+#### 2.1 Token-local
 
 若对所有输入位置 $t$：
 
@@ -1589,7 +1317,7 @@ $$
 
 `token-local` 描述输入位置之间的依赖性质，不是消息 `owner` 的同义词，也不要求所有输入位置采用同一路径。MoE router 可以根据每个位置的 hidden state 动态选择不同 expert，只要同层各位置的 routing decisions 不通过 mutable selector state 相互影响。
 
-#### 10.2 Scan-composable
+#### 2.2 Scan-composable
 
 考虑 recurrence：
 
@@ -1615,7 +1343,7 @@ $$
 
 Scan 最常用于 node/kernel 内部，但也可以用于 subgraph。若一个 subgraph 具有固定边界状态，并且它的整体 boundary transition 满足上述条件，那么整个 subgraph 可以声明 `scan-composable`。一般动态 Graph 通常没有这一性质，Tide 不应假设 whole-graph scan 自动成立。
 
-#### 10.3 Causal-bulk
+#### 2.3 Causal-bulk
 
 有些 causal operator 没有适合的有限维 associative summary，但已有高性能 chunk algorithm。若 reference operator 为：
 
@@ -1641,7 +1369,7 @@ $$
 
 则它可以声明 `causal-bulk`。GPT causal attention 是主要例子；它不需要被强行解释为 Mamba 风格的 scan。
 
-#### 10.4 Ready-set-local
+#### 2.4 Ready-set-local
 
 在事件 DAG 中，称事件集合 $F_k$ 为一个就绪集合，当且仅当其中每个事件在该调度点的全部前驱均已完成。若 $F_k$ 中任意两个事件：
 
@@ -1657,13 +1385,13 @@ $$
 
 Phase 与就绪集合也不相同。Phase 定义大范围的 barrier、visibility 与 commit order；就绪集合是在满足这些约束后，由实际事件依赖与当前执行进度共同确定的可调度集合。它不是消息的因果前沿 `frontier`。
 
-#### 10.5 Sequential fallback
+#### 2.5 Sequential fallback
 
 任意无法归入前述类别的 reference region，仍可以由 exact interpreter 或 fused sequential kernel 执行。这保证了 Tide 表达能力，但不能把 kernel fusion 误报成 sequence parallelism。
 
 若一个 fallback region 的 span 随 chunk 长度 $L$ 线性增长，并且位于全局 critical path 上，它就可能决定整个模型的 prefill 上限。当前 persistent LH selector 是主要候选。
 
-### 11. Capability Contract
+### 3. Capability Contract
 
 Node 或 subgraph 的 capability declaration 至少应包含：
 
@@ -1687,11 +1415,11 @@ supported backend implementations
 
 Capability 也允许层级化。多个普通 nodes 组成的 subgraph，可以在证明整体 boundary transfer 后注册为一个更强的 macro-kernel。这样无需为了适配 LH 的每个实现细节而把所有机制都固定在最底层 node abstraction 中。
 
-### 12. 适合 Tide 的 Graph 约束
+### 4. 适合 Tide 的 Graph 约束
 
 一个有希望成为 `prefill-native` 的局部通信、超稀疏 Graph，应优先满足以下设计约束。
 
-#### 12.1 Sparse work
+#### 4.1 Sparse work
 
 令 $A_{t,r}$ 是 token $t$、round $r$ 的 active event set。总 work 应主要与：
 
@@ -1701,7 +1429,7 @@ $$
 
 及实际 active edges 数量相关，而不是与 $L\,R\,|V|$ 相关。运行时不能通过“执行全部 node 再 mask”隐藏地失去超稀疏性，除非它作为明确的小规模 fallback。
 
-#### 12.2 Explicit state ownership
+#### 4.2 Explicit state ownership
 
 多个 events 对同一 state location 的写入只允许几种可判定形式：
 
@@ -1712,13 +1440,13 @@ $$
 
 否则，Graph 虽然可以动态执行，但 chunk lowering 无法确定 visibility 与 commit semantics。
 
-#### 12.3 Prefill-capable temporal state
+#### 4.3 Prefill-capable temporal state
 
 跨输入位置状态应尽量由 `scan-composable` 或 `causal-bulk` 计算核承载。对于只在部分输入位置收到消息并实例化事件的空间节点，可以把该节点的事件压成按逻辑时间排序的稀疏事件序列，再执行 segmented scan 或 packed causal kernel。
 
 如果 state transition 包含时间间隔，计算核需要显式接收输入位置、逻辑轮次或时间间隔 $\Delta t$。例如固定 decay 可以把没有节点事件的区间折叠为 $A^{\Delta t}$，而不是逐输入位置执行空操作。
 
-#### 12.4 Ready-set-local routing
+#### 4.4 Ready-set-local routing
 
 Router 应优先读取当前事件输入和已提交前驱状态。它不应在同一就绪集合内用一个全局可变计数器逐项更新其他输入位置的选择优先级。
 
@@ -1731,11 +1459,11 @@ Router 应优先读取当前事件输入和已提交前驱状态。它不应在�
 
 当前 LH selector 可以保留为机制样本和 correctness fallback，但不应默认成为 Tide 高性能 profile 的必要组成。
 
-#### 12.5 Explicit fallback tax
+#### 4.5 Explicit fallback tax
 
 每个 sequential fallback 都要进入 span report。若 runtime 只是把多个逻辑 tick pack 到一个 kernel 内顺序执行，work 和 launch overhead 可能改善，但 logical span 没有被消除。
 
-### 13. Work、Span 与通信的联合目标
+### 5. Work、Span 与通信的联合目标
 
 令：
 
@@ -1762,9 +1490,9 @@ $$
 | `prefill-compatible` | chunk correctness 成立，但仍残留少量随 $L$ 增长的 sequential span |
 | `decode-only` | 关键路径基本随 token 数线性增长，chunk 主要只是 fused sequential execution |
 
-### 14. 三类模型如何落入该设计
+### 6. 三类模型如何落入该设计
 
-#### 14.1 GPT-style Transformer
+#### 6.1 GPT-style Transformer
 
 - Norm、projection、FFN 和 residual arithmetic 是 `token-local`。
 - causal self-attention 是 `causal-bulk`。
@@ -1772,13 +1500,13 @@ $$
 
 因此，模型 span 主要随 block depth 增长，而不是随 `block depth × token count` 增长。
 
-#### 14.2 Mamba/SSM
+#### 6.2 Mamba/SSM
 
 - input projection、gate 和多数 pointwise operator 是 `token-local`。
 - selective recurrent state 是 `scan-composable`。
 - local convolution 可以是 `causal-bulk` 或专门的 scan/bulk lowering。
 
-#### 14.3 Dynamic sparse Tide Graph
+#### 6.3 Dynamic sparse Tide Graph
 
 考虑每个 round：
 
@@ -1805,7 +1533,7 @@ $$
 
 当前 LH selector 的困难正是它同时引入 persistent selector state、active-set-dependent future computation 和 conditional memory side effects。它可以被 Tide 正确表达，却暂时只能声明 `sequential-fallback`，直到找到等价的 composable lowering、可验证 speculation，或者重新定义 selector semantics。
 
-### 15. 推荐的架构分层
+### 7. 推荐的架构分层
 
 Tide 可以据此划分为六层：
 

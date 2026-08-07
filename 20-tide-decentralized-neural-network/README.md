@@ -30,7 +30,7 @@ TIDE 是 `Token Inference Decentralized Engine`。总体目标是研究同时具
 
 LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden reference，不是理论必须完整复刻的终点。若 LH 的 selector、状态副作用或交错控制链破坏高性能 prefill，可以在不放弃总体目标的前提下简化、替代或移出 strict family。
 
-当前模型候选 HB-Lattice-v0 使用层级 backbone、有限生命周期的稀疏分支和固定 merge deadline。它已有结构 reference 和 `chunk == repeated decode` toy 验证，但尚未证明可训练、可扩展或优于 Transformer/Mamba/MoE。
+当前模型候选是 HB-Sliced 架构族：有限空间基图 $H$ 定义每个深度切片中的局部邻接，实际消息边只从 $d$ 指向 $d+1$。最小实例 HB-Line-v0 已有结构 reference，验证 depth-major chunk、token-major decode 和分段 chunk continuation 的输出、route artifact 与状态相同；它尚未证明真实 kernel 低 span、模型可训练、可扩展或优于 Transformer/Mamba/MoE。
 
 ## 文档地图
 
@@ -41,7 +41,7 @@ LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden referenc
 | 本页 | 入口、术语、阅读顺序、主张边界 | 导航 |
 | [[tide-mathematical-foundations]] | StepTransition、fold、kernel theorem、logical event DAG、显式 allocator general DAG、归属证书和 zero-delay 边界 | 正式定义与正向定理 |
 | [[adaptive-routing-prefill-lower-bound]] | 黑盒自适应路由链的 parallel-query 下界及局部稀疏 Graph 嵌入 | 正式反向定理 |
-| [[tide-model-architecture-and-training]] | HB-Lattice、selector capability、work/span、训练风险与实验顺序 | 架构候选与研究备忘 |
+| [[tide-model-architecture-and-training]] | HB-Sliced/HB-Line、selector capability、work/span、训练风险与实验顺序 | 架构候选与研究备忘 |
 | [[tide-runtime-validation-and-status]] | Runtime contract、LH 映射、artifact equality、CPU 对齐、性能和 backend 状态 | 实现规范与动态快照 |
 | [[tide-background-history-and-references]] | ISA/编译器/dataflow 谱系与人脑传播调查 | 外部背景，不承担证明 |
 | [[tide-statistical-mechanics-and-information-dynamics]] | 碰撞历史、粗粒化、路径相关性、kinetic limit 与耗散结构类比的 Tide 评述 | 研究备忘与候选假设，不承担证明 |
@@ -60,6 +60,8 @@ LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden referenc
 | --- | --- | --- |
 | `token` | 输入序列中的离散输入单位；数学上通常由位置 $t$ 和输入值 $x_t$ 分开表示 | 消息、事件或计算轨迹 |
 | 输入位置 | 全局流中的自然数下标 $t$ | 内部 round 或物理完成时间 |
+| 空间基图 | 有限图 $H=(U,F)$；只定义一个切片中的局部邻接关系 | 同切片计算依赖图 |
+| 深度切片 | 固定深度 $d$ 上的一组空间位置 $(d,u)$ | token 时间、层级尺度或 runtime phase |
 | 空间节点 | 静态 Graph 中可复用的计算与状态持有位置 | 一次执行中的事件实例 |
 | 消息 | 一次发送产生的有限记录，至少含消息标识符、源、目标、到达轮次和载荷 | 空间边或完整轨迹 |
 | 事件 | 某次有限执行中实际发生的一次计算、状态、控制、消息或提交动作 | 可复用空间节点 |
@@ -135,7 +137,7 @@ Tide 正式数学文档遵守以下规则：
 - Transformer/Mamba 主力 kernel family 已有构造性 chunk correctness 证明路线。
 - 显式 allocator 的一般空间 DAG 已证明常数次空间拓扑遍历，但没有自动证明时间分块组合律。
 - 自适应路由下界已在明确的 deterministic exact black-box query model 中证明。
-- HB-Lattice reference 已验证 toy 语义下 `chunk == repeated decode`。
+- HB-Line-v0 reference 已验证 toy 语义下 depth-major chunk、token-major decode 和分段 continuation 的 artifact equality。
 
 当前不能主张：
 
@@ -143,7 +145,7 @@ Tide 正式数学文档遵守以下规则：
 - 当前完整 LH 自动满足 strict model-level `prefill = decode`。
 - 任意具体 selector 已经落入自适应路由下界。
 - CPU 数值对齐证明了模型可训练性、scaling 或性能优势。
-- HB-Lattice 已经稳定训练或优于现有 Transformer、Mamba、MoE。
+- HB-Sliced/HB-Line 已经稳定训练或优于现有 Transformer、Mamba、MoE。
 - 通用 packed/crossbatch lowering、异步执行或 Ascend backend 已经完成。
 - Zero-delay algebraic loop 可以由普通 Graph 调度器自动解释。
 - 统计力学、熵增或耗散结构类比已经构成 Tide correctness、prefill 或训练稳定性定理。
@@ -154,7 +156,7 @@ Tide 在 2026-08-07 先被整合为六个职责文件，随后增加统计力学
 
 - `step-transition-mathematical-specification`、`explicit-allocator-general-dag-model` 和 `token-owned-general-dag-routing` 进入数学基础。
 - `adaptive-routing-prefill-impossibility` 改名为更准确的 lower-bound 文档。
-- HB-Lattice、selector capability 和训练稳定性进入模型架构与训练。
+- HB-Lattice 历史草案、HB-Sliced/HB-Line 当前候选、selector capability 和训练稳定性进入模型架构与训练。
 - 实现规范、当前状态和 LH/tide.old 历史进入 runtime 文档。
 - 编译器/dataflow 谱系和脑科学调查进入背景参考。
 

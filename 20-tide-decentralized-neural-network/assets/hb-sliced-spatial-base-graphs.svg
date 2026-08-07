@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="820" viewBox="0 0 1500 820">
+  <defs>
+    <style>
+      .title { font: 700 34px "Noto Sans CJK SC", sans-serif; fill: #182a31; }
+      .subtitle { font: 400 18px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .panelTitle { font: 700 22px "Noto Sans CJK SC", sans-serif; fill: #22363e; }
+      .label { font: 600 16px "Noto Sans CJK SC", sans-serif; fill: #22363e; }
+      .small { font: 400 14px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .tiny { font: 400 12px "Noto Sans CJK SC", sans-serif; fill: #62747b; }
+      .panel { fill: #fffdf8; stroke: #c9c0b1; stroke-width: 1.5; rx: 18; ry: 18; }
+      .edge { fill: none; stroke: #73868d; stroke-width: 3; }
+      .rearEdge { fill: none; stroke: #9ba6aa; stroke-width: 2.5; stroke-dasharray: 7 5; }
+      .site { fill: #2d848d; stroke: #13545c; stroke-width: 2; }
+      .arrow { fill: none; stroke: #ad7a24; stroke-width: 3.5; }
+      .formula { fill: #f7f1e4; stroke: #b9ab91; stroke-width: 1.5; rx: 14; ry: 14; }
+    </style>
+    <marker id="arrowGold" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#ad7a24"/></marker>
+  </defs>
+
+  <rect width="1500" height="820" fill="#f3efe6"/>
+  <text x="64" y="58" class="title">HB-Sliced：只替换空间基图 H，不改变切片接口</text>
+  <text x="64" y="91" class="subtitle">线段用于先验证语义；平面和立方体增加局部邻接自由度，但实际消息仍只从深度 d 发送到 d+1。</text>
+
+  <rect x="55" y="145" width="410" height="430" class="panel"/>
+  <rect x="545" y="145" width="410" height="430" class="panel"/>
+  <rect x="1035" y="145" width="410" height="430" class="panel"/>
+
+  <text x="260" y="190" text-anchor="middle" class="panelTitle">HB-Line</text>
+  <text x="750" y="190" text-anchor="middle" class="panelTitle">HB-Plane</text>
+  <text x="1240" y="190" text-anchor="middle" class="panelTitle">HB-Cube</text>
+
+  <!-- Line graph. -->
+  <path d="M115 340 H405" class="edge"/>
+  <circle cx="115" cy="340" r="14" class="site"/><circle cx="187" cy="340" r="14" class="site"/><circle cx="260" cy="340" r="14" class="site"/><circle cx="333" cy="340" r="14" class="site"/><circle cx="405" cy="340" r="14" class="site"/>
+  <text x="260" y="410" text-anchor="middle" class="label">U = {0,...,n-1}</text>
+  <text x="260" y="438" text-anchor="middle" class="small">相邻位置相差 1，无环状回绕</text>
+  <text x="260" y="475" text-anchor="middle" class="small">最大局部邻居数：2</text>
+  <text x="260" y="500" text-anchor="middle" class="small">直径：O(n)</text>
+
+  <!-- Plane graph. -->
+  <path d="M630 270 H870 M630 350 H870 M630 430 H870 M670 230 V470 M750 230 V470 M830 230 V470" class="edge"/>
+  <g>
+    <circle cx="670" cy="270" r="12" class="site"/><circle cx="750" cy="270" r="12" class="site"/><circle cx="830" cy="270" r="12" class="site"/>
+    <circle cx="670" cy="350" r="12" class="site"/><circle cx="750" cy="350" r="12" class="site"/><circle cx="830" cy="350" r="12" class="site"/>
+    <circle cx="670" cy="430" r="12" class="site"/><circle cx="750" cy="430" r="12" class="site"/><circle cx="830" cy="430" r="12" class="site"/>
+  </g>
+  <text x="750" y="500" text-anchor="middle" class="small">最大局部邻居数：4</text>
+  <text x="750" y="525" text-anchor="middle" class="small">同规模规则网格直径：O(sqrt(n))</text>
+
+  <!-- Cube graph. -->
+  <path d="M1110 295 H1300 V485 H1110 Z" class="edge"/>
+  <path d="M1175 235 H1365 V425 H1175 Z" class="rearEdge"/>
+  <path d="M1110 295 L1175 235 M1300 295 L1365 235 M1300 485 L1365 425 M1110 485 L1175 425" class="edge"/>
+  <g>
+    <circle cx="1110" cy="295" r="12" class="site"/><circle cx="1300" cy="295" r="12" class="site"/><circle cx="1300" cy="485" r="12" class="site"/><circle cx="1110" cy="485" r="12" class="site"/>
+    <circle cx="1175" cy="235" r="12" class="site"/><circle cx="1365" cy="235" r="12" class="site"/><circle cx="1365" cy="425" r="12" class="site"/><circle cx="1175" cy="425" r="12" class="site"/>
+  </g>
+  <text x="1240" y="520" text-anchor="middle" class="small">最大局部邻居数：6</text>
+  <text x="1240" y="545" text-anchor="middle" class="small">同规模规则网格直径：O(cuberoot(n))</text>
+
+  <path d="M465 360 H530" class="arrow" marker-end="url(#arrowGold)"/>
+  <path d="M955 360 H1020" class="arrow" marker-end="url(#arrowGold)"/>
+  <text x="498" y="343" text-anchor="middle" class="tiny">替换 H</text>
+  <text x="988" y="343" text-anchor="middle" class="tiny">替换 H</text>
+
+  <rect x="105" y="625" width="1290" height="145" class="formula"/>
+  <text x="135" y="658" class="label">统一生成规则</text>
+  <text x="135" y="693" class="small">静态节点：(d,u)，其中 d 是深度切片，u 是 H 中的空间位置。</text>
+  <text x="135" y="722" class="small">候选计算边：(d,u) -> (d+1,v)，其中 v=u 或 v 是 u 在 H 中的邻居。</text>
+  <text x="135" y="751" class="small">因此 H 自身即使含无向环，也不会成为 zero-delay 计算环；维度变化会改变度数、直径和路径数，但不改变 node/allocator 接口。</text>
+</svg>

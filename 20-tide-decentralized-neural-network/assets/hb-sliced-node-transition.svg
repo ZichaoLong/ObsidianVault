@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1540" height="820" viewBox="0 0 1540 820">
+  <defs>
+    <style>
+      .title { font: 700 34px "Noto Sans CJK SC", sans-serif; fill: #182a31; }
+      .subtitle { font: 400 18px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .label { font: 600 17px "Noto Sans CJK SC", sans-serif; fill: #22363e; }
+      .small { font: 400 14px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .tiny { font: 400 12px "Noto Sans CJK SC", sans-serif; fill: #62747b; }
+      .box { stroke-width: 2; rx: 14; ry: 14; }
+      .data { fill: #e9f0f2; stroke: #66808a; }
+      .state { fill: #e6f0df; stroke: #56824c; }
+      .control { fill: #f3e7c8; stroke: #95751f; }
+      .compute { fill: #fae1cb; stroke: #c46627; }
+      .inactive { fill: #efefeb; stroke: #8b969b; }
+      .stage { fill: #fffdf8; stroke: #c9c0b1; stroke-width: 1.5; rx: 18; ry: 18; }
+      .arrow { fill: none; stroke: #526b75; stroke-width: 3; }
+      .stateArrow { fill: none; stroke: #56824c; stroke-width: 3; }
+      .controlArrow { fill: none; stroke: #98751c; stroke-width: 3; }
+      .activeArrow { fill: none; stroke: #d46a2c; stroke-width: 4; }
+      .inactiveArrow { fill: none; stroke: #899398; stroke-width: 3; stroke-dasharray: 8 6; }
+      .note { fill: #f7f1e4; stroke: #b9ab91; stroke-width: 1.5; rx: 14; ry: 14; }
+    </style>
+    <marker id="arrow" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#526b75"/></marker>
+    <marker id="arrowGreen" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#56824c"/></marker>
+    <marker id="arrowGold" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#98751c"/></marker>
+    <marker id="arrowOrange" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#d46a2c"/></marker>
+    <marker id="arrowGray" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#899398"/></marker>
+  </defs>
+
+  <rect width="1540" height="820" fill="#f3efe6"/>
+  <text x="64" y="58" class="title">一个深度切片的显式微阶段</text>
+  <text x="64" y="91" class="subtitle">架构图可以把这些步骤收缩成一个 node transition；语义检查和 runtime lowering 必须重新展开它们。</text>
+
+  <rect x="55" y="135" width="1430" height="470" class="stage"/>
+  <text x="80" y="171" class="label">对固定深度 d、输入位置 t：先对所有接收节点并行，再由每个 group allocator 统一给出 mask</text>
+
+  <rect x="85" y="245" width="165" height="95" class="box data"/>
+  <text x="167" y="275" text-anchor="middle" class="label">Inbox</text>
+  <text x="167" y="299" text-anchor="middle" class="small">有限消息序列</text>
+  <text x="167" y="321" text-anchor="middle" class="tiny">按 source id 固定排序</text>
+
+  <rect x="300" y="245" width="175" height="95" class="box data"/>
+  <text x="387" y="275" text-anchor="middle" class="label">Merge</text>
+  <text x="387" y="299" text-anchor="middle" class="small">得到节点输入 z</text>
+  <text x="387" y="321" text-anchor="middle" class="tiny">或保留 packed records</text>
+
+  <rect x="525" y="235" width="200" height="115" class="box state"/>
+  <text x="625" y="267" text-anchor="middle" class="label">Observe / Update</text>
+  <text x="625" y="292" text-anchor="middle" class="small">q' = U(q, z)</text>
+  <text x="625" y="316" text-anchor="middle" class="tiny">收到即执行，与激活无关</text>
+  <text x="625" y="337" text-anchor="middle" class="tiny">KV / SSM / observer state</text>
+
+  <rect x="775" y="245" width="175" height="95" class="box data"/>
+  <text x="862" y="275" text-anchor="middle" class="label">Cheap Score</text>
+  <text x="862" y="299" text-anchor="middle" class="small">sigma = S(q', z)</text>
+  <text x="862" y="321" text-anchor="middle" class="tiny">尚未执行重 kernel</text>
+
+  <rect x="770" y="445" width="245" height="100" class="box control"/>
+  <text x="892" y="476" text-anchor="middle" class="label">Group Allocator</text>
+  <text x="892" y="500" text-anchor="middle" class="small">mask, ell' = A(scores, ell)</text>
+  <text x="892" y="523" text-anchor="middle" class="tiny">只读本组分数、静态配置和本组状态</text>
+
+  <rect x="1060" y="225" width="210" height="125" class="box compute"/>
+  <text x="1165" y="257" text-anchor="middle" class="label">ActiveCompute</text>
+  <text x="1165" y="282" text-anchor="middle" class="small">y = K(q', z)</text>
+  <text x="1165" y="306" text-anchor="middle" class="tiny">Attention / FFN / SSM</text>
+  <text x="1165" y="329" text-anchor="middle" class="tiny">只对 mask=1 的节点执行</text>
+
+  <rect x="1320" y="245" width="130" height="95" class="box compute"/>
+  <text x="1385" y="275" text-anchor="middle" class="label">Emit</text>
+  <text x="1385" y="299" text-anchor="middle" class="small">到 d+1</text>
+  <text x="1385" y="321" text-anchor="middle" class="tiny">固定邻接后继</text>
+
+  <rect x="1080" y="455" width="190" height="90" class="box inactive"/>
+  <text x="1175" y="486" text-anchor="middle" class="label">Inactive</text>
+  <text x="1175" y="510" text-anchor="middle" class="small">提交 q' 与 ell'</text>
+  <text x="1175" y="532" text-anchor="middle" class="tiny">不重计算，不发送</text>
+
+  <rect x="500" y="665" width="250" height="90" class="box state"/>
+  <text x="625" y="696" text-anchor="middle" class="label">节点持久状态 q[d,u]</text>
+  <text x="625" y="721" text-anchor="middle" class="small">每个深度、位置、序列独立</text>
+  <text x="625" y="743" text-anchor="middle" class="tiny">物理复用设备不等于共享状态</text>
+
+  <rect x="790" y="665" width="245" height="90" class="box control"/>
+  <text x="912" y="696" text-anchor="middle" class="label">控制状态 ell[d,G]</text>
+  <text x="912" y="721" text-anchor="middle" class="small">group G 的历史负载 / quota</text>
+  <text x="912" y="743" text-anchor="middle" class="tiny">不得读取其他请求的物理负载</text>
+
+  <path d="M250 292 L300 292" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M475 292 L525 292" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M725 292 L775 292" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M862 340 L880 445" class="controlArrow" marker-end="url(#arrowGold)"/>
+  <path d="M1015 477 C1040 425, 1080 385, 1110 350" class="activeArrow" marker-end="url(#arrowOrange)"/>
+  <path d="M1015 510 L1080 510" class="inactiveArrow" marker-end="url(#arrowGray)"/>
+  <path d="M1270 292 L1320 292" class="activeArrow" marker-end="url(#arrowOrange)"/>
+  <path d="M625 350 L625 665" class="stateArrow" marker-end="url(#arrowGreen)"/>
+  <path d="M912 545 L912 665" class="controlArrow" marker-end="url(#arrowGold)"/>
+  <path d="M625 665 C470 610, 470 420, 570 350" class="stateArrow" marker-end="url(#arrowGreen)"/>
+  <path d="M912 665 C1045 635, 1040 555, 1015 510" class="controlArrow" marker-end="url(#arrowGold)"/>
+
+  <text x="80" y="635" class="small">固定微阶段次序：Receive/Merge -> Update/Score -> Allocate -> ActiveCompute/Emit。它增加常数个阶段，不增加随 chunk 长度增长的空间遍历。</text>
+</svg>

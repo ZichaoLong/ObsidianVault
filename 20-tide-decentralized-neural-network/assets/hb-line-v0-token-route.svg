@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="850" viewBox="0 0 1440 850">
+  <defs>
+    <style>
+      .title { font: 700 34px "Noto Sans CJK SC", sans-serif; fill: #182a31; }
+      .subtitle { font: 400 18px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .label { font: 600 17px "Noto Sans CJK SC", sans-serif; fill: #22363e; }
+      .small { font: 400 14px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .tiny { font: 400 12px "Noto Sans CJK SC", sans-serif; fill: #62747b; }
+      .column { fill: #fffdf8; stroke: #c9c0b1; stroke-width: 1.5; rx: 16; ry: 16; }
+      .group { fill: none; stroke: #b9aa8e; stroke-width: 1.5; stroke-dasharray: 7 6; rx: 12; ry: 12; }
+      .inactive { fill: #edf0f1; stroke: #89979c; stroke-width: 1.8; }
+      .received { fill: #f4c88f; stroke: #b66c24; stroke-width: 2; }
+      .active { fill: #df742f; stroke: #944115; stroke-width: 2.5; }
+      .backbone { fill: #27838b; stroke: #12555d; stroke-width: 2.5; }
+      .route { fill: none; stroke: #d66c2b; stroke-width: 4; }
+      .baseRoute { fill: none; stroke: #1d7880; stroke-width: 4; }
+      .candidate { fill: none; stroke: #9aa6aa; stroke-width: 1.5; opacity: .28; }
+      .note { fill: #f7f1e4; stroke: #b9ab91; stroke-width: 1.5; rx: 14; ry: 14; }
+    </style>
+    <marker id="arrowOrange" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#d66c2b"/></marker>
+    <marker id="arrowTeal" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#1d7880"/></marker>
+  </defs>
+
+  <rect width="1440" height="850" fill="#f3efe6"/>
+  <text x="64" y="58" class="title">单个 token 的消息、接收、激活与继续传播</text>
+  <text x="64" y="91" class="subtitle">消息携带固定输入位置 t；浅橙节点已经接收并更新状态，但只有深橙节点执行重 kernel 并向下一切片发送。</text>
+
+  <!-- Six depth slices as columns. -->
+  <g>
+    <rect x="115" y="145" width="170" height="540" class="column"/>
+    <rect x="325" y="145" width="170" height="540" class="column"/>
+    <rect x="535" y="145" width="170" height="540" class="column"/>
+    <rect x="745" y="145" width="170" height="540" class="column"/>
+    <rect x="955" y="145" width="170" height="540" class="column"/>
+    <rect x="1165" y="145" width="170" height="540" class="column"/>
+  </g>
+  <text x="200" y="176" text-anchor="middle" class="label">d=0</text>
+  <text x="410" y="176" text-anchor="middle" class="label">d=1</text>
+  <text x="620" y="176" text-anchor="middle" class="label">d=2</text>
+  <text x="830" y="176" text-anchor="middle" class="label">d=3</text>
+  <text x="1040" y="176" text-anchor="middle" class="label">d=4</text>
+  <text x="1250" y="176" text-anchor="middle" class="label">d=5 / readout</text>
+
+  <!-- Group boundaries. -->
+  <path d="M140 195 H260 V405 H140 Z M140 420 H260 V655 H140 Z M350 195 H470 V405 H350 Z M350 420 H470 V655 H350 Z M560 195 H680 V405 H560 Z M560 420 H680 V655 H560 Z M770 195 H890 V405 H770 Z M770 420 H890 V655 H770 Z M980 195 H1100 V405 H980 Z M980 420 H1100 V655 H980 Z M1190 195 H1310 V405 H1190 Z M1190 420 H1310 V655 H1190 Z" class="group"/>
+
+  <!-- Candidate local edges are deliberately faint. -->
+  <path d="M200 232 L410 232 M200 232 L410 292 M200 292 L410 232 M200 292 L410 292 M200 292 L410 352 M200 352 L410 292 M200 352 L410 352 M200 352 L410 382 M200 382 L410 352 M200 382 L410 382 M200 462 L410 462 M200 462 L410 522 M200 522 L410 462 M200 522 L410 522 M200 522 L410 582 M200 582 L410 522 M200 582 L410 582 M200 582 L410 632 M200 632 L410 582 M200 632 L410 632" class="candidate"/>
+  <path d="M410 232 L620 232 M410 292 L620 292 M410 352 L620 352 M410 382 L620 382 M410 462 L620 462 M410 522 L620 522 M410 582 L620 582 M410 632 L620 632 M620 232 L830 232 M620 292 L830 292 M620 352 L830 352 M620 382 L830 382 M620 462 L830 462 M620 522 L830 522 M620 582 L830 582 M620 632 L830 632 M830 232 L1040 232 M830 292 L1040 292 M830 352 L1040 352 M830 382 L1040 382 M830 462 L1040 462 M830 522 L1040 522 M830 582 L1040 582 M830 632 L1040 632 M1040 232 L1250 232 M1040 292 L1250 292 M1040 352 L1250 352 M1040 382 L1250 382 M1040 462 L1250 462 M1040 522 L1250 522 M1040 582 L1250 582 M1040 632 L1250 632" class="candidate"/>
+
+  <!-- Always-on routes and one optional route. -->
+  <path d="M200 292 L410 292 L620 292 L830 292 L1040 292 L1250 292" class="baseRoute" marker-end="url(#arrowTeal)"/>
+  <path d="M200 522 L410 522 L620 522 L830 522 L1040 522 L1250 522" class="baseRoute" marker-end="url(#arrowTeal)"/>
+  <path d="M200 352 L410 382 L620 352 L830 382 L1040 352 L1250 382" class="route" marker-end="url(#arrowOrange)"/>
+
+  <!-- Sites: eight per slice. -->
+  <g>
+    <circle cx="200" cy="232" r="11" class="received"/><circle cx="200" cy="292" r="14" class="backbone"/><circle cx="200" cy="352" r="14" class="active"/><circle cx="200" cy="382" r="11" class="received"/><circle cx="200" cy="462" r="11" class="received"/><circle cx="200" cy="522" r="14" class="backbone"/><circle cx="200" cy="582" r="11" class="received"/><circle cx="200" cy="632" r="14" class="active"/>
+    <circle cx="410" cy="232" r="11" class="received"/><circle cx="410" cy="292" r="14" class="backbone"/><circle cx="410" cy="352" r="11" class="received"/><circle cx="410" cy="382" r="14" class="active"/><circle cx="410" cy="462" r="11" class="received"/><circle cx="410" cy="522" r="14" class="backbone"/><circle cx="410" cy="582" r="14" class="active"/><circle cx="410" cy="632" r="11" class="inactive"/>
+    <circle cx="620" cy="232" r="11" class="received"/><circle cx="620" cy="292" r="14" class="backbone"/><circle cx="620" cy="352" r="14" class="active"/><circle cx="620" cy="382" r="11" class="received"/><circle cx="620" cy="462" r="14" class="active"/><circle cx="620" cy="522" r="14" class="backbone"/><circle cx="620" cy="582" r="11" class="received"/><circle cx="620" cy="632" r="11" class="inactive"/>
+    <circle cx="830" cy="232" r="11" class="received"/><circle cx="830" cy="292" r="14" class="backbone"/><circle cx="830" cy="352" r="11" class="received"/><circle cx="830" cy="382" r="14" class="active"/><circle cx="830" cy="462" r="11" class="received"/><circle cx="830" cy="522" r="14" class="backbone"/><circle cx="830" cy="582" r="14" class="active"/><circle cx="830" cy="632" r="11" class="inactive"/>
+    <circle cx="1040" cy="232" r="11" class="received"/><circle cx="1040" cy="292" r="14" class="backbone"/><circle cx="1040" cy="352" r="14" class="active"/><circle cx="1040" cy="382" r="11" class="received"/><circle cx="1040" cy="462" r="14" class="active"/><circle cx="1040" cy="522" r="14" class="backbone"/><circle cx="1040" cy="582" r="11" class="received"/><circle cx="1040" cy="632" r="11" class="inactive"/>
+    <circle cx="1250" cy="232" r="11" class="received"/><circle cx="1250" cy="292" r="14" class="backbone"/><circle cx="1250" cy="352" r="11" class="received"/><circle cx="1250" cy="382" r="14" class="active"/><circle cx="1250" cy="462" r="11" class="received"/><circle cx="1250" cy="522" r="14" class="backbone"/><circle cx="1250" cy="582" r="14" class="active"/><circle cx="1250" cy="632" r="11" class="inactive"/>
+  </g>
+
+  <rect x="115" y="720" width="1220" height="90" class="note"/>
+  <circle cx="155" cy="753" r="10" class="received"/><text x="178" y="759" class="small">收到消息并提交状态更新</text>
+  <circle cx="405" cy="753" r="12" class="active"/><text x="430" y="759" class="small">selector 激活：执行重计算并发送</text>
+  <circle cx="755" cy="753" r="12" class="backbone"/><text x="780" y="759" class="small">固定 backbone site</text>
+  <text x="155" y="785" class="small">为避免线条遮挡，只高亮一条深橙传播路线；其他被激活 site 的出边仍按固定邻接发送，但没有逐条画出。</text>
+  <text x="155" y="807" class="small">路线是 token 位置 t 的消息轨迹，不表示 token 本身变成空间节点；跨 token 影响只通过显式节点/allocator 状态发生。</text>
+</svg>

@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980">
+  <defs>
+    <style>
+      .title { font: 700 34px "Noto Sans CJK SC", sans-serif; fill: #182a31; }
+      .subtitle { font: 400 18px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .label { font: 600 17px "Noto Sans CJK SC", sans-serif; fill: #22363e; }
+      .small { font: 400 14px "Noto Sans CJK SC", sans-serif; fill: #52646c; }
+      .tiny { font: 400 12px "Noto Sans CJK SC", sans-serif; fill: #62747b; }
+      .slice { fill: #fffdf7; stroke: #c9c0b1; stroke-width: 1.5; rx: 16; ry: 16; }
+      .adjacency { fill: none; stroke: #91a0a5; stroke-width: 2; stroke-dasharray: 7 7; }
+      .candidate { fill: none; stroke: #91a0a5; stroke-width: 1.7; opacity: .38; }
+      .backbone { fill: none; stroke: #176f79; stroke-width: 5; }
+      .route { fill: none; stroke: #d46a2c; stroke-width: 5; }
+      .site { fill: #e8edef; stroke: #73868d; stroke-width: 2; }
+      .backboneSite { fill: #2c8990; stroke: #14565e; stroke-width: 2.5; }
+      .activeSite { fill: #ed8a45; stroke: #9e4719; stroke-width: 2.5; }
+      .note { fill: #f7f1e4; stroke: #b9ab91; stroke-width: 1.5; rx: 14; ry: 14; }
+    </style>
+    <marker id="arrowTeal" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#176f79"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d46a2c"/>
+    </marker>
+  </defs>
+
+  <rect width="1440" height="980" fill="#f3efe6"/>
+  <text x="64" y="58" class="title">HB-Line-v0：堆叠线段生成的前向空间 DAG</text>
+  <text x="64" y="91" class="subtitle">每一行是一个深度切片；横向虚线只是空间邻接元数据，真正的计算边只从 d 指向 d+1。</text>
+
+  <text x="95" y="145" class="label">深度</text>
+  <text x="1360" y="145" text-anchor="end" class="label">空间位置 u</text>
+  <text x="255" y="145" text-anchor="middle" class="small">u=0</text>
+  <text x="430" y="145" text-anchor="middle" class="small">u=1</text>
+  <text x="605" y="145" text-anchor="middle" class="small">u=2</text>
+  <text x="780" y="145" text-anchor="middle" class="small">u=3</text>
+  <text x="955" y="145" text-anchor="middle" class="small">u=4</text>
+  <text x="1130" y="145" text-anchor="middle" class="small">u=5</text>
+
+  <rect x="170" y="165" width="1030" height="105" class="slice"/>
+  <rect x="170" y="310" width="1030" height="105" class="slice"/>
+  <rect x="170" y="455" width="1030" height="105" class="slice"/>
+  <rect x="170" y="600" width="1030" height="105" class="slice"/>
+  <rect x="170" y="745" width="1030" height="105" class="slice"/>
+
+  <text x="105" y="224" class="label">d=0</text>
+  <text x="105" y="369" class="label">d=1</text>
+  <text x="105" y="514" class="label">d=2</text>
+  <text x="105" y="659" class="label">d=3</text>
+  <text x="105" y="804" class="label">d=4</text>
+
+  <!-- Spatial adjacency metadata inside each slice. -->
+  <path d="M255 217 H1130 M255 362 H1130 M255 507 H1130 M255 652 H1130 M255 797 H1130" class="adjacency"/>
+
+  <!-- Candidate compute edges: identity and radius-one neighbors in the next slice. -->
+  <path d="M255 232 L255 347 M255 232 L430 347 M430 232 L255 347 M430 232 L430 347 M430 232 L605 347 M605 232 L430 347 M605 232 L605 347 M605 232 L780 347 M780 232 L605 347 M780 232 L780 347 M780 232 L955 347 M955 232 L780 347 M955 232 L955 347 M955 232 L1130 347 M1130 232 L955 347 M1130 232 L1130 347" class="candidate"/>
+  <path d="M255 377 L255 492 M255 377 L430 492 M430 377 L255 492 M430 377 L430 492 M430 377 L605 492 M605 377 L430 492 M605 377 L605 492 M605 377 L780 492 M780 377 L605 492 M780 377 L780 492 M780 377 L955 492 M955 377 L780 492 M955 377 L955 492 M955 377 L1130 492 M1130 377 L955 492 M1130 377 L1130 492" class="candidate"/>
+  <path d="M255 522 L255 637 M255 522 L430 637 M430 522 L255 637 M430 522 L430 637 M430 522 L605 637 M605 522 L430 637 M605 522 L605 637 M605 522 L780 637 M780 522 L605 637 M780 522 L780 637 M780 522 L955 637 M955 522 L780 637 M955 522 L955 637 M955 522 L1130 637 M1130 522 L955 637 M1130 522 L1130 637" class="candidate"/>
+  <path d="M255 667 L255 782 M255 667 L430 782 M430 667 L255 782 M430 667 L430 782 M430 667 L605 782 M605 667 L430 782 M605 667 L605 782 M605 667 L780 782 M780 667 L605 782 M780 667 L780 782 M780 667 L955 782 M955 667 L780 782 M955 667 L955 782 M955 667 L1130 782 M1130 667 L955 782 M1130 667 L1130 782" class="candidate"/>
+
+  <!-- Two illustrative always-on columns and one sparse route. -->
+  <path d="M430 232 L430 347 M430 377 L430 492 M430 522 L430 637 M430 667 L430 782" class="backbone" marker-end="url(#arrowTeal)"/>
+  <path d="M955 232 L955 347 M955 377 L955 492 M955 522 L955 637 M955 667 L955 782" class="backbone" marker-end="url(#arrowTeal)"/>
+  <path d="M605 232 L780 347 M780 377 L780 492 M780 522 L955 637 M955 667 L1130 782" class="route" marker-end="url(#arrowOrange)"/>
+
+  <!-- Sites are drawn last so edge endpoints remain readable. -->
+  <g>
+    <circle cx="255" cy="217" r="15" class="site"/><circle cx="430" cy="217" r="17" class="backboneSite"/><circle cx="605" cy="217" r="17" class="activeSite"/><circle cx="780" cy="217" r="15" class="site"/><circle cx="955" cy="217" r="17" class="backboneSite"/><circle cx="1130" cy="217" r="15" class="site"/>
+    <circle cx="255" cy="362" r="15" class="site"/><circle cx="430" cy="362" r="17" class="backboneSite"/><circle cx="605" cy="362" r="15" class="site"/><circle cx="780" cy="362" r="17" class="activeSite"/><circle cx="955" cy="362" r="17" class="backboneSite"/><circle cx="1130" cy="362" r="15" class="site"/>
+    <circle cx="255" cy="507" r="15" class="site"/><circle cx="430" cy="507" r="17" class="backboneSite"/><circle cx="605" cy="507" r="15" class="site"/><circle cx="780" cy="507" r="17" class="activeSite"/><circle cx="955" cy="507" r="17" class="backboneSite"/><circle cx="1130" cy="507" r="15" class="site"/>
+    <circle cx="255" cy="652" r="15" class="site"/><circle cx="430" cy="652" r="17" class="backboneSite"/><circle cx="605" cy="652" r="15" class="site"/><circle cx="780" cy="652" r="15" class="site"/><circle cx="955" cy="652" r="17" class="activeSite"/><circle cx="1130" cy="652" r="15" class="site"/>
+    <circle cx="255" cy="797" r="15" class="site"/><circle cx="430" cy="797" r="17" class="backboneSite"/><circle cx="605" cy="797" r="15" class="site"/><circle cx="780" cy="797" r="15" class="site"/><circle cx="955" cy="797" r="17" class="backboneSite"/><circle cx="1130" cy="797" r="17" class="activeSite"/>
+  </g>
+
+  <rect x="170" y="885" width="1030" height="65" class="note"/>
+  <line x1="200" y1="913" x2="250" y2="913" class="adjacency"/><text x="265" y="919" class="small">同切片空间邻接 F：不是计算边</text>
+  <line x1="520" y1="913" x2="570" y2="913" class="candidate"/><text x="585" y="919" class="small">跨切片候选边</text>
+  <line x1="760" y1="913" x2="810" y2="913" class="backbone"/><text x="825" y="919" class="small">always-on backbone</text>
+  <line x1="1015" y1="913" x2="1065" y2="913" class="route"/><text x="1080" y="919" class="small">一次稀疏路由示例</text>
+</svg>

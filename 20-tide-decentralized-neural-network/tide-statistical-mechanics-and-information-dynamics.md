@@ -20,7 +20,7 @@ tags:
 
 1. 微观计算历史经过压缩后，哪些信息必须保留，才能继续满足同一个可观察语义契约？
 2. 大量局部、稀疏交互形成的路径重汇聚与相关性，如何影响表示、梯度、路由和训练稳定性？
-3. 当节点数、平面数或空间尺度增长时，Tide 是否存在可描述的宏观统计演化？
+3. 当 site 数、深度切片数或空间尺度增长时，Tide 是否存在可描述的宏观统计演化？
 
 与 Tide 现有理论最直接的接口是：
 
@@ -198,17 +198,17 @@ $$
 
 因此，Tide 的判据仍是：node/subgraph 是否属于 token-local、scan-composable、causal-bulk、有限 chunk-wide routing stage 或其他已证明低 span 的 family。所谓“环预算”不能替代 [[adaptive-routing-prefill-lower-bound]] 中的 adaptive-depth 分析。
 
-## 6. 对 HB-Lattice 更有价值的统计力学视角
+## 6. 对 HB-Sliced 更有价值的统计力学视角
 
 ### 6.1 为什么 Tide 比 Transformer 更接近局部相互作用系统
 
-HB-Lattice 明确具有：
+HB-Sliced 当前候选明确具有：
 
 - 空间节点与局部有界度连接。
-- 多平面或多层级传播。
+- 多深度切片传播和可配置的层级 partition。
 - 稀疏激活和局部 selector。
 - 节点持久状态、控制状态与在途消息。
-- always-on backbone 与有限生命周期分支。
+- always-on backbone，以及可进一步声明固定寿命和 merge point 的分支接口。
 
 若寻找 reaction/transport、interacting-particle 或 kinetic-system 类比，这些对象比“把 token hidden 当成粒子”更自然：
 
@@ -219,9 +219,9 @@ HB-Lattice 明确具有：
 | node kernel | 局部反应或状态转移 | 启发性类比 |
 | selector/allocator | 门控、稀疏反应或资源约束 | 启发性类比 |
 | backbone | 稳定公共输运与梯度通路 | 架构事实，可实验 |
-| branch/merge | 有限生命周期扰动及回注 | 架构事实，可实验 |
+| branch/merge | 有限生命周期扰动及回注 | 候选接口，可实验 |
 
-但 HB-Lattice 的 learned kernel、层级异质性和 deterministic routing 与稀薄硬球系统仍有本质差异。局部有界度也不自动产生 propagation of chaos；局部相关性可能长期存在。未来应根据模型结构选择 interacting-particle limit、hydrodynamic limit、local weak limit 或其他工具，而不是预设一定得到 Boltzmann 方程。
+但 HB-Sliced 的 learned kernel、层级异质性和 deterministic routing 与稀薄硬球系统仍有本质差异。局部有界度也不自动产生 propagation of chaos；局部相关性可能长期存在。未来应根据模型结构选择 interacting-particle limit、hydrodynamic limit、local weak limit 或其他工具，而不是预设一定得到 Boltzmann 方程。
 
 ### 6.2 候选多尺度对象
 
@@ -385,7 +385,7 @@ $H_{route}$ 较高通常表示激活分布更均匀，但它不自动表示：
 
 ### 第二阶段：先测量，不预设物理理论
 
-1. 为 HB-Lattice 增加 route entropy、语义互信息、route churn 和层级负载统计。
+1. 为 HB-Sliced/HB-Line 增加 route entropy、语义互信息、route churn 和层级负载统计。
 2. 为 branch/merge 增加来源数、support overlap、delta 夹角和 gradient attribution。
 3. 在固定参数、数据与 schedule 下检查这些量是否能预测训练不稳定或质量变化。
 
@@ -415,7 +415,7 @@ $H_{route}$ 较高通常表示激活分布更均匀，但它不自动表示：
 - Transformer event DAG 中的 diamond、residual 或 AR feedback 等同于硬球 recollision。
 - KV cache 是完整计算历史，或 SSM 是 Transformer 的已证 kinetic closure。
 - 环越少就越容易 prefill，或环越多就越智能。
-- 当前 Tide/HB-Lattice 已经具有 kinetic limit、propagation of chaos 或 dissipative structure theorem。
+- 当前 Tide/HB-Sliced 已经具有 kinetic limit、propagation of chaos 或 dissipative structure theorem。
 - 任意信息丢弃、cache eviction 或 selector 稀疏化都构成安全“排熵”。
 
 ## 参考入口
