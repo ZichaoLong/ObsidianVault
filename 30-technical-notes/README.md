@@ -16,6 +16,7 @@ tags:
 
 - [[30-technical-notes/Transformer-and-Beyond|Transformer and Beyond]]
 - [[30-technical-notes/ai-diffusion|Diffusion Process in AI]]
+- [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|从希尔伯特第六问题到普利高津：AI 熵增与耗散结构类比]]
 
 ## 零散原始笔记
 

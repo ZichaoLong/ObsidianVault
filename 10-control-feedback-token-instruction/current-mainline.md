@@ -386,4 +386,5 @@ TapeWalker 在这个图谱中的位置是：
 
 - 实验定义和具体指标见 [[10-control-feedback-token-instruction/experiment-protocol|实验协议]]。
 - 理论支撑、对标机制和攻击面见 [[10-control-feedback-token-instruction/theory-and-challenges|理论与挑战]]。
+- 主动信息获取、task-relative value of information 与自书写 workspace 的候选形式化见 [[10-control-feedback-token-instruction/information-acquisition-and-stigmergic-state|主动信息获取与自书写状态]]。
 - 历史来时路见 [[10-control-feedback-token-instruction/historical-motivation|历史动机]]。

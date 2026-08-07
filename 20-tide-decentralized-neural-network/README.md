@@ -9,7 +9,7 @@ tags:
 # TIDE / 去中心化神经网络
 
 > [!summary] 本页定位
-> 本页是 Tide 线的唯一入口，只负责当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；模型候选见 [[tide-model-architecture-and-training]]；工程完成度见 [[tide-runtime-validation-and-status]]。
+> 本页是 Tide 线的唯一入口，只负责当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；模型候选见 [[tide-model-architecture-and-training]]；工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。
 
 ## 一页版结论
 
@@ -34,7 +34,7 @@ LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden referenc
 
 ## 文档地图
 
-当前只保留六个 Markdown 职责文件：
+当前保留七个 Markdown 职责文件：
 
 | 文档 | 职责 | 结论类型 |
 | --- | --- | --- |
@@ -44,6 +44,7 @@ LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden referenc
 | [[tide-model-architecture-and-training]] | HB-Lattice、selector capability、work/span、训练风险与实验顺序 | 架构候选与研究备忘 |
 | [[tide-runtime-validation-and-status]] | Runtime contract、LH 映射、artifact equality、CPU 对齐、性能和 backend 状态 | 实现规范与动态快照 |
 | [[tide-background-history-and-references]] | ISA/编译器/dataflow 谱系与人脑传播调查 | 外部背景，不承担证明 |
+| [[tide-statistical-mechanics-and-information-dynamics]] | 碰撞历史、粗粒化、路径相关性、kinetic limit 与耗散结构类比的 Tide 评述 | 研究备忘与候选假设，不承担证明 |
 
 建议阅读顺序：
 
@@ -51,6 +52,7 @@ LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden referenc
 2. 模型设计：[[tide-model-architecture-and-training]]。
 3. 工程实现：[[tide-runtime-validation-and-status]]。
 4. 外部概念：遇到 ISA、SSA、MemorySSA、dataflow、fixed point 或脑科学类比时查 [[tide-background-history-and-references]]。
+5. 统计力学假设：研究 coarse-graining、path correlation、route entropy 或宏观极限时查 [[tide-statistical-mechanics-and-information-dynamics]]；其中内容不进入正式证明链。
 
 ## 核心术语
 
@@ -144,10 +146,11 @@ Tide 正式数学文档遵守以下规则：
 - HB-Lattice 已经稳定训练或优于现有 Transformer、Mamba、MoE。
 - 通用 packed/crossbatch lowering、异步执行或 Ascend backend 已经完成。
 - Zero-delay algebraic loop 可以由普通 Graph 调度器自动解释。
+- 统计力学、熵增或耗散结构类比已经构成 Tide correctness、prefill 或训练稳定性定理。
 
 ## 整合记录
 
-当前六文件结构由 2026-08-07 的文档整合产生。整合前的逐文件版本保存在 Git 提交 `d27819f`。其中：
+Tide 在 2026-08-07 先被整合为六个职责文件，随后增加统计力学与信息动力学评述，因此当前共有七个职责文件。整合前的逐文件版本保存在 Git 提交 `d27819f`。其中：
 
 - `step-transition-mathematical-specification`、`explicit-allocator-general-dag-model` 和 `token-owned-general-dag-routing` 进入数学基础。
 - `adaptive-routing-prefill-impossibility` 改名为更准确的 lower-bound 文档。
