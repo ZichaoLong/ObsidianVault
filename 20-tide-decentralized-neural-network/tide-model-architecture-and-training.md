@@ -1452,7 +1452,620 @@ $$
 8. 节点和格子到 16 张 Ascend 卡的静态映射，是否足以吸收剩余负载波动，减少 selector 对模型语义的干预？
 9. selector 的逐 token CPU scan 在多大 $B$、$L$ 和 $D$ 下开始成为关键路径？
 
-### 14. 主要参考
+### 14. 从人脑稀疏到 Tide node 稀疏：讨论综合
+
+> [!summary] 本节定位
+> 本节系统整理 2026-08-10 围绕动态稀疏、路径分布漂移、长路径信用分配、人脑微观与宏观功能稀疏、LH selector、粗粒度 node、replay、固定 merge 和高性能 `prefill` 的讨论。它给出设计假设、反例和实验顺序，不把脑科学类比写成训练稳定性定理。本部分前文第 3--13 节仍提供 MoE 证据、selector 接口和既有训练建议；本节负责把这些内容收束到同一个尺度分层中。
+
+今日问题与本节内容的对应关系如下，后文按结论之间的逻辑关系重新排序，而不是按发言顺序逐条抄录：
+
+| 今日讨论的问题 | 对应小节 |
+| --- | --- |
+| 路径分布漂移和长路径信用分配是否由任何稀疏激活必然引起；residual 与短生命周期 merge 到底改善什么 | 14.1 |
+| 人脑是否也依赖大量 hard selector；它如何保持训练、推理和行为的相对稳定 | 14.2--14.4 |
+| 人脑大颗粒功能稀疏是否不同于局部稀疏；是否依靠唯一主干收拢 | 14.5--14.6 |
+| LH 的固定局部连接、收到即更新、激活后全下游发送、局部能量竞争、恢复和阈值语义 | 14.7 |
+| 粗粒度 Tide node 能否通过增加节点数获得类似神经群体的平滑性；稠密 hidden vector 与 node 稀疏有何差别 | 14.8--14.9 |
+| 状态化 selector、CPU 顺序控制、空间常数遍历与高性能 `prefill` 能否同时成立 | 14.10 |
+| 海马式 replay 和各级 merge 处的局部学习如何在不改变推理 transition 的条件下借鉴 | 14.11--14.12 |
+| 上述讨论对 Tide 架构与增量实验顺序的共同约束 | 14.13--14.14 |
+
+#### 14.1 稀疏激活本身不是两个训练问题的充分条件
+
+首先区分四个不同问题：
+
+| 问题 | 数学或工程含义 | 动态 hard routing 是否必然带来 |
+| --- | --- | --- |
+| 路由边界不连续 | selector score 穿过 Top-K 边界时，执行子图离散变化 | 除退化情形外，是 |
+| selected-only feedback | 未选路径缺少“若选择它会怎样”的任务反馈 | 通常是 |
+| 路径分布漂移 | 同类输入在不同 checkpoint 或历史状态下进入不同下游分布 | 容易发生，但不是必然 |
+| 长路径信用分配 | 某次选择经过很长控制生命周期后才得到有效学习信号 | 取决于发散到收拢的距离和中间控制依赖 |
+
+静态剪枝、固定 hash、固定稀疏拓扑和冻结 router 可以具有很高稀疏度，却没有 checkpoint routing drift。连续 soft gate 或稀疏连续 gate 也可以改变分支权重，而不产生同样强的离散边界。因此不能把上述问题归结为“任何稀疏激活都会发生”。风险最强的组合是：
+
+> 可学习的离散选择、差异较大的候选函数、未覆盖的反事实分支，以及过长的控制生命周期同时出现。
+
+令 always-on 主路径为 $b(x)$，有限候选分支集合为 $J$，分支 $j\in J$ 的 residual 函数为 $\Delta_j$，分支权重为 $g_j(x)$，hard mask 为 $a_j(x)\in\{0,1\}$，则固定加法 merge 可以写成：
+
+$$
+y(x)
+=
+b(x)
++
+\sum_{j\in J}
+a_j(x)g_j(x)\Delta_j(x).
+$$
+
+若路由从分支 $i$ 切换到分支 $j$，并且其他分支不变，则稀疏残差的跳变量为：
+
+$$
+\Delta y(x)
+=
+g_j(x)\Delta_j(x)
+-
+g_i(x)\Delta_i(x).
+\tag{T-14.1}
+$$
+
+由此可把主要风险拆成三个近似独立、需要分别测量的量：
+
+1. **切换频率 $C$**：同类输入多频繁地改变 active set。
+2. **边界跳变量 $J_{\mathrm{jump}}$**：一次 active-set 改变造成的表示差 $\lVert\Delta y(x)\rVert$，或该量在指定验证集上的统计量。
+3. **控制寿命 $D_{\mathrm{control}}$**：该选择在多少层、状态更新或后续 routing 中仍保持独立路径身份。
+
+当分支被约束成尺度较小的有界 residual delta 时，residual 设计主要降低 $J_{\mathrm{jump}}$；固定且频繁的 merge 主要降低 $D_{\mathrm{control}}$；margin、慢速 router、EMA teacher、蒸馏和后期冻结主要降低 $C$。只写成 residual 形式、却不限制 residual 分支的尺度，并不会自动减小跳变量；三类措施也都不能单独解决全部问题。
+
+标准 MoE 即使在一个 block 内立即 merge，仍然保留 Top-K 边界不连续、selected-only feedback 和可能的 routing drift。但 merge 后路径身份被压回共同 residual stream，因此它没有 HB-Sliced 中“某次选择继续改变随后几十个切片的 routing”的同等长控制链。其早期专家贡献仍需通过后续深层网络到达最终 loss，但这部分更接近普通深网络的长程梯度，而不是持续未收拢的路径身份信用分配。
+
+#### 14.2 人脑确实稀疏，但不等价于大量 MoE 式 hard selector
+
+至少要区分四种脑稀疏性：
+
+| 稀疏性 | 含义 |
+| --- | --- |
+| 结构稀疏 | 一个神经元只连接全脑神经元中的极小部分 |
+| 群体稀疏 | 某个时刻只有部分神经元具有较强活动 |
+| 时间稀疏 | 单个神经元只在部分时间产生 spike |
+| 功能稀疏 | 某些神经群只对部分情境、任务或动作显著贡献 |
+
+一个高度简化的神经元工作流是：
+
+~~~text
+接收固定解剖连接上的大量突触输入
+-> 连续更新膜电位、树突和局部突触状态
+-> 超过局部阈值时产生离散 spike
+-> spike 沿预先存在的轴突影响固定下游
+~~~
+
+这里确实存在大量 hard threshold，但它与 MoE router 有五个关键差异：
+
+1. 阈值主要决定“是否广播 spike”，通常不为每次 spike 动态选择任意目标；轴突目标大体固定。
+2. 一个 spike 的贡献通常很小，下游同时整合大量神经元的输入。
+3. 未产生 spike 不等于状态不更新；亚阈值膜电位、突触状态和可塑性仍可能变化。
+4. 稀疏模式由大量局部阈值、兴奋/抑制平衡、增益和复发动力学共同形成，不是一个全局 Top-K 控制器一次决定完整路径。
+5. 接近 hard choice 的基底节门控、工作记忆更新和动作提交只占完整认知过程的一部分；直接、间接和超直接通路也不是严格的一开一关。
+
+因此，人脑更接近“固定稀疏图上的大量局部 `Update + EmitGate`”，而不是“每层用一个 router 在多个完整且相互独立的专家之间排他选择”。
+
+#### 14.3 人脑没有消除微观漂移，而是保持宏观功能不变量
+
+同一任务在多天或更长时间尺度上可以出现 representational drift：具体参与的神经元、单细胞调谐和微观活动模式发生变化，而行为仍相对稳定。一个有用的抽象是给定微观状态集合 $\mathcal S_{\mathrm{micro}}$、宏观功能状态集合 $\mathcal Q_{\mathrm{macro}}$ 和粗粒化函数：
+
+$$
+\alpha:
+\mathcal S_{\mathrm{micro}}
+\to
+\mathcal Q_{\mathrm{macro}}.
+$$
+
+大量不同的微观状态可以满足：
+
+$$
+\alpha(s)=q.
+$$
+
+只要活动漂移仍留在同一个宏观功能等价类中，具体神经元路径变化不必改变行为。可能共同起作用的稳定机制包括：
+
+- 群体编码、冗余和多个部分可替代的微观实现。
+- 下游读取依赖群体统计、低维轨迹或通信子空间，而不是永久绑定单一神经元。
+- 部分稳定核心表征与允许漂移的外围表征并存。
+- 下游突触也缓慢持续适应，而不是假设上游永久冻结。
+- 稳态可塑性、抑制平衡和突触缩放防止长期过强或沉默。
+- 毫秒活动、较慢突触学习、更慢结构变化和离线巩固之间存在时间尺度分离。
+
+这不表示人脑已经严格解决路径漂移。遗忘、习惯干扰、错误归因和行为波动都说明问题仍然存在。其工程目标更接近“宏观行为足够稳定、错误可由持续反馈纠正”，而不是“同一刺激必须重放逐神经元相同 artifact”。
+
+#### 14.4 人脑也没有已知的精确全局信用分配算法
+
+生物信用分配仍是开放问题。较可信的图景不是一个最终 scalar loss 精确反传整个全脑路径，而是多种局部和延迟教学机制并行工作：
+
+- 感觉系统持续获得局部预测误差和真实感觉反馈。
+- 小脑通过攀缘纤维等通路获得较直接的事件、预测和校准信号。
+- 基底节利用多巴胺奖励预测误差学习动作、价值和认知门控。
+- Eligibility trace 暂时保留近期活动过的突触资格，延迟调制信号到达后再影响可塑性。
+- 海马和皮层的离线重放、睡眠及系统巩固反复呈现过去经历。
+- 注意、目标和神经调质决定哪些局部区域在当前阶段允许更强可塑性。
+- 进化和发育已经提供反射、感觉主通路、局部学习规则和价值先验，脑并非从随机 Graph 与单一终局 loss 开始训练。
+
+因此，人脑采用的是“足够好的局部信用、多个闭环反馈、延迟资格痕迹和反复纠错”，不是已经发现了等价于精确 backpropagation 的生物算法。这也解释了为何学习需要重复练习、探索、睡眠和巩固，并仍会失败。
+
+#### 14.5 大颗粒功能稀疏不是脑区被完全关闭
+
+大尺度脑区或功能网络的所谓“激活”通常是相对于持续背景活动的增量。可作如下直观分解：
+
+$$
+z_{\mathrm{brain}}(t)
+=
+z_{\mathrm{baseline}}(t)
++
+\Delta z_{\mathrm{task}}(t).
+\tag{T-14.2}
+$$
+
+未出现在某张 task-activation map 中，不表示脑区没有代谢、没有放电、没有接收输入或没有更新状态。大颗粒功能稀疏更接近：
+
+~~~text
+多个持续存在的结构和背景动力学
++ 少数任务相关网络获得更高增益
++ 某些网络间的有效通信暂时增强
++ 若干宏观状态在任务期间成为主导
+~~~
+
+大颗粒功能状态不是与局部稀疏完全独立的第二种机制。它由局部阈值、兴奋/抑制竞争、长程连接、丘脑协调、神经调质、振荡相位和复发动力学经过粗粒化共同产生。但粗粒化会出现新的亚稳态与吸引子效应：状态内部允许大量平滑或随机微观漂移，状态之间则可以在证据积累后发生相对突出的切换。
+
+因此，大颗粒功能稀疏并非处处平滑，也不是任意跳变。较稳定的宏观切换通常包含：连续证据积累、决策 margin、吸引子或 hysteresis、防止边界抖动的抑制竞争，以及切换后的感觉反馈和在线修正。
+
+#### 14.6 人脑不存在唯一全局主干，但存在多级稳定接口
+
+人脑没有一条严格对应 Transformer residual stream 的唯一全局 backbone。更接近的图景是“多条相对稳定主通路、多种闭环和多级汇聚接口”：
+
+- 感觉系统有相对稳定的外周、脑干/丘脑和皮层主通路。
+- 视觉腹侧流与背侧流分工但持续交换和重汇聚。
+- 皮层-基底节-丘脑环路完成选择后重新影响皮层。
+- 小脑结果通过丘脑、脑干等接口重新进入运动或认知网络。
+- 额顶、丘脑和其他 hub 协调多个任务相关网络。
+- 动作最终汇聚到脑干、脊髓和肌肉等共同输出系统。
+
+固定 merge 对 Tide 的价值，不是声称脑中存在同一种加法 merge，而是为可变微观路径建立稳定宏观接口：分支在有限生命周期后必须产生声明类型的状态或 tensor，再由固定算子进入下一段。Tide 可以采用多个层级 backbone 与 region-local merge，而不必强制全模型只有一条主干。
+
+#### 14.7 LH 的结构稀疏、状态更新与局部 selector
+
+LH 复杂参考实现已经明确具有结构稀疏，当前 Tide 也计划保留以下核心语义：
+
+1. 空间 Graph 只包含局部连接，不是全连接。
+2. 节点一旦激活，就向其所有静态下游节点发送消息；selector 主要决定节点是否激活，而不是为每条消息任意改写目标拓扑。
+3. 下游只要收到上游消息，就可以记忆并更新 KV cache、SSM 或其他神经状态。
+4. 下游是否激活并继续发送，由下游局部策略决定。
+5. 某个逻辑时刻没有收到消息时，内部状态仍可以按明确规则保持、leak 或 decay。
+6. 同一区域中的节点竞争有限激活预算；节点激活后可以进入恢复期，激活阈值也可以慢速调整。
+
+这里的“能量竞争”目前只对应数字模型中的区域激活预算、恢复状态和慢速阈值，不表示已经定义或验证了一个物理能量模型。
+
+历史 LH selector 主要统计过去激活次数，并据此降低再次激活的优先级。它粗略实现了防止长期过强或长期沉默的 homeostatic/refractory 效果，但没有显式表示当前消息经过时间累积后是否已经形成足够激活证据。
+
+为避免再次混淆状态，本节沿用本部分第 6.1 节“神经状态”的 $q_{i,t}$ 表示 KV/SSM 等神经状态，并新增：
+
+| 符号 | 对象 | 作用 |
+| --- | --- | --- |
+| $q_{i,t}$ | 神经状态 | KV、SSM、Linear Attention accumulator 等 |
+| $u_{i,t}$ | 信号累积状态 | 积累当前和近期入站消息形成的激活证据 |
+| $r_{i,t}$ | 恢复状态 | 节点激活后暂时提高再次激活成本 |
+| $\theta_{i,t}$ | 慢速阈值状态或固定参数 | 调节长期激活率和兴奋性；若它是状态，其更新规则必须另行声明 |
+| $c_{i,t}$ | 历史负载统计 | 记录较慢的使用率，不承载神经表示 |
+
+下面只定义一种待实验的控制动力学，不把它当作 LH 的唯一解释。令 $R$ 为一个非空有限节点集合，称为一个 selector 区域；令 $t\in\mathbb N$ 为单条序列中的 token 逻辑位置，而不是物理执行时刻。对每个 $i\in R$：
+
+- $I_{i,t}$ 是节点 $i$ 在位置 $t$ 收到的有限消息多重集。
+- $E_i$ 是把 $I_{i,t}$ 映射成实数激活证据的函数，并规定 $E_i(\varnothing)=0$。
+- $s_{i,t}\in\mathbb R$ 是本部分第 6.2 节“语义分数”定义的内容语义分数。
+- $a_{i,t}\in\{0,1\}$ 是本位置的最终激活指示量。
+
+取 $\lambda_i,\rho_i,\eta_i\in[0,1]$ 和 $\alpha_i,\gamma_i,\beta_i,\mu_i,\nu_i\geq 0$。节点先把当前位置的消息纳入信号累积量，并让恢复状态衰减：
+
+$$
+\widehat u_{i,t}
+=
+\lambda_i u_{i,t}
++
+E_i(I_{i,t}),
+\qquad
+\widehat r_{i,t}
+=
+\rho_i r_{i,t}.
+\tag{T-14.3}
+$$
+
+令区域平均历史负载为
+
+$$
+\overline c_{R,t}
+=
+\frac{1}{|R|}
+\sum_{j\in R}c_{j,t}.
+\tag{T-14.4}
+$$
+
+局部 selector 不应只读取其中一个量。可先定义节点 $i$ 的有效分数：
+
+$$
+\ell_{i,t}
+=
+s_{i,t}
++
+\alpha_i \widehat u_{i,t}
+-
+\mu_i \widehat r_{i,t}
+-
+\nu_i(c_{i,t}-\overline c_{R,t})
+-
+\theta_{i,t},
+\tag{T-14.5}
+$$
+
+令 $K_R\in\{0,1,\ldots,|R|\}$ 为区域激活预算，并令 $\mathcal F_R$ 为所有满足 $|A|\leq K_R$ 及其他预先声明静态拓扑约束的子集 $A\subseteq R$ 所成的有限集合。一个确定的区域选择策略是函数
+
+$$
+\Pi_R:\mathbb R^R\to\mathcal F_R.
+$$
+
+它从带节点下标的有效分数向量中产生激活集合：
+
+$$
+A_{R,t}
+=
+\Pi_R
+\left(
+(\ell_{i,t})_{i\in R}
+\right).
+\tag{T-14.6}
+$$
+
+令 $a_{i,t}=\mathbf 1[i\in A_{R,t}]$。完成本位置的选择后，控制状态按下式延续到位置 $t+1$：
+
+$$
+\begin{aligned}
+u_{i,t+1}
+&=
+\widehat u_{i,t}-\gamma_i a_{i,t},\\
+r_{i,t+1}
+&=
+\widehat r_{i,t}+\beta_i a_{i,t},\\
+c_{i,t+1}
+&=
+\eta_i c_{i,t}+(1-\eta_i)a_{i,t}.
+\end{aligned}
+\tag{T-14.7}
+$$
+
+这里 $s_{i,t}$ 是内容与节点的语义匹配，$\widehat u_{i,t}$ 是包含当前消息后的积累证据，$\widehat r_{i,t}$ 是选择前的短时恢复成本，$c_{i,t}$ 是慢负载统计。把四者分开，才能实验“语义、信号强度、恢复和均衡”各自是否有效；若重新压成一个历史计数，就无法知道训练失败来自哪一部分。
+
+当 $I_{i,t}$ 为空时，式 T-14.3 仍应用 leak/decay。若同一逻辑位置有多条上游消息，必须先按固定、确定且与物理到达顺序无关的规则形成 $I_{i,t}$ 或其聚合结果。神经状态 $q_{i,t}$ 的含义及其更新仍分别由本部分第 6.1 节“神经状态”和第 7.1 节“`Observe / Update / Score`”负责，不应与这里的控制状态递推合并成一个含义不明的“节点状态”。
+
+#### 14.8 粗粒度 Tide node 不会因数量增加而自动平滑
+
+一个 LH/Tide node 可能代表大量神经元，甚至是一个完整 Attention、SSM、FFN 或 Transformer block。关闭一个神经元与关闭一个宏观 kernel 不是同一粒度。若每次只选择一个相互独立的完整模块：
+
+$$
+y=b(x)+\Delta_i(x),
+$$
+
+则从 $i$ 切换到 $j$ 的变化仍为式 T-14.1。把候选节点数从 16 增加到 4096 不会自动缩小该跳变量，反而可能增加决策边界数量。
+
+若同时激活 $K$ 个较小贡献，并做归一化 merge：
+
+$$
+y
+=
+b(x)
++
+\frac{1}{K}
+\sum_{i\in A(x)}
+\Delta_i(x),
+\tag{T-14.8}
+$$
+
+只替换其中一个节点时，单次变化才可能随单节点贡献尺度下降。因此，增加 node 数只有同时满足下列条件时，才可能近似人脑的群体平滑性：
+
+1. 同时激活多个节点，而不是始终 Top-1。
+2. 单节点只提供有界 residual delta，不替换完整主路径。
+3. 同一 cell 内节点共享主体参数、状态接口或输出子空间。
+4. 邻近输入或相邻逻辑时刻的 active set 有较高 overlap。
+5. 多个节点在固定 cell/region 边界重新聚合。
+
+稠密模型中的 hidden vector 已经提供一种微观群体表示：很多坐标接近零，少量坐标较大，但整体函数通常随输入连续变化。接近零的坐标不自动转化为硬件计算稀疏；一旦把连续坐标分组成可跳过的完整模块，就重新引入 group threshold 与粗粒度跳变。
+
+因此，Tide 更合理的尺度分工是：
+
+~~~text
+Node 内部：
+    稠密向量或细粒度稀疏向量
+    Attention / SSM / FFN
+    连续群体表示
+
+Node 之间：
+    固定局部结构稀疏
+    条件 residual contribution
+    局部 K-of-M 激活
+    层级固定 merge
+~~~
+
+更多小节点还会减小单次矩阵尺寸、增加 metadata、packing 和通信开销。因此“节点越多越接近脑”不是单调结论；必须同时测量稳定性收益与加速卡利用率损失。
+
+#### 14.9 不同 Tide node 不应共享同一种稀疏语义
+
+建议至少声明三类架构角色：
+
+| Node 类型 | 激活方式 | 训练与稳定性要求 |
+| --- | --- | --- |
+| Backbone node | always-on 或极高激活率 | 提供稳定信息、状态和梯度路径 |
+| Population node | cell 内 K-of-M，多节点共同贡献 | 小 residual、共享主体、频繁节点换路可接受 |
+| Specialist node | 条件激活、较低频率、较明显功能贡献 | 强证据、margin、hysteresis、固定 merge 和局部监督 |
+
+Population node 更接近神经群体中的细粒度功能稀疏；specialist node 更接近条件性的记忆检索、校准或任务网络参与。二者不能只因都使用 hard mask，就由同一个无差别 selector 管理。
+
+一个候选层级是：
+
+~~~text
+Region
+├── always-on local backbone
+├── Cell A：稳定语义功能
+│   ├── 多个共享主体的 population nodes
+│   └── 局部累积、恢复与负载均衡
+├── Cell B：另一种稳定语义功能
+└── 少量 specialist branches
+        -> fixed region merge
+~~~
+
+语义专门化优先发生在 cell/region 级；cell 内节点可以作为容量副本、参数共享分片或相近子空间中的微观实现。这样节点级路由允许漂移，而 cell 的宏观输入输出 contract 保持稳定。
+
+下面把“更多小节点可能使单次换路更平滑”写成一个明确的充分条件。令 $\mathcal H$ 为有限维赋范向量空间，$C$ 为有限节点集合，节点 $i\in C$ 在固定输入 $x$ 上的 residual contribution 为 $v_i(x)\in\mathcal H$。对 active set $A\subseteq C$，定义带节点下标的输入元组
+
+$$
+z_A(x)
+=
+\left(
+\mathbf 1[i\in A]v_i(x)
+\right)_{i\in C}
+\in
+\mathcal H^C.
+$$
+
+令 fixed merge 为函数 $M_C:\mathcal H^C\to\mathcal H$，并定义 $h_C(A,x)=M_C(z_A(x))$。若存在 $L_C\geq 0$，使得任意 $z,z'\in\mathcal H^C$ 均满足
+
+$$
+\left\|M_C(z)-M_C(z')\right\|
+\leq
+L_C
+\sum_{i\in C}\left\|z_i-z_i'\right\|,
+$$
+
+则对任意两个 active set $A,A'\subseteq C$，直接得到：
+
+$$
+\left\|h_C(A,x)-h_C(A',x)\right\|
+\leq
+L_C
+\sum_{i\in A\triangle A'}
+\left\|v_i(x)\right\|.
+\tag{T-14.9}
+$$
+
+这里 $A\triangle A'=(A\setminus A')\cup(A'\setminus A)$ 是对称差。式 T-14.9 说明，提高 active-set overlap、限制单节点 contribution、共享表示空间和采用具有较小 $L_C$ 的稳定 merge，比单纯增加候选节点数更直接。该界只约束固定输入上的 merge 输出变化，不证明训练过程中的 active set 会稳定，也不证明最终任务损失的变化同样小。
+
+#### 14.10 局部 stateful selector 可以保持空间常数遍历，但不自动低 token span
+
+对固定无环空间 Graph，可以让上游节点先产生整个有限 chunk 的带逻辑时间消息；节点随后一次接收按逻辑时间整理的 inbox，并在节点内部执行：
+
+~~~python
+for t in logical_times:
+    neural_state = update_neural_state(neural_state, inbox[t])
+    excitation = leak(excitation) + evidence(inbox[t])
+    recovery = decay(recovery)
+    active = local_select(
+        semantic_score[t], excitation, recovery, threshold, load_state
+    )
+    if active:
+        emit[t] = active_compute(neural_state, inbox[t])
+        recovery = apply_refractory(recovery)
+~~~
+
+于是空间执行仍可保持：
+
+~~~text
+上游节点完成整个 chunk
+-> 当前节点获得完整时间序列 inbox
+-> 当前节点产生整个 chunk 的 route list 和消息
+-> 下游节点开始处理
+~~~
+
+这与“空间节点拓扑遍历次数不随 chunk 长度增长”兼容，也允许 K/V projection、Attention、SSM readout、FFN 和消息 packing 使用大批量 kernel。但 selector 内的 $u/r/\theta/c$ recurrence 可能仍有 $O(L)$ 顺序 span。
+
+线性 leak、affine accumulator 和可结合统计量可能进一步 scan；threshold、reset、refractory 与 region Top-K 一般不会自动具有结合律。第一版可以接受 CPU 处理小型顺序控制递推，但必须测量它何时成为关键路径，不能把它称为 Transformer 意义上的完全 token-parallel prefill。
+
+保持 `prefill = decode` 还要求：
+
+- selector 只读取本 region 的历史控制状态和当前已到达的上游消息。
+- selector 不读取当前 chunk 尚未计算的下游状态或物理设备负载。
+- 控制状态逐序列隔离，并进入 chunk boundary state。
+- decay 使用逻辑时间差，不使用物理等待时间。
+- 同一逻辑时间的消息采用确定聚合，与物理到达顺序无关。
+- batch 组合、chunk 切分和设备调度不改变 route artifact。
+- 若一组相互竞争的节点在空间上并列，应把竞争表示为位于其前方的显式 region allocator，不能让 selector 同时读取自己选择之后才产生的输出。
+
+#### 14.11 Replay 必须区分训练调度与推理 transition
+
+“海马重放不兼容高性能 prefill”只对模型在推理过程中主动回放内部轨迹的强版本成立。至少应区分：
+
+| Replay 类型 | 是否改变推理 transition | 与高性能 prefill 的关系 |
+| --- | --- | --- |
+| 训练数据 replay | 否 | 旧序列仍可用普通 chunk prefill 重新训练 |
+| Route/hidden/teacher artifact replay | 否 | 可用旧路径、旧表示和 logits 约束当前 checkpoint |
+| 推理时模型内部 latent replay | 是 | 引入动态循环、额外状态和可能的跨 token 控制链 |
+
+前两类是训练与巩固方法，不要求推理时重演过去。可以对固定 replay 样本记录旧模型的投影表示和输出分布，并使用：
+
+$$
+\mathcal L_{\mathrm{replay}}
+=
+\left\|
+P(h^{\mathrm{new}})
+-
+P(h^{\mathrm{old}})
+\right\|^2
++
+\lambda
+D_{\mathrm{KL}}
+\left(
+p^{\mathrm{old}}
+\Vert
+p^{\mathrm{new}}
+\right).
+\tag{T-14.10}
+$$
+
+人类语言理解本身不提供 Transformer 式高性能 `prefill` 的证据。视觉可以并行接收多个文字，但认知和决策具有显著序列性、反馈和有限工作记忆。Tide 应把脑科学用于启发结构稀疏、稳态控制和信用分配，而把 Attention、SSM、causal bulk 与 packed kernel 作为机器架构独有的工程优势。脑中的微环路和上下文保持也不必逐神经元复制；Attention、SSM 和 Linear Attention 可以作为粗粒度数字功能模块。
+
+#### 14.12 Fixed merge 处逐段学习不等于切断端到端梯度
+
+设第 $r$ 个有限生命周期分支段对位置 $t$ 的固定 merge 输出为：
+
+$$
+h_{r+1,t}
+=
+B_r(h_{r,t})
++
+\sum_{j\in A_{r,t}}
+g_{r,j,t}
+\Delta_{r,j}(h_{r,t}).
+\tag{T-14.11}
+$$
+
+主模型始终保留最终语言模型损失 $\mathcal L_{\mathrm{final}}$，并允许该损失端到端反向传播。所谓“各级 merge 处逐段学习”，首先只表示在训练时为确定的 merge 表示增加较近的辅助信号，而不是执行 greedy layer-wise training 或停止主梯度。
+
+一种 representation-distillation loss 是：
+
+$$
+\mathcal L_{\mathrm{repr}}^{(r)}
+=
+\sum_t
+\left\|
+P_r(h_{r+1,t})
+-
+\operatorname{stopgrad}
+\left(
+h^{\mathrm{teacher}}_{r+1,t}
+\right)
+\right\|^2.
+\tag{T-14.12}
+$$
+
+也可以增加训练期中间 next-token 读出：
+
+$$
+\mathcal L_{\mathrm{LM}}^{(r)}
+=
+\sum_t
+\operatorname{CE}
+\left(
+W_rh_{r+1,t},
+x_{t+1}
+\right).
+\tag{T-14.13}
+$$
+
+总损失可以写成：
+
+$$
+\mathcal L
+=
+\mathcal L_{\mathrm{final}}
++
+\sum_r
+\alpha_r
+\mathcal L_{\mathrm{repr}}^{(r)}
++
+\sum_r
+\beta_r
+\mathcal L_{\mathrm{LM}}^{(r)}
++
+\lambda_{\mathrm{replay}}
+\mathcal L_{\mathrm{replay}}.
+\tag{T-14.14}
+$$
+
+$P_r$、$W_r$ 和这些辅助 loss 可以只在训练时存在，推理时删除。对长度为 $L$ 的 chunk，所有位置的投影和交叉熵仍可使用规整矩阵计算；$x_{t+1}$ 只作为监督目标进入 loss，不进入位置 $t$ 的前向依赖，因此不破坏 causal prefill。
+
+辅助 loss 缩短了表示和分支获得监督的距离，但仍不能自动给 hard selector 的未选索引提供反事实梯度。还需要在训练期选择 soft gate、大于推理期的 $K$、少量 shadow branch、straight-through surrogate 或带局部 baseline 的 policy-gradient/advantage estimator。训练期额外执行不能进入 reference output；本部分第 11.5 节“语义不变量”的 route artifact equality 仍以推理 selector 语义为准。
+
+辅助目标也可能过强地迫使所有中间深度形成相同表示。第一版应优先使用 teacher representation matching、小权重辅助读出并在训练后期衰减 $\alpha_r,\beta_r$，同时做无辅助 loss 对照。
+
+#### 14.13 对 Tide 的综合架构建议
+
+本轮讨论收敛到以下尺度化架构，而不是“所有 nodes 都是独立专家”：
+
+~~~text
+多级 always-on backbone
+-> region/cell 级稳定语义接口
+-> cell 内多个小 residual population nodes
+-> 少量具有明确进入/退出条件的 specialist branches
+-> 各级有限生命周期和 fixed merge
+-> 下一层级 backbone / region
+~~~
+
+建议优先遵守：
+
+1. `Update` 与 `EmitGate` 分离：收到消息即更新声明的神经状态，激活主要决定昂贵计算和继续发送。
+2. 固定局部连接：节点激活后向所有静态下游发送，不首先引入任意动态目标改写。
+3. Cell 级专门化：语义 routing 优先选择 cell；cell 内只在真正可交换或相近的 population nodes 间做强负载均衡。
+4. 多主干而非单主干：每个层级或 region 有稳定 backbone 和 merge contract。
+5. 大颗粒 specialist 使用更强证据、margin 与 hysteresis；population nodes 允许更频繁的局部换路。
+6. 分支输出使用归一化、有界 residual contribution，避免一个 node 切换替换全部语义。
+7. Router 参数、稳态阈值和结构变化使用慢时间尺度；token-time 激活可以快速变化，但不能读取物理调度状态。
+8. 脑式反馈、推理时 replay 和未收拢长控制链不进入第一版 strict prefill 模型。
+
+需要特别区分两种 hysteresis。跨 optimizer step 的慢 router/threshold 更新和后期冻结属于训练稳定化，不改变单次推理语义；跨 token 的状态化进入/退出规则属于模型 transition，会产生顺序控制状态，必须进入 boundary state 并承担相应 span。
+
+#### 14.14 建议的增量实验阶梯
+
+为了避免一次引入全部 LH 与脑式机制后无法归因，建议按下列顺序推进：
+
+1. 固定空间 DAG、always-on backbone、全部 residual branches 执行并 fixed merge。
+2. 加入静态稀疏 active set，先验证容量、质量、packing 和通信。
+3. 加入只读取当前输入的 token-local 语义 selector。
+4. 加入独立信号累积 $u_{i,t}$，暂不加入恢复状态和负载均衡。
+5. 加入恢复状态 $r_{i,t}$ 与慢速阈值 $\theta_{i,t}$。
+6. 加入历史负载 $c_{i,t}$，并限制它只在语义上可接受的 cell 内做均衡。
+7. 加入训练期 shadow route、merge-local auxiliary loss 和 replay consistency。
+8. 加入两层递归分支和更长但有界的 specialist 生命周期。
+9. 最后才比较推理时 delayed feedback、内部 replay 或其他会形成跨 token 控制链的机制。
+
+每一级除最终质量和吞吐外，至少记录：
+
+- Active-set overlap、route churn 和切换 margin。
+- 式 T-14.1 的边界跳变量分布。
+- 每次选择的控制寿命和 fixed-merge 距离。
+- Cell 级与 node 级输入分布漂移。
+- 激活、梯度、语义和优化器状态饥饿。
+- Shadow branch 相对 selected branch 的局部 regret。
+- Selector CPU 顺序时间、packed kernel 利用率和通信量。
+- 不同 chunk 切分、batch 组合和逐 token decode 的完整 artifact equality。
+
+在先把 $C$、$J_{\mathrm{jump}}$ 与 $D_{\mathrm{control}}$ 分别归一化成无量纲非负统计量后，一个值得检验、但当前不是定理的风险代理是：
+
+$$
+R_{\mathrm{route}}
+\propto
+C
+\cdot
+J_{\mathrm{jump}}
+\cdot
+D_{\mathrm{control}}.
+\tag{T-14.15}
+$$
+
+实验应分别改变三项，而不是只改变 Top-K 或稀疏比例。若该代理具有预测力，Tide 可以在保持高稀疏度的同时，通过较高 active-set overlap、较小 node delta、较短局部生命周期和更稳定的 cell 级语义显著降低训练风险。
+
+### 15. 主要参考
 
 - 本地背景报告：[[tide-background-history-and-references#第二部分：人脑信号传播调查|人脑信号传播调查]]
 - StableMoE: [Stable Routing Strategy for Mixture of Experts](https://arxiv.org/abs/2204.08396)
@@ -1469,6 +2082,9 @@ $$
 - STAR: [Rethinking MoE Routing as Structure-Aware Subspace Learning](https://arxiv.org/abs/2606.08814)
 - MCF-MoE: [Multi-level Context Modeling for Consistent Expert Selection in Mixture-of-Experts](https://arxiv.org/abs/2607.16427)
 - Less is MoE: [Trimming Experts in Domain-Specialist Language Models](https://arxiv.org/abs/2606.05538)
+- Gerstner et al.: [Eligibility Traces and Plasticity on Behavioral Time Scales](https://doi.org/10.3389/fncir.2018.00053)
+- Lillicrap et al.: [Backpropagation and the Brain](https://doi.org/10.1038/s41583-020-0277-3)
+- Turrigiano: [Homeostatic Synaptic Plasticity](https://doi.org/10.1101/cshperspect.a005736)
 
 ---
 
