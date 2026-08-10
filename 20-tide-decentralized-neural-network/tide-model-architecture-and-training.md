@@ -1469,6 +1469,14 @@ $$
 | 状态化 selector、CPU 顺序控制、空间常数遍历与高性能 `prefill` 能否同时成立 | 14.10 |
 | 海马式 replay 和各级 merge 处的局部学习如何在不改变推理 transition 的条件下借鉴 | 14.11--14.12 |
 | 上述讨论对 Tide 架构与增量实验顺序的共同约束 | 14.13--14.14 |
+| 模块内部大量小值为何通常不能直接转化为稀疏加速；当前硬件是否可能使稠密模型已经处于最佳粒度 | 14.15 |
+| MoE 的全局候选、设备间 all-to-all 和共同 residual merge 与 Tide 局部结构稀疏有何本质区别 | 14.16 |
+| 构造局部计算介质是否约等于解决路径漂移和信用分配；其中哪些内容可以证明 | 14.17 |
+| 人脑两种尺度的稀疏对粗粒度 hard node 有何反向证据；狭窄中间粒度是否存在如何成为 Tide 核心假设 | 14.18 |
+| 2026-08-10 的前沿开放权重模型采用了什么结构；为什么仍以规则 block 与短生命周期 MoE 为主 | 14.19 |
+| MoE 在立即 merge 后是否仍能影响下一层路由和后续 Token；它与 Tide 的信息量和路径身份有何区别 | 14.20 |
+| 从“只有末级叶子稀疏”到一般 Tide 应如何形成可逐级验证的架构阶梯 | 14.21 |
+| “更长距离的信用分配”中的距离到底是什么；何时 Tide 确实比 MoE 更难 | 14.22 |
 
 #### 14.1 稀疏激活本身不是两个训练问题的充分条件
 
@@ -2065,6 +2073,493 @@ $$
 
 实验应分别改变三项，而不是只改变 Top-K 或稀疏比例。若该代理具有预测力，Tide 可以在保持高稀疏度的同时，通过较高 active-set overlap、较小 node delta、较短局部生命周期和更稳定的 cell 级语义显著降低训练风险。
 
+#### 14.15 数值接近零不等于可获利的稀疏计算
+
+模块内部的 hidden value 接近零，首先是一种数值或表示现象，不自动成为硬件可以跳过的工作。必须区分：
+
+1. **近零值**：浮点值很小但不等于零；跳过它会改变模型函数。
+2. **精确零值**：数值等于零，但其位置可能是不规则且随输入变化的。
+3. **结构化零值**：零值满足硬件预先支持的 block、N:M 或其他规则模式。
+4. **模块未激活**：一个具有明确边界的完整 kernel 在本次执行中可以不运行。
+
+固定一个硬件平台和输入 workload，并采用把关键路径开销相加的简化时间模型。令 $T_{\mathrm{dense}}\in\mathbb R_{\geq 0}$ 为稠密 kernel 的实际执行时间；令 $T_{\mathrm{detect}}$、$T_{\mathrm{pack}}$、$T_{\mathrm{index}}$ 和 $T_{\mathrm{sparse}}$ 为检测非零位置、重排数据、处理索引以及执行稀疏 kernel 的非负时间。在该模型中，稀疏执行真正有时间收益的条件是：
+
+$$
+T_{\mathrm{detect}}
++
+T_{\mathrm{pack}}
++
+T_{\mathrm{index}}
++
+T_{\mathrm{sparse}}
+<
+T_{\mathrm{dense}}.
+\tag{T-14.16}
+$$
+
+式 T-14.16 没有一个脱离硬件、数据类型、矩阵形状和 batch 大小的统一稀疏率阈值；流水重叠存在时还应直接测量总关键路径，而不能机械相加各项。当前加速卡上的大矩阵稠密乘具有连续访存、成熟调度和很高的矩阵单元利用率；动态无结构稀疏则还会引入索引、分支、packing 和负载不均衡。因此即使 hidden vector 中有大量小值，稠密计算仍可能是当前硬件下最合适的执行粒度。未来硬件若原生支持静态局部通信、稀疏数据流或更低成本的动态调度，式 T-14.16 两侧的关系可以改变。
+
+只增加并行分支而不跳过任何分支，主要增加的是容量和总计算量：
+
+$$
+y(x)
+=
+b(x)
++
+\sum_{j\in J}\Delta_j(x).
+$$
+
+它可能改善表达能力、优化或物理并行度，但不是条件计算。MoE 的主要计算收益来自只执行 $A(x)\subset J$ 中少量专家：
+
+$$
+y(x)
+=
+b(x)
++
+\sum_{j\in A(x)}g_j(x)\Delta_j(x),
+\qquad
+|A(x)|\ll |J|.
+\tag{T-14.17}
+$$
+
+因此，若把 expert 看作 node，MoE 已经实现了粗粒度 node 计算稀疏；它没有自动解决的是 node 换路的语义平滑性。扩大 dense 模型的深度和宽度，以及扩大 MoE 的总专家数但保持较小 active expert 数，都是当前硬件上较常见的规模扩展方式，因为二者最终仍把昂贵工作整理成规则的稠密 kernel。
+
+Tide 必须进一步区分两个粒度：
+
+| 粒度 | 含义 |
+| --- | --- |
+| 语义 node | 模型中具有参数、状态、输入输出 contract 和激活语义的对象 |
+| 执行 tile | runtime 在特定硬件上一次打包、放置或调用的工作单元 |
+
+一个语义 node 不必对应一次很小的 kernel launch。多个 node 可以跨 token、batch 或 cell 被打包成 grouped GEMM 或其他大 kernel。该 lowering 只有在不执行语义上未激活的昂贵分支、并保持 route artifact equality 时，才同时保留模型稀疏性和硬件效率。
+
+#### 14.16 从 MoE 星形结构到局部计算介质
+
+标准 MoE 的专家不是彼此全连接。更准确的逻辑结构是：共同 token residual stream 产生 router score，一个 token 可以从全体专家中选择任意少数专家，所选专家的输出随后立即 merge 回同一个 token stream。若专家分布在不同设备上，token dispatch 与 gather 在物理实现中通常表现为设备间 all-to-all 通信。因此应区分：
+
+~~~text
+逻辑层：全局候选专家 -> 少量选择 -> 共同 residual merge
+物理层：token 在设备间 dispatch / gather，常形成 all-to-all collective
+~~~
+
+MoE 的共同 merge 不只是通信结构，也是一项训练优势：一次专家选择的独立路径身份通常只持续一个 block，随后又进入稳定的公共接口。Tide 若改成持续存在的局部 node 网络，就同时放弃了这项短控制寿命优势。
+
+下面给出局部结构稀疏的最低数学描述。令固定有限空间 DAG 为 $G=(V,E)$，并给定正整数 $\Delta$，使每个节点 $v\in V$ 都满足：
+
+$$
+\deg^+(v)\leq\Delta,
+\qquad
+\deg^-(v)\leq\Delta.
+\tag{T-14.18}
+$$
+
+于是 $|E|\leq\Delta|V|$。对一个随规模 $n$ 增长的 Graph family $\{G_n=(V_n,E_n)\}_{n\in\mathbb N}$，“有界局部连接”进一步要求存在同一个 $\Delta$，使式 T-14.18 对每个 $G_n$ 都成立；仅对单个有限 Graph 声称“存在某个最大度数”是平凡事实。
+
+对单条序列中的 token 位置 $t$，令 $A_t\subseteq V$ 为激活节点集合。若沿用“节点激活后向所有静态下游发送”的语义，则本位置实际用于发送的边集合为：
+
+$$
+E_t^{\mathrm{emit}}
+=
+\left\{
+(u,v)\in E:
+u\in A_t
+\right\}.
+\tag{T-14.19}
+$$
+
+没有出现在 $A_t$ 中的接收节点仍可以因为收到 $(u,v)\in E_t^{\mathrm{emit}}$ 上的消息而执行 `Observe / Update`；$A_t$ 只表示哪些节点执行声明的昂贵激活计算并继续发送。式 T-14.18 是结构稀疏，$A_t$ 与式 T-14.19 是执行时激活稀疏，二者不能相互替代。
+
+这种局部计算介质的潜在收益是：
+
+- 参数和 KV/SSM 等状态可以长期留在拥有它们的 node 或 region 附近。
+- 静态邻接可以映射到设备、chiplet 或片上网络中的局部链路。
+- 激活节点不必把 token 动态发送到任意全局设备。
+- 多层局部路径可以组合出单层 MoE 星形结构没有的计算轨迹。
+- 模型规模增长时，节点度数与单次局部通信范围仍可保持有界。
+
+相应代价是：局部路径可能长期不收拢，全局负载调节变难，早期选择持续改变后续输入分布，路径分布漂移和信用分配都可能比短生命周期 MoE 更严重。结构局部性本身不解决这些问题，也不自动保证整个图具有足够小的直径或信息混合能力。Tide 因而不能简单地删除 merge；更可行的方向是使用局部、周期性和层级化的 fixed merge 与 always-on backbone，在不恢复单一全局 all-to-one 星形结构的前提下限制路径寿命。
+
+固定逻辑邻接还必须与物理放置共同设计。若逻辑邻居被放到相距很远的设备上，式 T-14.18 只提供图论局部性，不提供物理通信局部性。当前通用加速卡可能仍偏好把一个 region 内的多个语义 node 合并为较大的执行 tile；未来 many-core、chiplet、wafer-scale 或近存硬件则可能使固定局部边更直接地映射成低成本通信通道。
+
+#### 14.17 “解决”路径漂移与信用分配的准确含义
+
+构造局部计算介质，确实要求 Tide 正面处理比 MoE 更强的路径分布漂移和信用分配风险，但不能把研究目标写成“证明漂移完全消失”或“证明任意训练必然收敛”。路径变化本身可以存在；关键在于它是否仍保持声明的宏观功能 contract。
+
+令 $\mathcal U$ 为待比较的有限 chunk 输入集合，$\mathcal C$ 为合法左边界状态集合，$\mathcal H_{\mathrm{out}}$ 为赋范输出空间，$\Omega$ 为某个固定有限模型的合法 route artifact 集合。对每个 $\omega\in\Omega$，定义强制使用该 artifact 时的输出函数
+
+$$
+F_\omega:
+\mathcal U\times\mathcal C
+\to
+\mathcal H_{\mathrm{out}}.
+$$
+
+再定义非负路径差异函数
+
+$$
+d_{\mathrm{route}}:
+\Omega\times\Omega
+\to
+\mathbb R_{\geq 0},
+\qquad
+d_{\mathrm{route}}(\omega,\omega)=0.
+$$
+
+它可以取为各局部 merge 段 active-set 对称差大小之和。本文不要求它一定满足三角不等式，因此称为差异函数而不是默认称为度量。定义固定输入与边界状态上的换路扰动：
+
+$$
+J(\omega,\omega';x,C)
+=
+\left\|
+F_\omega(x;C)
+-
+F_{\omega'}(x;C)
+\right\|.
+\tag{T-14.20}
+$$
+
+令 $\mathcal P$ 为预先声明的合法比较四元组集合：
+
+$$
+\mathcal P
+\subseteq
+\Omega\times\Omega\times\mathcal U\times\mathcal C.
+$$
+
+一类可以尝试严格证明的结构性充分条件是：存在常数 $\varepsilon\geq 0$，使每个 $(\omega,\omega',x,C)\in\mathcal P$ 都满足
+
+$$
+J(\omega,\omega';x,C)
+\leq
+\varepsilon
+d_{\mathrm{route}}(\omega,\omega').
+\tag{T-14.21}
+$$
+
+本部分式 T-14.9 的 bounded residual 与 Lipschitz fixed merge 是获得局部版本式 T-14.21 的一种方式。它只说明固定模型参数下的换路影响有界，不说明 router 会少换路，也不说明两个 artifact 对任务具有相同质量。不同 checkpoint 之间的完整路径分布漂移还同时改变模型参数，即函数族 $F_\omega$ 本身也会变化；式 T-14.21 只控制其中的 route-sensitivity 分量，不能直接充当完整 checkpoint drift 界。
+
+信用分配可采用另一组结构代理：
+
+1. 每个动态选择在最多 $H$ 个空间深度后进入 fixed merge，即 $D_{\mathrm{control}}\leq H$。
+2. always-on residual backbone 为所有输入保留固定的前向与反向计算路径。
+3. merge-local auxiliary loss 或 teacher target 把某些监督路径长度限制在预先声明范围内。
+4. 训练期 soft/shadow route、较大的 $K$ 或其他 estimator 为未选分支提供受控反事实反馈。
+
+前两项可以作为架构性质证明；第三项可以证明“存在较短监督依赖路径”；第四项可以证明哪些分支被执行并进入 loss。但这些都不能证明梯度数值一定足够大、非凸优化一定收敛、selector 一定形成有用功能或最终质量一定提高。always-on 路径的存在尤其不等于其 Jacobian 不会衰减或抵消。
+
+因此，“Tide 解决了路径漂移和信用分配”应拆成三层结论：
+
+| 层次 | 可以要求的结论 |
+| --- | --- |
+| 数学与架构 | `prefill = decode`、有界连接度、有界控制寿命、换路扰动界、明确状态所有权和监督路径存在性 |
+| 训练实验 | route churn、边界跳变量、梯度覆盖、输入分布漂移和最终质量处于可接受范围 |
+| 系统实验 | 跳过的工作大于 selector、packing、通信和负载不均衡开销，得到实际端到端收益 |
+
+只有三层同时成立，局部计算介质才算在一个具体模型规模、任务和硬件平台上得到证真；单独证明 DAG correctness 或单独观察训练 loss 正常都不充分。
+
+#### 14.18 狭窄中间粒度假设
+
+人脑的两种尺度观察，对粗粒度 hard node 提供的是有限但重要的反向证据，而不是一个否定定理。
+
+第一，单神经元 spike、群体稀疏与稠密 hidden vector 中大量小坐标都体现了“许多小贡献共同形成宏观表示”的图景。两者并不严格等价：hidden coordinate 没有固定神经元身份，换基后坐标稀疏性也可能改变；但该类比说明，微观贡献的出现和消失通常不会替换完整宏观功能模块。
+
+第二，大尺度功能网络通常表现为持续背景活动之上的增益、耦合和主导程度变化，而不是整个脑区严格从 0 关闭到 1 开启。宏观区域还具有重叠、冗余和多条重汇聚路径。这倾向于反对“独立大模块之间频繁 Top-1 切换天然稳定”的假设，并支持以下 Tide 分解：
+
+~~~text
+Observe / Update：通常仍执行
+ActiveCompute：只在选择后执行昂贵稠密 kernel
+Emit：只在激活后沿固定局部边继续传播
+~~~
+
+该脑科学类比仍不能决定数字模型的最优粒度。人脑的物理基底、能量预算、学习规则和序列处理方式不同，也没有提供 Transformer 式高性能 `prefill` 的范例；基底节、动作提交等系统也确实包含较强的离散门控。因此它只能作为反对粗暴大模块开关、支持群体重叠和持续底座的设计倾向。
+
+Tide 面临的核心冲突可以写成：
+
+> 被跳过的条件分支必须足够昂贵，稀疏执行才有系统收益；但单个分支的语义贡献又必须足够小、不同 active set 必须足够重叠、动态路径必须足够快地 merge，训练和输出才不会因 hard routing 发生不可控跳变。
+
+先固定一个实验 protocol，其中包含任务、数据规模、dense baseline、硬件平台、时间或能耗二选一的收益口径、有限 route 比较集，以及数值越大表示质量越高的质量指标。一个候选 Tide 设计记录 $\xi$ 至少包含合法输入集合 $\mathcal U_\xi$、有限可选 node 集合 $V_\xi^{\mathrm{opt}}$、active-set 函数
+
+$$
+A_\xi:
+\mathcal U_\xi
+\to
+2^{V_\xi^{\mathrm{opt}}},
+$$
+
+以及节点执行成本函数
+
+$$
+\kappa_\xi:
+V_\xi^{\mathrm{opt}}
+\to
+\mathbb R_{>0}.
+$$
+
+这里 $2^{V_\xi^{\mathrm{opt}}}$ 表示 $V_\xi^{\mathrm{opt}}$ 的幂集。令 $\mathfrak X$ 为所有满足以下条件的候选设计记录构成的集合：
+
+1. node 内部的昂贵 kernel 使用稠密计算，node 之间采用固定局部结构。
+2. 动态激活是非平凡的：存在 $x,x'\in\mathcal U_\xi$ 使 $A_\xi(x)\neq A_\xi(x')$。
+3. 确实存在被跳过的正成本工作：存在 $z\in\mathcal U_\xi$ 和 $v\in V_\xi^{\mathrm{opt}}$ 使 $v\notin A_\xi(z)$；由 $\kappa_\xi$ 的值域可知 $\kappa_\xi(v)>0$。
+
+第二、三项共同排除了“所有输入始终走同一路径”和“只做一次静态剪枝”的退化解。对每个 $\xi\in\mathfrak X$ 定义下列函数或统计量：
+
+| 量及值域 | 含义 |
+| --- | --- |
+| $\operatorname{Correct}(\xi)\in\{0,1\}$ | 是否满足 protocol 声明的 chunk correctness；取值为 1 时必须另附证明或验证证书 |
+| $\Delta(\xi)\in\mathbb N$ | 空间 Graph 的最大入度与最大出度二者中的较大值 |
+| $G_{\mathrm{hw}}(\xi)\in\mathbb R$ | 相对 dense baseline 的端到端时间或能耗收益，正值表示有收益 |
+| $J_{\max}(\xi)\in\mathbb R_{\geq 0}$ | protocol 固定有限 route 比较集上的最大换路扰动 |
+| $H_{\mathrm{control}}(\xi)\in\mathbb N$ | 动态选择保持独立路径身份的最大声明寿命 |
+| $Q(\xi)\in\mathbb R$ | protocol 指定的模型质量指标 |
+| $Q_{\mathrm{ref}}\in\mathbb R$ | dense baseline 在同一任务上的质量 |
+
+再给定允许的最大局部度数 $\Delta_0\in\mathbb N_{>0}$、可接受常数 $\varepsilon\geq 0$、$H_0\in\mathbb N$ 和 $\delta\geq 0$。定义候选可行设计集合：
+
+$$
+\begin{aligned}
+\mathfrak X_{\mathrm{feasible}}
+=
+\bigl\{
+\xi\in\mathfrak X:
+&\ \operatorname{Correct}(\xi)=1,\\
+&\ \Delta(\xi)\leq\Delta_0,\\
+&\ G_{\mathrm{hw}}(\xi)>0,\\
+&\ J_{\max}(\xi)\leq\varepsilon,\\
+&\ H_{\mathrm{control}}(\xi)\leq H_0,\\
+&\ Q(\xi)\geq Q_{\mathrm{ref}}-\delta
+\bigr\}.
+\end{aligned}
+\tag{T-14.22}
+$$
+
+> [!important] Tide 狭窄中间粒度假设
+> 对至少一组有实际意义的任务、规模和硬件平台，存在某种设计使 $\mathfrak X_{\mathrm{feasible}}\neq\varnothing$。
+
+这是一项混合数学与经验的可证伪假设，不是当前定理。Correctness、有界连接和有界控制寿命可以形式证明；$G_{\mathrm{hw}}$、$J_{\max}$ 和 $Q$ 必须通过实现与实验测量。当前硬件上该集合可能为空，意味着相应规模下 dense 模型已经处于更合适的粒度；硬件、编译器、packing 方法或模型规模变化后，同一设计族的可行集合也可能从空变为非空。
+
+如果 Tide 最终成功，更准确的结论不是“所有局部稀疏 Graph 都优于 dense 或 MoE”，而是：已经为某个非平凡范围的任务、规模和硬件证实狭窄中间粒度确实存在，并找到了进入该区域的一组结构与训练方法。这本身就是 Tide 最重要的研究结果之一。
+
+#### 14.19 前沿模型提供的现实基线
+
+本小节只记录截至 2026-08-10 可以从官方仓库、模型卡或技术报告确认的结构事实。参数量中的“激活”表示一次 Token 前向实际使用的参数量级，不表示这些参数在训练中都收到同样大小的梯度。Qwen3.8-Max 的完整 checkpoint 配置在该日期尚未公开，因此只记录发布页已经披露的口径，不从第三方推测层数和专家数。
+
+| 模型 | 总参数 / 激活参数 | 稀疏与主干结构 | 与本节直接相关的其他结构 |
+| --- | --- | --- | --- |
+| GLM-5.2 | 744B / 40B | 78 个主干层，前 3 层为 dense；MoE 层含 256 个 routed experts，每 Token 选择 8 个，并有 1 个 shared expert | DSA、IndexShare、1M context |
+| Kimi K3 | 2.8T / 104B | 93 层，896 个 experts，每 Token 选择 16 个，并有 2 个 shared experts；采用 Stable LatentMoE 与 Quantile Balancing | 69 层 KDA 与 24 层 Gated MLA，AttnRes，1M context |
+| DeepSeek-V4-Pro | 1.6T / 49B | 61 层，384 个 experts，每 Token 选择 6 个，并有 1 个 shared expert；前 3 层采用报告声明的 hash routing | CSA/HCA 混合 attention、四流 mHC，1M context |
+| DeepSeek-V4-Flash | 284B / 13B | 43 层，256 个 experts，每 Token 选择 6 个，并有 1 个 shared expert | 与 Pro 同属 V4 架构族的较小版本 |
+| Qwen3.8-Max | 2.4T / 95B | 发布页将其归入 Qwen3.5 路线的 sparse-MoE 架构；截至本节日期，完整权重配置尚未公开 | Gated DeltaNet 与 full attention 的混合主干，1M context |
+
+表中缩写是各模型官方材料中的架构名称。本节不依靠这些缩写的内部细节得出结论；真正相关的共同结构是：这些模型仍把绝大多数计算组织为规则的深度堆叠，每个 MoE 子层从较大的专家集合中选择少数专家，然后立即回到共同 hidden/residual stream。Attention、DeltaNet 或其他序列模块可以变化，但没有把一次专家选择扩展成长期存在、持续限制未来可达节点集合的一般局部 Graph 路径。
+
+这说明前沿模型已经在实践中找到了下列容量与计算折中。设一个 MoE 子层有 $N$ 个大小相近的 routed experts，每个 expert 有 $p$ 个参数，每个 Token 激活 $k$ 个，其中 $k\ll N$。忽略 router、shared expert 和共同主干后，该子层的总参数量与每 Token 激活参数量分别为：
+
+$$
+P_{\mathrm{total}}\asymp Np,
+\qquad
+P_{\mathrm{active}}\asymp kp.
+\tag{T-14.23}
+$$
+
+“容量扩充”指整个输入分布可以使用由 $N$ 个 expert 共同形成的函数族；“单个 expert 的语义贡献”指某个具体 Token 输出中该 expert residual 的影响大小。二者不是同一个量，因此不构成形式矛盾。MoE 不要求每个被选 expert 的贡献都很小；它依靠共同 residual stream、Top-K 加权、shared expert 或 dense 层、短生命周期 merge 和负载控制，把一次离散选择的风险限制在局部子层。该平衡已经被上述模型的训练与部署经验性证实，但没有由此得到“任意 MoE 都稳定”或“任意专家切换都只有小扰动”的定理。
+
+这些模型没有改成 Tide 所设想的局部计算介质，至少有五个现实原因：
+
+1. 规则 block、grouped GEMM、expert parallel 和 all-to-all 已有成熟 kernel、编译器和集群实现。
+2. 每层重新开放完整 expert 候选集合，避免一次早期选择长期限制未来计算能力。
+3. 立即 merge 给下一层提供固定宽度的公共接口，并把离散控制身份限制在一个子层内。
+4. 全局 token 池更容易做容量分配和设备负载均衡；固定局部邻接则必须同时解决局部热点和信息混合。
+5. 规则主干便于复用 checkpoint、训练配方和扩展规律；一般局部 Graph 同时改变优化、通信、状态所有权和 runtime。
+
+这不是局部计算介质不可行的证据。它说明 Tide 主动放弃了 MoE 的部分成熟优势，以换取固定局部通信、长期本地参数/状态和组合式局部路径；因此 Tide 必须额外证明或实验验证局部路径确实带来收益，并把控制寿命、训练稳定性和硬件利用率限制在可接受范围内。
+
+#### 14.20 MoE merge 后保留语义影响，但不保留显式路径身份
+
+考虑 decoder-only 模型第 $\ell$ 个 MoE 子层和 Token 位置 $t$。令 $h_{\ell,t}$ 为 router 的输入表示，$A_{\ell,t}$ 为被选 expert 集合，$g_{\ell,j,t}$ 为 expert $j$ 的权重，$E_{\ell,j}$ 为其函数。省略归一化和其他公共分支后，固定 merge 可以写成：
+
+$$
+h_{\ell,t}^{+}
+=
+h_{\ell,t}
++
+\sum_{j\in A_{\ell,t}}
+g_{\ell,j,t}E_{\ell,j}(h_{\ell,t}).
+\tag{T-14.24}
+$$
+
+下一层 router 读取由 $h_{\ell,t}^{+}$ 继续计算得到的公共表示。因此本层专家选择完全可能改变下一层 expert 集合：
+
+$$
+A_{\ell,t}
+\longrightarrow
+h_{\ell,t}^{+}
+\longrightarrow
+h_{\ell+1,t}
+\longrightarrow
+A_{\ell+1,t}.
+\tag{T-14.25}
+$$
+
+若 $t_A<t_B$ 是两个 Token 位置，位置 $t_A$ 的 expert 输出还可以进入后续层为该位置形成的 K/V 或其他因果状态，再影响位置 $t_B$ 的表示和路由：
+
+$$
+A_{\ell,t_A}
+\longrightarrow
+h_{\ell,t_A}^{+}
+\longrightarrow
+\operatorname{Memory}_{\ell+1}(t_A)
+\longrightarrow
+h_{\ell+1,t_B}
+\longrightarrow
+A_{\ell+1,t_B}.
+\tag{T-14.26}
+$$
+
+所以，“MoE 立即 merge”不表示早期专家选择的语义影响被删除。它仍会引起两类普通的长程影响：一类沿模型深度传播，另一类通过 causal Attention、SSM 或其他序列状态跨 Token 传播；它也可能使下游 router 的输入分布随 checkpoint 改变。
+
+立即 merge 真正删除的是**显式控制路径身份**。式 T-14.24 输出的是共同向量，而不是“当前 Token 仍位于 expert $j$ 的私有子图”这一控制状态。下一层通常重新面对完整候选 expert 集合，不会因为上一层选了 $j$ 就在拓扑上只能访问 $j$ 的后继。因此应同时区分：
+
+| 概念 | merge 后是否继续存在 |
+| --- | --- |
+| expert 产生的数值语义影响 | 可以继续存在，并可影响后续层和后续 Token |
+| 当前 hidden vector 中可由后续网络利用的信息 | 继续存在，但已经进入共同表示 |
+| “上一层选中了哪个 expert”这一显式 route artifact | 通常不作为下一层控制输入继续传递 |
+| 由上一选择直接限定的未来可达节点集合 | 标准 block-local MoE 中不存在；下一层重新选择 |
+
+由此也不能断言标准 MoE 与 Tide “拥有相同的信息量”。标准 MoE 的跨 Token 历史通常保存在公共 Attention K/V、SSM state 或 residual stream 中，expert 本身通常没有独立的单序列持久状态。Tide 可以给每个 node 配置独立的 KV/SSM/局部记忆；上游激活决定哪些 node 收到消息，后来的激活又决定何时读出这些状态。即使两者都满足 causal semantics，它们的状态分解、历史可见性和未来可达集合仍然不同。
+
+若历史负载统计进一步进入 Tide selector，它还是标准 MoE 通常没有的额外控制状态。该状态可以用于序列内负载均衡，但必须成为单序列 reference semantics 的正式组成部分；它不能读取物理 batch 组成或实时设备负载，否则会破坏本部分第 4.3 节要求的 batch 与 chunk 不变性。
+
+#### 14.21 从末级叶子稀疏到一般 Tide 的架构阶梯
+
+为了避免从 dense Transformer 一步跳到长期不收拢的一般 Graph，应把候选架构分成四级。每一级都只在前一级上增加一种新的语义能力，并重新验证质量、训练、`prefill` 和系统收益。
+
+**第 0 级：只有末级叶子稀疏。** 每个层级化分支结构中的所有非叶 node 都常亮，只有最末一级叶 node 可以被 selector 跳过；叶 node 输出立即进入固定 merge，随后返回共同 residual stream。若下一段重新开放全部末级叶候选、叶 node 不保留会在 merge 后改变未来可达集合的私有控制状态，则它在控制拓扑上等价于一个层级化、局部候选的 block-local MoE。这里的“等价”只指发散、稀疏选择、立即 merge 和候选集合重置的结构，不表示两个模型数值函数自动相等。
+
+**第 1 级：有界的层级稀疏分支。** always-on backbone 和各级 hub 保持常亮，允许多个层级出现稀疏叶分支，但每个分支必须在声明的至多 $H$ 个 Graph 深度内进入 fixed merge。它比第 0 级允许更丰富的递归分支，同时仍给控制生命周期一个与 chunk 长度无关的上界。
+
+**第 2 级：接收者门控的局部介质。** 某些非叶 node 也可以不激活；已激活 node 沿全部固定局部出边发送，所有实际收到消息的下游 node 都更新本地状态，但只有被 selector 激活的接收者执行昂贵计算并继续发送。对固定空间 DAG $G=(V,E)$，令 $M_{v,t}$ 为 node $v$ 在逻辑位置 $t$ 收到的有限消息多重集合，$I_{v,t}=\Gamma_v(M_{v,t})$ 为声明的确定性聚合结果，则一个最小 node transition 为：
+
+$$
+\widehat S_{v,t}
+=
+U_v(S_{v,t},I_{v,t}),
+\qquad
+a_{v,t}
+=
+A_v(\widehat S_{v,t},I_{v,t})
+\in
+\{0,1\}.
+\tag{T-14.27}
+$$
+
+当 $a_{v,t}=1$ 时：
+
+$$
+y_{v,t}=F_v(\widehat S_{v,t},I_{v,t}),
+\qquad
+\forall w\in\operatorname{succ}(v),
+\quad
+m_{v\to w,t}=P_{v\to w}(y_{v,t}).
+\tag{T-14.28}
+$$
+
+当 $a_{v,t}=0$ 时，式 T-14.27 的状态更新仍然保留，但不执行式 T-14.28 的昂贵计算和发送。若 $M_{v,t}=\varnothing$，状态保持、decay 或空步更新必须由模型另行声明，不能由 runtime 自行决定。
+
+进入 reference semantics 的 node 状态应写成有限元组：
+
+$$
+S_{v,t}
+=
+\left(
+S_{v,t}^{\mathrm{semantic}},
+S_{v,t}^{\mathrm{load}}
+\right).
+\tag{T-14.29}
+$$
+
+$S^{\mathrm{semantic}}$ 包含 KV、SSM 或其他神经状态；$S^{\mathrm{load}}$ 包含进入 reference semantics 的单序列激活计数、恢复量或能量预算。实现还可以维护另一个 runtime 记录 $R_{v,t}$，用于队列、设备负载和物理调度，但 $R_{v,t}$ 不是 $S_{v,t}$ 的分量，也不能作为 $U_v$、$A_v$ 或 $F_v$ 的输入。式 T-14.27--T-14.29 使“状态更新”与“昂贵激活并继续传播”成为两个不同操作。它比 MoE 更强，因为未激活 node 可以保存以后才被读出的潜在语义影响。
+
+**第 3 级：长期保持路径身份的一般 Tide。** 路由可以在多个局部区域和 Token 之间持续限制未来可达 node，node-local state 与路径历史共同改变后续路由，且没有较短的强制 merge 上界。这一级表达力最强，但路径分布漂移、跨 Token 信用分配、状态存储和 `prefill` 并行都最难；它不应作为第一个 checkpoint-growth 实验。
+
+四级之间的关系不是“越一般越好”。第 0 级是最接近现有 checkpoint 和 MoE 训练经验的起点；第 1 级检验有界递归分支；第 2 级才检验 Tide 特有的 `Observe / Update` 与稀疏继续传播；第 3 级只有在前三级已经给出正面证据后才值得进入。
+
+对第 2 级还必须把三种性能结论分开：
+
+1. **语义正确性**：chunk 执行与逐 Token reference transition 产生相同 artifact。
+2. **空间常数遍历**：固定有限空间 DAG 可以按拓扑序处理，每个 node 对整个 chunk 调用一次或固定次数，空间遍历次数不随 chunk 长度 $L$ 增长。
+3. **node 内 Token 并行**：$U_v$、$A_v$ 和 $F_v$ 具有 causal bulk、scan 或其他可批量代数结构，从而不在 node 内逐 Token 串行。
+
+若每个 node 等待所有前驱产生完整 inbox，按逻辑时间排序并确定性处理，只读取自己的左边界状态、当前 inbox、静态参数和上游结果，那么固定空间 DAG 可以获得前两项。任意 stateful selector 仍可能迫使 node 内按 Token 顺序执行，因此前两项不自动推出第三项。该区分允许第一版先接受 CPU 侧局部顺序 selector，同时保留以后把 Attention、SSM、FFN 和可组合 selector lowering 成批量 kernel 的空间。
+
+#### 14.22 信用分配中的三种距离
+
+“更长距离的信用分配”不是指 node 在欧氏空间中相距更远。令一次有限前向执行展开成事件 DAG $\mathcal D=(\mathcal E,\mathcal A)$，其中 $\mathcal E$ 是有限事件集合，$\mathcal A\subseteq\mathcal E\times\mathcal E$ 是直接依赖边集合。若
+
+$$
+p=(e_0,e_1,\ldots,e_n)
+$$
+
+满足 $(e_i,e_{i+1})\in\mathcal A$，则称 $p$ 为从 $e_0$ 到 $e_n$ 的一条依赖路径，其长度为边数 $n$。一个早期选择事件到最终 loss 事件之间可能有多条路径；残差 backbone 可以提供短路径，状态递推和稀疏分支则可能产生长路径。
+
+为了说明数值梯度，再额外假设每个事件 $e_i$ 产生一个实数 $z_i$，存在可微函数 $f_i$ 使 $z_{i+1}=f_i(z_i)$，并且最终 loss 为可微函数 $\mathcal L(z_n)$。在只有这一条数值依赖链的简化情形，反向信用包含导数连乘：
+
+$$
+\frac{\mathrm d\mathcal L}{\mathrm d z_0}
+=
+\frac{\mathrm d\mathcal L}{\mathrm d z_n}
+\prod_{i=0}^{n-1}
+f_i'(z_i).
+\tag{T-14.30}
+$$
+
+向量值事件把普通导数替换成 Jacobian；一般 DAG 中还要在汇合处对来自不同后继的反向贡献求和。式 T-14.30 只用于说明路径长度为何会影响数值梯度；它不是梯度必然衰减的定理。若某条边来自 hard Top-K 索引，该离散选择本身通常没有普通意义下的导数，还会叠加 selected-only feedback，而不只是导数连乘问题。事件边数还取决于预先选择的事件分解粒度，因此只有在固定同一 reference event schema 后，才能用它比较两个架构。
+
+对 Tide 至少应分别记录三种结构距离：
+
+| 距离 | 含义 | MoE 与 Tide 的主要差别 |
+| --- | --- | --- |
+| 数值语义距离 | 某个中间数值贡献到最终 loss 所经过的 event 边数 | 深层 Transformer、MoE 和 Tide 都可能很长 |
+| 控制寿命 | 一次离散选择仍保持独立路径身份、限制未来候选集合的 Graph 深度 | block-local MoE 通常到本子层 merge 为止；Tide 可以跨多个切片 |
+| 状态读写延迟 | 某个 Token 写入 node 状态，到后续 Token 真正读出该影响之间的位置差 | 标准无独立 expert state 的 MoE 没有这条额外 node-local 链；有状态 Tide 可以很长 |
+
+以两个 Token 位置 $t_A<t_B$ 为例，若 $u$ 在位置 $t_A$ 激活并向 $v$ 发送，$v$ 当时只更新状态，直到位置 $t_B$ 才激活并读出，则存在依赖链：
+
+$$
+a_{u,t_A}
+\longrightarrow
+m_{u\to v,t_A}
+\longrightarrow
+S_{v,t_A}^{+}
+\longrightarrow
+S_{v,t_A+1}
+\longrightarrow
+\cdots
+\longrightarrow
+S_{v,t_B}
+\longrightarrow
+a_{v,t_B}
+\longrightarrow
+y_{v,t_B}
+\longrightarrow
+\mathcal L.
+\tag{T-14.31}
+$$
+
+这里最终训练信号必须区分：位置 $t_A$ 的发送是否有用、$v$ 的哪次状态更新有用、位置 $t_B$ 的激活是否有用，以及中间其他消息对 $S_{v,t_B}$ 各贡献多少。如果训练采用截断反向传播，式 T-14.31 的早期部分还可能根本收不到该 loss；如果 selector 是 hard 的，激活决策又需要 estimator、soft/shadow route 或其他训练机制。
+
+因此，“Tide 比 MoE 有更长的信用分配”只能作如下有条件陈述：
+
+| 架构级别 | 是否必然比标准 MoE 更长 |
+| --- | --- |
+| 第 0 级末级叶子稀疏并立即 merge | 不必然；控制寿命与 block-local MoE 接近 |
+| 第 1 级有界层级分支 | 可能更长，但由声明常数 $H$ 限制 |
+| 第 2 级接收者门控且以后读出 node state | 通常新增跨 Graph 和跨 Token 的信用链，可能明显更长 |
+| 第 3 级长期路径与状态耦合 | 可以随 Graph 深度或 chunk 长度增长；对每个有限 chunk 仍是有限链，但不再有与 $L$ 无关的统一小上界 |
+
+“收到消息总是更新状态”可以减少 node 完全看不到数据的激活饥饿，却不自动解决信用分配。一个长期未激活的 node 即使持续写入状态，也可能直到很晚才通过输出影响 loss；此时梯度只是从“是否写入”问题变成了“哪次写入在以后有用”的延迟归因问题。always-on backbone、频繁 fixed merge、显式限制分支寿命和状态读写延迟、merge-local auxiliary loss，以及从第 0 级逐步增长，分别提供短梯度路径或缩短特定信用链，但都不能单独证明非凸训练必然稳定。
+
 ### 15. 主要参考
 
 - 本地背景报告：[[tide-background-history-and-references#第二部分：人脑信号传播调查|人脑信号传播调查]]
@@ -2082,6 +2577,10 @@ $$
 - STAR: [Rethinking MoE Routing as Structure-Aware Subspace Learning](https://arxiv.org/abs/2606.08814)
 - MCF-MoE: [Multi-level Context Modeling for Consistent Expert Selection in Mixture-of-Experts](https://arxiv.org/abs/2607.16427)
 - Less is MoE: [Trimming Experts in Domain-Specialist Language Models](https://arxiv.org/abs/2606.05538)
+- GLM-5.2: [Official Repository and Release Notes](https://github.com/zai-org/GLM-5)
+- Kimi K3: [Official Repository and Technical Report](https://github.com/MoonshotAI/Kimi-K3)
+- DeepSeek-V4: [Transparency Center](https://www.deepseek.com/transparency/) and [Technical Report](https://arxiv.org/abs/2606.19348)
+- Qwen3.8: [Official Release Blog](https://qwen.ai/blog?id=qwen3.8)
 - Gerstner et al.: [Eligibility Traces and Plasticity on Behavioral Time Scales](https://doi.org/10.3389/fncir.2018.00053)
 - Lillicrap et al.: [Backpropagation and the Brain](https://doi.org/10.1038/s41583-020-0277-3)
 - Turrigiano: [Homeostatic Synaptic Plasticity](https://doi.org/10.1101/cshperspect.a005736)
