@@ -2589,6 +2589,13 @@ $$
 
 ## 第四部分：执行能力与成本模型
 
+> [!important] 本部分的证据层级
+> 本部分同时使用三种不同强度的陈述，后文不得互相替代：
+>
+> - **已证明的语义或复杂度结论**必须给出明确前提，并链接到证明或可检查的等价证书。
+> - **架构设计目标**规定 Tide 希望满足的 contract、gate 和成本账本；它本身不是“某个实现已经达标”的定理。
+> - **经验假设**包括 learning value、训练稳定性、硬件利用率和 scaling behavior，只能由实验与测量支持。
+
 ### 1. Tide 的进一步设计目标
 
 前面的讨论可以收敛为一个比“让一般 Graph 支持 prefill”更严格的目标：
@@ -2676,6 +2683,21 @@ $$
 
 > reference DAG 能否被划分成具有局部等价证书的 regions，并使收缩后的 execution DAG 具有较低 span。
 
+#### 1.3 高性能有限前缀执行的四道 gate
+
+下面四道 gate 是本项目采用的**设计审查框架**，不是一个已经证明为必要且充分的分类定理：
+
+| Gate | 要回答的问题 | 所需证据 |
+| --- | --- | --- |
+| Semantic gate | chunk/window 执行是否保持 reference streaming semantics | event dependency、窗口组合律、完整 artifact 与 continuation equality |
+| Progress gate | 对声明支持的 sealed finite cut，执行是否在有限工作后返回 | bounded rounds、良基秩、guarded delay、有限格、或带终止条件的 solver certificate |
+| Parallel-complexity gate | 在问题规模增长时，work、span、memory 与 communication 是否可接受 | 显式 execution DAG、复杂度推导、fallback critical path 与资源账本 |
+| Hardware-lowering gate | 上述算法能否映射成目标设备上规则且高利用率的实现 | 具体 kernel/layout、端到端 profiling、吞吐、延迟、显存与通信测量 |
+
+Semantic gate 和 Progress gate 主要决定“声明的有限前缀结果是否精确且可返回”；Parallel-complexity gate 与 Hardware-lowering gate 才进一步决定它是否能称为高性能。低理论 span 不推出 GPU/NPU 上的高利用率；反过来，把逐位置串行循环融合进一个 kernel 也不会消除逻辑 span。
+
+通过某一道 gate 的结论必须限定作用域。例如“某个固定 $K$ 的 family 总会终止”属于带前提的 progress 结论；“某个 packed sparse kernel 在 Ascend 上更快”属于特定 shape、dtype、layout 和设备上的经验测量，不能提升为 graph family 的数学定理。
+
 ### 2. 五类 Execution Capability
 
 这些 capability 是 sub-DAG 的 lowering contract，不是没有验证义务的提示标签。
@@ -2687,6 +2709,9 @@ $$
 | `causal-bulk` | 存在已证明等价的 causal chunk operator | attention/conv 等专用 bulk kernel | causal attention、causal convolution |
 | `ready-set-local` | 同一就绪事件集合内没有相互依赖或可见写冲突 | wavefront packing | message-passing round、MoE routing |
 | `sequential-fallback` | 尚无可用的并行等价 lowering | exact sequential execution | 当前 LH persistent selector |
+
+> [!important] SCC 是认证边界，不是第六种 capability
+> `certified SCC` 表示一个多节点循环区域具有明确的 boundary transfer、continuation，以及所声明的 semantic/progress/cost/lowering 证书。它回答“认证和封装的作用域是什么”，不回答“内部怎样并行”。SCC 内部及其边界 lowering 仍须分解为本节已有的五类 capability：例如 fixed-round 展开可使用 `token-local` 与 `ready-set-local`，仿射 recurrence 可使用 `scan-composable`，专用窗口算子可使用 `causal-bulk`，尚无并行证书的迭代则进入 `sequential-fallback`。仅把任意困难循环包成宏节点，不能获得新的性能结论。
 
 #### 2.1 Token-local
 
@@ -2764,9 +2789,9 @@ $$
 
 `layer-local` 是 `ready-set-local` 在规则 Transformer chain 中的特殊情况。一般 Tide Graph 未必具有 layer；它可能按图距离、内部轮次，或者 $(t,r)$ 的反对角线形成 wavefront。
 
-这里的 wavefront 只是调度术语：它表示按依赖关系连续推进的一系列就绪集合，不是消息、持久状态或新的 `frontier` 字段。
+这里的 wavefront 只是调度术语：它表示按依赖关系连续推进的一系列就绪集合，不是消息、持久状态，也不是 `causal input frontier` 或 `progress frontier` 字段。
 
-Phase 与就绪集合也不相同。Phase 定义大范围的 barrier、visibility 与 commit order；就绪集合是在满足这些约束后，由实际事件依赖与当前执行进度共同确定的可调度集合。它不是消息的因果前沿 `frontier`。
+Phase 与就绪集合也不相同。Phase 定义大范围的 barrier、visibility 与 commit order；就绪集合是在满足这些约束后，由实际事件依赖与当前执行进度共同确定的可调度集合。它不是消息的 `causal input frontier`。
 
 #### 2.5 Sequential fallback
 
@@ -2865,7 +2890,23 @@ $$
 
 “局部通信 + 超稀疏”主要降低 $W$ 与 $C$；`token-local / scan-composable / causal-bulk / ready-set-local` 主要降低 $D$。只满足前者还不够：一条极稀疏但跨全部 token 的自适应链，work 很小，却无法获得高吞吐 prefill。
 
-可以据此定义三个运行等级：
+#### 5.1 语义与进展能力轴
+
+语义正确、有限前缀能否返回、以及有限输入后是否整体静止，是与性能不同的一条轴。每个模型或 SCC family 应分别声明它支持到哪一层：
+
+| 等级 | Contract | 不自动保证 |
+| --- | --- | --- |
+| `stream-step-exact` | 每个已执行 step/event 的状态、消息、route、commit 与 readout 符合确定的 reference semantics | 任意 sealed finite cut 都能在有限时间推进完成 |
+| `finite-cut-total` | 在 `stream-step-exact` 基础上，对声明输入域中的每个合法 sealed finite cut，`AdvanceUntil(cut)` 在有限工作后返回完整 artifacts、continuation 与 sound progress certificate | 有限输入引发的所有未来内部活动最终静止 |
+| `quiescence-total` | 在声明输入域中，有限且已 seal 的外部输入所引发的全部内部工作最终静止，`RunToQuiescence` 在有限工作后返回 | 低 span、低 work 或高效硬件实现 |
+
+`quiescence-total` 是比“可以不断完成有限 cut”更强的 settling 要求；长期运行但 finite-prefix productive 的流处理可以是 `finite-cut-total` 而非 `quiescence-total`。对只定义了单步 transition、却没有 finite-cut productivity 证明的开放循环，只能声明 `stream-step-exact` 或 experimental/best-effort 范围，不能把“跑了一段时间”报告成 total prefill。
+
+这些标签本身是 contract 名称。只有相应证明、验证或受限输入域证书齐全时，“某个 family 达到该等级”才是可接受的结论。
+
+#### 5.2 Sequence-bulk 性能轴
+
+在独立的性能轴上，可以保留三个运行等级：
 
 | 等级 | 定义 |
 | --- | --- |
@@ -2873,7 +2914,28 @@ $$
 | `prefill-compatible` | chunk correctness 成立，但仍残留少量随 $L$ 增长的 sequential span |
 | `decode-only` | 关键路径基本随 token 数线性增长，chunk 主要只是 fused sequential execution |
 
-### 6. 三类模型如何落入该设计
+这三个标签必须附带 $W,D,C$、memory、shape 与 backend witness。`decode-only` 是 sequence-bulk 性能判断，不是否定 chunk correctness：一个 `finite-cut-total × decode-only` 的实现可以精确返回有限前缀，只是主要沿 token 轴顺序执行。类似地，`stream-step-exact` 也不能推出 `decode-only`；某个 streaming semantics 可能另有经过证明的 native chunk lowering。
+
+#### 5.3 Tide-Prefill 与 Tide-Streaming 是正交组合 profile
+
+`Tide-Prefill` 和 `Tide-Streaming` 不增加第三、第四条战略设计路线。第一部分的 Graph 收缩线与 checkpoint 生长线回答“候选架构从哪里来、怎样演化”；这里的 profile 回答“同一个候选在语义/进展轴与 sequence-bulk 性能轴上承诺什么”。
+
+建议把一次 profile 声明写成显式元组：
+
+$$
+\operatorname{Profile}
+=
+(\text{semantic/progress level},
+ \text{sequence-bulk level},
+ \text{backend/evidence scope}).
+$$
+
+- `Tide-Streaming` 以 `stream-step-exact` 为语义基础，并必须明确它是否进一步达到 `finite-cut-total` 或 `quiescence-total`；严格/production profile 对其声明支持的 cuts 要求 `finite-cut-total`，只有单步正确性而没有 finite-cut progress certificate 的开放 Graph 应标为 `Tide-Streaming-Experimental`。它不承诺通用低 token-axis span，但仍可使用 batch、空间并行、ready-set packing 和 pipeline。
+- `Tide-Prefill` 至少要求 `finite-cut-total` 以及 prefill 后可精确接续 streaming 的 continuation equality；再以 `prefill-native` 作为高性能目标，`prefill-compatible` 作为明确标税的中间态。若只能 `decode-only`，它可以是 exact prefill reference，却不能称为高性能 Tide-Prefill。
+
+二者不是互斥集合。一个 `finite-cut-total × prefill-native` 模型既能以 streaming reference 运行，也满足高性能 prefill profile；一个探索性开放 Graph 则可能只有 `stream-step-exact × decode-only`。SCC certification 只为这个元组提供局部证据，不形成第三条坐标。
+
+### 6. 若干结构化模型如何落入该设计
 
 #### 6.1 GPT-style Transformer
 
@@ -2916,6 +2978,29 @@ $$
 
 当前 LH selector 的困难正是它同时引入 persistent selector state、active-set-dependent future computation 和 conditional memory side effects。它可以被 Tide 正确表达，却暂时只能声明 `sequential-fallback`，直到找到等价的 composable lowering、可验证 speculation，或者重新定义 selector semantics。
 
+#### 6.4 固定 $K$ 轮 GNN / message passing
+
+**结构性结论（带前提）**：若空间图有限、每轮只读取前一轮已提交状态、每个节点和边在一轮内产生有限事件，并且 $K$ 是预先给定的有限值，那么把 round 写入逻辑秩后，$K$ 轮执行可以静态展开为有限 event DAG。原始空间 schema 即使含环，也不会因此产生开放的同刻循环。
+
+这仍不产生新的 execution capability。典型 lowering 是：
+
+- 同一 round 的独立 edge/node events 使用 `ready-set-local`。
+- node update 与 per-message transform 在没有跨位置 mutable dependency 时使用 `token-local`。
+- inbox 若具有已声明的 associative merge，则使用 reduction；否则必须保留 ordered semantics。
+- round 之间的深度至少反映 $K$ 个依赖阶段，除非另有经过证明的跨 round contraction。
+
+固定 $K$ 给出 bounded-unroll 的 progress certificate，不自动给出 `prefill-native`：不规则图布局、聚合热点和跨设备通信仍要通过复杂度与硬件 gate；若另一个 model family 允许 $K$ 随问题规模增长，还必须把这种增长计入 span。它也不构成“GNN 机制具有 learning value”的证据，后者仍是经验问题。
+
+#### 6.5 DEQ / implicit layer
+
+DEQ 更适合被建模为显式 solver-wrapped zero-delay SCC，而不是对环内节点做一次任意拓扑遍历。这里有三项必须分别声明：
+
+1. **Semantic contract**：reference result 是精确固定点，还是由具体 solver、容差、最大迭代数和失败值共同定义的数值结果。
+2. **Progress contract**：收缩映射、单调有限格、受限输入域收敛证明，或语义内的 bounded iteration；“训练时通常收敛”只是经验观察。
+3. **Execution contract**：每次迭代内部继续使用现有五类 capability；迭代链若无额外 contraction，仍是 `sequential-fallback`。把 solver 封装成 SCC 不会隐藏其 work、span 和 memory。
+
+若改变容差、提前停止规则或近似 solver 会改变 reference artifact，就应把它记录为模型/语义变换，而不是 exact lowering。Implicit differentiation 还需要独立的 backward correctness、conditioning 和成本证据；forward fixed-point certificate 本身不证明这些性质，也不证明 DEQ 相对基线的 learning value。
+
 ### 7. 推荐的架构分层
 
 Tide 可以据此划分为六层：
@@ -2938,3 +3023,46 @@ Tide 可以据此划分为六层：
 因此，当前设计目标可以最终概括为：
 
 > “局部通信 + 超稀疏”负责降低 work 和 communication；`token-local / scan-composable / causal-bulk / ready-set-local` 负责降低 span；reference event DAG、capability contract 与局部等价证明负责确保这些优化没有改变 decode semantics。
+
+### 8. Learning value 与 compute-matched 实验
+
+#### 8.1 两类风险必须分开
+
+> [!warning] 研究优先级判断，不是定理
+> Tide 当前的**首要科学风险**是 learning value：局部通信、持久状态、feedback 和动态 routing 是否能被稳定学到，并在能力或泛化上带来相对强基线的可重复收益。首要**规模化风险**是 sequence-level bulk execution：若长序列 forward/backward 只能沿 token 轴串行，可承担的模型、数据、上下文、随机种子和消融数量都会下降。前者不能由并行计算理论证明，后者也不能仅凭小规模 kernel microbenchmark 排除。
+
+Learning value 至少要拆成下列可否证问题：
+
+1. **Optimization**：训练是否稳定，梯度、信用分配、route load 与 state dynamics 是否健康。
+2. **Mechanism use**：模型是否真的使用目标 feedback/state/routing，而不是退化为更简单的近似架构。
+3. **Capability and generalization**：是否改善明确任务能力、长度泛化、组合泛化或分布外行为。
+4. **Efficiency-normalized value**：在匹配训练资源后，优势是否仍存在。
+5. **Scaling behavior**：收益能否随模型、数据与上下文扩大。
+
+“函数类表达力更强”不推出可学习性；一次训练 loss 更低也不推出更好的泛化。相反，实验失败也可能来自 sequence-bulk 受限造成的训练不足，而不是机制本身没有 learning value。Teacher forcing 只提前给出外部 token，不会自动删除模型内部真实的状态、反馈或 routing 依赖。
+
+#### 8.2 Compute-matched 比较套件
+
+Compute-matched evaluation 是**实验设计要求**，不是质量相等或公平性的数学定理。参数、token、FLOPs、显存、能耗和墙钟通常无法在同一对实验里全部同时严格匹配，因此应报告一组互补比较，而不是挑选唯一有利口径：
+
+| 比较视角 | 固定或对齐 | 主要回答 |
+| --- | --- | --- |
+| Capacity-matched | 总参数、激活参数、宽深等主要容量变量 | 收益是否只来自更多参数或更大 active compute |
+| Data-matched | 训练 token、数据顺序/分布与上下文课程 | 在相同数据暴露下是否更有效 |
+| FLOP-matched | 可审计的 forward+backward 训练 FLOPs | 在相近算术预算下是否有质量收益 |
+| Resource-matched | device-hours 或墙钟，并同时报告峰值显存与能耗 | 在现实实验预算下是否可兑现 |
+| Quality-matched | 达到同一验证质量或任务阈值 | 达标所需 token、FLOPs、时间与推理成本 |
+
+每组核心实验至少还应：
+
+- 使用多个随机种子并报告方差或置信区间。
+- 给基线与 Tide 候选合理且可审计的调参预算。
+- 同时报训练曲线、稳定性、吞吐、峰值显存、通信和长上下文成本。
+- 做机制消融与 counterfactual probe，例如冻结/清零长期状态、约束反馈、替换 learned route、缩短迭代次数，确认目标机制确实承担收益。
+- 分开报告 in-distribution quality、长度/组合泛化和 scaling trend，避免用单一 benchmark 汇总 learning value。
+
+#### 8.3 阶段性投入规则
+
+一个保守的**研究策略**是先用 `stream-step-exact` reference 和可承受的小规模实验否证 learning hypothesis；出现可重复机制信号后，再投入 ragged batching、SCC 专用 lowering 和多设备 runtime，并尝试把有效机制约束为 bounded、scan-composable 或 causal-bulk family。若约束、蒸馏或近似改变 reference semantics，它是新的模型变换，必须重新比较 quality 与 continuation，而不能记作原模型的 exact optimization。
+
+这套策略不预设 Tide-Prefill 或 Tide-Streaming 最终更优。它只要求每次研究声明同时给出：科学假设、语义/进展等级、sequence-bulk 等级、计算预算和证据状态。

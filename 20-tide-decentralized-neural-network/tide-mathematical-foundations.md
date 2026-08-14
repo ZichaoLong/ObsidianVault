@@ -14,10 +14,10 @@ tags:
 # Tide 数学基础
 
 > [!summary] 本页定位
-> 本页是 Tide 正向数学主线的唯一正式入口。它依次定义单步 transition、顺序 fold、kernel 级 chunk 正确性、有限 logical event DAG、显式 allocator 的一般空间 DAG，以及 checkpoint 函数保持生长与有限 DAG 节点细化。自适应路由的通用下界独立见 [[adaptive-routing-prefill-lower-bound]]。
+> 本页是 Tide 正向数学主线的唯一正式入口。它依次定义单步 transition、顺序 fold、kernel 级 chunk 正确性、有限 logical event DAG、显式 allocator 的一般空间 DAG、structural SCC 与 finite-cut 宏节点契约，以及 checkpoint 函数保持生长与有限 DAG 节点细化。自适应路由的通用下界独立见 [[adaptive-routing-prefill-lower-bound]]。
 
 > [!important] 证明状态
-> StepTransition、B0 kernel family 与一般空间 DAG 的既有定理按原证明保留。第五部分新增的精确状态嵌入、DAG 节点细化和 token-local 固定 merge 闭包只在各自明示前提下成立。显式 allocator 的拓扑序构造只证明空间遍历次数不随 chunk 长度增长；时间分块组合律仍是额外义务，不能由空间 DAG 自动推出。
+> StepTransition、B0 kernel family 与一般空间 DAG 的既有定理按原证明保留。第五部分的精确状态嵌入、DAG 节点细化和 token-local 固定 merge 闭包只在各自明示前提下成立。显式 allocator 的拓扑序构造只证明空间遍历次数不随 chunk 长度增长；时间分块组合律仍是额外义务，不能由空间 DAG 自动推出。结构 SCC 与 condensation DAG 的图论结论已证明；finite-cut 宏节点组合与 `prefill + streaming` 接续仍是明示的 theorem obligation。
 
 ## 第一部分：StepTransition、kernel 与 logical event DAG
 
@@ -35,8 +35,11 @@ tags:
 > [!important] 对象层级约定
 > 本页区分输入位置、输入值、空间节点与逻辑事件：$t$ 是输入位置，$x_t$ 是输入值，二者都不是计算轨迹；空间图的节点是可复用计算位置，逻辑事件 DAG 的顶点是一次有限执行中的事件。数学符号 $\mathcal S$ 表示在相邻 transition 调用之间传递的 **transition-state 容器**；其中只有旧值能够影响下一步语义的分量才称为**持久上下文**。B0 为统一表达而把会被 `Init` 无条件覆盖的当前步 activation slot 也放进 $\mathcal S$，但它不承载跨步历史。临时工作区、局部输出记录、消息和事件值若不属于返回的 $\mathcal S$，则不自动成为 transition state 或持久上下文。本页需要的这些区分均在本页相应定义中重新给出，不以其他文档为定义来源。
 
+> [!important] 归属、依赖与进展术语
+> 本页严格区分四类元数据：`owner label set` 是对外归属或联合处理标签，不声称数值依赖；`dependency support` 是数值可能实质依赖的输入位置集；`causal input frontier` 是该依赖集的输入前缀上界；`progress frontier / output watermark` 是“未来不再出现某个 cut 之前的输入或输出”的负信息。前三者描述归属或因果，第四者描述完成进度；它们都不是物理完成时间，也不得继续共用裸名 `support` 或 `frontier`。
+
 > [!roadmap] 当前形式化边界
-> 第一部分定义顺序折叠、分块正确性、语义商、有限 logical event DAG、主力 kernel family 与步骤模拟；第二部分定义可从任意全局位置开始的一般空间 DAG 窗口执行；第三部分给出可选归属与因果证书；第四部分规定有限事件展开和 zero-delay 强连通分量的 strict-core 边界；第五部分定义 checkpoint transition 的精确状态嵌入、有限 DAG 节点细化和 token-local 固定 merge 分支的 chunk 闭包。一般动态事件生成、任意有环拓扑和定点 kernel 仍未形成统一的高性能 prefill 定理。
+> 第一部分定义顺序折叠、分块正确性、语义商、有限 logical event DAG、主力 kernel family 与步骤模拟；第二部分定义可从任意全局位置开始的一般空间 DAG 窗口执行；第三部分给出可选归属与因果证书；第四部分区分 structural SCC、zero-delay SCC 与动态事件 DAG，并给出 condensation DAG、多端口边界与 finite-cut 宏节点契约；第五部分定义 checkpoint transition 的精确状态嵌入、有限 DAG 节点细化和 token-local 固定 merge 分支的 chunk 闭包。一般动态事件生成、任意有环拓扑和定点 kernel 仍未形成统一的高性能 prefill 定理。
 
 > [!important] 证否边界
 > 本页以构造性 correctness 为主。任意黑盒自适应 routing 在 exact、work-efficient 前提下为何不能获得次线性 adaptive-depth prefill，见独立数学文档 [[adaptive-routing-prefill-lower-bound]]。该下界不自动等价于具体 LH selector 的不可能性结论。
@@ -783,7 +786,7 @@ $$
 
 本节使用 $e,n,m$ 表示 logical event DAG 的事件顶点标识符，不表示 B0 空间图中的空间节点。事件顶点的局部值由后文的 $F_n$ 计算；实现若另外保存事件头，则完整事件记录是“事件标识符、依赖元数据与该局部值”组成的有限元组，而不是一个新的空间节点。
 
-给定长度 $L\in\mathbb{N}$，定义 frontier index space：
+给定长度 $L\in\mathbb{N}$，定义 causal-input-frontier index space：
 
 $$
 \mathbb F_L
@@ -804,14 +807,14 @@ $$
 $$
 
 $$
-\operatorname{support}(e)\subseteq[L],
+\operatorname{ownerLabels}(e)\subseteq[L],
 $$
 
 $$
-\operatorname{frontier}(e)\in\mathbb F_L.
+\operatorname{causalInputFrontier}(e)\in\mathbb F_L.
 $$
 
-$\operatorname{support}(e)$ 表示该事件顶点直接联合处理或在外部接口上标识的 `owner` 索引；$\operatorname{frontier}(e)$ 表示事件值对输入前缀的保守依赖上界。支持集不是实际依赖集合，也不能用整个前缀集合代替因果前沿；语义融合还可能产生不属于输入支持集的提升后输出 `owner`。
+$\operatorname{ownerLabels}(e)$ 表示该事件顶点直接联合处理或在外部接口上标识的 `owner` 索引；它是 owner-label set，不是数值依赖集。$\operatorname{causalInputFrontier}(e)$ 表示事件值对输入前缀的保守依赖上界。语义融合可以产生不在 owner-label set 中的提升后输出 `owner`；反之，某个 owner label 也不声称数值必然依赖该位置。若需声明精确或保守数值依赖，使用第三部分的 $\operatorname{dependencySupport}$。
 
 给定 logical event order：
 
@@ -847,13 +850,13 @@ $$
 e=(t,o)
 $$
 
-其中 $o$ 是 token-local operation slot，$\operatorname{support}(e)=\{t\}$，$\operatorname{frontier}(e)=t$。固定周期 Tide event 可取：
+其中 $o$ 是 token-local operation slot，$\operatorname{ownerLabels}(e)=\{t\}$，$\operatorname{causalInputFrontier}(e)=t$。固定周期 Tide event 可取：
 
 $$
-e=(\text{kind},\text{spatial node},\text{absolute round},\text{phase},\text{owner support})
+e=(\text{kind},\text{spatial node},\text{absolute round},\text{phase},\text{owner label set})
 $$
 
-其中第二个坐标是空间节点位置；并把 absolute round 与 phase 放入 $\operatorname{time}(e)$。这样输入位置索引、逻辑时间与因果前沿不再复用同一个符号。
+其中第二个坐标是空间节点位置；并把 absolute round 与 phase 放入 $\operatorname{time}(e)$。这样输入位置索引、逻辑时间与 causal input frontier 不再复用同一个符号。
 
 这里定义的是某次有限执行已经实例化后的逻辑事件，不要求 Tide 静态空间图本身无环，也不要求运行时在执行前预先枚举完整路径。未来若允许选择器在线生成事件，需要额外证明：该次执行终止、事件集合有限，并且每条依赖严格推进某个良基逻辑秩。普通 CFG / recurrent graph 的回边可以通过输入位置、内部轮次或迭代索引展开；同一逻辑秩内的零时延环不在当前定义覆盖范围内。
 
@@ -874,7 +877,7 @@ $$
 1. $D_L$ 是有向无环图。
 2. 若 $(e',e)\in\mathcal{E}_L$，则 $e'\prec_L e$。
 
-DAG 条件 2 表示依赖只来自 reference logical order 中更早的 event。物理执行可以乱序，但逻辑依赖必须映射回这个 DAG。一般 kernel 可以通过 overwrite、mask 或已证明的 projection 得到更小 frontier；只有特定 monotone-frontier profile 才额外要求 dependency edge 上 frontier 单调。
+DAG 条件 2 表示依赖只来自 reference logical order 中更早的 event。物理执行可以乱序，但逻辑依赖必须映射回这个 DAG。一般 kernel 可以通过 overwrite、mask 或已证明的 projection 得到更小 causal input frontier；只有特定 monotone-causal-frontier profile 才额外要求 dependency edge 上 causal input frontier 单调。
 
 对任意事件顶点 $n\in\mathcal{N}_L$，定义直接前驱集合：
 
@@ -912,7 +915,7 @@ $$
 还要求每个 $F_n$ 满足 prefix-causal boundary condition。令：
 
 $$
-c=\operatorname{frontier}(n).
+c=\operatorname{causalInputFrontier}(n).
 $$
 
 则 $F_n$ 对 $x_{0:L}$ 的依赖只能通过前缀 $x_{0:c+1}$；当 $c=-1$ 时，它不能读取任何 input token。若 $c\geq 0$，形式化地说，若两个输入序列 $x_{0:L}$ 与 $\bar{x}_{0:L}$ 满足：
@@ -2585,13 +2588,13 @@ $$
 
 ### 7. 第一部分之后的完成项与未决项
 
-整合后的第四部分已经给出有限事件秩引理、zero-delay 环没有普通拓扑求值顺序的命题，以及禁止隐藏恢复成本的 strict-core 约束。第二部分已经给出显式 allocator 空间 DAG 的拓扑序构造。它们不应继续列为“尚未开始”的候选。
+整合后的第四部分已经给出有限事件秩引理、structural SCC 及 condensation-DAG 定理、zero-delay 环没有普通拓扑求值顺序的命题，以及禁止隐藏恢复成本的 strict-core 约束。第二部分已经给出显式 allocator 空间 DAG 的拓扑序构造。这些图论和空间构造结果不应继续列为“尚未开始”的候选；但 finite-cut 宏组合与 streaming 接续仍只有契约和 proof gate。
 
 当前仍需证明或实现的目标是：
 
 1. **Dependency-Complete Local Refinement Theorem**：把第一部分已有的 event-DAG、quotient 与 simulation 结果整理为一个显式覆盖数据、状态、控制、可见性和提交依赖的局部 refinement 定理。
-2. **Allocator 时间分块组合律**：定义逐绝对轮次节点参考转移，并证明第二部分式 A-6.3，而不是把节点分块等价直接作为前提。
-3. **Dynamic/Cyclic Tide Instantiation**：对带正时延反馈的静态环给出有限窗口展开与 boundary-state contract；零延迟 SCC 只允许进入独立 implicit-kernel family。
+2. **Allocator 时间分块组合律**：实例化候选命题 6.5 的六项 proof gate，定义逐绝对轮次节点参考转移，并证明第二部分式 A-6.3。
+3. **Certified SCC Composition**：实例化定义 D.8--D.12，并证明候选命题 D.13--D.14；零延迟 SCC 只允许进入独立 implicit-kernel family。
 4. **Capability Witness**：为 mailbox、phase、selector、readout、pronounce 及主力 node kernel 分别给出低-span lowering 或显式 sequential fallback 成本。
 5. **Backward 与数值语义**：在 exact reference contract 稳定后，再声明浮点容差、梯度边界、重计算和跨 chunk BPTT 规则。
 
@@ -2602,7 +2605,7 @@ $$
 
 
 > [!summary] 本页定位
-> 本部分是 Tide `prefill / decode` 正向设计的当前主线候选。它先把最低层模型收缩为：有限空间 DAG、单位边时延、节点持有状态、带到达轮次的消息、边界延续状态、显式 allocator 节点和节点级 artifact equality。`owner / frontier` 不作为本部分核心前提；它们是第三部分用于证明 token 因果性、读出归因和细粒度调试的增强字段。
+> 本部分是 Tide `prefill / decode` 正向设计的当前主线候选。它先把最低层模型收缩为：有限空间 DAG、单位边时延、节点持有状态、带到达轮次的消息、边界延续状态、显式 allocator 节点和节点级 artifact equality。`owner label / dependency support / causal input frontier` 不作为本部分核心前提；它们是第三部分用于证明 token 因果性、读出归因和细粒度调试的增强字段。
 
 > [!important] 核心结论
 > 显式 allocator 方案可以处理不等长路径。只要空间图是 DAG，allocator 也是 DAG 中的普通节点，并且每个窗口级节点转导器只读取自己的左边界状态与拓扑上游消息，那么窗口执行方程可以按节点拓扑序唯一构造。一次 chunk 调度只需调用每个节点一次；每个节点内部可以批量处理当前 chunk 中到达本节点的所有消息。
@@ -3901,6 +3904,67 @@ $$
 
 命题 6.4 表明，当前主定理严格证明的是空间调度性质。下一步若要证明 `prefill = decode`，必须再给出逐绝对轮次的节点参考转移，并证明 $\operatorname{Ref}_{v,B,L}$ 是这些逐轮转移在 $\mathbb T_{B,L}$ 上的折叠；或者直接证明整个窗口转导族满足式 A-6.3。只有在加入这一层之后，才可以把节点拓扑序 chunk 执行称为逐轮 decode 执行的等价重排。
 
+#### 候选命题 6.5：逐逻辑时间节点 fold 推出全 DAG 窗口组合的 proof gate（尚未证明）
+
+`Ref` “可以被实现成一个 fold”只是直观，不是当前定义已经提供的性质。为了把两层循环：
+
+```text
+for logical_time in [a,b):
+  for node in spatial_topological_order:
+    step(node, logical_time)
+```
+
+交换为：
+
+```text
+for node in spatial_topological_order:
+  fold(node, [a,b))
+```
+
+每个具体 DAG profile 至少必须实例化并证明下列六项义务。
+
+1. **逐时刻状态类型**。对每个 $v\in V$ 给出完整局部 continuation 集 $\mathcal K_v$；它包含 $\mathcal S_v$ 及所有 pending event、timer、staged write 与局部在途工作。若某 profile 没有这些坐标，可取 $\mathcal K_v=\mathcal S_v$，但不能默认丢弃它们。
+2. **逐时刻转移**。对每个绝对轮次 $\tau$ 给出确定函数
+
+   $$
+   \delta_{v,\tau}:
+   \mathcal K_v\times\mathsf{Bucket}_{v,\tau}
+   \longrightarrow
+   \mathcal K_v\times\mathsf{TimedArtifact}_{v,\tau},
+   \tag{O-6.5a}
+   $$
+
+   并给出同一时间桶的 canonical source order，或者证明桶内 merge 可交换且可结合。
+3. **节点 fold certificate**。对任意切面 $a<c<b$，将输入桶序列按时间切分后，$\operatorname{Ref}_{v,[a,b)}$ 必须精确等于依次应用式 O-6.5a 的 fold，且满足：
+
+   $$
+   \operatorname{Fold}_{v,[a,b)}
+   =
+   \operatorname{Fold}_{v,[c,b)}
+   \circ
+   \operatorname{Fold}_{v,[a,c)}.
+   \tag{O-6.5b}
+   $$
+
+   这里的等号比较完整 timed artifact 与 continuation，不只比较最后节点状态。
+4. **cut-完整 artifact 代数**。必须为 output、commit、route、message 和 pending work 定义按逻辑时间的 restriction 与规范拼接 $\mathbin{\Vert}$，并证明区间分解：
+
+   $$
+   \mathbf A_{v,[a,b)}
+   =
+   \mathbf A_{v,[a,c)}\mathbin{\Vert}
+   \mathbf A_{v,[c,b)}.
+   \tag{O-6.5c}
+   $$
+
+   在切面 $c$ 尚未可见的对象必须进入 continuation，不能被归入任意一边后丢失。
+5. **依赖完备与 no-backdating**。所有跨节点 data、state、control、visibility 与 commit 依赖都必须出现在空间 DAG 中；节点在轮次 $\tau$ 产生的消息不得在任意 $\tau'<\tau$ 可见。当前单位时延规则 $\operatorname{arrival}(m)=\operatorname{send}(m)+1$ 满足后一条，但不自动证明前一条。
+6. **cut 封闭与读出稳定**。进入节点 fold 前，它在 $[a,b)$ 内可见的全部上游输入必须已经封闭；已提交的 $y_t$ 不得被切面右侧的事件修订。对一般宏节点，这一负信息必须由第四部分的 source seal 与 output watermark 承载。
+
+**候选结论。** 若对一个有限空间 DAG 完成上述六项实例化，则预期可以按空间拓扑序归纳：上游节点的式 O-6.5c 使下游节点在长窗口与两个短窗口中收到相同的时间桶；再用该下游节点的式 O-6.5b 与 O-6.5c，可把等价性传到其出站 artifact。有限拓扑序归纳完成后，式 A-6.3 成立。
+
+**当前缺口。** 上一段不是定理证明，因为当前基础类型尚未实例化式 O-6.5a--O-6.5c：$\operatorname{Ref}_{v,B,L}$ 仍是可以查看整个窗口的原始函数；非输出节点的 $\mathsf{Out}_{v,B,L}$ 没有强制逻辑时间坐标；$\mathsf{Cont}_b$ 没有 pending event 或 source seal 坐标；本页也尚未给出一个将全部 artifact 按 cut 限制的统一类型。在这些对象被具体 profile 定义并逐项证明之前，“每个节点都能 fold”不得被引用为全 DAG `prefill = decode` 定理。
+
 ### 7. 不等长路径如何进入模型
 
 #### 7.1 不等长路径不是 allocator 的障碍
@@ -4088,16 +4152,16 @@ allocator 的路由记录由 $\operatorname{routes}_{v,B,L}$ 给出；实际发�
 
 <div class="qed" aria-label="证毕">∎</div>
 
-### 10. `owner / frontier` 在本页之外的位置
+### 10. `owner label / dependency support / causal input frontier` 在基础 DAG 之外的位置
 
-本页最低层模型没有使用 `owner / frontier`。这不是说它们无用，而是把职责分开：
+本部分的最低层模型没有使用 `owner label / dependency support / causal input frontier`。这不是说它们无用，而是把职责分开：
 
 1. 一般空间 DAG、不等长路径、显式 allocator 和跨 chunk 在途消息，只需要消息标识符、到达轮次、源节点、目标节点和载荷。
-2. 若要证明自回归 token-prefix causality，需要额外说明每个输出 $y_t$ 不能依赖 $x_{t+1},x_{t+2},\ldots$。这可以通过 `owner / frontier` 字段证明，也可以通过其他因果证书证明。
-3. 若要调试同一轮次多 token 消息的归属、融合输出、读出归因或 prefix leakage，`owner / frontier / support` 是有用的增强字段。
-4. 若加入这些字段，它们应作为消息记录和局部输出记录的额外坐标，而不改变本页的空间 DAG、节点状态、边界延续状态和 artifact equality 主结构。
+2. 若要证明自回归 token-prefix causality，需要额外说明每个输出 $y_t$ 不能依赖 $x_{t+1},x_{t+2},\ldots$。这可以通过 `dependency support / causal input frontier` 字段证明，也可以通过其他因果证书证明；`owner` 本身不是依赖证书。
+3. 若要调试同一轮次多 token 消息的归属、融合输出、读出归因或 prefix leakage，这三类字段各自有用，但不得互相代替。
+4. 若加入这些字段，它们应作为消息记录和局部输出记录的额外坐标，而不改变本部分的空间 DAG、节点状态、边界延续状态和 artifact equality 主结构。
 
-因此，第三部分作为本模型的增强语义层：它处理 token 归属、因果前沿、同刻融合与更细读出约束；第二部分则保留当前主线所需的最低空间 DAG 与显式 allocator 框架。
+因此，第三部分作为本模型的增强语义层：它处理 token 归属、dependency support、causal input frontier、同刻融合与更细读出约束；第二部分则保留当前主线所需的最低空间 DAG 与显式 allocator 框架。
 
 ### 11. 当前设计边界
 
@@ -4146,7 +4210,11 @@ $$
 \{A\subseteq\mathbb N\mid A\text{ 是有限集合}\}.
 $$
 
-定义增强消息集合：
+定义 causal-input-frontier 值域与增强消息集合：
+
+$$
+\mathbb F_{\infty}=\{-1\}\cup\mathbb N,
+$$
 
 $$
 \mathsf{Msg}_G^+
@@ -4154,7 +4222,7 @@ $$
 \mathsf{Msg}_G
 \times\mathbb N
 \times\mathcal P_{\mathrm{fin}}(\mathbb N)
-\times\mathbb N
+\times\mathbb F_{\infty}
 \times\mathsf{EID}.
 \tag{C.1}
 $$
@@ -4169,8 +4237,8 @@ $$
 
 - $m\in\mathsf{Msg}_G$ 是第二部分已经定义的基础消息；
 - $o\in\mathbb N$ 称为 `owner`，是该消息对外声明的输入位置标签；
-- $P\in\mathcal P_{\mathrm{fin}}(\mathbb N)$ 称为声明输入支撑集；
-- $c\in\mathbb N$ 称为因果前沿上界；
+- $P\in\mathcal P_{\mathrm{fin}}(\mathbb N)$ 称为声明 dependency support；
+- $c\in\mathbb F_{\infty}$ 称为 causal input frontier；$c=-1$ 表示声明不依赖任何输入位置；
 - $e\in\mathsf{EID}$ 是生产该消息的事件标识符。
 
 定义投影函数：
@@ -4180,11 +4248,11 @@ $$
 \quad
 \operatorname{owner}(m^+)=o,
 \quad
-\operatorname{support}(m^+)=P,
+\operatorname{dependencySupport}(m^+)=P,
 $$
 
 $$
-\operatorname{frontier}(m^+)=c,
+\operatorname{causalInputFrontier}(m^+)=c,
 \quad
 \operatorname{producer}(m^+)=e.
 $$
@@ -4192,15 +4260,13 @@ $$
 称 $m^+$ 合法，当且仅当：
 
 $$
-o\le c
-\quad\text{且}\quad
-\forall p\in P, p\le c.
+\forall p\in P,\ p\le c.
 \tag{C.2}
 $$
 
-`owner`、输入支撑集和生产事件是三个不同对象。相同 `owner` 可以沿不同路径产生多条消息；一个融合消息可以有单一 `owner`，同时让输入支撑集包含多个位置；生产事件标识符也不能由 `owner` 或因果前沿唯一恢复。
+`owner`、dependency support、causal input frontier 和生产事件是四个不同对象。相同 `owner` 可以沿不同路径产生多条消息；一个融合消息可以有单一 `owner`，同时让 dependency support 包含多个位置；`owner` 不必属于 dependency support，也不受 causal input frontier 上界约束。若 $c=-1$，式 C.2 强制 $P=\varnothing$。生产事件标识符同样不能由前三者唯一恢复。
 
-### 定义 C.2：精确支撑与保守支撑
+### 定义 C.2：精确与保守 dependency support
 
 给定非空有限位置集合 $J\subseteq\mathbb N$。对每个 $j\in J$，给定非空输入值集合 $X_j$。定义有限乘积集合：
 
@@ -4225,7 +4291,7 @@ f(x)\ne f(x').
 \tag{C.3}
 $$
 
-定义 $f$ 的精确输入支撑集：
+定义 $f$ 的精确 dependency support：
 
 $$
 \operatorname{Ess}(f)
@@ -4234,19 +4300,19 @@ $$
 \tag{C.4}
 $$
 
-若增强消息 $m^+$ 的基础载荷由函数 $f$ 产生，则称声明集合 $P=\operatorname{support}(m^+)$ 是精确支撑，当且仅当：
+若增强消息 $m^+$ 的基础载荷由函数 $f$ 产生，则称声明集合 $P=\operatorname{dependencySupport}(m^+)$ 是精确 dependency support，当且仅当：
 
 $$
 P=\operatorname{Ess}(f).
 $$
 
-称 $P$ 是保守支撑，当且仅当：
+称 $P$ 是保守 dependency support，当且仅当：
 
 $$
 \operatorname{Ess}(f)\subseteq P.
 $$
 
-若 $P$ 是保守支撑且 $m^+$ 满足式 C.2，则 $\operatorname{frontier}(m^+)$ 是保守因果前沿。工程实现可以只维护保守前沿；形式化调试、归因或 prefix-leakage 定位可以维护完整支撑集。两者都不是物理完成时间，也不是消息到达轮次。
+若 $P$ 是保守 dependency support 且 $m^+$ 满足式 C.2，则 $\operatorname{causalInputFrontier}(m^+)$ 是保守 causal input frontier。工程实现可以只维护该上界；形式化调试、归因或 prefix-leakage 定位可以维护完整 dependency support。两者都不是物理完成时间、消息到达轮次或第四部分的 output watermark。
 
 ### 定义 C.3：同一逻辑时刻的多归属输入
 
@@ -4275,11 +4341,10 @@ $$
 \mathsf{OID}
 \times\mathbb N
 \times\mathcal P_{\mathrm{fin}}(\mathbb N)
-\times\mathbb N
+\times\mathbb F_{\infty}
 \times Z_v
 \ \middle|\
-o\le c,
-\ \forall p\in P,\ p\le c
+\forall p\in P,\ p\le c
 \right\}.
 \tag{C.5}
 $$
@@ -4300,11 +4365,11 @@ $$
 
 记录的第一坐标 $\omega\in\mathsf{OID}$ 是局部输出标识符，第二坐标 $o\in\mathbb N$ 才是 `owner`；两者不能互相替代。
 
-若 $P$ 要作为因果证书，则对产生载荷 $z$ 的输出函数，$P$ 必须满足定义 C.2 的保守支撑条件。节点参考转导器还必须声明下列三类中的一类；这三类是对其函数类型和依赖范围的约束：
+若 $P$ 要作为因果证书，则对产生载荷 $z$ 的输出函数，$P$ 必须满足定义 C.2 的保守 dependency-support 条件。节点参考转导器还必须声明下列三类中的一类；这三类是对其函数类型和依赖范围的约束：
 
 1. **分别输出**：$\mathbf z_{v,\tau}$ 可写成按 $o\in O_{v,\tau}$ 的自然数升序连接得到的子序列；归属 $o$ 的子序列只读取 $I_{v,\tau,o}^+$ 和节点左状态。
 2. **联合计算但保留归属**：转导器可以读取整个 $I_{v,\tau}^+$；每条输出记录的 `owner` 必须属于 $O_{v,\tau}$，并且 reference contract 明确每个被保留归属对应哪些输出记录。
-3. **融合输出**：转导器可以读取整个 $I_{v,\tau}^+$，并产生任意有限序列 $\mathbf z_{v,\tau}$；每条输出记录仍必须显式给出 `(owner, support, frontier)` 三个坐标。
+3. **融合输出**：转导器可以读取整个 $I_{v,\tau}^+$，并产生任意有限序列 $\mathbf z_{v,\tau}$；每条输出记录仍必须显式给出 `(owner, dependency support, causal input frontier)` 三个坐标。
 
 这三种选择定义不同的 reference semantics。融合输出若丢失分别输出所需的信息，不能在没有额外证明时声称与分别输出等价。
 
@@ -4316,7 +4381,7 @@ $$
 g_t:\prod_{j\in J_t}X_j\to Y_t.
 $$
 
-给定 $g_t$ 的保守支撑 $P_t\in\mathcal P_{\mathrm{fin}}(\mathbb N)$，即：
+给定 $g_t$ 的保守 dependency support $P_t\in\mathcal P_{\mathrm{fin}}(\mathbb N)$，即：
 
 $$
 \operatorname{Ess}(g_t)\subseteq P_t.
@@ -4435,7 +4500,7 @@ $$
 
 ### 已归档结果 C.6：固定周期 token-owned profile
 
-整合前的 `token-owned-general-dag-routing.md` 还定义过一个更强、也更复杂的固定周期 profile：有限单位时延空间 DAG、按输入位置标记的 `owner/frontier`、显式消息生产者与消费者、边界在途消息、逐节点规范输入序列，以及绝对时间流式调度和节点拓扑序分块调度。该 profile 在以下额外前提下证明两种调度产生相同的事件值、节点提交、读出和右边界延续状态：
+整合前的 `token-owned-general-dag-routing.md` 还定义过一个更强、也更复杂的固定周期 profile：有限单位时延空间 DAG、按输入位置标记的 `owner` 与 causal input frontier、显式消息生产者与消费者、边界在途消息、逐节点规范输入序列，以及绝对时间流式调度和节点拓扑序分块调度。该 profile 在以下额外前提下证明两种调度产生相同的事件值、节点提交、读出和右边界延续状态：
 
 1. 当前窗口产生的事件和消息集合有限。
 2. 所有空间边只指向拓扑序更大的节点。
@@ -4450,7 +4515,7 @@ $$
 
 ---
 
-## 第四部分：有限事件展开与 zero-delay 边界
+## 第四部分：有限事件、structural SCC 与 finite-cut 边界
 
 ### 定义 D.1：有限执行事件图
 
@@ -4513,32 +4578,195 @@ $$
 
 <div class="qed" aria-label="证毕">∎</div>
 
+### 定义 D.3b：带边标识符和端口的有限静态图
+
+为了表达平行边和 SCC 的多端口边界，本部分新建一个不同于第二部分简单边关系的类型。给定：
+
+- 有限非空微节点集 $V$；
+- 有限边标识符集 $A$；
+- 源、目标函数 $s,t:A\to V$；
+- 对每个 $v\in V$，有限输入端口集 $P_v^{\mathrm{in}}$ 和有限输出端口集 $P_v^{\mathrm{out}}$；
+- 边端口函数
+
+  $$
+  p_s:A\to\bigcup_{v\in V}(\{v\}\times P_v^{\mathrm{out}}),
+  \qquad
+  p_t:A\to\bigcup_{v\in V}(\{v\}\times P_v^{\mathrm{in}}),
+  \tag{SCC.1a}
+  $$
+
+  且 $p_s(a)\in\{s(a)\}\times P_{s(a)}^{\mathrm{out}}$、$p_t(a)\in\{t(a)\}\times P_{t(a)}^{\mathrm{in}}$；
+- 边时延 $d:A\to\mathbb N$；
+- 对每个 $a\in A$，非空 payload 集 $\mathcal U_a$。
+
+称：
+
+$$
+\mathfrak G=(V,A,s,t,(P_v^{\mathrm{in}},P_v^{\mathrm{out}})_{v\in V},p_s,p_t,d,(\mathcal U_a)_{a\in A})
+\tag{SCC.1b}
+$$
+
+为有限静态 port multigraph。两条边 $a,a'\in A$ 即使具有相同的源节点、目标节点或端口，只要 $a\ne a'$，仍是两条不同的边。边标识符不得在 SCC 收缩时丢失。
+
+第二部分的简单空间图 $G=(V,E)$ 可以通过取 $A=E$、$s(u,v)=u$、$t(u,v)=v$ 嵌入这个类型，再为每个 incidence 选择端口和时延。这只是一个显式嵌入：定义 D.3b 不静默改写定义 2.1--2.5，也不改变定理 6.1 的既有前提。
+
+### 定义 D.3c：structural SCC
+
+对 $u,v\in V$，称 $u$ 在 $\mathfrak G$ 中可达 $v$，当且仅当存在 $k\in\mathbb N$ 和边序列 $(a_0,\ldots,a_{k-1})\in A^k$ 使：当 $k=0$ 时 $u=v$；当 $k>0$ 时：
+
+$$
+s(a_0)=u,
+\qquad
+t(a_{k-1})=v,
+\qquad
+t(a_i)=s(a_{i+1})\quad(i\in[k-1]).
+\tag{SCC.2a}
+$$
+
+定义关系 $\sim_{\mathfrak G}\ \subseteq V\times V$：
+
+$$
+u\sim_{\mathfrak G}v
+\Longleftrightarrow
+u\text{ 可达 }v
+\text{ 且 }v\text{ 可达 }u.
+\tag{SCC.2b}
+$$
+
+长度为零的路径给出反身性，互达定义给出对称性，路径拼接给出传递性，因而 $\sim_{\mathfrak G}$ 是等价关系。其等价类族记为：
+
+$$
+\mathcal C_{\mathfrak G}=V/{\sim_{\mathfrak G}},
+$$
+
+并称其元素为 $\mathfrak G$ 的 structural strongly connected components，简称 structural SCC。这个分解使用全部静态边 $A$，暂不看边时延。
+
+### 定义 D.3d：condensation graph 与宏边界
+
+对 $C\in\mathcal C_{\mathfrak G}$，定义内部边、输入 cut edges 和输出 cut edges：
+
+$$
+A_C^{\mathrm{int}}
+=\{a\in A\mid s(a)\in C, t(a)\in C\},
+\tag{SCC.3a}
+$$
+
+$$
+P_C^{\mathrm{in}}
+=\{a\in A\mid s(a)\notin C, t(a)\in C\},
+\qquad
+P_C^{\mathrm{out}}
+=\{a\in A\mid s(a)\in C, t(a)\notin C\}.
+\tag{SCC.3b}
+$$
+
+式 SCC.3b 有意把每个 cut-edge identity 作为一个宏端口。该标识符可唯一恢复 $s(a),p_s(a),t(a),p_t(a),d(a)$ 和 payload 类型 $\mathcal U_a$，所以不同内部 endpoint 与平行边不会被宏节点收缩自动 merge。只有在 reference semantics 本就规定 merge，或者另外证明 semantics-preserving quotient 后，才可合并宏端口。
+
+称 SCC $C$ 的通信边界明确，当且仅当：所有跨边界 data、state、control、visibility 和 commit 影响都通过 $P_C^{\mathrm{in}}\cup P_C^{\mathrm{out}}$ 中的显式边；外部节点不直接读写 $C$ 的内部可变状态；并且每个 port 的 endpoint、payload 类型、delay/visibility、source order 与 merge 规则已由 profile 声明。边界可以很宽，“明确”不表示只有一个入口和一个出口。
+
+定义 condensation 边关系：
+
+$$
+E_{\mathrm{cond}}
+=
+\left\{
+(C,D)\in\mathcal C_{\mathfrak G}\times\mathcal C_{\mathfrak G}
+\ \middle|\
+C\ne D,
+\ \exists a\in A:\ s(a)\in C, t(a)\in D
+\right\}.
+\tag{SCC.3c}
+$$
+
+称：
+
+$$
+\operatorname{Cond}(\mathfrak G)
+=(\mathcal C_{\mathfrak G},E_{\mathrm{cond}})
+$$
+
+为 structural condensation graph。$E_{\mathrm{cond}}$ 只记录宏观可达方向；实际通信仍由式 SCC.3b 中互不混淆的 edge-identity ports 承载。
+
+### 定理 D.3e：structural condensation graph 是 DAG
+
+$\operatorname{Cond}(\mathfrak G)$ 是有限有向图且不含有向环。这里的 DAG 取图论中的一般含义；本定理不声称 condensation graph 已经具备定义 2.1 额外要求的指定单一输入、单一输出与全节点可达性。若要复用定理 6.1，还必须显式实例化这些 profile 条件。
+
+**证明。**
+
+反设 condensation graph 含有向环：
+
+$$
+C_0\to C_1\to\cdots\to C_{k-1}\to C_k=C_0,
+\qquad k>0,
+\tag{SCC.4}
+$$
+
+并删除重复片段，使 $C_0,\ldots,C_{k-1}$ 两两不同。根据式 SCC.3c，每一步 $C_i\to C_{i+1}$ 都有一条微观边从 $C_i$ 内节点指向 $C_{i+1}$ 内节点。每个 $C_i$ 内部任意两点互达，因而把分量内路径与这些跨分量边依次拼接，可得环上任意 $C_i$ 中的节点与任意 $C_j$ 中的节点互相可达。于是 $C_0\cup\cdots\cup C_{k-1}$ 应属于同一个 $\sim_{\mathfrak G}$ 等价类，与这些 $C_i$ 两两不同矛盾。故 condensation graph 无环。
+
+<div class="qed" aria-label="证毕">∎</div>
+
+### 例 D.3f：$A,B,C,D$ 的 SCC 与多端口边界
+
+设微节点为 $A,B,C,D$，边标识符分别承载：
+
+$$
+A\to B,
+\qquad B\to A,
+\qquad A\to C,
+\qquad B\to D.
+$$
+
+则 structural SCC 是：
+
+$$
+\{A,B\},
+\qquad
+\{C\},
+\qquad
+\{D\}.
+$$
+
+宏节点 $\{A,B\}$ 有两个不同输出 cut-edge ports：$A\to C$ 保留 $A$ 的内部源 endpoint，$B\to D$ 保留 $B$ 的内部源 endpoint。它们不因来自同一个 SCC 而合并。
+
+若再加入 $C\to D$ 与 $D\to C$，则：
+
+$$
+M_0=\{A,B\},
+\qquad
+M_1=\{C,D\},
+$$
+
+且 condensation graph 只有宏观方向 $M_0\to M_1$，但边界仍保留两条微观连接：
+
+```text
+M0.out[A_to_C] -> M1.in[C_from_A]
+M0.out[B_to_D] -> M1.in[D_from_B]
+```
+
+因为没有从 $C$ 或 $D$ 返回 $A$ 或 $B$ 的路径，四个节点不构成同一 SCC。只有再加入从 $M_1$ 返回 $M_0$ 的可达路径，才会合并成 $\{A,B,C,D\}$。
+
 ### 定义 D.4：带延迟的环与零延迟强连通分量
 
-给定有限静态空间图 $G=(V,E)$。对每条边 $a\in E$，给定非负整数时延：
-
-$$
-d:E\to\mathbb N.
-$$
+给定定义 D.3b 的 port multigraph $\mathfrak G$。
 
 一条有向环称为带延迟环，当环上至少存在一条边 $a$ 满足 $d(a)>0$。一条有向环称为零延迟环，当环上所有边的时延均为零。
 
-定义零延迟边集合和零延迟子图：
+定义零延迟边标识符集合和零延迟子图：
 
 $$
-E_0=\{a\in E\mid d(a)=0\},
+A_0=\{a\in A\mid d(a)=0\},
 \qquad
-G_0=(V,E_0).
+\mathfrak G_0=(V,A_0,s|_{A_0},t|_{A_0}).
 $$
 
-给定非空集合 $W\subseteq V$。称 $W$ 在 $G_0$ 中强连通，当且仅当对任意 $u,v\in W$，$G_0$ 中存在从 $u$ 到 $v$ 的有向路径。称 $W$ 是 $G_0$ 的强连通分量，当且仅当 $W$ 强连通，并且不存在严格包含 $W$ 的强连通集合 $W'\subseteq V$。
+这里只保留了定义强连通性需要的源、目标函数；端口、payload 和边类型仍可由原边标识符恢复。给定非空集合 $W\subseteq V$。称 $W$ 在 $\mathfrak G_0$ 中强连通，当且仅当对任意 $u,v\in W$，$\mathfrak G_0$ 中存在从 $u$ 到 $v$ 的有向路径。称 $W$ 是 $\mathfrak G_0$ 的强连通分量，当且仅当 $W$ 强连通，并且不存在严格包含 $W$ 的强连通集合 $W'\subseteq V$。
 
 称强连通分量 $W$ 是零延迟循环分量，当且仅当：
 
 $$
 |W|>1
 \quad\text{或}\quad
-\bigl(W=\{v\}\text{ 且 }(v,v)\in E_0\bigr).
+\bigl(W=\{v\}\text{ 且 }\exists a\in A_0:\ s(a)=t(a)=v\bigr).
 $$
 
 因此，零延迟循环分量恰好是零延迟子图中包含有向环的强连通分量。
@@ -4550,6 +4778,12 @@ x=F(y,u),
 \qquad
 y=G(x,u).
 $$
+
+structural SCC、zero-delay SCC 和动态 event DAG 是三个不同对象：
+
+1. structural SCC 对静态 schema 的全部边 $A$ 求强连通分量，包含正时延反馈；
+2. zero-delay SCC 只对 $A_0$ 求分量，用于定位同一逻辑时刻内的代数环；
+3. 动态 event DAG 是某次有限执行中已实例化的事件与依赖图。一个含 structural cycle 的 schema 可因版本或正时延展开而在每个有限 cut 上产生 event DAG；反之，静态 schema 是 DAG 也不会自动证明动态事件数有限。
 
 ### 命题 D.5：零延迟环没有普通拓扑求值顺序
 
@@ -4587,8 +4821,230 @@ $$
 
 若实现用 $\alpha(a)$ 代替 $a$，则所有后继 kernel 必须直接在 $\widehat A$ 上实现 reference contract 所需的商语义，或者证明局部交换关系成立。实现不得把昂贵逆问题或信息恢复过程隐藏在后继 kernel 中，再据此宣称上游聚合具有工程价值。即使存在某个逆映射，其 work、span、memory 与 communication 成本也必须进入实现成本账本。
 
+### 定义 D.8：SCC 宏节点的多端口 timed message
+
+固定 structural SCC $C\in\mathcal C_{\mathfrak G}$，并把式 SCC.3b 的 edge-identity 集 $P_C^{\mathrm{in}}$ 与 $P_C^{\mathrm{out}}$ 分别作为宏输入、宏输出 port 集。给定非空消息标识符集 $\mathsf{MID}_C$，定义：
+
+$$
+\mathsf{InMsg}_C
+=
+\bigcup_{a\in P_C^{\mathrm{in}}}
+(\mathsf{MID}_C\times\{a\}\times\mathbb N\times\mathcal U_a),
+\tag{FC.1a}
+$$
+
+$$
+\mathsf{OutMsg}_C
+=
+\bigcup_{a\in P_C^{\mathrm{out}}}
+(\mathsf{MID}_C\times\{a\}\times\mathbb N\times\mathcal U_a).
+\tag{FC.1b}
+$$
+
+记录 $m=(\iota,a,\tau,u)$ 的四个坐标分别是 message identity、edge-identity port、接口逻辑到达时间和 payload。定义投影 $\operatorname{mid}(m)=\iota$、$\operatorname{port}(m)=a$、$\operatorname{itime}(m)=\tau$ 与 $\operatorname{payload}(m)=u$。producer event、send time、owner label 和 dependency support 可作为具体 profile 的额外坐标，但不代替这四个基础坐标。
+
+为了不把 correctness 缩减成“只比较跨 SCC 消息”，每个具体 profile 还必须给出带唯一标识符和接口逻辑时间投影的局部 artifact 集 $\mathsf{LocalArtifact}_C$；它至少覆盖 readout、state commit 与 route decision。定义有限宏 artifact batch 类型：
+
+$$
+\mathsf{MacroArtifactBatch}_C
+=
+\mathcal P_{\mathrm{fin}}(\mathsf{OutMsg}_C)
+\times
+\mathcal P_{\mathrm{fin}}(\mathsf{LocalArtifact}_C).
+\tag{FC.1c}
+$$
+
+式 FC.1c 的第一坐标是跨宏边界输出，第二坐标是对外可观测的局部 artifact。两个坐标的标识符唯一性、同刻顺序与合法性是 profile 必须实例化的类型条件。
+
+一个宏输入可以产生零条、一条或多条输出，同一 SCC 也可以在多个不同接口逻辑时刻发送消息。各 SCC 可使用不同的内部 iteration/event rank；这个内部坐标不必等于 $\operatorname{itime}$。但从内部事件到边界 $\operatorname{itime}$ 的映射、delay 和 visibility 必须是 reference profile 的一部分，不得由物理墙钟完成时间决定。
+
+一个输入或输出 history 是对应消息集的子集 $H$，且具有唯一 message identity。称 $H$ 对逻辑时间局部有限，当且仅当：
+
+$$
+\forall b\in\mathbb N,
+\quad
+\left|\{m\in H\mid\operatorname{itime}(m)<b\}\right|<\infty.
+\tag{FC.2}
+$$
+
+记所有局部有限输入 histories 构成的集合为 $\mathsf{LFHist}_C^{\mathrm{in}}$，输出对应集为 $\mathsf{LFHist}_C^{\mathrm{out}}$。
+
+若需把 history 序列化，profile 必须对 port 和 message identity 给出固定 total order，并按 `(interface time, port order, message-id order)` 得到 canonical sequence；不得使用物理线程完成顺序解除 tie。
+
+### 定义 D.9：source seal、progress frontier 与 hard output watermark
+
+一个宏输入 progress frontier 是逐 port 向量：
+
+$$
+\sigma\in\mathbb N^{P_C^{\mathrm{in}}}.
+$$
+
+对已观测输入 history $H$，source seal $\sigma(a)=b$ 的语义是：任意合法未来扩展 $H'\supseteq H$ 都不得在 port $a$ 上新增 $\operatorname{itime}(m)<b$ 的消息。队列当前为空不是 source seal；seal 承载的是“以后也不会再来”的负信息。
+
+一个宏输出 hard watermark 也是逐 port 向量：
+
+$$
+\omega\in\mathbb N^{P_C^{\mathrm{out}}}.
+$$
+
+$\omega(a)=b$ 的语义是：任意合法后续执行都不得在输出 port $a$ 上新产生 $\operatorname{itime}(m)<b$ 的消息。这里的 $\sigma$ 是 input progress frontier，$\omega$ 是 output progress certificate；它们与 $\operatorname{causalInputFrontier}$ 完全不同，也不是允许迟到数据的启发式 watermark。
+
+### 定义 D.10：宏节点 continuation 与 no-backdating
+
+对 SCC $C$ 给定非空 continuation 集 $\mathcal Q_C$，以及投影：
+
+$$
+\operatorname{acceptedSeal}_C:
+\mathcal Q_C\to\mathbb N^{P_C^{\mathrm{in}}},
+\qquad
+\operatorname{outputWatermark}_C:
+\mathcal Q_C\to\mathbb N^{P_C^{\mathrm{out}}},
+\qquad
+\operatorname{completedCut}_C:
+\mathcal Q_C\to\mathbb N.
+\tag{FC.3}
+$$
+
+$q\in\mathcal Q_C$ 必须是一个 sufficient cut：它包含全部内部微节点的 committed state versions、未消费内部消息、delay buffer、timer、pending event、未公开 staged output、未完成 solver/iteration state 和确定 tie-breaking 所需状态。$\operatorname{completedCut}_C(q)=b$ 表示宏节点内部已完成封闭低于 $b$ 的 reference work；它是即使 $P_C^{\mathrm{out}}=\varnothing$ 也必须存在的内部进展坐标。两段历史若产生同一 continuation，则对任意相同合法未来输入，其后续 reference artifacts 必须相同。这是 continuation sufficiency 义务，不能只靠列出字段名字获得。
+
+称宏节点 profile 满足 no-backdating，当且仅当任意合法后继执行同时满足：
+
+1. 不接受低于 $\operatorname{acceptedSeal}_C(q)$ 的新输入；
+2. 不产生低于 $\operatorname{outputWatermark}_C(q)$ 的新输出；
+3. 已接受 seal 与已发布 output watermark 只能逐 port 单调不降；
+4. 一个内部事件不得产生在 reference causal order 中回到其已封闭逻辑过去的边界消息。
+
+这些规则允许一条消息在 cut 右侧继续循环，但禁止它修订已经被 hard progress certificate 封闭的过去。
+
+### 定义 D.11：finite-cut local finiteness
+
+每个具体 SCC profile 必须为内部事件集 $\mathcal E_C$ 给出接口逻辑秩：
+
+$$
+\lambda_C:\mathcal E_C\to\mathbb N.
+$$
+
+定义 $\mathcal E_C$ 的幂集 $\mathcal P(\mathcal E_C)=\{S\mid S\subseteq\mathcal E_C\}$。具体 profile 还必须给出必需事件集函数：
+
+$$
+\operatorname{NeedEvents}_C:
+\mathcal Q_C\times\mathsf{LFHist}_C^{\mathrm{in}}\times\mathbb N
+\to\mathcal P(\mathcal E_C).
+$$
+
+对 continuation $q$、局部有限的合法输入 history $H$ 与 cut $b\in\mathbb N$，定义为封闭 cut $b$ 而必须实例化的 reference 内部事件集：
+
+$$
+\mathcal E_C^{<b}(q,H)
+=
+\operatorname{NeedEvents}_C(q,H,b).
+$$
+
+称该 profile 对 finite cut 局部有限，当且仅当：
+
+$$
+\forall(q,H,b)\in
+\mathcal Q_C\times\mathsf{LFHist}_C^{\mathrm{in}}\times\mathbb N,
+\qquad
+\left|\mathcal E_C^{<b}(q,H)\right|<\infty.
+\tag{FC.4}
+$$
+
+只证明每条依赖边使 $\lambda_C$ 不减或严格增长仍不够。若 profile 先证明“封闭接口 cut $b$ 只需要 $\lambda_C(e)<g(b)$”，那么由于 $g(b)\in\mathbb N$，相关秩值只有有限多个；但每个有限秩层仍可以因无限 branching 或无限同秩 microsteps 含无限事件。若未证明接口 cut 与内部秩的这种有限上界耦合，则有限 $b$ 甚至可能需要无上界的内部秩。式 FC.4 同时排除这两类失败，是排除有限逻辑时间内 Zeno 执行的独立义务。
+
+### 定义 D.12：`AdvanceUntil` finite-cut 契约
+
+给定非空 completion-certificate 集 $\mathsf{Cert}_C$、合法调用关系：
+
+$$
+\mathsf{Admissible}_C
+\subseteq
+\mathcal Q_C
+\times\mathbb N
+\times\mathcal P_{\mathrm{fin}}(\mathsf{InMsg}_C)
+\times\mathbb N^{P_C^{\mathrm{in}}},
+\tag{FC.5}
+$$
+
+以及部分函数：
+
+$$
+\operatorname{AdvanceUntil}_C:
+\mathsf{Admissible}_C
+\rightharpoonup
+\mathcal Q_C
+\times\mathsf{MacroArtifactBatch}_C
+\times\mathbb N^{P_C^{\mathrm{out}}}
+\times\mathsf{Cert}_C.
+\tag{FC.6}
+$$
+
+四元组 $(q,b,I,\sigma)$ 合法，至少要求 $b\ge\operatorname{completedCut}_C(q)$；$I$ 是 continuation $q$ 尚未消费且接口时间低于 $b$ 的完整新输入；它不违反 $\operatorname{acceptedSeal}_C(q)$；并且对每个 $a\in P_C^{\mathrm{in}}$ 有 $\sigma(a)\ge b$。“完整新输入”必须由消息 identity、已消费集合或等价的 reference-history 定义实例化，不能用“当前队列看起来为空”代替。
+
+若：
+
+$$
+\operatorname{AdvanceUntil}_C(q,b,I,\sigma)
+=(q',\mathbf A,\omega,\gamma),
+\tag{FC.7}
+$$
+
+则 finite-cut contract 要求：
+
+1. **完整 continuation 与内部完成**：$q'$ 包含 cut $b$ 之前的提交状态和所有跨过 cut 的 pending event、timer、solver state、staged output 与在途消息，且 $\operatorname{completedCut}_C(q')\ge b$；
+2. **source progress**：$\operatorname{acceptedSeal}_C(q')(a)\ge b$ 对每个输入 port 成立，且不得超过已获得且已与所有未消费输入一起记入 continuation 的 source seal；
+3. **artifact completeness**：$\operatorname{outputWatermark}_C(q')=\omega$，且 $\omega(a)\ge b$ 对每个输出 port 成立；$\mathbf A$ 的第一坐标精确包含上一 continuation 的 watermark 与新 watermark 之间新公开的边界输出，第二坐标精确包含该次推进新公开的 readout、commit 与 route artifacts，两者均不得漏失或重复。当 $P_C^{\mathrm{out}}=\varnothing$ 时，watermark 条件真空成立，但第 1 条的 $\operatorname{completedCut}_C(q')\ge b$ 与第 5 条 completion certificate 仍非真空；
+4. **no-backdating**：定义 D.10 的四条性质对该调用及任意后续调用成立；
+5. **finite completion**：式 FC.4 对该 cut 成立，$\mathbf A$ 有限，且 $\gamma$ 能由 profile 声明的 verifier 检查上述 completion 事实；
+6. **reference determinism**：对相同 $(q,b,I,\sigma)$，忽略可能不唯一的证明对象 $\gamma$ 后，$q',\mathbf A,\omega$ 唯一，且比较的是完整 output、commit、route 与 continuation semantics。
+
+部分函数符号是实质的：若某个合法输入在 cut $b$ 之前引发无限循环、无限分支、Zeno microsteps，或依赖一个永远无法获得的 source seal，则 `AdvanceUntil` 可以无定义。要进入 strict exact-prefill profile，还需要对所声明的全部合法输入域证明式 FC.6 total；只在运行时观察到某个实例停止，只是事后实例证书。
+
+### 候选命题 D.13：宏节点时间分块与 condensation-DAG 组合（待证明）
+
+对 $a<c<b$，把合法输入按接口时间分为 $I_{[a,c)}$ 与 $I_{[c,b)}$。一个 certified macro profile 必须先证明它自身的 cut-composition law：从 $q_a$ 一次 `AdvanceUntil(b)` 的完整 artifact 与 continuation，应等于先 `AdvanceUntil(c)`、再从所得 $q_c$ `AdvanceUntil(b)` 的规范拼接。该等式必须明确处理：
+
+1. 逐 port watermark 和已封闭输入前沿；
+2. 在第一段已生成但尚未公开的 staged output；
+3. 可能超前于请求 cut 的内部执行；
+4. 不随 chunk/cut 分割改变的 stable event identity 和 message identity；
+5. 对 output、commit、route、pending work 和 continuation 的 cut restriction、canonical concatenation 与 over-advance normalization。
+
+未定义这些操作时，两次调用和一次调用连类型正确的等号都无法写出；如果 identity 依赖调用编号或 chunk 长度，那么即使 payload 相同，artifact equality 也会失败。
+
+预期的全图候选结论是：若每个 structural SCC 都有 total、cut-composable、no-backdating、locally-finite 的 `AdvanceUntil` 契约，且每条宏边的 delay/visibility 规则确定并保持逻辑时间不回退，则可按定理 D.3e 的 condensation DAG 拓扑序向下游传递 timed messages 和 hard watermarks，并构造唯一的有限网络 cut。
+
+这一段是 theorem obligation，不是本页已证定理。当前还缺少：宏边上 seal/watermark 的传播函数；多上游 port 的封闭规则；宏节点 artifact 的 cut restriction/拼接代数；可选延迟变换的单调性前提；以及从微节点 reference trace 到宏契约的 refinement 证明。定理 6.1 不能直接填补这些缺口，因为它的基础消息只有简单 endpoint 和单位时延，延续状态也尚未包含宏内 pending work。
+
+### 候选命题 D.14：finite-cut prefill 与 streaming 接续（待证明）
+
+对输入前缀 $x_{0:L}$，具体 semantic profile 必须声明对应接口 cut $b_L$。一次 prefill 的保守完成条件应是：
+
+1. 所有 prefix contract 要求的读出已稳定提交；
+2. 所有相关宏输入 ports 已 source-seal 到 $b_L$；
+3. 所有相关宏输出 ports 的 hard watermark 至少为 $b_L$；
+4. 全部跨过 $b_L$ 的影响位于精确 continuation $Q_{b_L}$ 中。
+
+这不要求 SCC 在所有未来逻辑时刻永久停止。一条消息可以沿正时延环永久运行，只要每个有限 cut 前的事件有限，并把跨 cut 消息保存到 continuation。相反，若外部持续输入却无法对任意有限前缀提供 seal，或 SCC 在有限 cut 前产生无限事件，则对应 `AdvanceUntil` 无定义，不能宣称 exact finite-prefix prefill。
+
+待证的 model-level 组合式为：
+
+$$
+\operatorname{RunToCut}(Q_0,x_{0:L+K},b_{L+K})
+=
+\operatorname{ContinueToCut}
+\left(
+\operatorname{PrefillToCut}(Q_0,x_{0:L},b_L),
+x_{L:L+K},
+b_{L+K}
+\right).
+\tag{FC.8}
+$$
+
+式 FC.8 的等号必须比较完整逐位置输出、state commit、route、跨 SCC 消息、hard watermarks 和最终 continuation。它需要候选命题 D.13 以及每个宏节点的 cut-composition law；本页现在只定义了该 proof gate，尚未证明式 FC.8。
+
 > [!important] 当前边界
-> 第四部分给出有限事件 DAG 与 zero-delay 的 strict-core 规则，不把任意动态 runtime 自动提升为高性能 prefill。高性能还需要各节点声明并证明 token-local、scan、causal bulk 或其他低-span 实现见证；无法收缩的自适应控制链受 [[adaptive-routing-prefill-lower-bound]] 约束。
+> 第四部分已证明 structural condensation graph 是 DAG，并定义了 edge-identity ports、zero-delay 边界和 finite-cut 宏契约。它没有证明候选命题 D.13--D.14，也不把任意动态 runtime 自动提升为高性能 prefill。高性能还需要各宏节点声明并证明 token-local、scan、causal bulk、solver 或其他低-span 实现见证；无法收缩的自适应控制链受 [[adaptive-routing-prefill-lower-bound]] 约束。
 
 ---
 

@@ -1087,7 +1087,9 @@ MoE 的 active expert graph 在执行 router 前同样未知，但一层中所�
 
 ## 11. 逃离下界的结构化特例
 
-基于一般空间 DAG、显式 allocator、可选 `owner/support/frontier` 证书和三种同刻融合语义的正向候选设计，见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|显式 allocator 的一般空间 DAG]] 与 [[tide-mathematical-foundations#第三部分：可选的归属与因果证书|归属与因果证书]]。
+基于一般空间 DAG、显式 allocator、可选 `owner label / dependency support / causal input frontier` 证书和三种同刻融合语义的正向候选设计，见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|显式 allocator 的一般空间 DAG]] 与 [[tide-mathematical-foundations#第三部分：可选的归属与因果证书|归属与因果证书]]。
+
+这些正向特例在架构和 runtime 中怎样登记为 lowering、怎样区分语义/进展能力与 sequence-bulk 性能，见 [[tide-model-architecture-and-training#第四部分：执行能力与成本模型|执行能力与成本模型]]。本节只列出逃离本文 oracle family 的结构条件，不在这里重复其 correctness、progress 或硬件证书。
 
 ### 11.1 Token-local routing
 
@@ -1109,7 +1111,7 @@ $$
 
 ### 11.4 有限个 Chunk-Wide Routing Stages
 
-本节把 `chunk-wide routing stage` 定义为：对固定 Graph round $r$，联合处理 chunk 中全部输入位置的一组 routing computations。早期讨论曾称它为 `chunk-wide routing frontier`，但为避免与因果前沿字段 `frontier` 混淆，本文改称 routing stage。不同输入位置可以选择不同空间节点，但不能通过同一 stage 内逐输入位置更新的可变 selector state 形成新的自适应链。
+本节把 `chunk-wide routing stage` 定义为：对固定 Graph round $r$，联合处理 chunk 中全部输入位置的一组 routing computations。早期讨论曾称它为 `chunk-wide routing frontier`，但为避免与 `causal input frontier` 混淆，本文改称 routing stage。不同输入位置可以选择不同空间节点，但不能通过同一 stage 内逐输入位置更新的可变 selector state 形成新的自适应链。
 
 这里的 routing stage 是下界逃离条件中的计算分组，不等于 Tide runtime 的 `phase`。`phase` 规定 barrier、visibility 与 commit order；routing stage 只断言这一组路由计算可以在同一批次中求值而不形成新的逐位置控制链。
 
@@ -1127,6 +1129,24 @@ $$
 ### 11.5 小状态空间的全枚举
 
 若 $N$ 足够小，可以先查询整个 transition table，再对函数表做 composition。它从数学上有效，但 work 与 memory 至少依赖 $N$，不能作为巨大超稀疏 Graph 的默认解法。
+
+### 11.6 Certified SCC 是封装边界，不是第六种逃离算法
+
+> [!important] 下界应用边界
+> 本小节不增加新定理。它说明定理 6.1 对 SCC 宏封装的直接适用边界，以及正向架构设计仍需另行提供的证据。
+
+把一段自适应路由链收缩并命名为一个 `certified SCC`，不会改变它内部必须查询的 oracle、query transcript 或 adaptive rounds。若该 SCC family 仍允许定理 6.1 的任意黑盒 pointer-chasing instances，并且算法仍受相同 work budget 约束，那么下界继续作用于宏节点内部；condensation DAG 只有一个节点也不会把这条 control chain 变短。
+
+SCC certification 的正向作用是限定并封装一个较小的 operator family。例如：
+
+- fixed-$K$ 或 bounded-unroll certificate 把开放循环限制为有限 routing stages；
+- compact associative summary 把内部 transition 限制为第 11.2 节的 scan-composable family；
+- exact window kernel 把内部依赖封装为第 11.3 节的 causal-bulk operator；
+- finite-lattice 或 solver certificate 可以证明某个受限 SCC 的 progress，但只有再给出 work/span 与 lowering witness，才构成高性能逃离条件。
+
+这些候选都需要单独给出**正向充分条件与实现证据**，不是从定理 6.1 自动推出的结论。特别地，termination certificate 只解决“能否完成”，不自动解决“能否以 sublinear depth 完成”。
+
+因此，`certified SCC` 是 semantic/progress/cost 证书的作用域，不是 [[tide-model-architecture-and-training#2. 五类 Execution Capability|五类 Execution Capability]] 之外的第六种 capability。SCC 内部仍须使用 `token-local`、`scan-composable`、`causal-bulk`、`ready-set-local` 或 `sequential-fallback`。已有 exact semantics 但没有并行证书的区域可以走 `sequential-fallback`；连所需 semantic/progress certificate 都没有的开放区域只能明确标为 experimental/best effort。
 
 ## 12. 与显式程序复杂度下界的关系
 
@@ -1154,6 +1174,8 @@ $$
 ### 13.1 Correctness 与高性能必须分开
 
 绝对 logical time、phase、state version 与 event DAG 可以给任意有限执行定义清楚的 correctness，但不会自动降低 adaptive depth。
+
+还必须把 progress 单独列出：`stream-step-exact` 只说明已执行步骤正确，`finite-cut-total` 才说明声明的有限 cut 会在有限工作后返回；二者都不自动推出 `prefill-native`。相反，一个 `finite-cut-total × decode-only` 实现可以精确完成 chunk，却仍受线性 token-axis critical path 限制。术语与 profile 组合见 [[tide-model-architecture-and-training#5. Work、Span 与通信的联合目标|架构成本模型]]。
 
 ### 13.2 局部通信与超稀疏只控制 work
 
@@ -1190,6 +1212,6 @@ Layered routing graph 已经同时具有有界出度和单条实际访问路径�
 2. **Restricted selector algebra**：去掉 conditional clear 或 persistent fairness 后，是否出现 compact transition composition？
 3. **Adaptive-depth upper bound theorem**：对固定 $R$ 的 chunk-wide sparse Graph，如何从 local capability contracts 推出必须顺序等待的 routing stages 数量与 $L$ 无关？
 4. **Work-span witness**：如何同时报告 active work、adaptive depth、kernel span、communication 与 memory，而不把 fused sequential loop 误报成 prefill parallelism？
-5. **Model split**：是否应把完整交错传播定义为 Tide Streaming profile，把满足结构化限制的模型定义为 Tide Prefill profile？
+5. **Profile placement**：对具体 selector，怎样分别确定 `stream-step-exact / finite-cut-total / quiescence-total` 与 `prefill-native / prefill-compatible / decode-only`，而不把 Tide-Streaming 和 Tide-Prefill 误写成互斥模型路线？
 
 这些问题中，第 1 项决定本页下界能否直接作用于当前 LH-like mechanism；第 2-3 项决定是否存在保留主要研究动机、同时逃离下界的结构化 Tide 子类。

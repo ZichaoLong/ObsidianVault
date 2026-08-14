@@ -27,7 +27,7 @@ tags:
 ### Position
 
 > [!summary] 本页定位
-> 本部分是 [[tide-mathematical-foundations]] 的外部理论与工程谱系参考。读者不需要预先掌握 CPU ISA、编译器、SSA 或分布式数据流；每节只提炼对 Tide 有用的最小概念、适用边界与原始参考。类比本身不构成 Tide 定理的证明。dynamic event DAG 与 zero-delay 的 Tide-specific 规则见 [[tide-mathematical-foundations#第四部分：有限事件展开与 zero-delay 边界|有限事件与 zero-delay 边界]]。
+> 本部分是 [[tide-mathematical-foundations]] 的外部理论与工程谱系参考。读者不需要预先掌握 CPU ISA、编译器、SSA 或分布式数据流；每节只提炼对 Tide 有用的最小概念、适用边界与原始参考。类比本身不构成 Tide 定理的证明。dynamic event DAG、structural SCC 与 zero-delay 的 Tide-specific 规则见 [[tide-mathematical-foundations#第四部分：有限事件、structural SCC 与 finite-cut 边界|有限事件、SCC 与 finite-cut 边界]]。
 
 `Logical Event DAG Theorem` is not meant to be a mathematically novel theorem. Its core is a specialization of several mature ideas:
 
@@ -69,6 +69,8 @@ The theorem separates two questions:
 | Kahn process networks | Deterministic processes communicate over channels; results can be independent of scheduling. | Supports the intuition that asynchronous graph execution can be deterministic if communication semantics are disciplined. | KPN assumes specific blocking stream semantics; LH/Tide message aggregation may not satisfy them. |
 | Synchronous dataflow | A static graph can be scheduled predictably when production/consumption rates are known. | Useful for fixed internal rounds, phases, and graph schedules. | Tide may have selectors, sparse event instantiation, or data-dependent routing beyond static SDF. |
 | Timely dataflow / Naiad | Messages carry logical timestamps; operators reason over partially ordered logical time. | Very close to separating message identity, owner labels, profile-specific timestamps, and spatial location. | It is a distributed dataflow execution model, not an autoregressive-model proof by itself. |
+| Finite-prefix productivity and hard progress | An open computation need not terminate globally if every bounded observable prefix can be completed after finite work; a tracked frontier can certify which past times are complete. | Motivates a finite-cut SCC macro interface and exact output-progress certificates. | Local finiteness alone does not prove scheduler progress, and an event-time estimate is not a hard certificate. |
+| Zeno / explosive event generation | Infinitely many internal events may occur below one finite logical-time cut even when individual transitions advance time. | Motivates local-finiteness, no-backdating and explicit non-productivity checks in addition to rank monotonicity. | A watchdog or event budget detects some runs but is not a general termination proof. |
 | Parallel prefix / scan | Sequential recurrences can be parallelized when updates compose associatively. | This is the high-performance proof path for Mamba / SSM / linear attention accumulators. | It applies only to recurrences with suitable algebraic structure. |
 | Database provenance | Query results can carry provenance explaining which inputs contributed. | Closest analogy for why untagged aggregation can destroy message-instance and input influence relations. | Provenance frameworks are usually for databases, not neural runtime kernels. |
 | CALM / confluence | Order-independent distributed results require monotonic or coordination-safe structure. | Supports the distinction between safe aggregation and arrival-order-dependent kernels. | CALM is about distributed consistency, not chunk prefill directly. |
@@ -386,8 +388,21 @@ Every finite directed graph can be condensed by strongly connected components in
 2. delayed recurrence whose edges advance logical rank;
 3. same-rank zero-delay SCC requiring rejection or an explicit implicit-kernel contract.
 
+#### 三种图层不能混同
+
+这里至少有三次不同的“成图”操作；它们的顶点和值域不同，因而不能只看到 `SCC` 一词就互相替换：
+
+| 图层 | 顶点和边 | 出现环意味着什么 | Tide 中的用途 |
+| --- | --- | --- | --- |
+| spatial/schema graph | 静态 node/port 与有独立 identity 的 schema edge | 只表示结构上的互相可达；尚未指定一次运行怎样求值 | 求 structural SCC 并缩成 macro-node DAG；保留 macro 边界上的多端口和平行边 |
+| zero-delay dependency graph | 同一 logical rank 内的 value/event instance 与 zero-delay dependency | 同一时刻存在循环定义，没有普通拓扑序 | strict profile 拒绝；或由显式 implicit/fixed-point kernel 承担额外语义 |
+| dynamic event graph | 某次具体运行中的 event/message/state-version instances 与实际因果依赖 | 跨 delay/time 的 schema feedback 可展开为不同实例；图是否无环取决于 rank 和 dependency contract | terminating strict run 要求有限 dependency-complete DAG；开放流可以整体无限，但其已封闭有限 cut 仍需可完成 |
+
+所以，schema SCC 缩点只给出模块边界，不会自动把内部循环“求完”；zero-delay SCC 是求值障碍；dynamic event DAG 则是一次合法执行展开后的证明对象。后者也不是从 schema 自动得到的：event generation、时间推进、状态版本和 zero-delay policy 都必须先声明。
+
 Relevant sources:
 
+- Robert Tarjan, "Depth-First Search and Linear Graph Algorithms", SIAM Journal on Computing, 1972. DOI: https://doi.org/10.1137/0201010
 - B. R. Rau, "Iterative Modulo Scheduling", MICRO 1994. DOI: https://doi.org/10.1145/192724.192731
 - LLVM MemorySSA documentation: https://llvm.org/docs/MemorySSA.html
 - Edward A. Lee and David G. Messerschmitt, "Synchronous Data Flow", Proceedings of the IEEE, 1987. DOI: https://doi.org/10.1109/PROC.1987.13876
@@ -486,6 +501,42 @@ Relevant sources:
 
 - Derek G. Murray et al., "Naiad: A Timely Dataflow System", SOSP 2013. PDF: https://www.cs.princeton.edu/courses/archive/fall22/cos418/papers/naiad.pdf
 - Microsoft Research page: https://www.microsoft.com/en-us/research/publication/naiad-a-timely-dataflow-system/
+
+### 5A. Finite-Prefix Productivity, Hard Progress, And Zeno
+
+#### Finite-prefix productivity
+
+对 closed finite computation，最简单的问题是“它最终会不会停止”。对持续接收外部输入的 open streaming computation，这个问题通常没有意义：预期行为本来就是永不全局停止。更合适的性质是 finite-prefix productivity：给定足够的 source progress 或 source seal，每个有界、downward-closed 的可观察 logical-time cut 都能在有限工作后被产出并封闭。
+
+在线性 stream 中，这对应“任意要求的有限输出前缀都能经过有限约简产生”。Tide 把它推广到偏序 logical time 和多输出端口只是候选研究接口，不能直接引用 stream-productivity 文献当作已经完成的 Tide 定理。至少还要分别证明：
+
+- cut 以下的动态 event/message dependency closure 是 locally finite；
+- scheduler 不会在已 ready 的有限工作之间饥饿；
+- 输入端已经给出足以排除迟到依赖的 progress/seal；
+- macro 的内部状态和在途工作可以完整续接。
+
+local finiteness 是必要边界，但本身不是 productivity 证明；全局 termination 也不是必要条件。反过来，一个最终会停止的黑盒求解器若不能在中间 cut 暂停、输出硬证书并保存 continuation，也不自动满足 finite-cut runtime contract。
+
+#### Hard progress frontier 不等于 event-time estimate watermark
+
+流系统中的 `watermark` 并非总是同一强度。Google Dataflow 语境中的 event-time watermark 是对“该 event time 之前输入大致已经到齐”的估计，系统仍需要 late-data policy。Naiad/timely dataflow 的 progress tracking 则根据 pointstamp 和 outstanding-work accounting 一类事实维护 logical frontier，对 frontier 之前不再出现工作的陈述更接近硬进展保证。
+
+Tide 候选 runtime 使用 `hard output watermark` 这个名称，特指一个更窄的端口级语义证书：该输出端口在 watermark 之前的消息已经全部发出或被确定为不存在，任何符合 contract 的 continuation 都不能再 backdate 新输出到该区域。它依赖 source seal、完整的 pending/in-flight accounting、no-backdating 和正确的 macro semantics；不能由墙钟空闲、队列暂时为空或一个预测出来的 event-time watermark 替代。它也不同于“某个值依赖到哪个输入位置”的 causal input frontier。
+
+#### Zeno 与 non-productivity
+
+rank 严格推进仍可能不够。例如时间戳可以形成趋近某个有限时刻的无限递增序列，或者一个外部 step/cut 以下不断产生无界 microsteps；此时系统在有限 logical-time cut 前做无限工作，形成 Zeno/non-productive execution。zero-delay algebraic loop 是另一类问题：它可能根本没有下一事件，而是同一 rank 的循环方程。
+
+因此 verifier/runtime 至少要把三件事分开检查：same-rank causality、有限 cut 下的 local finiteness、以及实际调度的 finite-prefix progress。no-backdating 只禁止把新工作送回已封闭的过去，并不能单独排除 Zeno。event budget 和 watchdog 是有用的失败检测机制，但耗尽预算时只能报告 `non-productive/unknown`，不能据此发布硬 progress certificate。
+
+Relevant sources:
+
+- Jörg Endrullis, Clemens Grabmayer, Dimitri Hendriks, "Data-Oblivious Stream Productivity", LPAR 2008. DOI: https://doi.org/10.1007/978-3-540-89439-1_7
+- Tyler Akidau et al., "The Dataflow Model: A Practical Approach to Balancing Correctness, Latency, and Cost in Massive-Scale, Unbounded, Out-of-Order Data Processing", PVLDB 2015. DOI: https://doi.org/10.14778/2824032.2824076
+- Derek G. Murray et al., "Naiad: A Timely Dataflow System", SOSP 2013. PDF: https://www.cs.princeton.edu/courses/archive/fall22/cos418/papers/naiad.pdf
+- Edward A. Lee and Haiyang Zheng, "Operational Semantics of Hybrid Systems", HSCC 2005. DOI: https://doi.org/10.1007/978-3-540-31954-2_2
+
+这里的 `hard output watermark`、SCC macro continuation 和 `AdvanceUntil(cut)` 是 Tide-specific 候选 contract；上述文献只提供 stream productivity、event-time completeness、logical progress tracking 与 Zeno semantics 的相邻谱系，不承担 Tide 正确性证明。
 
 ### 6. Parallel Prefix / Scan
 
@@ -617,6 +668,7 @@ The current theoretical stack should be read as:
 7. LH is a mechanism pool and golden reference, not a mandatory final contract. Mechanisms that block strict prefill may be modified, isolated, or replaced while retaining the local-communication and ultra-sparsity goals.
 8. Static Tide topology may be cyclic, but each terminating strict execution over a finite chunk should admit a dependency-complete logical event DAG indexed by a profile-specific well-founded rank such as external step/internal round/phase/microstep or absolute round/phase/semantic tie.
 9. Same-rank zero-delay SCCs are not ordinary scheduling problems; they require delay, rejection, or an explicit fixed-point contract.
+10. An open streaming execution need not terminate globally, but a claimed finite-cut profile separately owes local finiteness, finite-prefix productivity, complete continuation state, and a hard output-progress certificate; estimated event-time watermarks do not discharge that obligation.
 
 The design pressure for Tide is therefore:
 

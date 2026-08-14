@@ -161,7 +161,7 @@ Step(input_value, State):
 
 上面的伪代码描述 fixed-round reference family。若内部轮次数或实际事件实例由选择器动态决定，还必须给出终止条件、事件预算或良基逻辑秩，不能把无限循环隐藏在 `rounds` 中。
 
-该伪代码默认一个 `Step` 完成后才开始下一个输入位置。[[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|一般空间 DAG 窗口语义]] 允许按固定外部周期注入输入，并允许长路径消息跨边界延续；第三部分另给出可选 `owner/support/frontier` 证书。实现该 profile 时必须把绝对轮次、阶段、在途消息与状态提交轨迹纳入运行时契约，不能把输入位置或 `owner` 直接当成全局内部时间。
+该伪代码默认一个 `Step` 完成后才开始下一个输入位置。[[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|一般空间 DAG 窗口语义]] 允许按固定外部周期注入输入，并允许长路径消息跨边界延续；第三部分另给出可选 `owner label / dependency support / causal input frontier` 证书。实现该 profile 时必须把绝对轮次、阶段、在途消息与状态提交轨迹纳入运行时契约，不能把输入位置或 `owner` 直接当成全局内部时间。
 
 当前数学定理只对齐最后一个 readout 后继续 flush 的 closed finite execution；可直接接续 decode 的实现还必须定义 boundary cut，并把 cut 上的 node-state snapshots 与 in-flight messages 共同编码进 continuation state。
 
@@ -177,8 +177,9 @@ EventKey {
   location_kind       # external / spatial_node / spatial_edge / subgraph
   location_id
   logical_timestamp
-  owner_support
-  frontier
+  owner_label_set
+  dependency_support
+  causal_input_frontier
   semantic_tie
 }
 
@@ -195,7 +196,7 @@ Event {
 }
 ```
 
-`EventId` 只标识一个具体事件实例。`owner_support` 表示该事件显式处理或标识的归属索引集合，`frontier` 表示输入前缀依赖上界；二者都不能替代事件标识符。配置 J/F 的一个事件可以同时具有多个 `owner`，所以 `EventId` 不能再以单个 `external_token` 字段充当事件身份。
+`EventId` 只标识一个具体事件实例。`owner_label_set` 表示该事件显式处理或对外标识的归属索引集合；`dependency_support` 表示事件值可能实质依赖的有限输入位置集；`causal_input_frontier` 是后者的输入前缀上界。这三个字段都不能替代事件标识符，也不能互相代替。配置 J/F 的一个事件可以同时具有多个 `owner`，所以 `EventId` 不能再以单个 `external_token` 字段充当事件身份。
 
 #### Logical rank
 
@@ -218,7 +219,7 @@ LogicalRank = (logical_timestamp, semantic_tie)
 SerializationKey = (LogicalRank, EventId)
 ```
 
-`owner` 和 `frontier` 是事件标签，不自动成为时间。只有参考语义明确使用 `owner` 打破同刻并列时，它才通过 `semantic_tie` 参与逻辑秩。`EventId` 只进入稳定序列化键，不能凭编号大小创造事件依赖；若同刻事件之间确有状态或控制依赖，该依赖必须由 `semantic_tie` 或更细逻辑子事件显式表达。
+`owner label`、`dependency support` 和 `causal input frontier` 是归属或因果元数据，不自动成为时间。只有参考语义明确使用 `owner` 打破同刻并列时，它才通过 `semantic_tie` 参与逻辑秩。`EventId` 只进入稳定序列化键，不能凭编号大小创造事件依赖；若同刻事件之间确有状态或控制依赖，该依赖必须由 `semantic_tie` 或更细逻辑子事件显式表达。
 
 这里 `semantic_tie` 是语义 profile 为“同一逻辑时间戳内必须有序的事件”给出的确定性键；没有这种有序要求时取空值或统一常量。`SerializationKey` 只用于日志、测试比较和稳定存储，即使它把本来可并行的事件排成全序，也不能把这个存储次序误写成新的事件依赖。
 
@@ -261,6 +262,107 @@ Event IR 至少需要显式表达：
 3. 同 rank zero-delay SCC：strict core 拒绝。
 
 若未来确实需要 equilibrium / implicit computation，应把整个 SCC 显式声明为 `FixedPointKernel` 或 `RootSolveKernel`，并单独规定 fixed-point selection、termination、cost 与 differentiation contract。它不能作为普通 graph cycle 自动获得语义。
+
+#### 候选 SCC macro runtime contract
+
+> [!warning] 状态：候选接口，尚未实现
+> 当前 Tide runtime 没有通用 SCC macro executor，也没有下面所需的独立 port/edge identity、source seal、hard output watermark 与可序列化 continuation。这里给出的是后续数学 contract 落地时的工程接口草案，不是当前能力声明，也不替代数学文档中的定义和证明。
+
+这里的 SCC 是静态空间图缩点得到的 macro node；它不等于上文同一 logical rank 上的 zero-delay dependency SCC。一个 macro 可以通过多个内部节点和多个端口与外界通信，所以 boundary edge 不能只用 `(src_node, dst_node)` 二元组识别。候选 schema 至少要能表达：
+
+```text
+BoundaryEdge {
+  edge_id
+  src_macro_id
+  src_internal_node_id
+  src_port_id
+  dst_macro_id
+  dst_internal_node_id
+  dst_port_id
+  delay_semantics
+  message_schema
+}
+
+TimedMessage {
+  message_id
+  edge_id
+  src_port_id
+  dst_port_id
+  logical_timestamp
+  producer_event_id
+  owner_label_set
+  dependency_support
+  causal_input_frontier
+  payload
+}
+```
+
+`edge_id` 必须区分相同端点之间的平行边，port id 必须指出 macro 边界后实际连接的内部端口；`logical_timestamp`、`owner_label_set`、`dependency_support`、`causal_input_frontier` 和 message identity 仍是不同字段。输入与输出都使用 timestamped message，而不是假设一次 macro 调用只有一个共同逻辑时刻。这三类归属/因果字段若不属于某个最小 runtime profile，可以显式取空或省略，但不能重新合并成一个语义含混的混合字段。
+
+候选执行接口为：
+
+```text
+AdvanceUntil(
+  macro_instance_id,
+  cut,
+  timed_inputs,
+  source_seals,
+  continuation
+) -> {
+  timed_outputs,
+  hard_output_watermarks,
+  completed_cut,
+  continuation_next,
+  disposition
+}
+```
+
+其中 `cut` 是相应 logical-time profile 定义的有界切面，其完成区域必须 downward closed；它不默认等同于 token index。一次成功的 `AdvanceUntil(cut)` 要求完成 cut 之前的 reference work 并封闭相应可观察输出，不要求 SCC 内部全局静止，也不要求消费 cut 之后已经在途的工作。`completed_cut` 是内部完成进展，不能由输出端口 watermark 推导：没有输出端口时，逐端口 watermark 条件会真空成立，但内部状态与 continuation 仍必须真正推进到请求 cut。
+
+接口各部分的最低语义是：
+
+- **source seal**：`SourceSeal(input_port, cut)` 是输入源的硬承诺，表示该 source/port 以后不会再提交落在 `cut` 所覆盖的完成区域中的新输入。违反既有 seal 的 backdated input 必须被拒绝，不能悄悄重算已经封闭的输出。
+- **pending 与 in-flight work**：局部 ready/pending events、延迟定时器、尚未消费的内部或边界消息、未提交写入和异步 kernel completion 都必须有显式状态；不能只保存 node tensor 而丢掉 cut 上仍可能影响未来的工作。
+- **continuation ownership**：返回时，每个跨 cut 的 state version、pending event 和 in-flight message 必须恰好由 `continuation_next` 或一个声明过的外部 channel owner 持有。executor 私有队列不能成为 checkpoint 看不见的第二份所有者，resume 也不能重复消费已经转移所有权的输入。`continuation_next` 还必须记录至少覆盖请求 cut 的内部 `completed_cut`。
+- **hard output watermark**：对输出端口 $p$ 返回 $W_p$，表示该端口位于 $W_p$ 所界定的 downward-closed 过去区域中的输出都已发出或被确定为不存在；任何合法 resume 都不得再产生该区域中的输出。它是语义证书，不是根据墙钟延迟猜测的 event-time watermark。
+- **local finiteness**：在满足输入 seal 的任一有限 cut 以下，macro 的 dependency closure 中只能有有限多个 event/message instance。只有 rank 单调并不足以排除在一个有限 cut 前生成无限事件的 Zeno 行为。
+- **no backdating**：新 event/message 的时间必须服从 profile 声明的 predecessor、delay 与 state-version 规则；运行时不得生成早于其因果下界的工作，也不得越过已经发布的 hard output watermark 回写过去。
+
+`AdvanceUntil(cut)` 成功返回，当且仅当 `completed_cut` 至少覆盖请求 cut，且请求的各输出端口都已给出至少覆盖该 cut 的 hard watermark；第一项在无输出端口时仍非真空。若尚缺 source progress、触发 backpressure、超过资源预算，或 verifier 发现 non-productive/zero-delay 行为，`disposition` 必须显式区分这些情况；它不能把“当前队列暂时为空”误报为 prefix complete。
+
+continuation/checkpoint 至少应序列化：
+
+```text
+SccContinuation {
+  macro_instance_id
+  graph_schema_version
+  kernel_and_numeric_policy_version
+  committed_state_versions
+  pending_events
+  in_flight_messages
+  source_seals
+  hard_output_watermarks
+  completed_cut
+  deterministic_id_allocator_state
+  external_channel_ownership
+}
+```
+
+checkpoint/replay 验证必须覆盖任意合法 cut 上的暂停与恢复：恢复执行应产生相同的 timed outputs、最终可观察 state、route/message/commit 记录和后续 hard watermarks；数值相等按该 kernel 已声明的 exact 或 tolerance policy 判断。稳定 `message_id / event_id` 用于 exactly-once handoff 或去重，不能依赖恢复后的 thread completion order 重新编号。
+
+closed finite strict family 与 finite-cut streaming profile 是两个正交要求：
+
+- closed finite strict execution 在所有输入 source 最终 seal 后，要求整个运行有限并达到 terminal quiescence；此时可把 terminal cut 交给同一接口。
+- finite-cut streaming execution 可以在外部持续输入时永不全局停止，但对每个已获得足够 source progress 的有限 cut，仍应在有限工作后完成 `AdvanceUntil` 并返回 continuation。
+- 全局会终止的 SCC kernel 不自动具备增量 cut/resume 接口；反过来，每个有限 cut 都 productive 也不意味着整个开放流会终止。因此二者必须分别声明、分别验证。
+
+候选测试矩阵固定覆盖三类行为：
+
+| 行为类 | 构造与切分 | 必须验证的结果 |
+| --- | --- | --- |
+| 最终静止的 closed finite run | 所有 source 在有限输入后 seal；比较 monolithic strict run、多个 `AdvanceUntil` 切分及中途 checkpoint/replay | timed outputs、最终 state、route/message/commit 记录一致；terminal watermark/terminal seal 完整，continuation 中无遗失工作 |
+| 永久开放但 finite-prefix productive | source 持续产生输入；逐步推进一串有限 cuts，并在不同 pending/in-flight 布局上暂停恢复 | 每个具备 source progress 的 cut 都在有限 work budget 内返回硬证书；resume 不重放/漏放消息，队列与 backpressure 状态可恢复；测试不等待全局 quiescence |
+| zero-delay、Zeno 或 backdating 反例 | 同 rank cycle、单个有限 cut 下无界 microsteps、seal/watermark 之后的迟到输入 | verifier 拒绝，或 runtime 以明确的 non-productive/resource failure 停止；不得挂死、伪造 hard watermark，或把不完整 continuation 当成功结果 |
 
 #### Kernel metadata lowering
 
@@ -464,10 +566,11 @@ B0 的工程门槛也要随之提高：不能只实现一个能容纳这些模�
 对 LH-like 图运行时，事件键至少应能表达：
 
 ```text
-(kind, location, logical_timestamp, owner_support, frontier, semantic_tie)
+(kind, location, logical_timestamp, owner_label_set,
+ dependency_support, causal_input_frontier, semantic_tie)
 ```
 
-物理执行可以乱序，`owner` 较大的消息也可以在墙钟时间上先完成；但消息必须带独立标识符、`owner`、逻辑轮次、阶段等元数据，空间节点计算核必须按逻辑时间戳做分桶、排序、掩码或缓冲。若节点内把不同 `owner` 或逻辑轮次的消息做不可逆、无时间标签聚合，输入影响关系会被折叠，通常无法证明 chunk prefill correctness。
+物理执行可以乱序，`owner` 较大的消息也可以在墙钟时间上先完成；但消息必须带独立标识符、所需的归属/因果字段、逻辑轮次、阶段等元数据，空间节点计算核必须按逻辑时间戳做分桶、排序、掩码或缓冲。若节点内把不同 `owner` 或逻辑轮次的消息做不可逆、无时间标签聚合，输入影响关系会被折叠，通常无法证明 chunk prefill correctness。
 
 第二层才是 kernel family 的高性能见证：
 
@@ -872,7 +975,7 @@ Checkpoint growth chain：
 | `tide.old` strict / non-strict family 与 runtime 对象 | 作为设计候选，不直接继承 |
 | 当时的必要条件、未解决问题与下一步 | 历史问题清单；其中部分已被数学规范和 finite logical event DAG 讨论取代 |
 
-特别是“有环图是否进入第一阶段”的旧判断，后来已经细化为：static graph 可以有环，但每次对有限 chunk 的终止 strict execution 应能展开为 dependency-complete logical event DAG；详见 [[tide-mathematical-foundations#第四部分：有限事件展开与 zero-delay 边界|有限事件与 zero-delay 边界]]。
+特别是“有环图是否进入第一阶段”的旧判断，后来已经细化为：static graph 可以有环，但每次对有限 chunk 的终止 strict execution 应能展开为 dependency-complete logical event DAG；详见 [[tide-mathematical-foundations#第四部分：有限事件、structural SCC 与 finite-cut 边界|有限事件、SCC 与 finite-cut 边界]]。
 
 ### 总体判断
 
