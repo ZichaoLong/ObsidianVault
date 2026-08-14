@@ -29,11 +29,17 @@ TIDE 是 `Token Inference Decentralized Engine`。总体目标是研究同时具
 - **尚缺的正向结果**：空间拓扑序构造不自动推出时间分块组合律。完整 model-level `prefill = decode` 仍需从逐绝对轮次节点转移证明窗口折叠，并为各 node/subgraph 给出低-span execution witness。
 - **反向结果**：若模型类别允许任意、不可组合的 pointer-chasing 式自适应 routing，则不存在对该类别所有实例都有效的 exact、work-efficient、次线性 adaptive-depth prefill。该下界不能未经 embedding 证明就直接套到每个具体 selector。
 
+对一般 static schema Graph，可以先求 structural SCC 并得到 condensation DAG；这是已经成立的图论分解，只把循环求值义务局部化到各个宏节点，并不替 SCC 证明语义、有限前缀进展或低 span。开放 streaming 执行可以永不全局停止，但若要声明某个有限 cut 已完成，仍需 source seal、局部有限性、可续接的 pending/in-flight 状态和不允许未来回写过去的硬进展证书。相应 SCC macro contract 目前是候选数学/runtime 接口，尚未成为通用组合定理或已实现 executor。
+
+因此，“能精确执行”“有限前缀必然返回”“是否整体静止”“能否沿序列批量执行”必须分别登记。高性能有限前缀执行依次接受 semantic、progress、parallel-complexity 与 hardware-lowering 四道 gate；这些 gate 是设计审查框架，不是只看 Graph 拓扑即可得到的完备分类。
+
 LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden reference，不是理论必须完整复刻的终点。若 LH 的 selector、状态副作用或交错控制链破坏高性能 prefill，可以在不放弃总体目标的前提下简化、替代或移出 strict family。
 
 当前不是只有一条模型设计路线。Graph 收缩线从 LH 和一般 Graph 出发，逐步加入高性能 `prefill`、可训练性与局部通信约束；checkpoint 生长线从可完整装载的预训练 Transformer/Mamba 出发，逐步加入固定汇聚分支、selector、递归结构和空间化。两条路线都服务于“局部通信 + 超稀疏”的总体目标，但不预设它们必然得到同一个最终架构。
 
 HB-Sliced 是 Graph 收缩线当前最具体的空间候选：有限空间基图 $H$ 定义每个深度切片中的局部邻接，实际消息边只从 $d$ 指向 $d+1$。最小实例 HB-Line-v0 已有结构 reference，验证 depth-major chunk、token-major decode 和分段 chunk continuation 的输出、route artifact 与状态相同；它尚未证明真实 kernel 低 span、模型可训练、可扩展或优于 Transformer/Mamba/MoE。checkpoint 生长线尚未形成同等级别的可运行 reference，这是当前最优先补齐的实验缺口。
+
+Tide 当前最大的科学不确定性仍是 learning value：局部通信、持久状态、feedback 与动态 routing 是否能被稳定学到，并在匹配训练资源后改善能力、泛化或 scaling。sequence-level bulk execution 则是主要规模化风险。二者逻辑上不同、实验上耦合；现有并行计算谱系可以约束执行设计，却不能替代 compute-matched 神经架构实验。
 
 ## 两条战略路线
 
@@ -42,13 +48,17 @@ HB-Sliced 是 Graph 收缩线当前最具体的空间候选：有限空间基图
 这条路线从表达力较强、机制混合且不保证高性能 `prefill` 的对象出发：
 
 ```text
-一般 Graph / LH mechanism pool
--> dependency-complete finite event DAG
--> 显式 allocator 的一般空间 DAG
--> HB-Lattice 的几何与层级直觉
--> HB-Sliced / HB-Line / HB-Plane
--> 有界递归、固定 merge 的结构化分支族
+一般 static schema Graph / LH mechanism pool
+├── 对一次有限执行展开并验证
+│   └── dependency-complete dynamic event DAG
+└── 对可接受架构族施加结构约束
+    └── 显式 allocator 的一般空间 DAG
+        └── HB-Lattice 的历史几何直觉
+            └── HB-Sliced / HB-Line / HB-Plane
+                └── 有界递归、固定 merge 的结构化分支族
 ```
+
+dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态架构限制；前者不是通往后者的中间拓扑。一般 static schema Graph 的 SCC condensation 又是第三种对象，不能与二者混写。condensation DAG 只规定宏节点之间的无环连接，不替宏节点内部选择 fixed-round 展开、scan、solver、sequential fallback 或其他求值语义。
 
 它主要承担四项职责：寻找理论上限，给出 correctness 与 complexity 边界，识别会破坏 chunk composition 或低 span 的机制，并为局部通信、超稀疏和训练稳定性提供设计约束。LH 是这条路线的重要早期动机和机制样本，但不是必须逐项保留的终点。历史 HB-Lattice 是从一般空间 DAG 走向层级局部结构的中间直觉；当前 HB-Sliced 是消除“空间平面、模型阶段和 runtime lowering”混写后的正式继承者。
 
@@ -79,16 +89,16 @@ HB-Sliced 是 Graph 收缩线当前最具体的空间候选：有限空间基图
 
 ## 文档地图
 
-当前保留七个 Markdown 职责文件：
+当前核心研究线保留七个职责文件：
 
 | 文档 | 职责 | 结论类型 |
 | --- | --- | --- |
 | 本页 | 入口、术语、阅读顺序、主张边界 | 导航 |
-| [[tide-mathematical-foundations]] | StepTransition、fold、kernel theorem、logical event DAG、显式 allocator general DAG、函数保持生长、固定 merge 闭包、归属证书和 zero-delay 边界 | 正式定义与正向定理 |
+| [[tide-mathematical-foundations]] | StepTransition、fold、kernel theorem、logical event DAG、显式 allocator general DAG、归属/因果证书、structural SCC 与 condensation、多端口 finite-cut 候选契约、函数保持生长及 fixed-merge 闭包 | 正式定义、正向定理与明示的 proof obligations |
 | [[adaptive-routing-prefill-lower-bound]] | 黑盒自适应路由链的 parallel-query 下界及局部稀疏 Graph 嵌入 | 正式反向定理 |
-| [[tide-model-architecture-and-training]] | 两条战略路线、checkpoint 生长、递归固定 merge 分支、HB-Sliced/HB-Line、selector、训练风险与实验顺序 | 架构候选与研究备忘 |
-| [[tide-runtime-validation-and-status]] | Runtime contract、LH 映射、artifact equality、CPU 对齐、性能和 backend 状态 | 实现规范与动态快照 |
-| [[tide-background-history-and-references]] | ISA/编译器/dataflow 谱系与人脑传播调查 | 外部背景，不承担证明 |
+| [[tide-model-architecture-and-training]] | 两条战略路线、checkpoint 生长、递归固定 merge 分支、HB-Sliced/HB-Line、四道 execution gate、正交 profile、learning-value 风险与实验顺序 | 架构候选与研究备忘 |
+| [[tide-runtime-validation-and-status]] | Runtime contract、LH 映射、artifact equality、CPU 对齐、候选 SCC macro 接口、性能和 backend 状态 | 实现规范、候选接口与动态快照 |
+| [[tide-background-history-and-references]] | ISA/编译器/dataflow、SCC、finite-prefix progress 与相关脑科学谱系 | 外部背景，不承担证明 |
 | [[tide-statistical-mechanics-and-information-dynamics]] | 碰撞历史、粗粒化、路径相关性、kinetic limit 与耗散结构类比的 Tide 评述 | 研究备忘与候选假设，不承担证明 |
 
 建议阅读顺序：
@@ -98,6 +108,15 @@ HB-Sliced 是 Graph 收缩线当前最具体的空间候选：有限空间基图
 3. Checkpoint 生长与工程验证：[[tide-runtime-validation-and-status]]。
 4. 外部概念：遇到 ISA、SSA、MemorySSA、dataflow、fixed point 或脑科学类比时查 [[tide-background-history-and-references]]。
 5. 统计力学假设：研究 coarse-graining、path correlation、route entropy 或宏观极限时查 [[tide-statistical-mechanics-and-information-dynamics]]；其中内容不进入正式证明链。
+
+### 附录与研究暂存
+
+下列文档不计入七份核心职责文件，也不进入正式证明、架构或 runtime 的依赖链：
+
+| 附录 | 定位 |
+| --- | --- |
+| [[appendices/tide-directed-learning-roadmap|Tide 定向学习路线]] | 个人课程、证明和实现训练脚手架；不是研究结论或项目里程碑 |
+| [[appendices/research-memos/scc-macro-node-logical-time-research-memo|SCC 宏节点剩余研究问题与迁移索引]] | 只保留尚未合入核心文档的开放问题及迁移状态；已合入内容不在此重复 |
 
 ## 核心术语
 
@@ -110,9 +129,13 @@ HB-Sliced 是 Graph 收缩线当前最具体的空间候选：有限空间基图
 | 空间节点 | 静态 Graph 中可复用的计算与状态持有位置 | 一次执行中的事件实例 |
 | 消息 | 一次发送产生的有限记录，至少含消息标识符、源、目标、到达轮次和载荷 | 空间边或完整轨迹 |
 | 事件 | 某次有限执行中实际发生的一次计算、状态、控制、消息或提交动作 | 可复用空间节点 |
-| `owner` | 可选的消息或输出归属位置标签 | 消息身份、路径身份或逻辑时间 |
-| `support` | 某个值可能依赖的有限输入位置集合 | 物理收件箱 |
-| `frontier` | 输入支撑位置的保守上界 | 调度 wavefront 或消息到达时间 |
+| `owner label set` | 事件直接联合处理或对外标识的一组输入位置标签 | 数值依赖集合、消息身份或逻辑时间 |
+| `dependency support` | 某个值可能实质依赖的有限输入位置集合 | owner 标签或物理收件箱 |
+| `causal input frontier` | `dependency support` 的输入前缀上界；$-1$ 表示不依赖输入 | 调度 wavefront、消息到达时间或完成进度 |
+| `progress frontier / hard output watermark` | 对过去区域的硬完成证书：合法 continuation 不会再产生落入该区域的新工作或输出 | 因果依赖上界、墙钟空闲或估计型 event-time watermark |
+| structural SCC | static schema Graph 中极大的互相可达节点集合 | 同一 logical rank 的 zero-delay SCC 或一次运行的 event graph |
+| condensation DAG | 以 structural SCC 为顶点的商 DAG；跨宏节点边仍保留 edge identity 与 port 边界 | SCC 内部求值算法或终止证明 |
+| source seal | 输入源以后不会再提交某个 downward-closed cut 内新输入的硬承诺 | 暂时没有输入或队列为空 |
 | 边界延续状态 | 从位置 $B$ 开始执行所需的节点状态与在途消息 | 仅由 chunk 长度决定的缓存 |
 | 发送激活 | 节点在某逻辑轮次实际产生至少一条出站消息 | hidden activation tensor |
 | logical event DAG | 一次有限执行的事件集合及其直接语义依赖关系 | 静态空间 Graph 本身 |
@@ -158,9 +181,10 @@ Tide 正式数学文档遵守以下规则：
 
 1. 为显式 allocator 一般空间 DAG 定义逐绝对轮次节点参考转移。
 2. 从该转移证明窗口时间分块组合律，而不是把 node chunk contract 直接作为前提。
-3. 给每类 node/subgraph 声明 `token-local`、`scan-composable`、`causal-bulk`、`ready-set-local` 或 `sequential-fallback`，并分别证明 lowering contract。
-4. 把 correctness 与 work、span、memory、communication cost ledger 分开。
-5. 对具体 stateful selector 判断它落入结构化可并行特例，还是能嵌入自适应路由下界。
+3. 先对一个受限 SCC family（例如 fixed-round 或带显式 delay 的有限 family）实例化多端口 boundary、finite-cut、continuation、seal 与 output-watermark 契约，再尝试证明宏节点 DAG 的组合定理。
+4. 给每类 node/subgraph 声明 `token-local`、`scan-composable`、`causal-bulk`、`ready-set-local` 或 `sequential-fallback`，并分别证明 lowering contract；`certified SCC` 只表示这些证书的封装范围，不是第六种 capability。
+5. 把 semantic、progress、work/span/memory/communication 与 hardware measurement 分账，并给具体候选登记正交的语义/进展和 sequence-bulk 等级。
+6. 对具体 stateful selector 判断它落入结构化可并行特例，还是能嵌入自适应路由下界。
 
 ### Checkpoint 生长线
 
@@ -185,6 +209,8 @@ Tide 正式数学文档遵守以下规则：
 3. 先完成 CPU semantic gate 和逐阶段 artifact equality。
 4. 再进行 packed/crossbatch lowering、并行 executor 与 Ascend backend。
 
+若某个实验引入 SCC macro，应在通用 executor 之前先实现最小受限 profile：稳定 edge/port identity、`AdvanceUntil(cut)`、source seal、完整 continuation、hard output watermark，以及 zero-delay/Zeno/backdating 反例测试。当前仓库尚未实现这套接口。
+
 ## 当前主张边界
 
 当前可以主张：
@@ -194,16 +220,21 @@ Tide 正式数学文档遵守以下规则：
 - Transformer/Mamba 主力 kernel family 已有构造性 chunk correctness 证明路线。
 - 单步精确状态嵌入、有限 DAG 节点细化和 token-local 固定 merge 分支已有明确前提下的闭包定理。
 - 显式 allocator 的一般空间 DAG 已证明常数次空间拓扑遍历，但没有自动证明时间分块组合律。
+- 任意有限 static schema Graph 的 structural SCC 与 condensation DAG 分解成立；这只是图论结构结论，不包含 SCC 内部求值或性能结论。
 - 自适应路由下界已在明确的 deterministic exact black-box query model 中证明。
 - HB-Line-v0 reference 已验证 toy 语义下 depth-major chunk、token-major decode 和分段 continuation 的 artifact equality。
 - 两条路线是否最终汇合仍是研究假设，而不是当前结论。
+- 四道 gate、正交 execution profile 和候选 SCC macro contract 已形成设计框架，但具体 family 仍需逐项提交证明、实现或测量证据。
 
 当前不能主张：
 
 - 任意一般 Graph 都有高性能 chunk prefill。
+- SCC 分解、宏节点封装或 termination certificate 本身解决了循环求值、有限前缀组合或低 span。
 - 当前完整 LH 自动满足 strict model-level `prefill = decode`。
 - 任意具体 selector 已经落入自适应路由下界。
 - CPU 数值对齐证明了模型可训练性、scaling 或性能优势。
+- 当前 runtime 已实现通用 `AdvanceUntil(cut)`、source seal、hard output watermark 或 SCC continuation/replay。
+- Tide 的 feedback、持久状态、局部通信或动态 routing 已经带来优于强基线的 learning value。
 - HB-Sliced/HB-Line 已经稳定训练或优于现有 Transformer、Mamba、MoE。
 - 已经完成预训练 Transformer/Mamba checkpoint 到递归 Tide 分支模型的函数保持生长链。
 - 通用 packed/crossbatch lowering、异步执行或 Ascend backend 已经完成。
