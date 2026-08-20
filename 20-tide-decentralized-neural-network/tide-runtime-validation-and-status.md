@@ -13,7 +13,7 @@ tags:
 # Tide Runtime、验证与工程状态
 
 > [!summary] 本页定位
-> 本页统一保存三类工程信息：稳定的 runtime/StepTransition 实现契约、带日期的当前架构与数值验证快照，以及 LH/tide.old 的历史迁移记录。它同时规定 Graph 收缩线和 checkpoint 生长线共享的 state-dict、transition、artifact 与 backend 验证接口，并记录 [[tide-checkpoint-growth-experiment-contract]] 所需的 ReceiverCell 候选 reference contract，但不假设两条模型路线最终汇合。数学定义和证明只以 [[tide-mathematical-foundations]] 为准；本页中的历史性能数字不构成当前性能承诺。
+> 本页统一保存三类工程信息：稳定的 runtime/StepTransition 实现契约、带日期的当前架构与数值验证快照，以及 LH/tide.old 的历史迁移记录。它同时规定 Graph 收缩线和 checkpoint 生长线共享的 state-dict、transition、artifact 与 backend 验证接口，并提炼 ReceiverCell 候选对 reference semantics 的一般要求，但不保存当前实验工作流或配置。数学定义和证明只以 [[tide-mathematical-foundations]] 为准；本页中的历史性能数字不构成当前性能承诺。
 
 > [!important] 阅读顺序
 > 第一部分回答“runtime 应实现什么”；第二部分回答“当前已经实现并验证了什么”；第三部分解释“这些接口为何从 LH 演化而来”。后两部分不得反向修改第一部分的规范含义。
@@ -165,12 +165,12 @@ Step(input_value, State):
 
 当前数学定理只对齐最后一个 readout 后继续 flush 的 closed finite execution；可直接接续 decode 的实现还必须定义 boundary cut，并把 cut 上的 node-state snapshots 与 in-flight messages 共同编码进 continuation state。
 
-### Checkpoint-growth ReceiverCell 候选契约
+### Checkpoint-growth ReceiverCell 候选 reference semantics
 
 > [!warning] 状态边界
-> 本节规定首个 checkpoint 生长 reference implementation 必须显式表达的候选接口。它尚未成为当前 `~/llm/tide` 已实现能力，也未获得新的数学闭包定理；实现完成度仍以第二部分为准。
+> 本节只提炼 checkpoint 生长候选对 runtime 的一般语义要求，不规定实验仓库当前采用的配置、工作流或 gate。它尚未成为当前 `~/llm/tide` 已实现能力，也未获得新的数学闭包定理；实现完成度仍以第二部分为准。
 
-该 profile 不需要先实现一般 Graph runtime。它在一个固定、有界的局部 DAG 或递归 branch grammar 上，把接收、状态写入、选择、昂贵计算和继续传播拆成可独立记录的阶段：
+该候选不需要先实现一般 Graph runtime。它在固定、有界的局部 DAG 或递归 branch grammar 上，把消息可见性、状态写入、选择、昂贵计算和继续传播拆成独立阶段：
 
 ```text
 MessageProjection
@@ -182,59 +182,20 @@ MessageProjection
 -> FixedMerge
 ```
 
-最小对象为：
-
-| 对象 | 候选责任 |
-| --- | --- |
-| `MessageProjection` | 把 sender 输出映射到固定 receiver slots，并声明消息形状与局部邻接 |
-| `ReceiverCell` | 承载 Observe、Update、Read、ExpensiveCompute 与 Emit |
-| `ReceiverState` | receiver-private semantic state；支持 reset、save、reload 与 continuation |
-| `SelectorState` | sibling-level、逐序列 history/load state；不得与 ReceiverState 或物理负载混写 |
-| `PropagationProfile` | 产生 receive、update、active、read 与 emit artifacts |
-| `FixedMerge` | 声明 slots、merge 范围、归约顺序与输出接口 |
-
-两种传播 profile 在同一拓扑上定义：
+同一拓扑至少可以区分两种 propagation profile：
 
 1. `selected-dispatch`：selector 先形成 active set；只有 active receivers Receive、Update、Read、Compute 和 Emit。
 2. `broadcast-observe`：active sender 沿全部声明局部出边发送；实际 receivers 都 Receive/Update，只有 active receivers Read、Compute 和 Emit。
 
-BO 中的 selector 可以使用 parent/current content、pre-Update state 或 post-Update proposal/state。具体顺序必须写入 profile；不能在同一名称下隐式切换。若 selector 读取 post-Update state，Update 对当前 route 的依赖必须进入 Event IR 或等价 phase artifact。
+任何具体 reference implementation 都必须进一步声明：
 
-#### State 与空消息规则
+- `ReceiverState` 与逐序列 `SelectorState` 的初始化、reset、save/reload、continuation 和空消息转移；二者不得与物理负载状态混写。
+- selector 读取 parent/current content、pre-Update state 还是 post-Update proposal/state，以及该顺序产生的依赖。
+- 多父 receiver 的 inbox 完整条件、消息顺序或确定性归约、重复/空消息、单次 state commit 与跨父预算仲裁。
+- receive、update、active、read、emit 五类 artifact 及其 message/state version；batch 同伴、合法 chunk 切分和物理调度不得改变单序列结果。
+- 函数保持点上原模型输出和原 state trajectory 如何保持；新增 private state 可以形成后台轨迹，但在中性期不得影响旧可观察量。
 
-每个 state 坐标必须声明：
-
-- 初始化、reset、save/reload 和 chunk continuation。
-- 没有消息时保持、decay、推进空步或其他确定转移。
-- Update 是否持久、是否 detach、是否允许当前 readout 读取。
-- inactive receiver 的写入何时能被以后激活读取。
-- selector history/load state 的逐序列 namespace。
-
-函数保持初始化只要求原模型的可观察输出和原有 state trajectory 保持。新增 private state 可以在后台形成自己的轨迹，但在中性期不得影响旧输出。零 gate 或零 output projection 还必须记录哪些新增参数在初始步可获得梯度。
-
-#### 多父 receiver
-
-若 receiver 有多个静态 parents，reference contract 还必须定义：
-
-- inbox 在什么条件下完整。
-- 多消息是按稳定顺序处理，还是由声明的结合/交换归约合并。
-- 零消息、重复消息和同一 sender 多次发送如何处理。
-- Update 的单次 commit 点和 state version。
-- 多个 parent proposal 如何参与同一个局部 active budget。
-
-`selected-dispatch` 与 `broadcast-observe` 都应能在同一多父拓扑上实例化。传播 profile、拓扑与聚合规则是三个独立坐标。
-
-#### Artifact 与 replay
-
-`RouteArtifact` 至少按输入位置、parent、Head/Group 和递归层记录：
-
-- receive mask 与 message ids。
-- update mask、pre/post state digest 与 commit version。
-- active ids、selector scores/weights 和 selector-state digest。
-- read mask、ExpensiveCompute kind 与输出 digest。
-- emit mask、edge ids 和 fixed-merge slots。
-
-同一初始 state、参数和输入在不同 batch 同伴、合法 chunk 切分和物理调度下，必须得到相同单序列 route/state/output artifacts。fresh save/reload、state knockout 和 replay route 也必须是第一等测试路径。
+传播 profile、拓扑、聚合规则、state 生命周期和 selector 输入是独立坐标。当前接口名、matched 配置、knockout 与交付要求由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护；本页只保留对 Tide runtime 与数学证明可复用的语义边界。
 
 ### Dynamic Event Contract
 
@@ -728,7 +689,7 @@ same parameters
 2. 用 Event IR 与实现规范约束 logical rank、dependency、graph/state/workspace/phase/kernel 边界。
 3. 工程上保留 native LH golden path，并用独立 Tide CPU path 做 translation-validation-style 对齐。
 4. 建立 native pretrained model 到 Tide baseline、再到中性扩展模型的 checkpoint golden path。
-5. 为 checkpoint 工作流 A/B 建立同拓扑可切换的 selected-dispatch/BO ReceiverCell reference、state knockout 与 replay path。
+5. 为 checkpoint 生长候选建立同拓扑可切换的 selected-dispatch/BO ReceiverCell reference、state knockout 与 replay path。
 6. 用更简单的 strict transition family 建立 model-level prefill，再分别检验哪些结果能推广到 LH-like mechanisms 和 checkpoint-derived branches。
 
 六类工作都由各自 reference contract 下的 `prefill / decode` 等价性反过来裁决 graph、state、schedule 与 kernel 设计；它们共享验证接口，但不要求两条模型路线最终统一。
@@ -1010,14 +971,14 @@ Checkpoint growth shared foundation：
 1. 选择一个 pre-norm decoder-only 原生 checkpoint 和对应实现作为 oracle。
 2. 完成 backend-neutral parameter/state mapping、Tide baseline equality 与 fresh save/reload，不加入 Tide 分支。
 3. 实现函数保持 growth operator，并按 [[tide-mathematical-foundations#定理 E.2：单步精确状态嵌入推出任意长度 fold 等价|定理 E.2]] 检查连续序列和最终状态。
-4. 实现本页 ReceiverCell 候选契约，使同一 Group-receiver/递归拓扑可切换 selected-dispatch/BO、持久/无延迟 state、knockout 与 replay route。
+4. 实现本页 ReceiverCell 候选 reference semantics，使同一 Group-receiver/递归拓扑可切换 selected-dispatch/BO、持久/无延迟 state、knockout 与 replay route。
 
-基础就绪后并行推进：
+基础就绪后，实验可以同时建立：
 
-- 工作流 A：dense continued-pretraining、成熟 flat MoE、checkpoint-grown MoE 与 Group-receiver selected control。
-- 工作流 B：包含 BO、private state later readout、局部稀疏昂贵计算、always-on backbone 与 fixed merge 的完整候选。
+- dense continued-pretraining、成熟 flat MoE、checkpoint-grown MoE 与 Group-receiver selected control 等强基线。
+- 包含 BO、private state later readout、局部稀疏昂贵计算、always-on backbone 与 fixed merge 的完整正面候选。
 
-两条工作流及其 gate 以 [[tide-checkpoint-growth-experiment-contract]] 为准。节点删除、合并或 kernel 替换属于 checkpoint-derived 结构变异，必须保留独立迁移 contract，但不再由一个全局阶段号决定何时准入。
+上述对象的当前配置、工作流与 gate 以 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 为准。节点删除、合并或 kernel 替换属于 checkpoint-derived 结构变异，必须保留独立迁移 contract，但不再由一个全局阶段号决定何时准入。
 
 两条 chain 共同需要：为每条 chunk path 给出 non-degenerate certificate 与 work/span/memory/communication ledger，再增加 dynamic event generation、parallel executor、batch memory、packed selector 与 crossbatch fusion；CPU semantic gate 稳定后再做 Ascend lowering。
 

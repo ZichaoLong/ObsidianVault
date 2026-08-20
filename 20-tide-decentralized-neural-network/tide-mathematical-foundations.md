@@ -5921,7 +5921,7 @@ $$
 
 #### Broadcast-observe 的候选证明义务
 
-[[tide-checkpoint-growth-experiment-contract]] 当前把 broadcast-observe、receiver-private state 与 later readout 作为需要正面验证的实验候选。这一政策不改变上述定理边界，也不能把 E.9/E.14 直接引用为 stateful BO 的 chunk-correctness 证明。
+[[tide-model-architecture-and-training]] 把 broadcast-observe、receiver-private state 与 later readout 记录为需要正面验证的架构候选。这一候选方向不改变上述定理边界，也不能把 E.9/E.14 直接引用为 stateful BO 的 chunk-correctness 证明。
 
 在形成新的正式定义与定理前，至少需要给出：
 
@@ -5933,7 +5933,7 @@ $$
 6. Chunk implementation：若 Update 或 selector 具有跨位置递推，需单独证明其 scan/causal-bulk 组合律，或明确登记 sequential fallback；不能仅由空间 DAG 拓扑推出低 span。
 7. Mask 与 packing：receive、update、active、read、emit 五类 mask 的 optimized implementation 必须模拟同一 reference transition，并将消息、state I/O、packing 与 merge 计入成本。
 
-在这些对象完成前，BO 只能称为候选 semantic profile 和实验 contract；机制被运行、被模型使用、带来 learning value、具有 scaling value 与产生系统收益仍是五个彼此独立的命题。
+在这些对象完成前，BO 只能称为候选 semantic profile；机制被运行、被模型使用、带来 learning value、具有 scaling value 与产生系统收益仍是五个彼此独立的命题。
 
 固定 merge 本身只提供清晰的组合边界。高性能还要求分支的 chunk implementation 具有可接受的 work/span，并要求掩码序列能够通过 packed、segmented scan 或 causal-bulk kernel 实现，而不是物理执行所有未选分支再乘零。
 

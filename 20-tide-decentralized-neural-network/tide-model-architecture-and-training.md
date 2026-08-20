@@ -14,13 +14,13 @@ tags:
 # Tide 模型架构与训练
 
 > [!summary] 本页定位
-> 本页统一记录 Tide 的两条战略路线、当前正向模型候选、selector/allocator 能力契约、训练风险和诊断坐标。第一部分定义 Graph 收缩线、checkpoint 生长线及其可能但不保证发生的汇合；第二部分定义 HB-Sliced 并用 HB-Line-v0 给出结构 reference；第三、四部分记录训练和执行约束。checkpoint 生长的当前实验政策、并行工作流与验收 gate 以 [[tide-checkpoint-growth-experiment-contract]] 为准；一般空间 DAG 见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|数学基础第二部分]]；函数保持生长与 fixed merge 闭包见 [[tide-mathematical-foundations#第五部分：函数保持生长与有限 DAG 节点细化|数学基础第五部分]]；自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
+> 本页统一记录 Tide 的两条战略路线、checkpoint 生长的设计动机、当前正向模型候选、selector/allocator 能力契约、训练风险和诊断坐标。第一部分定义 Graph 收缩线、checkpoint 生长线及其可能但不保证发生的汇合；第二部分定义 HB-Sliced 并用 HB-Line-v0 给出结构 reference；第三、四部分记录训练和执行约束。当前 checkpoint 生长实验的配置、工作流、验收 gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护；一般空间 DAG 见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|数学基础第二部分]]；函数保持生长与 fixed merge 闭包见 [[tide-mathematical-foundations#第五部分：函数保持生长与有限 DAG 节点细化|数学基础第五部分]]；自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
 
 > [!important] 语义边界
 > `prefill`、`decode`、batch 组合和物理调度不得改变单序列 reference semantics。CPU selector、加速卡 packing、设备放置和通信流水只属于实现；若历史负载进入语义，它必须是逐序列隔离、可延续且可重放的正式状态。
 
-> [!important] 当前实验政策
-> Checkpoint 生长线并行推进工作流 A（dense/flat MoE 与 matched selected control）和工作流 B（broadcast-observe 完整候选）。旧 P0-P6 与 selector A-D 仍是有用的对照 profile 和诊断工具，但不再是禁止递归、private state 或 stateful selector 进入首个完整候选的全局串行 gate。
+> [!important] 研究与实验边界
+> 本页回答“为什么研究这些结构、概念之间是什么关系、它们承担哪些证明与工程义务”。Checkpoint 生长可以同时追求完整候选的正面信号和 matched counterfactual 的因果归因；旧 P0-P6 与 selector A-D 是有用的对照 profile 和诊断坐标，不是全局串行准入 gate。实验仓库负责决定当前究竟训练哪些配置。
 
 ## 第一部分：两条设计路线与递归固定 merge 分支
 
@@ -58,15 +58,61 @@ Checkpoint 生长线从已有成熟训练、部署事实和高性能 `prefill` �
 ```text
 原生预训练 Transformer / Mamba
 -> Tide baseline 完全等价装载与函数保持接口
-├── 工作流 A：dense / flat MoE 基线与 selected controls
-└── 工作流 B：broadcast-observe 完整候选
+├── 强基线与配对反事实：dense / flat MoE / selected-dispatch
+└── 当前正面候选：broadcast-observe 局部计算介质
       ├── private state 与 later readout
       ├── 有界局部 selector、递归与 active budget
       ├── always-on backbone 与 fixed merge
       └── 由观察牵引空间化、会聚和结构变异
 ```
 
-这条路线同时追求正面候选发现和严格归因。探索实验可以把一组有共同设计理由的机制组成完整候选，以回答是否存在正面信号；诊断实验再用 matched control、knockout 和单轴修改建立因果归因。所有候选都保留可追溯 checkpoint 谱系，不能用组合候选的一次结果替代单项证据。
+##### 1.2.1 从目标约束到有界多跳扩展
+
+下面的推导按“已有证据、条件性刚需、工程护栏、研究赌注、可选干预”区分结论强度。它解释为什么值得形成当前候选，不把候选设计预写成实验结果。
+
+```text
+【已有证据】Flat MoE 已证明：很大的潜在参数容量
+             可以与每 Token 少量昂贵激活同时成立
+        ↓ 但它没有验证固定有界的局部传播和长期本地状态
+【目标约束】容量继续随节点数增长 + 统一有界入度/出度
+             + 不依赖全局 router + 输入自适应
+             + 全局昂贵计算超稀疏
+        ↓
+【条件性刚需】有界度、多跳、逐级的局部容量扩展
+             + 多次有界局部选择或等价的分布式路由
+             + 显式 active、message 和 depth budget
+        ↓
+【新增风险】早期选择延长控制寿命并改变下游输入分布，
+             私有状态还可能引入跨 Token 延迟信用链
+        ↓
+【工程护栏】checkpoint 中性生长、always-on backbone、
+             有界局部 selector、函数保持接口和 fixed merge
+```
+
+严格推出的是“有界度的多跳局部扩展”，不是某一种规则树。若固定入口数量、最大 fan-out 为 $\Delta$，半径 $D$ 内的可达槽位至多为 $1+\Delta+\cdots+\Delta^D$；容量持续增长时，传播深度、空间直径或入口数量中至少一项必须增长。规则层次递归离已有 checkpoint 较近，便于控制发散、收拢和证据变量，因此是工程与证据前置；line、lattice、mesh、多尺度 backbone 和其他局部 DAG 都可能成为后续形式。
+
+##### 1.2.2 从路径相关历史到 broadcast-observe 假设
+
+```text
+【结构事实】多级 selected-dispatch 使固定 receiver
+             只保存与自身路径前缀相符的消息历史
+        ↓
+【待验证风险】receiver exposure 变薄、私有状态彼此碎片化，
+             可能削弱局部记忆和后续处理
+        ↓
+【研究赌注 A】broadcast-observe + private state
+               + Update/ExpensiveCompute 分离
+【研究赌注 B】有界多父局部会聚或交叉传播
+        ↓
+【最终待验证】这些机制是否产生 learning/scaling value，
+             并覆盖状态、通信、selector 和调度成本
+```
+
+receiver exposure 变薄不等于当前 hidden 被机械切碎。active child 仍可能收到已经整合完整前缀的 parent hidden；结构直接决定的是固定 receiver 的私有状态只记录实际送达的 route-conditioned 历史。该差异是否伤害任务相关记忆、选择性历史是否反而促进专门化，以及 BO 或交叉会聚是否值得成本，都必须由实验回答。第二条链也不由第一条链严格推出：有界多跳扩展是目标约束下的结构结论，BO 则是当前主动选择的机制假设，而不是 Tide 的唯一实现。
+
+##### 1.2.3 从研究逻辑到实验
+
+上述逻辑链只规定候选生成与结论边界。探索实验可以把一组有共同设计理由的机制组成完整候选，回答是否存在正面信号；诊断实验再用 matched control、knockout 和单轴修改建立因果归因。所有候选都保留可追溯 checkpoint 谱系，不能用组合候选的一次结果替代单项证据。当前 checkpoint、配置坐标、两条实验工作流、gate 与首个交付均以实验仓库为准，本页不复制其易变政策。
 
 这条路线不要求永远与原 Transformer 兼容。随着实验积累，后期可以删除冗余节点、合并分支、改变状态表示、替换 kernel 或形成不同拓扑；但从发生非函数保持变异的阶段起，必须把模型称为 checkpoint-derived descendant，而不能继续声称完全 checkpoint-compatible。
 
@@ -258,7 +304,7 @@ $$
 
 较稳妥的起点是少量 always-on core heads 加若干 routed head groups，而不是立即让每个微小 head 独立竞争。还必须单独选择状态语义：所有候选 head 是否都更新 K/V，还是只有选中 head 更新。前者更接近“收到即更新、激活才 readout”，状态更连续但节省不了全部 KV 成本；后者更稀疏，却会让未来 Attention state 依赖历史路由。
 
-Head/Group 只提供规则的局部发散—收拢布局，不自动构成 broadcast-observe，也不自动保证物理局部。当前实验使用同一 Group-receiver 骨架建立 selected-dispatch 与 BO matched pair，并把 ReceiverState、SelectorState、group-level active budget 与 mixer 范围分开登记；具体契约见 [[tide-checkpoint-growth-experiment-contract#6. Head/Group-receiver 配对骨架]]。
+Head/Group 只提供规则的局部发散—收拢布局，不自动构成 broadcast-observe，也不自动保证物理局部。使用同一 Group-receiver 骨架建立 selected-dispatch 与 BO matched pair，可以把传播 profile 与 group layout、昂贵算子、state 容量和 mixer 范围分开；其中 ReceiverState、SelectorState、group-level active budget 与物理放置也必须分别登记。当前配对配置由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
 
 ### 7. 两条路线如何交换证据
 
@@ -286,7 +332,7 @@ Graph 收缩线可以否决包含隐藏反向控制依赖、不可组合跨 toke
 | P5 空间化 | HB-Line/Plane 放置 | 逻辑局部能否兑现为通信与端到端收益 |
 | P6 结构变异 | 删除、合并或替换旧节点 | checkpoint-derived 后代如何迁移与恢复 |
 
-当前执行政策以 [[tide-checkpoint-growth-experiment-contract#7. 两条并行工作流]] 为准：P0/equality 是两条工作流共同依赖；其余 profile 可作为工作流 A 的基线、工作流 B 的完整候选组件，或观察问题后的诊断对照。探索实验允许同时改变多个有共同设计理由的坐标，但只能主张组合候选的存在性信号；单项因果结论必须回到 matched counterfactual。
+P0/equality 是所有 checkpoint 生长候选的共同依赖；其余 profile 可以成为强基线、完整候选组件，或观察问题后的诊断对照。探索实验允许同时改变多个有共同设计理由的坐标，但只能主张组合候选的存在性信号；单项因果结论必须回到 matched counterfactual。当前实验如何组合这些坐标，以 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 为准。
 
 每个实验至少保留 continued-pretraining 原模型、成熟 flat MoE、容量/计算/资源匹配对照，以及相同 Group-receiver 骨架的传播 profile 对照。不能同时改变 tokenizer、数据配比、优化器、selector、空间拓扑和 kernel，再把结果归因于单一结构变量。
 
@@ -771,7 +817,7 @@ HB-Line-v0 当前固定：空间 DAG 无环、只使用相邻切片边、所有�
 8. selector 预期主要在 CPU 上处理紧凑控制数据；节点的大批量数值计算预期由加速卡处理。
 9. 设备放置不进入 HB-Line 定义。line 可把连续 site/cell 分片到设备；未来 HB-Plane 可再研究把 4x4 cell 静态映射到本机 16 张 Ascend 卡。
 
-第 6 条描述的是 HB-Sliced 当前候选采用的 broadcast-observe 式 propagation profile，不是所有 Tide 架构的公理。Checkpoint 生长实验必须在相同局部拓扑上保留 selected-dispatch 切换与 matched control；两种 profile 的定义及证据边界见 [[tide-checkpoint-growth-experiment-contract#4. Receiver 与传播语义]]。
+第 6 条描述的是 HB-Sliced 当前候选采用的 broadcast-observe 式 propagation profile，不是所有 Tide 架构的公理。同一局部拓扑也可以实例化 selected-dispatch；若要把结果归因于传播与未选 receiver 的状态写入，而不是拓扑变化，应保留相应 matched control。
 
 这里需要区分三个相互独立的层次概念：
 
@@ -1372,7 +1418,7 @@ $$
 
 ### 10. Selector 诊断 profiles
 
-下面 A-D 是 selector 复杂度坐标，与第一部分的 checkpoint 对照 profiles 正交。它们可用于构造单轴诊断，不再规定完整候选必须依次等待。工作流 B 可以因核心命题需要从 state-aware selector 开始，但必须同时保留 fixed/content-only、读取/忽略 post-Update state 和 matched/replay route 对照。
+下面 A-D 是 selector 复杂度坐标，与第一部分的 checkpoint 对照 profiles 正交。它们可用于构造单轴诊断，不再规定完整候选必须依次等待。一个候选可以因核心命题需要从 state-aware selector 开始，但若要归因，必须同时保留 fixed/content-only、读取/忽略 post-Update state 和 matched/replay route 对照。
 
 #### Profile A：固定均衡路由
 
@@ -2046,7 +2092,7 @@ $P_r$、$W_r$ 和这些辅助 loss 可以只在训练时存在，推理时删除
 
 #### 14.14 历史增量诊断阶梯
 
-下列顺序最初用于避免一次引入全部 LH 与脑式机制后无法归因。当前保留它作为失败定位与局部消融的诊断阶梯，不再作为 checkpoint 生长工作流 B 的准入顺序；完整候选与 matched counterfactual 以 [[tide-checkpoint-growth-experiment-contract]] 为准。
+下列顺序最初用于避免一次引入全部 LH 与脑式机制后无法归因。当前保留它作为失败定位与局部消融的诊断阶梯，不再作为 checkpoint 生长正面候选的准入顺序；完整候选与 matched counterfactual 的具体组合由实验仓库维护。
 
 1. 固定空间 DAG、always-on backbone、全部 residual branches 执行并 fixed merge。
 2. 加入静态稀疏 active set，先验证容量、质量、packing 和通信。

@@ -396,7 +396,7 @@ $H_{route}$ 较高通常表示激活分布更均匀，但它不自动表示：
 ### 第二阶段：先测量，不预设物理理论
 
 1. 为 HB-Sliced/HB-Line 增加 route entropy、语义互信息、route churn 和层级负载统计。
-2. 沿 [[tide-checkpoint-growth-experiment-contract]] 的两条工作流和 matched propagation profiles，为 receiver/branch/merge 增加来源数、support overlap、state use、delta 夹角和 gradient attribution；历史 P0-P6 只作为局部诊断坐标。
+2. 沿 checkpoint 生长候选及其 matched propagation profiles，为 receiver/branch/merge 增加来源数、support overlap、state use、delta 夹角和 gradient attribution；历史 P0-P6 只作为局部诊断坐标，当前实验组合由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
 3. 在固定参数、数据与 schedule 下检查这些量是否能预测训练不稳定或质量变化。
 
 ### 第三阶段：构造最小随机模型

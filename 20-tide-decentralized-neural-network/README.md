@@ -9,7 +9,7 @@ tags:
 # TIDE / 去中心化神经网络
 
 > [!summary] 本页定位
-> 本页是 Tide 线的唯一入口，只负责战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；模型候选见 [[tide-model-architecture-and-training]]；checkpoint 生长的当前实验政策见 [[tide-checkpoint-growth-experiment-contract]]；工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。
+> 本页是 Tide 线的唯一入口，只负责战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；模型候选、checkpoint 生长的设计动机与诊断坐标见 [[tide-model-architecture-and-training]]；工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。当前 checkpoint 生长实验的配置、工作流、gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
 
 ## 一页版结论
 
@@ -39,7 +39,7 @@ LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden referenc
 
 HB-Sliced 是 Graph 收缩线当前最具体的空间候选：有限空间基图 $H$ 定义每个深度切片中的局部邻接，实际消息边只从 $d$ 指向 $d+1$。最小实例 HB-Line-v0 已有结构 reference，验证 depth-major chunk、token-major decode 和分段 chunk continuation 的输出、route artifact 与状态相同；它尚未证明真实 kernel 低 span、模型可训练、可扩展或优于 Transformer/Mamba/MoE。checkpoint 生长线尚未形成同等级别的可运行 reference，这是当前最优先补齐的实验缺口。
 
-Checkpoint 生长线当前不再由单一串行架构阶梯支配，而是并行推进两个工作流：工作流 A 建立 dense checkpoint、成熟 flat MoE 和 matched selected-dispatch control；工作流 B 从 checkpoint 中性生长，正面验证 broadcast-observe、private state 与 later readout 组成的局部计算介质候选。该政策允许完整候选联合采用有共同设计理由的机制以寻找存在性信号，但任何单项因果结论仍需要配对反事实。
+Checkpoint 生长线不再把单一串行架构阶梯视为唯一研究方法：可以先联合有共同设计理由的机制构造完整候选，寻找正面存在性信号，再用 matched control、knockout 与单轴修改建立归因。Dense checkpoint 与成熟 flat MoE 提供强基线；`broadcast-observe`、private state 与 later readout 是当前重点候选，但不是已经成立的必要条件。具体实验安排留在实验仓库，本仓库只记录这一路线为何值得研究、概念之间如何区分，以及它对数学和 runtime 提出什么义务。
 
 Tide 当前最大的科学不确定性仍是 learning value：局部通信、持久状态、feedback 与动态 routing 是否能被稳定学到，并在匹配训练资源后改善能力、泛化或 scaling。sequence-level bulk execution 则是主要规模化风险。二者逻辑上不同、实验上耦合；现有并行计算谱系可以约束执行设计，却不能替代 compute-matched 神经架构实验。
 
@@ -71,15 +71,14 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 ```text
 原生预训练 Transformer / Mamba
 -> Tide 中的完全等价装载与函数保持接口
-├── 工作流 A：dense / flat MoE 基线与 Group-receiver selected control
-└── 工作流 B：broadcast-observe 完整候选
-      ├── private state 与 later readout
+├── 强基线与配对反事实：dense / flat MoE / selected-dispatch
+└── 当前正面候选：broadcast-observe + private state + later readout
       ├── 有界局部 selector、active/message/depth budget
       ├── always-on backbone 与 fixed merge
       └── 按观察引入递归、会聚、空间化与结构变异
 ```
 
-它主要承担可重复实验、正面候选发现、配对归因、训练稳定性验证和实际推广。早期必须完整保留原参数与初始化语义；工作流 A 与 B 共享数据、correctness oracle、成本口径和实验账本。随着证据积累，后期允许删除冗余节点、改变状态布局、重写 kernel 或形成不再与原 Transformer 结构兼容的后代模型。此时应保留 checkpoint 谱系和实验归因，不能继续声称结构或函数仍然完全兼容。
+它主要承担可重复实验、正面候选发现、配对归因、训练稳定性验证和实际推广。早期必须完整保留原参数与初始化语义；候选与对照共享数据、correctness oracle、成本口径和实验账本。随着证据积累，后期允许删除冗余节点、改变状态布局、重写 kernel 或形成不再与原 Transformer 结构兼容的后代模型。此时应保留 checkpoint 谱系和实验归因，不能继续声称结构或函数仍然完全兼容。
 
 ### 期待汇合而不预设汇合
 
@@ -93,15 +92,14 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 ## 文档地图
 
-当前核心研究线保留八个职责文件：
+当前核心研究线保留七个职责文件：
 
 | 文档 | 职责 | 结论类型 |
 | --- | --- | --- |
 | 本页 | 入口、术语、阅读顺序、主张边界 | 导航 |
 | [[tide-mathematical-foundations]] | StepTransition、fold、kernel theorem、logical event DAG、显式 allocator general DAG、归属/因果证书、structural SCC 与 condensation、多端口 finite-cut 候选契约、函数保持生长及 fixed-merge 闭包 | 正式定义、正向定理与明示的 proof obligations |
 | [[adaptive-routing-prefill-lower-bound]] | 黑盒自适应路由链的 parallel-query 下界及局部稀疏 Graph 嵌入 | 正式反向定理 |
-| [[tide-model-architecture-and-training]] | 两条战略路线、递归固定 merge 分支、HB-Sliced/HB-Line、selector 与训练风险、四道 execution gate | 架构候选与研究备忘 |
-| [[tide-checkpoint-growth-experiment-contract]] | checkpoint 生长的证据分级、并行工作流、配置坐标、配对反事实、五道实验 gate 与首个交付 | 当前实验政策与候选契约 |
+| [[tide-model-architecture-and-training]] | 两条战略路线、checkpoint 生长逻辑链、递归固定 merge 分支、HB-Sliced/HB-Line、selector 与训练风险、四道 execution gate | 架构候选与研究备忘 |
 | [[tide-runtime-validation-and-status]] | Runtime contract、LH 映射、artifact equality、CPU 对齐、候选 SCC macro 接口、性能和 backend 状态 | 实现规范、候选接口与动态快照 |
 | [[tide-background-history-and-references]] | ISA/编译器/dataflow、SCC、finite-prefix progress 与相关脑科学谱系 | 外部背景，不承担证明 |
 | [[tide-statistical-mechanics-and-information-dynamics]] | 碰撞历史、粗粒化、路径相关性、kinetic limit 与耗散结构类比的 Tide 评述 | 研究备忘与候选假设，不承担证明 |
@@ -110,13 +108,13 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 1. 战略与模型：本页 -> [[tide-model-architecture-and-training]]。
 2. Graph 收缩线数学：[[tide-mathematical-foundations]] -> [[adaptive-routing-prefill-lower-bound]]。
-3. Checkpoint 生长实验：[[tide-checkpoint-growth-experiment-contract]] -> [[tide-runtime-validation-and-status]]。
+3. Checkpoint 生长研究：[[tide-model-architecture-and-training]] -> [[tide-runtime-validation-and-status]]；当前实验执行见 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md)。
 4. 外部概念：遇到 ISA、SSA、MemorySSA、dataflow、fixed point 或脑科学类比时查 [[tide-background-history-and-references]]。
 5. 统计力学假设：研究 coarse-graining、path correlation、route entropy 或宏观极限时查 [[tide-statistical-mechanics-and-information-dynamics]]；其中内容不进入正式证明链。
 
 ### 附录与研究暂存
 
-下列文档不计入八份核心职责文件，也不进入正式证明、架构或 runtime 的依赖链：
+下列文档不计入七份核心职责文件，也不进入正式证明、架构或 runtime 的依赖链：
 
 | 附录 | 定位 |
 | --- | --- |
@@ -197,10 +195,10 @@ Tide 正式数学文档遵守以下规则：
 ### Checkpoint 生长线
 
 1. 选择一个 pre-norm decoder-only checkpoint，完成原生参数、logits、cache/state、`prefill/decode`、梯度与 fresh save/reload equality。
-2. 建立函数保持 growth operator 和两条工作流共同使用的 reference contract、成本口径与 ExperimentLedger。
-3. 工作流 A 建立 dense continued-pretraining、成熟 flat MoE、checkpoint-grown MoE 与 Group-receiver selected control。
-4. 工作流 B 同步建立最小但机制完整的 BO 候选，并保留 matched selected-dispatch、state knockout 与 route replay。
-5. 以“探索—诊断—确认”闭环推进；递归、stateful selector、会聚和空间化由完整候选需要或已观察问题牵引，不再由固定阶段号禁止。
+2. 建立函数保持 growth operator、reference semantics、成本口径与可追溯的实验账本。
+3. 使用 dense continued-pretraining、成熟 flat MoE 和 selected-dispatch 为正面候选提供强基线与配对反事实。
+4. 允许完整候选联合使用递归、private state、局部 selector、always-on backbone 与 fixed merge；组合结果只支持存在性判断，单项主张必须补直接反事实。
+5. 以“探索—诊断—确认”闭环推进；当前配置、工作流、gate 与交付物只在 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 中维护。
 
 ### Selector 与训练
 
@@ -256,12 +254,12 @@ Tide 正式数学文档遵守以下规则：
 
 ## 整合记录
 
-Tide 在 2026-08-07 先被整合为六个职责文件，随后增加统计力学与信息动力学评述。2026-08-20 又加入 checkpoint 生长实验契约，因此当前共有八个职责文件。整合前的逐文件版本保存在 Git 提交 `d27819f`；实验契约初始政策对应 tide 仓库 `fractal-latcarf` 分支提交 `19999de069fa15c39b7bbf2e46db33c723c3b456`。其中：
+Tide 在 2026-08-07 先被整合为六个职责文件，随后增加统计力学与信息动力学评述，因此当前共有七个职责文件。整合前的逐文件版本保存在 Git 提交 `d27819f`。2026-08-20，checkpoint 生长实验仓库补充了目标约束链、机制假设链和配对归因方法；本仓库只吸收其中可泛化的研究动机、概念边界、证明义务与测量建议，当前实验政策继续留在 `fractal-latcarf`。其中：
 
 - `step-transition-mathematical-specification`、`explicit-allocator-general-dag-model` 和 `token-owned-general-dag-routing` 进入数学基础。
 - `adaptive-routing-prefill-impossibility` 改名为更准确的 lower-bound 文档。
 - HB-Lattice 历史草案、HB-Sliced/HB-Line 当前候选、selector capability 和训练稳定性进入模型架构与训练。
-- checkpoint 生长的并行工作流、BO 主假设、matched control、五道 gate 与首个交付进入实验契约。
+- checkpoint 生长的逻辑链、BO 候选边界、matched-control 方法与诊断坐标进入模型架构与训练；具体工作流、gate 与首个交付留在实验仓库。
 - 实现规范、当前状态和 LH/tide.old 历史进入 runtime 文档。
 - 编译器/dataflow 谱系和脑科学调查进入背景参考。
 
