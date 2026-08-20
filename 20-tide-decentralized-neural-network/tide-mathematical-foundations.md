@@ -5919,6 +5919,22 @@ $$
 - 短分支先向外发送、长分支稍后修改同一父模块输出的异步 merge。
 - 节点删除、非精确蒸馏、量化误差或浮点重排。
 
+#### Broadcast-observe 的候选证明义务
+
+[[tide-checkpoint-growth-experiment-contract]] 当前把 broadcast-observe、receiver-private state 与 later readout 作为需要正面验证的实验候选。这一政策不改变上述定理边界，也不能把 E.9/E.14 直接引用为 stateful BO 的 chunk-correctness 证明。
+
+在形成新的正式定义与定理前，至少需要给出：
+
+1. 复合状态空间：原模型状态、`ReceiverState` 与 `SelectorState` 是不同坐标，后两者的初始化、reset、continuation 和空消息转移均有总定义。
+2. 单步顺序：MessageProjection、Receive、Update、Select、Read/ExpensiveCompute、Emit 与 FixedMerge 各自是明确函数或关系，并声明 selector 读取 pre-Update 还是 post-Update state。
+3. 多父聚合：零到多条消息的序列或多重集语义、确定性归约、重复消息和 state commit version 被形式化。
+4. 函数保持嵌入：中性 growth 点只要求原模型输出和原状态坐标保持；新增 state 的后台轨迹必须被允许但不能影响旧可观察量。
+5. Reference fold：逐位置 transition 包含所有会改变以后输出的 receiver/selector state，任意 chunk continuation 必须返回相同复合边界状态。
+6. Chunk implementation：若 Update 或 selector 具有跨位置递推，需单独证明其 scan/causal-bulk 组合律，或明确登记 sequential fallback；不能仅由空间 DAG 拓扑推出低 span。
+7. Mask 与 packing：receive、update、active、read、emit 五类 mask 的 optimized implementation 必须模拟同一 reference transition，并将消息、state I/O、packing 与 merge 计入成本。
+
+在这些对象完成前，BO 只能称为候选 semantic profile 和实验 contract；机制被运行、被模型使用、带来 learning value、具有 scaling value 与产生系统收益仍是五个彼此独立的命题。
+
 固定 merge 本身只提供清晰的组合边界。高性能还要求分支的 chunk implementation 具有可接受的 work/span，并要求掩码序列能够通过 packed、segmented scan 或 causal-bulk kernel 实现，而不是物理执行所有未选分支再乘零。
 
 > [!important] 与两条战略路线的关系

@@ -15,7 +15,7 @@ tags:
 > 本页审视 [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|从希尔伯特第六问题到普利高津：AI 熵增与耗散结构类比]] 与 Tide 主线的关系。它是一份研究备忘，不是正式数学文档，不向 [[tide-mathematical-foundations]] 导入定义、引理或定理。凡是尚未给出概率空间、函数、关系、极限过程或误差界的物理对应，均只视为类比或待检验假设。
 
 > [!note] 与两条战略路线的关系
-> Graph 收缩线提供更丰富的局部路径、汇聚和状态对象，适合提出路径相关性与宏观极限问题；checkpoint 生长线提供稳定基线和逐级增加分支的实验阶梯，更适合判断这些统计量是否真的预测质量、梯度或训练稳定性。两条路线可以共享测量方法，但统计相似性不能证明架构汇合。
+> Graph 收缩线提供更丰富的局部路径、汇聚和状态对象，适合提出路径相关性与宏观极限问题；checkpoint 生长线提供稳定基线、并行候选和配对反事实，更适合判断这些统计量是否真的预测质量、梯度或训练稳定性。两条路线可以共享测量方法，但统计相似性不能证明架构汇合。
 
 ## 一页版结论
 
@@ -290,8 +290,13 @@ $$
 - 各来源对输出或 loss 的 gradient attribution。
 - branch delta 的范数、夹角和抵消率。
 - 同一语义输入在不同 checkpoint 的路径 influence drift。
+- 每个 receiver 的 Receive/Update/Read/Emit coverage，以及这些量随传播深度的衰减。
+- receiver-private state 的 write-to-read 延迟、read sensitivity 与 freeze/clear/shuffle/no-read knockout 差异。
+- selected-dispatch 与 broadcast-observe matched pair 的 source coverage、state use 和路径相关性差异。
 
 它们是训练诊断指标，不是 `prefill = decode` correctness artifact。
+
+路径相关统计必须区分四种常被口语合并为“路径长”的量：静态拓扑路径长度、某个 Token 的实际传播 hop 数、实际执行的昂贵模块数，以及 state write 到以后 read 的 Token 距离。它们分别对应拓扑、通信/控制、计算和延迟信用，不应合并为一个标量后直接归因。
 
 ## 8. Selector 的信息论指标
 
@@ -323,6 +328,7 @@ $H_{route}$ 较高通常表示激活分布更均匀，但它不自动表示：
 - route 与语义标签、输入 feature 或任务类型的 mutual information。
 - route churn、时间自相关和 checkpoint drift。
 - 每个层级的激活率、梯度覆盖与语义覆盖。
+- Receive/Update 覆盖、later-read state use 与有效梯度覆盖；激活均衡不等于训练均衡。
 - chunk/decode/batch invariance artifact equality。
 
 ### 8.2 不能混用的“熵”
@@ -390,7 +396,7 @@ $H_{route}$ 较高通常表示激活分布更均匀，但它不自动表示：
 ### 第二阶段：先测量，不预设物理理论
 
 1. 为 HB-Sliced/HB-Line 增加 route entropy、语义互信息、route churn 和层级负载统计。
-2. 沿 checkpoint 生长 P0-P6 阶梯，为 branch/merge 增加来源数、support overlap、delta 夹角和 gradient attribution。
+2. 沿 [[tide-checkpoint-growth-experiment-contract]] 的两条工作流和 matched propagation profiles，为 receiver/branch/merge 增加来源数、support overlap、state use、delta 夹角和 gradient attribution；历史 P0-P6 只作为局部诊断坐标。
 3. 在固定参数、数据与 schedule 下检查这些量是否能预测训练不稳定或质量变化。
 
 ### 第三阶段：构造最小随机模型

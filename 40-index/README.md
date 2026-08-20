@@ -29,8 +29,11 @@ tags:
 
 ## TIDE
 
-- [[20-tide-decentralized-neural-network/README#TIDE：当前计划与 Defense|当前计划与 Defense]]
-- [[20-tide-decentralized-neural-network/README#从链表、星型到去中心化 Graph 神经网络|从链表到去中心化 Graph]]
+- [[20-tide-decentralized-neural-network/README|TIDE 总览]]
+- [[20-tide-decentralized-neural-network/tide-model-architecture-and-training|模型架构与训练]]
+- [[20-tide-decentralized-neural-network/tide-checkpoint-growth-experiment-contract|Checkpoint 生长实验契约]]
+- [[20-tide-decentralized-neural-network/tide-mathematical-foundations|数学基础]]
+- [[20-tide-decentralized-neural-network/tide-runtime-validation-and-status|Runtime、验证与状态]]
 
 ## 其他
 
