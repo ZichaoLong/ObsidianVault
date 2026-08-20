@@ -11,10 +11,10 @@ tags:
   - allocator
 ---
 
-# Tide 数学基础
+# TIDE 数学基础
 
 > [!summary] 本页定位
-> 本页是 Tide 正向数学主线的唯一正式入口。它依次定义单步 transition、顺序 fold、kernel 级 chunk 正确性、有限 logical event DAG、显式 allocator 的一般空间 DAG、structural SCC 与 finite-cut 宏节点契约，以及 checkpoint 函数保持生长与有限 DAG 节点细化。自适应路由的通用下界独立见 [[adaptive-routing-prefill-lower-bound]]。
+> 本页是 TIDE Architecture / Network 正向数学主线的唯一正式入口。它依次定义单步 transition、顺序 fold、kernel 级 chunk 正确性、有限 logical event DAG、显式 allocator 的一般空间 DAG、structural SCC 与 finite-cut 宏节点契约，以及 checkpoint 函数保持生长与有限 DAG 节点细化。自适应路由的通用下界独立见 [[adaptive-routing-prefill-lower-bound]]。
 
 > [!important] 证明状态
 > StepTransition、B0 kernel family 与一般空间 DAG 的既有定理按原证明保留。第五部分的精确状态嵌入、DAG 节点细化和 token-local 固定 merge 闭包只在各自明示前提下成立。显式 allocator 的拓扑序构造只证明空间遍历次数不随 chunk 长度增长；时间分块组合律仍是额外义务，不能由空间 DAG 自动推出。结构 SCC 与 condensation DAG 的图论结论已证明；finite-cut 宏节点组合与 `prefill + streaming` 接续仍是明示的 theorem obligation。

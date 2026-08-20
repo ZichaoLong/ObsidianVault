@@ -10,10 +10,13 @@ tags:
   - backend
 ---
 
-# Tide Runtime、验证与工程状态
+# TIDE Engine：Runtime、验证与工程状态
 
 > [!summary] 本页定位
-> 本页统一保存三类工程信息：稳定的 runtime/StepTransition 实现契约、带日期的当前架构与数值验证快照，以及 LH/tide.old 的历史迁移记录。它同时规定 Graph 收缩线和 checkpoint 生长线共享的 state-dict、transition、artifact 与 backend 验证接口，并提炼 ReceiverCell 候选对 reference semantics 的一般要求，但不保存当前实验工作流或配置。数学定义和证明只以 [[tide-mathematical-foundations]] 为准；本页中的历史性能数字不构成当前性能承诺。
+> 本页统一保存 TIDE Engine 的三类工程信息：稳定的 runtime/StepTransition 实现契约、带日期的当前架构与数值验证快照，以及 LH/tide.old 的历史迁移记录。它同时规定 Graph 收缩线和 checkpoint 生长线共享的 state-dict、transition、artifact 与 backend 验证接口，并提炼 ReceiverCell 候选对 reference semantics 的一般要求，但不保存当前实验工作流或配置。数学定义和证明只以 [[tide-mathematical-foundations]] 为准；本页中的历史性能数字不构成当前性能承诺。
+
+> [!important] TIDE 对象边界
+> `TIDE Engine` 专指执行 TIDE Model 的训练或推理 runtime。它不是 `TIDE Architecture` / `TIDE Network`，也不是某个训练后的 `TIDE Model` checkpoint。本页同时记录目标 contract 和未完成的工程快照，因此出现 `TIDE Engine` 这个名称不表示当前已经存在完整通用实现。
 
 > [!important] 阅读顺序
 > 第一部分回答“runtime 应实现什么”；第二部分回答“当前已经实现并验证了什么”；第三部分解释“这些接口为何从 LH 演化而来”。后两部分不得反向修改第一部分的规范含义。
@@ -170,7 +173,7 @@ Step(input_value, State):
 > [!warning] 状态边界
 > 本节只提炼 checkpoint 生长候选对 runtime 的一般语义要求，不规定实验仓库当前采用的配置、工作流或 gate。它尚未成为当前 `~/llm/tide` 已实现能力，也未获得新的数学闭包定理；实现完成度仍以第二部分为准。
 
-该候选不需要先实现一般 Graph runtime。它在固定、有界的局部 DAG 或递归 branch grammar 上，把消息可见性、状态写入、选择、昂贵计算和继续传播拆成独立阶段：
+该候选不需要先实现一般 Graph runtime。它在执行期间固定、fan-in/fan-out 具有统一上界的局部 DAG 或递归 branch grammar 上，把消息可见性、状态写入、选择、昂贵计算和继续传播拆成独立阶段：
 
 ```text
 MessageProjection
@@ -729,7 +732,7 @@ Chunk Prefill Correctness Test
 79bb9ec Add selector artifacts and CPU stress benchmark
 ```
 
-当前 `~/llm/tide` 已经不是单纯的 LH native wrapper，也不是完整通用 TIDE。最准确的定位是：
+当前 `~/llm/tide` 已经不是单纯的 LH native wrapper，也不是完整通用的 TIDE Engine。最准确的定位是：
 
 > 一套由 Tide 自己的 role-aware graph、phase schedule、state/workspace contract 与独立 CPU kernels 承载的 LH-compatible reference runtime；native LH 继续作为 golden oracle。
 

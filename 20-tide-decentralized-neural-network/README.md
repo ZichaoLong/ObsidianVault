@@ -3,23 +3,49 @@ type: index
 status: active
 tags:
   - tide
-  - decentralized-nn
+  - topology-invariant
+  - degree-bounded
+  - autoregressive-inference
 ---
 
-# TIDE / 去中心化神经网络
+# TIDE / 面向自回归 Token 推理的拓扑固定、度有界容量扩展架构
 
 > [!summary] 本页定位
-> 本页是 Tide 线的唯一入口，只负责战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；模型候选、checkpoint 生长的设计动机与诊断坐标见 [[tide-model-architecture-and-training]]；工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。当前 checkpoint 生长实验的配置、工作流、gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
+> 本页是 TIDE 线的唯一入口，只负责项目命名、对象边界、战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；TIDE Architecture / Network 候选、checkpoint 生长的设计动机与诊断坐标见 [[tide-model-architecture-and-training]]；TIDE Engine 的工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。当前 checkpoint 生长实验的配置、工作流、gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
+
+## 命名与对象边界
+
+TIDE 的完整项目表述是：`TIDE: A Topology-Invariant Degree-bounded Expansion Architecture for Autoregressive Token Inference`。
+
+中文表述是：**TIDE：面向自回归 Token 推理的拓扑固定、度有界容量扩展架构。**
+
+- `Topology-Invariant Degree-bounded Expansion`：TIDE 的核心结构创新。其中，`Degree-bounded` 不是额外增加的底层要求，而是“固定空间拓扑 + 单节点成本有界”在本文成本口径下的直接推论：每条直接连接都会占用节点的接口、状态、候选处理或通信资源，因此节点度不能随着模型总容量一直增长；`Expansion` 表示通过多跳或空间扩展，让可达容量继续增长。
+- `for Autoregressive Token Inference`：项目的应用范围。
+- `Architecture`：当前研究的主要对象。
+- `TIDE Engine`：执行 TIDE Model 的训练或推理 runtime，不是 Architecture / Network 的同义词。
+
+本文统一使用以下对象名称：
+
+| 名称 | 含义 |
+| --- | --- |
+| `TIDE Architecture` / `TIDE Network` | 模型结构与 reference semantics |
+| `TIDE Model` | 训练得到的具体模型 |
+| `TIDE Engine` | 执行 TIDE Model 的训练或推理 runtime |
+
+“去中心化”仍是 TIDE 的历史动机和可单独研究的系统性质，但不再作为项目全称，也不能单独推出固定空间拓扑、局部通信或度有界。目录名 `20-tide-decentralized-neural-network` 为保持已有链接稳定而保留，不代表继续使用旧全称。
 
 ## 一页版结论
 
-TIDE 是 `Token Inference Decentralized Engine`。总体目标是研究同时具有下列性质的自回归神经系统：
+TIDE 总体目标是研究同时具有下列性质的自回归神经系统：
 
-1. 空间通信保持局部、有界度。
-2. 每个输入位置只激活全部潜在计算中的稀疏子集。
-3. `prefill` 与逐位置 `decode` 保持同一 reference semantics。
-4. 有限 chunk 的执行能暴露完整的数据、状态、控制、可见性和提交依赖。
-5. 经证明可批量化的 node、kernel 或 subgraph 可以获得低 span 实现；无法批量化的部分显式承担顺序成本。
+1. 对一个已经确定的 TIDE Architecture，空间图拓扑不随 Token、状态或 selector 改写。
+2. 所有节点，包括入口、selector、router 和 merge，单节点成本都具有不随模型总容量增长的上界；与此同时，可达且能实际贡献的总容量可以继续增长。
+3. 每个输入位置只激活全部潜在计算中的稀疏子集。
+4. `prefill` 与逐位置 `decode` 保持同一 reference semantics。
+5. 有限 chunk 的执行能暴露完整的数据、状态、控制、可见性和提交依赖。
+6. 经证明可批量化的 node、kernel 或 subgraph 可以获得低 span 实现；无法批量化的部分显式承担顺序成本。
+
+固定拓扑本身不表示度有界；在每条直接连接都占用单节点资源的成本口径下，单节点成本上界才推出统一的度上界。有界度再与可达容量增长共同要求多跳、逐级、层次化或空间化扩展，而不是一步平铺访问全部容量。
 
 当前结论分为五层：
 
@@ -57,7 +83,7 @@ Tide 当前最大的科学不确定性仍是 learning value：局部通信、持
     └── 显式 allocator 的一般空间 DAG
         └── HB-Lattice 的历史几何直觉
             └── HB-Sliced / HB-Line / HB-Plane
-                └── 有界递归、固定 merge 的结构化分支族
+                └── 有界度的多跳扩展、固定 merge 的结构化分支族
 ```
 
 dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态架构限制；前者不是通往后者的中间拓扑。一般 static schema Graph 的 SCC condensation 又是第三种对象，不能与二者混写。condensation DAG 只规定宏节点之间的无环连接，不替宏节点内部选择 fixed-round 展开、scan、solver、sequential fallback 或其他求值语义。
@@ -99,8 +125,8 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 | 本页 | 入口、术语、阅读顺序、主张边界 | 导航 |
 | [[tide-mathematical-foundations]] | StepTransition、fold、kernel theorem、logical event DAG、显式 allocator general DAG、归属/因果证书、structural SCC 与 condensation、多端口 finite-cut 候选契约、函数保持生长及 fixed-merge 闭包 | 正式定义、正向定理与明示的 proof obligations |
 | [[adaptive-routing-prefill-lower-bound]] | 黑盒自适应路由链的 parallel-query 下界及局部稀疏 Graph 嵌入 | 正式反向定理 |
-| [[tide-model-architecture-and-training]] | 两条战略路线、checkpoint 生长逻辑链、递归固定 merge 分支、HB-Sliced/HB-Line、selector 与训练风险、四道 execution gate | 架构候选与研究备忘 |
-| [[tide-runtime-validation-and-status]] | Runtime contract、LH 映射、artifact equality、CPU 对齐、候选 SCC macro 接口、性能和 backend 状态 | 实现规范、候选接口与动态快照 |
+| [[tide-model-architecture-and-training]] | TIDE Architecture / Network 的两条战略路线、checkpoint 生长逻辑链、递归固定 merge 分支、HB-Sliced/HB-Line、selector 与训练风险、四道 execution gate | 架构候选与研究备忘 |
+| [[tide-runtime-validation-and-status]] | TIDE Engine/runtime contract、LH 映射、artifact equality、CPU 对齐、候选 SCC macro 接口、性能和 backend 状态 | 实现规范、候选接口与动态快照 |
 | [[tide-background-history-and-references]] | ISA/编译器/dataflow、SCC、finite-prefix progress 与相关脑科学谱系 | 外部背景，不承担证明 |
 | [[tide-statistical-mechanics-and-information-dynamics]] | 碰撞历史、粗粒化、路径相关性、kinetic limit 与耗散结构类比的 Tide 评述 | 研究备忘与候选假设，不承担证明 |
 
@@ -208,7 +234,7 @@ Tide 正式数学文档遵守以下规则：
 4. BO 读取 post-Update proposal/state 时，必须另有“读取/忽略”和 matched/replay route 对照。
 5. 分别记录 route churn、receiver exposure、梯度覆盖、state use、write-to-read 延迟和 chunk/decode artifact equality。
 
-### Runtime
+### TIDE Engine / Runtime
 
 1. 固定 model-level `prefill()` 的输入、读出和 boundary-state contract。
 2. 让 Event IR 显式表示事件标识符、逻辑时间、状态版本、依赖与提交。

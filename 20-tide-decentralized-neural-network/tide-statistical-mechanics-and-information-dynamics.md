@@ -9,10 +9,10 @@ tags:
   - research-hypothesis
 ---
 
-# Tide、统计力学与信息动力学
+# TIDE、统计力学与信息动力学
 
 > [!summary] 本页定位
-> 本页审视 [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|从希尔伯特第六问题到普利高津：AI 熵增与耗散结构类比]] 与 Tide 主线的关系。它是一份研究备忘，不是正式数学文档，不向 [[tide-mathematical-foundations]] 导入定义、引理或定理。凡是尚未给出概率空间、函数、关系、极限过程或误差界的物理对应，均只视为类比或待检验假设。
+> 本页审视 [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|从希尔伯特第六问题到普利高津：AI 熵增与耗散结构类比]] 与 TIDE 主线的关系。它是一份研究备忘，不是正式数学文档，不向 [[tide-mathematical-foundations]] 导入定义、引理或定理。凡是尚未给出概率空间、函数、关系、极限过程或误差界的物理对应，均只视为类比或待检验假设。
 
 > [!note] 与两条战略路线的关系
 > Graph 收缩线提供更丰富的局部路径、汇聚和状态对象，适合提出路径相关性与宏观极限问题；checkpoint 生长线提供稳定基线、并行候选和配对反事实，更适合判断这些统计量是否真的预测质量、梯度或训练稳定性。两条路线可以共享测量方法，但统计相似性不能证明架构汇合。

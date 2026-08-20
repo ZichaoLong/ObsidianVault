@@ -14,7 +14,7 @@ tags:
 # Adaptive Routing Prefill Lower Bound
 
 > [!summary] 本页定位
-> 本页研究一个证否问题：当较早输入位置产生的晚期控制结果以不可预知的方式决定后续输入位置的 routing 时，是否存在对整个模型类别都有效的、精确且 work-efficient 的高性能 chunk prefill。正文先给出自足的黑盒查询模型，再证明自适应路由链的并行轮数下界，最后说明该结论如何嵌入局部通信、超稀疏的 Tide Graph。
+> 本页研究一个证否问题：当较早输入位置产生的晚期控制结果以不可预知的方式决定后续输入位置的 routing 时，是否存在对整个模型类别都有效的、精确且 work-efficient 的高性能 chunk prefill。正文先给出自足的黑盒查询模型，再证明自适应路由链的并行轮数下界，最后说明该结论如何嵌入局部通信、超稀疏的 TIDE Network。
 
 > [!note] 与构造性主线的关系
 > [[tide-mathematical-foundations]] 主要给出 chunk correctness 的构造性充分条件；本页给出一般动态 routing 的反向边界。它不证明每一个跨 token routing 模型都无法并行，而是证明：只要模型类别允许任意、不可组合的 pointer-chasing 式 routing，就不存在对该类别所有实例都有效的通用高性能 exact prefill。

@@ -11,10 +11,13 @@ tags:
   - prefill-decode
 ---
 
-# Tide 模型架构与训练
+# TIDE Architecture / Network：模型架构与训练
 
 > [!summary] 本页定位
-> 本页统一记录 Tide 的两条战略路线、checkpoint 生长的设计动机、当前正向模型候选、selector/allocator 能力契约、训练风险和诊断坐标。第一部分定义 Graph 收缩线、checkpoint 生长线及其可能但不保证发生的汇合；第二部分定义 HB-Sliced 并用 HB-Line-v0 给出结构 reference；第三、四部分记录训练和执行约束。当前 checkpoint 生长实验的配置、工作流、验收 gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护；一般空间 DAG 见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|数学基础第二部分]]；函数保持生长与 fixed merge 闭包见 [[tide-mathematical-foundations#第五部分：函数保持生长与有限 DAG 节点细化|数学基础第五部分]]；自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
+> 本页统一记录 TIDE Architecture / Network 的两条战略路线、checkpoint 生长的设计动机、当前正向模型候选、selector/allocator 能力契约、训练风险和诊断坐标。第一部分定义 Graph 收缩线、checkpoint 生长线及其可能但不保证发生的汇合；第二部分定义 HB-Sliced 并用 HB-Line-v0 给出结构 reference；第三、四部分记录训练和执行约束。当前 checkpoint 生长实验的配置、工作流、验收 gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护；一般空间 DAG 见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|数学基础第二部分]]；函数保持生长与 fixed merge 闭包见 [[tide-mathematical-foundations#第五部分：函数保持生长与有限 DAG 节点细化|数学基础第五部分]]；自适应控制下界见 [[adaptive-routing-prefill-lower-bound]]。
+
+> [!note] TIDE 对象边界
+> 本页定义的是 `TIDE Architecture` / `TIDE Network`，即模型结构与 reference semantics。按该架构训练得到的具体模型称为 `TIDE Model`；执行 TIDE Model 的训练或推理 runtime 称为 `TIDE Engine`，其 contract 与工程状态见 [[tide-runtime-validation-and-status]]。
 
 > [!important] 语义边界
 > `prefill`、`decode`、batch 组合和物理调度不得改变单序列 reference semantics。CPU selector、加速卡 packing、设备放置和通信流水只属于实现；若历史负载进入语义，它必须是逐序列隔离、可延续且可重放的正式状态。
@@ -39,7 +42,7 @@ Graph 收缩线从表达力较强的机制集合出发：
 -> 显式 allocator 的一般空间 DAG
 -> HB-Lattice 的几何与层级直觉
 -> HB-Sliced / HB-Line / HB-Plane
--> 有界递归、固定 merge 的结构化分支族
+-> 有界度的多跳扩展、固定 merge 的结构化分支族
 ```
 
 它的主要产物不是一个必须完整训练的“最大模型”，而是：
@@ -73,13 +76,13 @@ Checkpoint 生长线从已有成熟训练、部署事实和高性能 `prefill` �
 ```text
 【已有证据】Flat MoE 已证明：很大的潜在参数容量
              可以与每 Token 少量昂贵激活同时成立
-        ↓ 但它没有验证固定有界的局部传播和长期本地状态
-【目标约束】容量继续随节点数增长 + 统一有界入度/出度
-             + 不依赖全局 router + 输入自适应
-             + 全局昂贵计算超稀疏
-        ↓
-【条件性刚需】有界度、多跳、逐级的局部容量扩展
-             + 多次有界局部选择或等价的分布式路由
+        ↓ 但标准 flat MoE 通常把增长的专家池作为一步全局候选集合
+【原始要求】执行期间固定的空间拓扑 + 单节点成本统一有界
+             + 可达、可利用的总容量持续增长
+        ↓ 每条直接连接都会占用节点接口、状态、候选处理或通信资源
+【结构推论】节点度统一有界 + 多跳、逐级或空间化容量扩展
+        ↓ 若还要求每 Token 的昂贵计算超稀疏
+【额外要求】多次有界局部选择或等价的分布式路由
              + 显式 active、message 和 depth budget
         ↓
 【新增风险】早期选择延长控制寿命并改变下游输入分布，
@@ -89,7 +92,7 @@ Checkpoint 生长线从已有成熟训练、部署事实和高性能 `prefill` �
              有界局部 selector、函数保持接口和 fixed merge
 ```
 
-严格推出的是“有界度的多跳局部扩展”，不是某一种规则树。若固定入口数量、最大 fan-out 为 $\Delta$，半径 $D$ 内的可达槽位至多为 $1+\Delta+\cdots+\Delta^D$；容量持续增长时，传播深度、空间直径或入口数量中至少一项必须增长。规则层次递归离已有 checkpoint 较近，便于控制发散、收拢和证据变量，因此是工程与证据前置；line、lattice、mesh、多尺度 backbone 和其他局部 DAG 都可能成为后续形式。
+固定空间拓扑本身不推出度有界；度上界来自单节点成本上界和“每条直接连接都占用实际资源”的成本口径。在入口数量和最大 fan-out $\Delta$ 都有统一上界时，半径 $D$ 内的可达槽位至多为 $1+\Delta+\cdots+\Delta^D$；容量持续增长时，传播深度或空间直径必须增长。这里把入口、router、广播和 merge 都计入成本，不能把一步全局访问当作 Graph 外部的免费服务。严格推出的是“有界度的多跳扩展”，不是某一种规则树；规则层次递归离已有 checkpoint 较近，便于控制发散、收拢和证据变量，因此是工程与证据前置，line、lattice、mesh、多尺度 backbone 和其他局部 DAG 都可能成为后续形式。
 
 ##### 1.2.2 从路径相关历史到 broadcast-observe 假设
 
@@ -217,7 +220,7 @@ $$
 1. 单 block 的一个附加分支。
 2. 一个父模块下多个并列兄弟分支。
 3. 兄弟分支共享的一套 selector、预算和 merge。
-4. 两层有界递归分支。
+4. 两层有界度递归分支。
 5. 模块级或 Attention head-group 级稀疏化。
 
 旧 state-dict 始终可装载，旧路径也始终存在；但模型继续训练后不再与原 checkpoint 函数相同。“checkpoint-compatible”在这里表示参数和结构映射仍存在，不表示行为永远不变。
@@ -261,7 +264,7 @@ $$
 - `Attention -> FFN`、`SSM -> FFN` 等有限串联模块。
 - 另一个满足同样单入口、单出口和固定 merge 契约的递归模块。
 
-递归结构必须有有限最大深度、每层 fan-out 上界、每次选择的 Top-K 上界和最长串行路径上界。一个孙分支只有在其父分支已激活时才允许激活，因此实际激活子树是前缀闭合的。
+每个具体 TIDE Architecture 都必须是有限 Graph，并声明本实例的最大深度和最长串行路径；跨规模扩展时，统一保持有界的是每层 fan-in、fan-out 和 Top-K，递归深度或空间直径可以增长。若节点度和最大深度都在所有规模上固定，从固定入口可达的总容量也会存在固定上限。一个孙分支只有在其父分支已激活时才允许激活，因此实际激活子树是前缀闭合的。
 
 ![[assets/tide-two-route-convergence.svg]]
 
@@ -328,7 +331,7 @@ Graph 收缩线可以否决包含隐藏反向控制依赖、不可组合跨 toke
 | P1 单零分支 | 一个 residual delta | 函数保持和分支梯度开启是否正确 |
 | P2 平铺分支 | 多兄弟与 fixed merge | 容量、吞吐和梯度覆盖如何变化 |
 | P3 共享 selector | token-local soft/hard 选择 | learned routing 相对 fixed/hash route 的作用 |
-| P4 两层递归 | 有界递归与两级 selector | 控制寿命、路径输入漂移和信用分配 |
+| P4 两层递归 | 有界度递归与两级 selector | 控制寿命、路径输入漂移和信用分配 |
 | P5 空间化 | HB-Line/Plane 放置 | 逻辑局部能否兑现为通信与端到端收益 |
 | P6 结构变异 | 删除、合并或替换旧节点 | checkpoint-derived 后代如何迁移与恢复 |
 
@@ -2540,7 +2543,7 @@ $S^{\mathrm{semantic}}$ 包含 KV、SSM 或其他神经状态；$S^{\mathrm{load
 
 **第 3 级：长期保持路径身份的一般 Tide。** 路由可以在多个局部区域和 Token 之间持续限制未来可达 node，node-local state 与路径历史共同改变后续路由，且没有较短的强制 merge 上界。这一级表达力最强，但路径分布漂移、跨 Token 信用分配、状态存储和 `prefill` 并行都最难；它不应作为第一个 checkpoint-growth 实验。
 
-四级之间的关系不是“越一般越好”。第 0 级是最接近现有 checkpoint 和 MoE 训练经验的起点；第 1 级检验有界递归分支；第 2 级才检验 Tide 特有的 `Observe / Update` 与稀疏继续传播；第 3 级只有在前三级已经给出正面证据后才值得进入。
+四级之间的关系不是“越一般越好”。第 0 级是最接近现有 checkpoint 和 MoE 训练经验的起点；第 1 级检验有界度递归分支；第 2 级才检验 Tide 特有的 `Observe / Update` 与稀疏继续传播；第 3 级只有在前三级已经给出正面证据后才值得进入。
 
 对第 2 级还必须把三种性能结论分开：
 

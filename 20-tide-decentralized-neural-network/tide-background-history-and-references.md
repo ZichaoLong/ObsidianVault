@@ -9,10 +9,10 @@ tags:
   - references
 ---
 
-# Tide 背景、历史谱系与参考资料
+# TIDE 背景、历史谱系与参考资料
 
 > [!summary] 本页定位
-> 本页只提供研究谱系、工程类比、设计启发和外部参考，不承担 Tide 数学定义或证明。正式对象必须在 [[tide-mathematical-foundations]] 或 [[adaptive-routing-prefill-lower-bound]] 中重新声明，不能从本页隐式导入。
+> 本页只提供研究谱系、工程类比、设计启发和外部参考，不承担 TIDE Architecture / Network 的数学定义或证明。正式对象必须在 [[tide-mathematical-foundations]] 或 [[adaptive-routing-prefill-lower-bound]] 中重新声明，不能从本页隐式导入。
 
 > [!warning] 类比边界
 > ISA、编译器、SSA、MemorySSA、dataflow 与人脑网络都能提供有价值的结构性启发，但它们不是 Tide 正确性或可训练性的证据。特别是，脑科学调查描述真实生物网络，并不要求数字模型直接复制反馈环、皮质柱或脑区连接。
