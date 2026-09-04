@@ -58,9 +58,15 @@ TimedDAG-v0：节点事件按 (node, logical_time) 形成
 
 因此，如果不同 Token 的消息具有相同逻辑到达时间，它们可以进入同一个关闭后的输入桶，由一次节点事件联合处理。
 
-完整的学习规格、最小例子、解释器轮廓和待证命题见：
+不含显式 region selector 的最小学习规格、例子、解释器轮廓和待证命题见：
 
 > [[timed-dag-v0-learning-note|TimedDAG-v0：从 SettleGraph 到跨 Token 汇合的最小一步]]
+
+若要从头学习同一套 TimedDAG 基础，并进一步加入多输入、多输出以及“不把 region 收缩成节点”的完整候选集合与 selector 语义，见另一份可独立阅读的候选定义：
+
+> [[timed-dag-region-selector-learning-note|TimedDAG：从多输入、多输出到 region 与 selector 的完整数学学习笔记]]
+
+第二份笔记重新定义固定图、输入输出端口、逻辑时间、消息、桶和 seal，不以前一份为阅读前提。它暂不把 region-DAG 或 packed prefill 当作合法性的组成部分。
 
 ## TimedDAG-v0 明确不做什么
 
@@ -106,7 +112,7 @@ TimedDAG-v0 完成后，只再增加一项能力：允许静态图出现环，�
 ## 推荐阅读顺序
 
 1. 先读并运行 `fractal-latcarf` 当前 SettleGraph 语义和 reference。
-2. 第一次只读 [[timed-dag-v0-learning-note]] 的第 0 节并完成四道题；不要继续读后面的定义。
+2. 若只想隔离“跨 Token 同刻汇合”这一小步，读 [[timed-dag-v0-learning-note]]；若想从 TimedDAG 基础一直读到 region selector，直接读 [[timed-dag-region-selector-learning-note]]。两份是不同粒度的学习入口，不互为前置。
 3. 实现最小整数 payload 解释器，不接入神经网络。
 4. 完成随机调度、cut/resume 和迟到消息拒绝测试。
 5. 再按需查阅 [[tide-mathematical-foundations]] 中的绝对轮次、时间桶、时间分块反例和 finite-cut 定义。
