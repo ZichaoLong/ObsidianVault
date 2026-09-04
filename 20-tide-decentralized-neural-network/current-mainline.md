@@ -106,7 +106,7 @@ TimedDAG-v0 完成后，只再增加一项能力：允许静态图出现环，�
 ## 推荐阅读顺序
 
 1. 先读并运行 `fractal-latcarf` 当前 SettleGraph 语义和 reference。
-2. 阅读 [[timed-dag-v0-learning-note]] 到“最小例子”，亲手写一次 trace。
+2. 第一次只读 [[timed-dag-v0-learning-note]] 的第 0 节并完成四道题；不要继续读后面的定义。
 3. 实现最小整数 payload 解释器，不接入神经网络。
 4. 完成随机调度、cut/resume 和迟到消息拒绝测试。
 5. 再按需查阅 [[tide-mathematical-foundations]] 中的绝对轮次、时间桶、时间分块反例和 finite-cut 定义。
