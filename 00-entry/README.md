@@ -26,7 +26,7 @@ tags:
 
 - 控制反馈：[[10-control-feedback-token-instruction/current-mainline|当前主线]]
 - 递归分解与 Memory：[[11-recursive-decomposition-memory/current-status|当前状态]]
-- TIDE：[[20-tide-decentralized-neural-network/README|总览]]
+- TIDE：[[20-tide-decentralized-neural-network/current-mainline|当前主线]]；[[20-tide-decentralized-neural-network/README|总览与研究资料库]]
 
 其他入口：
 

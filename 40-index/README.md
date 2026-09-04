@@ -29,10 +29,15 @@ tags:
 
 ## TIDE
 
+- [[20-tide-decentralized-neural-network/current-mainline|TIDE 当前主线]]
+- [[20-tide-decentralized-neural-network/timed-dag-v0-learning-note|TimedDAG-v0 学习规格]]
 - [[20-tide-decentralized-neural-network/README|TIDE 总览]]
 - [[20-tide-decentralized-neural-network/tide-model-architecture-and-training|模型架构与训练]]
 - [[20-tide-decentralized-neural-network/tide-mathematical-foundations|数学基础]]
+- [[20-tide-decentralized-neural-network/adaptive-routing-prefill-lower-bound|Adaptive Routing Prefill Lower Bound]]
 - [[20-tide-decentralized-neural-network/tide-runtime-validation-and-status|Runtime、验证与状态]]
+- [[20-tide-decentralized-neural-network/tide-background-history-and-references|背景、历史谱系与参考资料]]
+- [[20-tide-decentralized-neural-network/tide-statistical-mechanics-and-information-dynamics|统计力学与信息动力学]]
 
 ## 其他
 

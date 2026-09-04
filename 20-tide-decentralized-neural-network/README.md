@@ -11,7 +11,10 @@ tags:
 # TIDE / 面向自回归 Token 推理的拓扑固定、度有界容量扩展架构
 
 > [!summary] 本页定位
-> 本页是 TIDE 线的唯一入口，只负责项目命名、对象边界、战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；TIDE Architecture / Network 候选、checkpoint 生长的设计动机与诊断坐标见 [[tide-model-architecture-and-training]]；TIDE Engine 的工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。当前 checkpoint 生长实验的配置、工作流、gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
+> 本页是 TIDE 线的总览与研究资料库入口，只负责项目命名、对象边界、战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。当前学习与开发从 [[current-mainline]] 开始。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；TIDE Architecture / Network 候选、checkpoint 生长的设计动机与诊断坐标见 [[tide-model-architecture-and-training]]；TIDE Engine 的工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。当前 checkpoint 生长实验的配置、工作流、gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
+
+> [!important] 当前学习与开发入口
+> 如果目标是沿一条可以手算、实现和逐级证明的路线继续推进，请先读 [[current-mainline|TIDE 当前主线]]，再读 [[timed-dag-v0-learning-note|TimedDAG-v0 学习规格]]。本页以下七份职责文档是总研究资料库，不要求在开始下一步实验前从头读完。
 
 ## 命名与对象边界
 
@@ -118,6 +121,13 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 ## 文档地图
 
+当前学习层只增加两份面向当前台阶的文档，不改变下面七份核心研究资料的职责：
+
+| 文档 | 用途 |
+| --- | --- |
+| [[current-mainline]] | 当前台阶、下一台阶、延期范围和退出条件 |
+| [[timed-dag-v0-learning-note]] | 从 SettleGraph 到跨 Token 同刻汇合的最小语义与实现练习 |
+
 当前核心研究线保留七个职责文件：
 
 | 文档 | 职责 | 结论类型 |
@@ -132,11 +142,12 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 建议阅读顺序：
 
-1. 战略与模型：本页 -> [[tide-model-architecture-and-training]]。
-2. Graph 收缩线数学：[[tide-mathematical-foundations]] -> [[adaptive-routing-prefill-lower-bound]]。
-3. Checkpoint 生长研究：[[tide-model-architecture-and-training]] -> [[tide-runtime-validation-and-status]]；当前实验执行见 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md)。
-4. 外部概念：遇到 ISA、SSA、MemorySSA、dataflow、fixed point 或脑科学类比时查 [[tide-background-history-and-references]]。
-5. 统计力学假设：研究 coarse-graining、path correlation、route entropy 或宏观极限时查 [[tide-statistical-mechanics-and-information-dynamics]]；其中内容不进入正式证明链。
+1. 当前可执行主线：[[current-mainline]] -> `fractal-latcarf` SettleGraph -> [[timed-dag-v0-learning-note]]。
+2. 战略与模型：本页 -> [[tide-model-architecture-and-training]]。
+3. Graph 收缩线数学：[[tide-mathematical-foundations]] -> [[adaptive-routing-prefill-lower-bound]]。
+4. Checkpoint 生长研究：[[tide-model-architecture-and-training]] -> [[tide-runtime-validation-and-status]]；当前实验执行见 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md)。
+5. 外部概念：遇到 ISA、SSA、MemorySSA、dataflow、fixed point 或脑科学类比时查 [[tide-background-history-and-references]]。
+6. 统计力学假设：研究 coarse-graining、path correlation、route entropy 或宏观极限时查 [[tide-statistical-mechanics-and-information-dynamics]]；其中内容不进入正式证明链。
 
 ### 附录与研究暂存
 
