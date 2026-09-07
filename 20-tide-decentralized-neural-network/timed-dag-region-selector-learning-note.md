@@ -445,8 +445,7 @@ $$
 - 非空状态集合 $S_v$；
 - 初始状态 $q_v^{\mathrm{init}}\in S_v$；
 - 非空本地内容集合 $X_v$；
-- 非空选择描述量集合 $D_v$；
-- 非空本地结果集合 $R_v$，以及指定元素 $r_v^\circ\in R_v$。
+- 非空选择描述量集合 $D_v$。
 
 给定两个全函数：
 
@@ -528,22 +527,20 @@ S_v\times\mathbb N\times X_v
 \to
 (P_\bot)^{\operatorname{Out}(v)}
 \times
-(P_\bot)^{\operatorname{OutPort}(v)}
-\times R_v.
+(P_\bot)^{\operatorname{OutPort}(v)}.
 \tag{12}
 $$
 
 若：
 
 $$
-(f^A,f^O,r)=\operatorname{Full}_v(q',\theta,h),
+(f^A,f^O)=\operatorname{Full}_v(q',\theta,h),
 $$
 
 则：
 
 - 对每条 $a\in\operatorname{Out}(v)$，$f^A(a)\in P_\bot$ 决定是否沿边 $a$ 产生一个值；
-- 对每个 $o\in\operatorname{OutPort}(v)$，$f^O(o)\in P_\bot$ 决定是否向外部输出端口 $o$ 产生一个值；
-- $r\in R_v$ 是保留在计算记录中的本地结果。
+- 对每个 $o\in\operatorname{OutPort}(v)$，$f^O(o)\in P_\bot$ 决定是否向外部输出端口 $o$ 产生一个值。
 
 不同出边和不同输出端口是函数的不同坐标。因此模型直接支持一个节点向多个内部去向和多个外部去向给出不同的值。
 
@@ -845,14 +842,12 @@ $$
 对每个 $v\in\mathcal A_{j,\theta}$ 定义：
 
 $$
-(f^A_{v,\theta},f^O_{v,\theta},r_{v,\theta})
+(f^A_{v,\theta},f^O_{v,\theta})
 =
 \operatorname{Full}_v
 (q_v^{\theta+1},\theta,h_{v,\theta}).
 \tag{26}
 $$
-
-对候选但不 active 的 $v$，只为记录方便令 $r_{v,\theta}=r_v^\circ$，并且不应用 $\operatorname{Full}_v$。
 
 定义时间 $\theta$ 产生的消息集合：
 
@@ -909,8 +904,7 @@ $$
 > - 每个 active set $\mathcal A_{j,\theta}$；
 > - 每个节点的状态序列；
 > - 有限内部消息集合 $M^*$；
-> - 有限多端口外部输出集合 $Z^*$；
-> - 全部本地结果记录。
+> - 有限多端口外部输出集合 $Z^*$。
 
 **证明。** 对 $\theta$ 作归纳。
 
@@ -949,14 +943,11 @@ $$
 M^*,Z^*,
 (f^A_{v,\theta},f^O_{v,\theta})_
 {\substack{j\in J,\ \theta\in[0,\Theta_{\max}+1)\\
-v\in\mathcal A_{j,\theta}}},
-(r_{v,\theta})_
-{\substack{v\in V,\ \theta\in[0,\Theta_{\max}+1)\\
-B_{v,\theta}\ne\varnothing}}
+v\in\mathcal A_{j,\theta}}}
 \right),
 $$
 
-其中时间纤维、选择、逐坐标输出函数值和本地结果的时间坐标满足 $0\le\theta\le\Theta_{\max}$，状态还包含递归结束后的 $\theta=\Theta_{\max}+1$。称 $\mathcal T_x$ 为输入 $x$ 的完整计算记录。
+其中时间纤维、选择和逐坐标输出函数值的时间坐标满足 $0\le\theta\le\Theta_{\max}$，状态还包含递归结束后的 $\theta=\Theta_{\max}+1$。称 $\mathcal T_x$ 为输入 $x$ 的完整计算记录。
 
 本文把第 1--5 节的数据以及第 6 节所定义的直接语义合称为一个**带区域选择的 TimedDAG 规格**。
 
@@ -1069,7 +1060,7 @@ $$
 
 ### 7.2 局部函数与选择函数
 
-为简化状态，令每个节点的状态集合都是单点集 $\{*\}$，初态为 $*$，更新函数总返回 $*$。令每个本地结果集合也是单点集，并令 $r_v^\circ=*$。
+为简化状态，令每个节点的状态集合都是单点集 $\{*\}$，初态为 $*$，更新函数总返回 $*$。
 
 令每个 $X_v=D_v=\mathbb N$，并定义：
 
@@ -1092,7 +1083,7 @@ $$
 
 区域 $\mathcal R_2$ 取 $K_2=1$，其 selector 选择描述量较大的节点；若相等，固定选择 $a$。这条平局规则使它成为一个确定函数。
 
-$s_0$ 的完整输出函数把 $h$ 沿 $e_0$ 发送；$s_1$ 把 $h$ 沿 $e_1$ 发送。节点 $a,b$ 没有图内出边；若它们 active，则分别把 $h$ 送到 $o_a,o_b$。其他值坐标均取 $\bot$，第三个本地结果坐标恒取 $*$。这样，式 (12) 要求的函数在其整个定义域上都已给定。
+$s_0$ 的完整输出函数把 $h$ 沿 $e_0$ 发送；$s_1$ 把 $h$ 沿 $e_1$ 发送。节点 $a,b$ 没有图内出边；若它们 active，则分别把 $h$ 送到 $o_a,o_b$。其他值坐标均取 $\bot$。这样，式 (12) 要求的函数在其整个定义域上都已给定。
 
 ### 7.3 时间 0 与时间 1
 
@@ -1643,7 +1634,7 @@ $$
 
 在选择阶段，定理 3 保证候选集合相同；式 (14) 是函数，因此 active set 相同。
 
-在状态采用与完整输出阶段，式 (16)--(28) 都是函数，因而新状态、消息、外部输出和本地结果相同。对所有有限位置完成归纳，便得到整个记录相同。$\square$
+在状态采用与完整输出阶段，式 (16)--(28) 都是函数，因而新状态、消息和外部输出相同。对所有有限位置完成归纳，便得到整个记录相同。$\square$
 
 这个定理允许改变独立函数作用的求值先后，但不允许改变函数的输入集合。
 
@@ -1919,7 +1910,7 @@ $Z_{<b}$ 不影响未来节点计算；若要在恢复后重建完整多端口�
 > B_{v,\theta}(E_{\ge b},M^{\mathrm{res}}_{<\theta})
 > \qquad(\theta\ge b),
 > $$
-> 其余步骤仍按第 6.3 节递归。所得时间不小于 $b$ 的状态、候选集合、active sets、内部消息、外部输出和本地结果，与完整计算 $\mathcal T_x$ 的相应后缀相同。
+> 其余步骤仍按第 6.3 节递归。所得时间不小于 $b$ 的状态、候选集合、active sets、内部消息和外部输出，与完整计算 $\mathcal T_x$ 的相应后缀相同。
 
 **证明。** 对 $\theta\ge b$ 归纳。时间 $b$ 的旧状态由式 (43) 与完整计算相同。其外部输入由 $E_{\ge b}$ 相同；所有从左侧跨入的消息恰好是式 (42)，所以时间 $b$ 的完整纤维相同。式 (22)--(28) 都是函数，时间 $b$ 的结果相同。
 
@@ -2186,7 +2177,7 @@ $$
 > [!info]- S.7　chunk、prefill、decode、packing 与 fast path
 > **chunk（分块）**可以数学化为一个有限位置集合的划分。若 $E=E_1\cup\cdots\cup E_k$ 且各 $E_i$ 两两不交，那么 $(E_i)$ 是一种分块。它不改变位置本身的 $(v,\theta)$ 或 $(j,\theta)$ 坐标。
 >
-> **prefill** 通常表示一次联合处理许多已知输入位置；**decode** 通常表示逐个或小批增加输入位置。要声称二者等价，必须比较第 6 节的状态、内部消息、所有输出端口、候选集合、active sets 和本地结果，而不只是最后一个张量。
+> **prefill** 通常表示一次联合处理许多已知输入位置；**decode** 通常表示逐个或小批增加输入位置。要声称二者等价，必须比较第 6 节的状态、内部消息、所有输出端口、候选集合和 active sets，而不只是最后一个张量。
 >
 > **packing / packed attention** 是式 (45) 中 $\operatorname{Pack},\mathcal K,\operatorname{Unpack}$ 的具体实现候选。seal 证明输入不会再增加；式 (45) 证明联合求值等于参考递归。两项证明不能互相替代。
 >
