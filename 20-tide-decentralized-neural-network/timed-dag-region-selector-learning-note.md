@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-04
+as-of: 2026-09-07
 tags:
   - tide
   - timed-dag
@@ -12,169 +12,58 @@ tags:
   - learning-note
 ---
 
-# TimedDAG：从多输入、多输出到 region 与 selector 的完整数学学习笔记
+# 带区域选择的 TimedDAG：从零开始的数学定义
 
-> [!summary] 阅读约定
-> 本文从有限集合、函数、自然数和数学归纳法开始，独立定义一套包含多个输入端口、多个输出端口、逻辑时间、消息、完整输入桶、seal、region 与 selector 的 TimedDAG 候选语义。阅读本文不要求先读另一份 TimedDAG 笔记。
+> [!summary] 本文的阅读前提
+> 本文只假设读者熟悉集合、函数、自然数、有限求和、最小值和数学归纳法。有向图、逻辑时间、输入端口、消息、时间纤维、区域、候选集合、选择函数、封闭下界以及事件图都会在本文中重新定义。
 >
-> 正文只让已经定义的数学对象承担推理。`region`、`selector`、`SD`、`BO`、`prefill` 等计算机系统词汇的解释统一放在文末附录 S；删除整个附录以后，正文的定义、引理和证明目标仍然完整。
+> 本文的每一项定义都写在文内，其他文档与讨论均不是阅读前提。标题中的 `region`、`selector` 和完整 `TimedDAG` 规格只是待定义对象的名称；它们分别在第 2.4、5.3、6.4 节获得精确定义。
 >
-> 第一次只读第 0 节并完成四道题，然后停止。第二次只读第 1 节，确认每个符号的定义域；第三次只读第 2 节，手算一次选择；第四次才读第 3--4.5 节并独立证明候选集合关闭引理。后面的内容只在准备相应证明时阅读。
+> 正文先给数学对象，再给例子和定理。计算机系统中的常用说法统一放在附录 S；删除附录 S 后，正文仍然构成完整的数学规格。
 
-本文研究一个有限模型：
+> [!tip] 分四次阅读
+> 第一次只读第 1--3 节，目标是能从式 (8) 独立算出一个时间纤维；读到这里就停止。第二次读第 4--7 节，完整手算两个例子。第三次只研究第 8--9 节的封闭下界与次序无关。第 10 节以后讨论事件图、切面与性能分层，不是理解主定义的前置。
 
-> 不同输入位置产生的量可以在同一节点、同一逻辑时间汇合；同一组中的多个节点可以在这个逻辑时间共同接受一次选择；只有在所有同刻消息都已经确定以后，选择与节点状态变化才能发生。
+本文要定义的是一个有限确定性模型。它具有以下能力：
 
-模型从一开始就允许有限多个外部输入端口和有限多个外部输出端口。第 0 节为了只展示一个困难，暂时只画出两个输入位置；第 1 节的主定义不作单输入或单输出限制。
+1. 有有限多个外部输入端口，也有有限多个外部输出端口；
+2. 每个外部输入位置带有一个自然数时间；
+3. 节点沿固定有向边发送值，每条边增加一个正整数时间；
+4. 到达同一节点、同一时间的全部外部输入和内部消息被共同处理；
+5. 节点集合被划分为若干区域；同一区域中，在同一时间收到至少一个输入的全部节点共同参加一次选择；
+6. 只有在能够证明这组节点不会再增加时，在线求值过程才可以作出选择；
+7. 区域不是节点，不接收消息，也不发送消息；
+8. 区域之间不要求构成 DAG。
 
-本文同时区分三种对象：
+正文分成两个层次。
 
-1. **固定空间图**：哪些节点之间允许发送值；
-2. **区域划分**：哪些节点在同一逻辑时间共同接受选择；
-3. **事件图**：给定一次具体输入后，一组函数作用及足以保证正确求值的先后关系。
+- 第 1--7 节先假定一次输入全部给定，定义唯一的完整结果。这是模型本身的含义。
+- 第 8--9 节再定义一个求值者只逐步看见输入和消息时，怎样证明当前知道的集合已经完整。这只改变求值次序，不改变模型结果。
 
-区域不是固定空间图中的新节点。本文也不要求把区域收缩后所得的图无环。固定空间图暂时仍然是有限 DAG，每条边暂时仍然具有正整数逻辑时延。
+这个顺序很重要：必须先知道“正确的完整结果是什么”，才能定义“一个尚未看全的求值过程何时已经知道得足够多”。
 
-本文首先定义一般情形下唯一正确的计算。区域结构何时允许一次向前计算很大的逻辑时间区间，是以后附加条件下的定理，不是当前合法性的前提。
+## 1. 基础记号
 
-## 0. 第一次只看一个最小例子
-
-记：
-
-$$
-\mathbb N=\{0,1,2,\ldots\}.
-$$
-
-先只看某一个外部输入端口上的两个位置 $0,1$，并暂时把这个端口的逻辑时间函数简写为 $\iota$。两个位置的逻辑注入时间分别为：
-
-$$
-\iota(0)=0,
-\qquad
-\iota(1)=1.
-$$
-
-位置 $0$ 产生的一个量经过总时延 $5$ 到达节点 $a$；位置 $1$ 产生的一个量经过总时延 $4$ 到达节点 $b$。于是两个量的逻辑到达时间都是：
-
-$$
-0+5=1+4=5.
-$$
-
-把到达 $a,b$ 的两个量分别记为 $z_a,z_b$，则完整输入桶为：
-
-$$
-B_{a,5}=\{z_a\},
-\qquad
-B_{b,5}=\{z_b\}.
-$$
-
-现在把两个节点放进同一个固定集合：
-
-$$
-\mathcal R=\{a,b\}.
-$$
-
-因为两个桶都非空，逻辑时间 $5$ 的候选节点集合是：
-
-$$
-\mathcal C_{\mathcal R,5}=\{a,b\}.
-$$
-
-假设两个节点分别由自己的完整桶算出一个数：
-
-$$
-d_{a,5}=2,
-\qquad
-d_{b,5}=7.
-$$
-
-再定义一个函数：它从候选节点中选择 $d$ 最大的一个。于是：
-
-$$
-\operatorname{Select}_{\mathcal R}
-\left(
-5,\{(a,2),(b,7)\}
-\right)
-=\{b\}.
-$$
-
-这里的 $\{(a,2),(b,7)\}$ 是函数 $a\mapsto2,\ b\mapsto7$ 的图；它的两个坐标由节点标记，不表示先把 $a$ 再把 $b$ 交给函数。
-
-把被选节点集合记为：
-
-$$
-\mathcal A_{\mathcal R,5}=\{b\}.
-$$
-
-这次选择以后，仍然是节点 $b$ 读取自己的状态、执行自己的函数、沿自己的固定出边发送消息，并且可以向与 $b$ 相连的一个或多个外部输出端口给值。集合 $\mathcal R$ 本身不接收或发送边消息，也不产生外部输出。
-
-### 0.1 为什么不能看见一个消息就立刻选择
-
-假设机器先看见 $z_a$，过了一段现实时间才看见 $z_b$。在只看见 $z_a$ 时，机器暂时看到的候选集合是 $\{a\}$，但完整候选集合仍然是 $\{a,b\}$。
-
-因此不能立即选择 $a$。必须先得到一个可以证明的条件：
-
-$$
-\text{通向 }a,b\text{ 的全部入边都不会再出现逻辑到达时间为 }5\text{ 的消息。}
-$$
-
-后文用严格大于 $5$ 的 seal 表达这个条件。等待的不是固定秒数，而是等待这个全称命题成立。
-
-如果再有节点 $c\in\mathcal R$，并且它最终满足：
-
-$$
-B_{c,5}=\varnothing,
-$$
-
-仍然需要证明通向 $c$ 的消息不会再到来，才能确定 $c$ 不属于候选集合。证明“没有消息”与收集已经出现的消息同样重要。
-
-### 0.2 同一节点还可以接收多个同刻消息
-
-若另一个例子中有两条消息 $m_0,m_1$ 都在逻辑时间 $5$ 到达同一节点 $v$，则：
-
-$$
-B_{v,5}=\{m_0,m_1\}.
-$$
-
-节点 $v$ 只作为一个候选出现，并从整个集合 $\{m_0,m_1\}$ 算出一个描述量。不能先用 $\{m_0\}$ 选择或更新一次，再用 $\{m_1\}$ 选择或更新一次。
-
-所以本文同时允许：
-
-- 不同输入位置的消息在同一节点、同一逻辑时间汇合；
-- 不同节点在同一 region、同一逻辑时间共同选择。
-
-### 0.3 第一次阅读的四道题
-
-1. 位置 $0$ 与位置 $1$ 的量由机器以相反次序看见，会不会改变它们两个等式 $0+5=1+4=5$？
-2. 只看见 $z_a$、但关于 $b$ 的 seal 尚未越过 $5$ 时，能否确定候选集合是 $\{a\}$？
-3. 节点 $c$ 的桶最终为空时，为什么仍然需要等待关于 $c$ 的 seal？
-4. selector 选出 $b$ 后，是 region 发送消息和产生外部输出，还是 $b$ 沿自己的出边发送并向自己的输出端口给值？
-
-答案是：不会；不能；因为暂时没看见消息不能证明以后不会出现同刻消息；由节点 $b$ 发送和给出外部输出。
-
-第一次阅读到这里即可停止。
-
-## 1. 固定数据：节点、边、输入输出端口与逻辑时间
-
-### 1.1 数、有限集合与函数族
+### 1.1 自然数、有限集合与半开区间
 
 定义：
 
 $$
+\mathbb N=\{0,1,2,\ldots\},
+\qquad
 \mathbb N_{>0}=\{1,2,3,\ldots\}.
 $$
 
-对 $L\in\mathbb N_{>0}$，定义：
+若 $L\in\mathbb N_{>0}$，定义：
 
 $$
 [L]=\{0,1,\ldots,L-1\}.
 $$
 
-对 $c,b\in\mathbb N$ 且 $c\le b$，定义：
+若 $r,s\in\mathbb N$ 且 $r\le s$，定义：
 
 $$
-[c,b)
-=
-\{\theta\in\mathbb N\mid c\le\theta<b\}.
+[r,s)=\{\theta\in\mathbb N\mid r\le\theta<s\}.
 $$
 
 对任意集合 $X$，用：
@@ -183,71 +72,134 @@ $$
 \mathcal P_{\mathrm{fin}}(X)
 $$
 
-表示 $X$ 的全部有限子集所成的集合。对集合 $E,Y$，用 $Y^E$ 表示全部函数 $E\to Y$ 所成的集合。
+表示 $X$ 的所有有限子集所成的集合，用 $|X|$ 表示有限集合 $X$ 的元素个数。
 
-### 1.2 固定空间图以及输入、输出端口
-
-定义五元组：
+对任意集合 $E,Y$，定义：
 
 $$
-G=(V,A,\alpha,\beta,\delta).
+Y^E=\{f\mid f:E\to Y\}.
+$$
+
+也就是说，$Y^E$ 是所有从 $E$ 到 $Y$ 的函数所成的集合。
+
+本文说一个映射是**全函数**，只表示定义域中的每个元素都恰有一个函数值；它不表示这个函数一定容易计算。
+
+### 1.2 带名字的函数坐标
+
+设 $C$ 是有限集合，并且每个 $v\in C$ 都有一个集合 $D_v$。定义：
+
+$$
+\prod_{v\in C}D_v
+=
+\{d\mid d\text{ 是定义在 }C\text{ 上的函数，且 }d(v)\in D_v\}.
+$$
+
+因此，$(d_v)_{v\in C}$ 表示“由 $v$ 标记的函数坐标族”，不是一个依赖排列顺序的列表。若 $C=\{a,b\}$，那么 $(d_v)_{v\in C}$ 就是同时规定 $d(a)$ 与 $d(b)$；交换纸面上书写 $a,b$ 的顺序不会改变这个函数。
+
+### 1.3 一个表示“不产生值”的符号
+
+固定一个非空集合 $P$，其元素称为**承载值**。本文不限制 $P$ 是实数、向量还是别的集合。
+
+另取一个不属于 $P$ 的符号 $\bot$，定义：
+
+$$
+P_\bot=P\cup\{\bot\}.
+$$
+
+以后，一个以 $P_\bot$ 为值域的函数在某个坐标上取 $\bot$，只表示“这次在该坐标上不产生承载值”。
+
+## 2. 固定结构：时间、节点图、端口与区域划分
+
+本节定义一次具体输入到来以前就已经固定的数据。
+
+### 2.1 逻辑时间
+
+定义逻辑时间集合：
+
+$$
+\mathbb T=\mathbb N.
+$$
+
+本文中的 $\theta\in\mathbb T$ 只是一项数学坐标。它可以相加、比较大小，并作为函数的自变量。定义本身没有说 $\theta=5$ 等于五秒，也没有说它是某个程序执行的第五步。
+
+两个对象具有相同逻辑时间，严格地说只表示它们的时间坐标是同一个自然数。
+
+### 2.2 有限有向图与 DAG
+
+给定五元组：
+
+$$
+G=(V,A,\operatorname{src},\operatorname{dst},\delta).
 \tag{1}
 $$
 
-各分量如下：
+其中：
 
-- $V$ 是有限非空节点集合；
-- $A$ 是有限边集合；
-- $\alpha:A\to V$ 给出边的起点；
-- $\beta:A\to V$ 给出边的终点；
-- $\delta:A\to\mathbb N_{>0}$ 给出边的逻辑时延。
+- $V$ 是有限非空集合，其元素称为节点；
+- $A$ 是有限集合，其元素称为有向边；
+- $\operatorname{src}:A\to V$ 给出边的起点；
+- $\operatorname{dst}:A\to V$ 给出边的终点；
+- $\delta:A\to\mathbb N_{>0}$ 给出边的正整数时延。
 
-一条边 $a$ 的方向是：
+$\delta(a)$ 表示从起点节点在某个逻辑时间发生输入事件，到相应值到达终点节点之间的总逻辑时间差。若希望把源节点的逻辑计算耗时和边上传递耗时分开，可以另外给定：
 
 $$
-\alpha(a)\longrightarrow\beta(a).
+c:V\to\mathbb N,
+\qquad
+d:A\to\mathbb N,
 $$
 
-即使两条边起点和终点相同，只要它们是 $A$ 中两个不同元素，它们仍是两条不同的边。
+并令：
 
-对节点 $v$，定义：
+$$
+\delta(a)=c(\operatorname{src}(a))+d(a)>0.
+$$
+
+后文只使用总和 $\delta(a)$，所以这种分解不改变任何递归或封闭下界定义。这里的 $c,d$ 只是 $\delta$ 的一种分解，不会额外产生“节点完成时间”事件；消息的第一个时间坐标仍取源节点事件时间。若要让节点完成时间本身成为可观察坐标，或者记录外部值的逻辑可用时间，就需要另外定义相应事件或输出端口时延函数，不能暗中改变 $\theta$ 的含义。
+
+两条边即使具有相同起点和终点，只要它们是 $A$ 中不同的元素，仍然是两条不同的边。
+
+对 $v\in V$ 定义：
 
 $$
 \operatorname{In}(v)
-=
-\{a\in A\mid\beta(a)=v\},
+=\{a\in A\mid\operatorname{dst}(a)=v\},
 $$
 
 $$
 \operatorname{Out}(v)
+=\{a\in A\mid\operatorname{src}(a)=v\}.
+$$
+
+若 $(a_1,\ldots,a_k)$ 是非空有限边序列，并且：
+
+$$
+\operatorname{dst}(a_\ell)
 =
-\{a\in A\mid\alpha(a)=v\}.
+\operatorname{src}(a_{\ell+1})
+\qquad(1\le\ell<k),
 $$
 
-对 $k\in\mathbb N_{>0}$，称边序列 $(a_1,\ldots,a_k)$ 是一条有向路径，当且仅当：
+则称它为一条有向路径。若还满足：
 
 $$
-\beta(a_\ell)=\alpha(a_{\ell+1})
+\operatorname{dst}(a_k)=\operatorname{src}(a_1),
+$$
+
+则称它为有向环。
+
+本文规定式 (1) 中不存在有向环。满足这个条件的有限有向图称为有向无环图，英文缩写为 **DAG**。
+
+因此，本文标题中的 `DAG` 首先指式 (1) 的固定节点图是 DAG。第 10 节还会从一次具体计算构造另一张事件 DAG；两张图不是同一个数学对象。
+
+### 2.3 多个输入端口与多个输出端口
+
+给定两个有限非空集合：
+
+$$
+\mathsf I=\text{输入端口集合},
 \qquad
-(1\le \ell<k).
-$$
-
-这条路径的起点是 $\alpha(a_1)$，终点是 $\beta(a_k)$；若二者分别为 $u,v$，就称它是从 $u$ 到 $v$ 的有向路径。
-
-若还有：
-
-$$
-\beta(a_k)=\alpha(a_1),
-$$
-
-则称这条非空路径是有向环。本文称 $G$ 是 DAG，当且仅当 $G$ 有限且不存在有向环。
-
-再给定两个有限非空集合：
-
-$$
-\mathsf I=\text{外部输入端口集合},
-\qquad
-\mathsf O=\text{外部输出端口集合},
+\mathsf O=\text{输出端口集合},
 $$
 
 以及两个函数：
@@ -256,519 +208,317 @@ $$
 \gamma:\mathsf I\to V,
 \qquad
 \varepsilon:\mathsf O\to V.
+\tag{2}
 $$
 
-$\gamma(i)$ 是输入端口 $i$ 注入值的节点；$\varepsilon(o)$ 是可以向输出端口 $o$ 给值的节点。对每个节点定义：
+$\gamma(i)$ 是端口 $i$ 的值进入的节点；$\varepsilon(o)$ 是唯一可以向端口 $o$ 产生值的节点。端口不是 $V$ 中的节点。
+
+对节点 $v$ 定义：
 
 $$
 \operatorname{InPort}(v)
-=
-\{i\in\mathsf I\mid\gamma(i)=v\},
+=\{i\in\mathsf I\mid\gamma(i)=v\},
 $$
 
 $$
 \operatorname{OutPort}(v)
-=
-\{o\in\mathsf O\mid\varepsilon(o)=v\}.
+=\{o\in\mathsf O\mid\varepsilon(o)=v\}.
 $$
 
-端口不是 $V$ 中的额外节点。输入端口只提供外部输入原子；输出端口只记录节点给出的值，不再向图内发送消息。
+允许多个输入端口进入同一节点，也允许同一节点连接多个输出端口。
 
-本文暂时要求：
-
-1. $G$ 没有有向环；
-2. 对每个 $v\in V$，至少存在一个 $i\in\mathsf I$，使得 $v=\gamma(i)$，或者存在一条从 $\gamma(i)$ 到 $v$ 的有向路径。
-
-第二条只排除永远不可能收到任何外部因果来源的多余节点。它允许多个输入端口进入同一节点，也允许一个输入节点同时具有图内入边；输入节点不再是唯一的。
-
-这里的 DAG 只描述节点和边。区域划分尚未出现。
-
-### 1.3 region 是节点集合的划分
-
-取一个有限非空集合 $J$，并给定满射：
-
-$$
-\rho:V\to J.
-\tag{2}
-$$
-
-对每个 $j\in J$，定义：
-
-$$
-\mathcal R_j
-=
-\{v\in V\mid\rho(v)=j\}.
-\tag{3}
-$$
-
-于是：
-
-$$
-V=\bigcup_{j\in J}\mathcal R_j,
-$$
-
-并且：
-
-$$
-j\ne j'
-\Longrightarrow
-\mathcal R_j\cap\mathcal R_{j'}=\varnothing.
-$$
-
-所以每个节点恰好属于一个 $\mathcal R_j$。正文把 $\mathcal R_j$ 称为一个 **region**，把 $\rho$ 称为区域归属函数。
-
-式 (2)--(3) 没有在 $J$ 上定义边。本文允许一条节点路径离开一个 region 后，在更大的逻辑时间重新进入同一个 region；也允许同一 region 包含一条路径上前后位置不同的节点。
-
-### 1.4 多个输入端口、输入位置与逻辑注入时间
-
-固定一个非空值集合 $P$。对每个输入端口 $i\in\mathsf I$，给定正整数 $L_i$，并定义这个端口的位置集合：
-
-$$
-[L_i]=\{0,1,\ldots,L_i-1\}.
-$$
-
-一次多端口输入是函数族：
+对每个 $i\in\mathsf I$，固定一个正整数 $L_i$。端口 $i$ 的输入位置集合是 $[L_i]$。一次完整外部输入是函数族：
 
 $$
 x=(x_i)_{i\in\mathsf I},
 \qquad
 x_i:[L_i]\to P.
+\tag{3}
 $$
 
-再对每个 $i\in\mathsf I$ 给定严格递增函数：
+再为每个端口固定严格递增函数：
 
 $$
 \iota_i:[L_i]\to\mathbb N,
 \qquad
-t<t'
-\Longrightarrow
-\iota_i(t)<\iota_i(t').
+k<k'\Longrightarrow\iota_i(k)<\iota_i(k').
 \tag{4}
 $$
 
-输入位置由二元组 $(i,t)$ 唯一确定；它携带值 $x_i(t)$，并在逻辑时间 $\iota_i(t)$ 注入节点 $\gamma(i)$。这个时间是自然数标签，不表示现实中经过了多少秒。
+输入位置 $(i,k)$ 带有值 $x_i(k)$，并具有逻辑时间 $\iota_i(k)$。严格递增只发生在同一个端口内部；不同端口的位置可以具有相同逻辑时间。
 
-不同端口之间不要求 $\iota_i(t)$ 彼此不同。因此，多个端口完全可以在同一个逻辑时间向同一节点或不同节点注入值。
+### 2.4 区域是节点集合的划分
 
-### 1.5 消息与逻辑到达时间
-
-一条候选消息是三元组：
+给定有限非空集合 $J$ 和满射：
 
 $$
-m=(\theta,a,y)
-\in
-\mathbb N\times A\times P.
+\rho:V\to J.
 \tag{5}
 $$
 
-定义：
+这里“满射”明确表示：
 
 $$
-\operatorname{send}(m)=\theta,
-\qquad
-\operatorname{edge}(m)=a,
-\qquad
-\operatorname{value}(m)=y,
+\forall j\in J,\quad
+\exists v\in V:\rho(v)=j.
 $$
 
-$$
-\operatorname{sender}(m)=\alpha(a),
-\qquad
-\operatorname{receiver}(m)=\beta(a),
-$$
+对每个 $j\in J$ 定义：
 
 $$
-\operatorname{arrival}(m)
-=
-\theta+\delta(a).
+\mathcal R_j=\rho^{-1}(\{j\})
+=\{v\in V\mid\rho(v)=j\}.
 \tag{6}
 $$
 
-式 (6) 中的 arrival 仍然是逻辑时间。它不是消息在某台机器中变为可见的现实时间。
-
-若还想为每个节点指定一个非负整数逻辑计算耗时 $c(v)$，并为每条边指定一个非负整数逻辑传递耗时 $d(a)$，只需在固定数据中取：
+由于 $\rho$ 是满射，每个 $\mathcal R_j$ 都非空；并且：
 
 $$
-\delta(a)=c(\alpha(a))+d(a),
+V=\bigcup_{j\in J}\mathcal R_j,
 \qquad
-\delta(a)>0.
+j\ne j'\Longrightarrow
+\mathcal R_j\cap\mathcal R_{j'}=\varnothing.
 $$
 
-后文只使用总时延 $\delta(a)$，所以无需改变桶、selector 或解释器定义。这里仍然只是在定义逻辑时间差，不是在测量现实计算耗时。
+从现在起，集合 $\mathcal R_j$ 的系统别名是 **region**，中文称为区域。式 (5)--(6) 是这个词在正文中的全部基础含义：每个节点恰好属于一个区域。
 
-本文暂时规定：同一节点在同一逻辑时间沿同一出边至多产生一条消息。因此消息集合 $M$ 必须满足：
+区域没有自己的入边、出边或状态。$J$ 上目前也没有定义任何边。第 10.6 节会为了比较额外构造一张区域商图，但那张商图不参与本模型的消息传递。
+
+## 3. 外部输入记录、内部消息与时间纤维
+
+本节先定义哪些记录可以到达一个节点，再用目标节点与逻辑时间从这些记录中取出一个有限子集。
+
+### 3.1 外部输入记录
+
+定义所有可能的外部输入记录所成的集合：
 
 $$
-(\theta,a,y)\in M,
-\quad
-(\theta,a,y')\in M
-\Longrightarrow
-y=y'.
+\mathsf{Ext}
+=
+\{(\mathrm{ext},i,k,y)\mid
+i\in\mathsf I,\ k\in[L_i],\ y\in P\}.
+$$
+
+对 $e=(\mathrm{ext},i,k,y)\in\mathsf{Ext}$ 定义：
+
+$$
+\operatorname{inport}(e)=i,
+\qquad
+\operatorname{position}(e)=k,
+$$
+
+$$
+\operatorname{target}(e)=\gamma(i),
+\qquad
+\operatorname{time}(e)=\iota_i(k),
+\qquad
+\operatorname{value}(e)=y.
+$$
+
+坐标 $i$ 与 $k$ 被保留。因此，即使两个端口给出相等的值，它们仍然是两个不同的记录。
+
+### 3.2 内部消息与外部输出记录
+
+定义所有可能的内部消息所成的集合：
+
+$$
+\mathsf{Msg}
+=
+\{(\mathrm{msg},\eta,a,y)\mid
+\eta\in\mathbb N,\ a\in A,\ y\in P\}.
+$$
+
+对 $m=(\mathrm{msg},\eta,a,y)\in\mathsf{Msg}$ 定义：
+
+$$
+\operatorname{send}(m)=\eta,
+\qquad
+\operatorname{edge}(m)=a,
+$$
+
+$$
+\operatorname{target}(m)=\operatorname{dst}(a),
+\qquad
+\operatorname{time}(m)=\eta+\delta(a),
+\qquad
+\operatorname{value}(m)=y.
 \tag{7}
 $$
 
-### 1.6 输入原子与完整桶
+$\eta$ 是产生该消息的源节点事件时间；函数名 $\operatorname{send}$ 是它的简写。$\eta+\delta(a)$ 是逻辑到达时间。两者都是自然数坐标。若按第 2.2 节把 $\delta$ 分成节点耗时与传递耗时，$\eta$ 仍是源事件坐标，而不是新引入的节点完成坐标。
 
-对每个节点 $v$，定义外部输入原子集合：
+定义所有可能的外部输出记录：
 
 $$
-\mathsf{InAtom}_v
+\mathsf{OutRec}
 =
-\{(0,i,t,y)\mid
-i\in\operatorname{InPort}(v),\ t\in[L_i],\ y\in P\}.
+\{(\mathrm{out},\theta,o,y)\mid
+\theta\in\mathbb N,\ o\in\mathsf O,\ y\in P\}.
 $$
 
-对每个节点 $v$，定义边消息原子集合：
+对 $z=(\mathrm{out},\theta,o,y)\in\mathsf{OutRec}$ 定义：
 
 $$
-\mathsf{MsgAtom}_v
-=
-\{(1,m)\mid\operatorname{receiver}(m)=v\}.
+\operatorname{outtime}(z)=\theta,
+\qquad
+\operatorname{outport}(z)=o,
+\qquad
+\operatorname{outvalue}(z)=y.
 $$
 
-开头的 $0,1$ 只用于区分两种原子。定义：
+外部输出记录不会再次进入节点图，所以不为它定义 $\operatorname{target}$。
+
+### 3.3 到达原子的集合
+
+由于外部输入记录以 $\mathrm{ext}$ 开头，内部消息以 $\mathrm{msg}$ 开头，两个集合不相交。定义：
+
+$$
+\mathsf{Atom}=\mathsf{Ext}\cup\mathsf{Msg},
+$$
+
+以及节点 $v$ 所能接收的原子集合：
 
 $$
 \mathsf{Atom}_v
 =
-\mathsf{InAtom}_v\cup\mathsf{MsgAtom}_v.
+\{z\in\mathsf{Atom}\mid\operatorname{target}(z)=v\}.
 $$
 
-定义原子的逻辑到达时间：
+函数 $\operatorname{target}$、$\operatorname{time}$ 和 $\operatorname{value}$ 在 $\mathsf{Ext}$ 与 $\mathsf{Msg}$ 上已经分别定义，因此也在它们的不交并 $\mathsf{Atom}$ 上定义。
+
+### 3.4 由节点与时间取出的纤维
+
+任取有限集合 $E\subseteq\mathsf{Ext}$ 和 $M\subseteq\mathsf{Msg}$。对 $v\in V$ 与 $\theta\in\mathbb N$，定义：
 
 $$
-\operatorname{atime}(0,i,t,y)=\iota_i(t),
-$$
-
-$$
-\operatorname{atime}(1,m)=\operatorname{arrival}(m).
-$$
-
-节点 $v$ 在时间 $\theta$ 的输入桶是满足下式的有限集合 $B\subseteq\mathsf{Atom}_v$：
-
-$$
-z\in B
-\Longrightarrow
-\operatorname{atime}(z)=\theta.
-$$
-
-一次具体输入的**完整输入桶**记为 $B_{v,\theta}$：它包含这次完整计算中到达 $(v,\theta)$ 的全部外部输入原子和边消息原子。
-
-同一桶是集合，没有先后次序。完整桶可以为空；只有非空桶才产生候选节点事件。
-
-例如，取两个输入端口 $i_0,i_1$，令：
-
-$$
-\gamma(i_0)=\gamma(i_1)=v,
-\qquad
-L_{i_0}=L_{i_1}=1,
-\qquad
-\iota_{i_0}(0)=\iota_{i_1}(0)=5.
-$$
-
-若时间 $5$ 没有图内消息到达 $v$，则：
-
-$$
-B_{v,5}
+B_{v,\theta}(E,M)
 =
-\{
-(0,i_0,0,x_{i_0}(0)),
-(0,i_1,0,x_{i_1}(0))
-\}.
-$$
-
-即使两个值相等，端口坐标不同也使它们是两个不同的输入原子。
-
-第二次阅读到这里即可停止。此时只需能指出：一个输入原子由哪个端口、哪个位置、哪个值和哪个逻辑时间确定。
-
-## 2. 节点函数、候选集合与 selector
-
-### 2.1 节点状态与本地内容
-
-对每个节点 $v\in V$，给定：
-
-- 非空状态集合 $S_v$；
-- 初始状态 $q_v^0\in S_v$；
-- 非空本地内容集合 $X_v$；
-- 非空选择描述量集合 $D_v$；
-- 非空观察值集合 $R_v$，以及一个指定元素 $r_v^\circ\in R_v$。
-
-给定全函数：
-
-$$
-\operatorname{Aggregate}_v:
-\mathbb N
-\times
-\mathcal P_{\mathrm{fin}}(\mathsf{Atom}_v)
-\to X_v.
+\{z\in E\cup M
+\mid
+\operatorname{target}(z)=v,
+\ \operatorname{time}(z)=\theta\}.
 \tag{8}
 $$
 
-对非空完整桶定义：
+式 (8) 是映射：
 
 $$
-h_{v,\theta}
-=
-\operatorname{Aggregate}_v(\theta,B_{v,\theta}).
+z\longmapsto
+(\operatorname{target}(z),\operatorname{time}(z))
+$$
+
+在点 $(v,\theta)$ 上的逆像，所以定义它为节点 $v$ 在时间 $\theta$ 的**时间纤维**。附录 S 才把系统词 bucket / 输入桶对应到这个集合；正文推理统一使用“时间纤维”。
+
+时间纤维不是一个额外容器公理；它就是式 (8) 所定义的有限集合。由集合的定义可立即得到：
+
+- 同一时间纤维中的元素没有先后次序；
+- 一条边的身份 $a$ 和一个输入端口的身份 $i$ 没有被删除；
+- 一个时间纤维可以包含零个、一个或多个原子；
+- 两个原子数值相等，并不推出它们是同一个原子。
+
+例如，若：
+
+$$
+e_0=(\mathrm{ext},i_0,0,y),
+\qquad
+e_1=(\mathrm{ext},i_1,0,y),
+$$
+
+且 $\gamma(i_0)=\gamma(i_1)=v$、$\iota_{i_0}(0)=\iota_{i_1}(0)=5$，那么：
+
+$$
+B_{v,5}(\{e_0,e_1\},\varnothing)=\{e_0,e_1\}.
+$$
+
+这个集合有两个元素，即使两者承载的值都是 $y$。
+
+本节尚未定义一次计算实际会产生哪些内部消息。因此，式 (8) 目前是任意 $E,M$ 上的集合构造。第 6 节通过递归定义实际消息集合；到那以后，才会定义一次输入对应的**完整时间纤维**。
+
+## 4. 节点的局部函数
+
+本节定义：在一个节点的旧状态与一个非空时间纤维已经给定时，该节点能算出哪些数学量。它尚不决定哪些节点被选择。
+
+### 4.1 状态、本地内容与描述量
+
+对每个 $v\in V$，给定：
+
+- 非空状态集合 $S_v$；
+- 初始状态 $q_v^{\mathrm{init}}\in S_v$；
+- 非空本地内容集合 $X_v$；
+- 非空选择描述量集合 $D_v$；
+- 非空本地结果集合 $R_v$，以及指定元素 $r_v^\circ\in R_v$。
+
+给定两个全函数：
+
+$$
+\operatorname{Agg}_v:
+\mathbb N\times\mathcal P_{\mathrm{fin}}(\mathsf{Atom}_v)
+\to X_v,
+$$
+
+$$
+\operatorname{Upd}_v:
+S_v\times\mathbb N\times X_v
+\to S_v.
 \tag{9}
 $$
 
-如果节点需要区分不同入边，式 (8) 可以读取消息原子中的边 $a$；若要区分外部来源，也可以读取输入原子中的端口 $i$。它不能读取这些原子被机器看见的先后次序。
-
-### 2.2 候选新状态
-
-给定全函数：
+任取旧状态 $q\in S_v$、时间 $\theta\in\mathbb N$ 和非空集合 $B\subseteq\mathsf{Atom}_v$，并假定 $B$ 中每个原子的时间都是 $\theta$。定义：
 
 $$
-\operatorname{Update}_v:
-S_v\times\mathbb N\times X_v
-\to S_v.
+h=\operatorname{Agg}_v(\theta,B),
+\qquad
+\widetilde q=\operatorname{Upd}_v(q,\theta,h).
 \tag{10}
 $$
 
-设 $q^-_{v,\theta}$ 是节点处理逻辑时间 $\theta$ 以前全部更小时间事件后保留的状态。定义候选新状态：
+$h$ 称为本地内容，$\widetilde q$ 称为候选新状态。这里“候选”表示 $\widetilde q$ 只是一个已经定义的函数值；它是否成为节点下一时刻可读的状态，要到第 5 节由区域选择结果共同决定。
+
+$\operatorname{Agg}_v$ 的输入是原子集合本身。因此它可以读取外部记录中的端口 $i$，也可以读取内部消息中的边 $a$。若一个具体 $\operatorname{Agg}_v$ 只对所有 $\operatorname{value}(z)$ 求和，那是这个函数的特殊选择，不是式 (9) 强迫它忘记来源。
+
+### 4.2 三种选择描述量
+
+对每个节点给定三个全函数：
 
 $$
-\widetilde q_{v,\theta}
-=
-\operatorname{Update}_v
-\left(q^-_{v,\theta},\theta,h_{v,\theta}\right).
-\tag{11}
-$$
-
-式 (11) 只定义了一个 $S_v$ 中的值。它不表示后续事件已经可以读取这个值。第 2.7 节才决定它是否成为当前事件后的状态。
-
-### 2.3 content、pre 与 post 描述量
-
-给定三个全函数：
-
-$$
-\operatorname{Read}^{\mathrm{content}}_v:
+\operatorname{Read}^{0}_v:
 \mathbb N\times X_v\to D_v,
 $$
 
 $$
-\operatorname{Read}^{\mathrm{pre}}_v:
+\operatorname{Read}^{-}_v:
 S_v\times\mathbb N\times X_v\to D_v,
 $$
 
 $$
-\operatorname{Read}^{\mathrm{post}}_v:
+\operatorname{Read}^{+}_v:
 S_v\times\mathbb N\times X_v\to D_v.
 $$
 
-分别定义：
+对式 (10) 中的 $q,h,\widetilde q$，定义：
 
 $$
-d^{\mathrm{content}}_{v,\theta}
-=
-\operatorname{Read}^{\mathrm{content}}_v
-(\theta,h_{v,\theta}),
-\tag{12}
+d^0=\operatorname{Read}^{0}_v(\theta,h),
 $$
 
 $$
-d^{\mathrm{pre}}_{v,\theta}
-=
-\operatorname{Read}^{\mathrm{pre}}_v
-(q^-_{v,\theta},\theta,h_{v,\theta}),
-\tag{13}
+d^-=\operatorname{Read}^{-}_v(q,\theta,h),
 $$
 
 $$
-d^{\mathrm{post}}_{v,\theta}
-=
-\operatorname{Read}^{\mathrm{post}}_v
-(\widetilde q_{v,\theta},\theta,h_{v,\theta}).
-\tag{14}
+d^+=\operatorname{Read}^{+}_v(\widetilde q,\theta,h).
+\tag{11}
 $$
 
-pre 与 post 一般不是同一个函数输入。如果 $\operatorname{Update}_v$ 会压缩或遗忘旧状态，$\widetilde q$ 甚至未必能够恢复 $q^-$。
+三个上标的数学含义如下：
 
-### 2.4 同一 region、同一时间的候选集合
+- $0$：不读取状态；
+- $-$：读取这次事件以前的状态 $q$；
+- $+$：读取由本次输入算出的候选新状态 $\widetilde q$。
 
-固定 $j\in J$ 和 $\theta\in\mathbb N$。定义：
+上标 $+$ 不表示 $\widetilde q$ 已经被采用。它只说明描述量函数以 $\widetilde q$ 为自变量。
 
-$$
-\mathcal C_{j,\theta}
-=
-\{v\in\mathcal R_j\mid B_{v,\theta}\ne\varnothing\}.
-\tag{15}
-$$
-
-这是 region $\mathcal R_j$ 在逻辑时间 $\theta$ 的完整候选集合。
-
-若一个节点的桶含有多条消息，它仍然只在式 (15) 中出现一次。若一个节点的桶为空，它不属于候选集合。
-
-### 2.5 selector 的固定输入类型
-
-对每个 $j\in J$，固定：
-
-$$
-\tau_j
-\in
-\{\mathrm{content},\mathrm{pre},\mathrm{post}\}.
-$$
-
-对 $v\in\mathcal R_j$，简写：
-
-$$
-d_{v,\theta}=d^{\tau_j}_{v,\theta}.
-\tag{16}
-$$
-
-再固定整数：
-
-$$
-1\le K_j\le|\mathcal R_j|.
-$$
-
-对每个 $C\subseteq\mathcal R_j$，定义合法激活集合所成的集合：
-
-$$
-\mathsf{Act}_{j,C}
-=
-\{A'\subseteq C\mid |A'|\le K_j\}.
-\tag{17}
-$$
-
-### 2.6 selector 是完整候选族上的函数
-
-对每个 $j\in J$ 和每个子集 $C\subseteq\mathcal R_j$，给定全函数：
-
-$$
-\operatorname{Select}_{j,C}:
-\mathbb N
-\times
-\prod_{v\in C}D_v
-\to
-\mathsf{Act}_{j,C}.
-\tag{18}
-$$
-
-$\prod_{v\in C}D_v$ 的元素写成 $(d_v)_{v\in C}$。每个坐标由节点 $v$ 标记，所以这个输入没有机器到达顺序。
-
-令 $C=\mathcal C_{j,\theta}$。当 $C\ne\varnothing$ 时，定义 active set：
-
-$$
-\mathcal A_{j,\theta}
-=
-\operatorname{Select}_{j,C}
-\left(
-\theta,
-(d_{v,\theta})_{v\in C}
-\right).
-\tag{19}
-$$
-
-由值域可知：
-
-$$
-\mathcal A_{j,\theta}
-\subseteq
-\mathcal C_{j,\theta},
-$$
-
-$$
-|\mathcal A_{j,\theta}|\le K_j.
-$$
-
-若 $C=\varnothing$，规定：
-
-$$
-\mathcal A_{j,\theta}=\varnothing,
-$$
-
-并且该 $(j,\theta)$ 不产生选择事件。
-
-式 (18) 没有规定 selector 必须怎样选择。Top-$K$ 打分只是它的一个可能实例。若使用分数并可能出现相等值，必须事先在 $V$ 上给定一个固定全序来打破平局，不能让机器中先完成的节点获胜。
-
-### 2.7 SD 与 BO 决定哪些候选状态被采用
-
-对每个 region 固定：
-
-$$
-\pi_j\in\{\mathrm{SD},\mathrm{BO}\}.
-$$
-
-定义状态采用集合：
-
-$$
-\mathcal O_{j,\theta}
-=
-\begin{cases}
-\mathcal A_{j,\theta},&\pi_j=\mathrm{SD},\\
-\mathcal C_{j,\theta},&\pi_j=\mathrm{BO}.
-\end{cases}
-\tag{20}
-$$
-
-对 $v\in\mathcal C_{j,\theta}$，定义两个指示量：
-
-$$
-\chi_{v,\theta}
-=
-\begin{cases}
-1,&v\in\mathcal A_{j,\theta},\\
-0,&v\notin\mathcal A_{j,\theta},
-\end{cases}
-$$
-
-$$
-\omega_{v,\theta}
-=
-\begin{cases}
-1,&v\in\mathcal O_{j,\theta},\\
-0,&v\notin\mathcal O_{j,\theta}.
-\end{cases}
-\tag{21}
-$$
-
-$\chi$ 决定是否执行完整节点计算；$\omega$ 决定是否采用候选新状态。
-
-定义当前事件后的状态：
-
-$$
-q^+_{v,\theta}
-=
-\begin{cases}
-\widetilde q_{v,\theta},&\omega_{v,\theta}=1,\\
-q^-_{v,\theta},&\omega_{v,\theta}=0.
-\end{cases}
-\tag{22}
-$$
-
-因此：
-
-- SD 中只有 active candidates 采用候选新状态；
-- BO 中全部 candidates 采用候选新状态；
-- 两者都只有 active candidates 执行完整计算。
-
-### 2.8 完整节点计算、图内消息与外部输出
-
-取新符号 $\bot\notin P$，并定义：
-
-$$
-P_\bot=P\cup\{\bot\}.
-$$
-
-一条候选外部输出记录是三元组：
-
-$$
-z=(\theta,o,y)
-\in
-\mathbb N\times\mathsf O\times P.
-$$
-
-定义：
-
-$$
-\operatorname{otime}(z)=\theta,
-\qquad
-\operatorname{oport}(z)=o,
-\qquad
-\operatorname{ovalue}(z)=y.
-$$
+### 4.3 节点的完整输出函数
 
 对每个节点给定全函数：
 
@@ -780,710 +530,695 @@ S_v\times\mathbb N\times X_v
 \times
 (P_\bot)^{\operatorname{OutPort}(v)}
 \times R_v.
-\tag{23}
+\tag{12}
 $$
 
-定义两个全空函数：
+若：
 
 $$
-\bot_v^A(a)=\bot
+(f^A,f^O,r)=\operatorname{Full}_v(q',\theta,h),
+$$
+
+则：
+
+- 对每条 $a\in\operatorname{Out}(v)$，$f^A(a)\in P_\bot$ 决定是否沿边 $a$ 产生一个值；
+- 对每个 $o\in\operatorname{OutPort}(v)$，$f^O(o)\in P_\bot$ 决定是否向外部输出端口 $o$ 产生一个值；
+- $r\in R_v$ 是保留在计算记录中的本地结果。
+
+不同出边和不同输出端口是函数的不同坐标。因此模型直接支持一个节点向多个内部去向和多个外部去向给出不同的值。
+
+## 5. 区域候选集合、选择函数与状态采用
+
+本节在第 2.4 节的节点划分上定义共同选择。所有对象都只涉及同一个逻辑时间。
+
+### 5.1 候选节点集合
+
+先固定 $\theta\in\mathbb N$，并任取：
+
+$$
+B=(B_v)_{v\in V}
+\in
+\prod_{v\in V}\mathcal P_{\mathrm{fin}}(\mathsf{Atom}_v),
+$$
+
+其中每个 $B_v$ 的全部元素都具有时间 $\theta$。对区域 $j\in J$ 定义：
+
+$$
+C_j(B)
+=
+\{v\in\mathcal R_j\mid B_v\ne\varnothing\}.
+\tag{13}
+$$
+
+这个集合的元素是节点，而不是原子。即使 $B_v$ 含有十个原子，节点 $v$ 也只在 $C_j(B)$ 中出现一次。
+
+第 6 节把 $B_v$ 取为一次完整计算在 $(v,\theta)$ 的纤维，并把所得集合记为 $\mathcal C_{j,\theta}$。从现在起，$C_j(B)$ 的系统别名是候选集合，其中的节点称为候选节点。
+
+### 5.2 选择描述量模式
+
+对每个 $j\in J$ 固定：
+
+$$
+\tau_j\in\{0,-,+\}.
+$$
+
+若 $v\in\mathcal R_j$，则该区域为节点 $v$ 使用式 (11) 中的 $d^{\tau_j}$。区域中的所有候选节点使用同一种模式，但各节点的读取函数可以不同。
+
+### 5.3 选择函数
+
+对每个 $j\in J$ 固定整数：
+
+$$
+1\le K_j\le|\mathcal R_j|.
+$$
+
+对每个子集 $C\subseteq\mathcal R_j$，定义允许的选择结果集合：
+
+$$
+\mathsf{Allowed}_{j,C}
+=
+\{A'\subseteq C\mid |A'|\le K_j\}.
+$$
+
+再给定全函数族：
+
+$$
+\operatorname{Sel}_{j,C}:
+\mathbb N\times\prod_{v\in C}D_v
+\to\mathsf{Allowed}_{j,C}.
+\tag{14}
+$$
+
+并规定 $\operatorname{Sel}_{j,\varnothing}$ 的值是 $\varnothing$。
+
+若某个时间的完整候选集合是 $C$，候选描述量族是 $(d_v)_{v\in C}$，定义：
+
+$$
+A
+=
+\operatorname{Sel}_{j,C}
+(\theta,(d_v)_{v\in C}).
+\tag{15}
+$$
+
+从现在起，式 (14) 的系统别名是 **selector**，式 (15) 的集合 $A$ 称为 active set，其中的元素称为 active nodes。由值域定义自动得到：
+
+$$
+A\subseteq C,
 \qquad
-(a\in\operatorname{Out}(v)),
+|A|\le K_j.
 $$
 
-$$
-\bot_v^O(o)=\bot
-\qquad
-(o\in\operatorname{OutPort}(v)).
-$$
+式 (14) 没有规定必须按最大分数选择。最大值、Top-$K$、固定查表或任何别的确定性规则都可以成为一个具体的 $\operatorname{Sel}_{j,C}$。若规则可能遇到相等描述量，必须把确定的平局规则写进函数；不得让观察顺序代替函数定义。
 
-对候选节点定义：
+### 5.4 哪些候选节点采用候选新状态
+
+对每个区域固定一个二值参数：
 
 $$
-(o^A_{v,\theta},o^O_{v,\theta},r_{v,\theta})
+\kappa_j\in\{0,1\}.
+$$
+
+给定候选集合 $C$ 与 active set $A\subseteq C$，定义状态采用集合：
+
+$$
+O_j(C,A)
 =
 \begin{cases}
-\operatorname{Full}_v
-(q^+_{v,\theta},\theta,h_{v,\theta}),
-&\chi_{v,\theta}=1,\\
-(\bot_v^A,\bot_v^O,r_v^\circ),
-&\chi_{v,\theta}=0.
+A,&\kappa_j=0,\\
+C,&\kappa_j=1.
 \end{cases}
-\tag{24}
+\tag{16}
 $$
 
-若 $o^A_{v,\theta}(a)=y\in P$，则产生图内消息；若 $o^O_{v,\theta}(o)=y'\in P$，则产生外部输出记录：
+对候选节点 $v\in C$，旧状态为 $q_v$，候选新状态为 $\widetilde q_v$，定义事件后的状态：
 
 $$
-\begin{aligned}
-m&=(\theta,a,y),
-\\
-z&=(\theta,o,y').
-\end{aligned}
-\tag{25}
-$$
-
-外部输出记录的三个坐标分别是逻辑产生时间、输出端口和值。若相应函数值为 $\bot$，本次事件就在该边或该输出端口上不产生记录。因为每个 $o\in\mathsf O$ 具有唯一来源节点 $\varepsilon(o)$，任意实际输出集合 $Z$ 都满足：
-
-$$
-(\theta,o,y)\in Z,
-\quad
-(\theta,o,y')\in Z
-\Longrightarrow
-y=y'.
-$$
-
-region 和 selector 都不产生式 (25) 的图内消息或外部输出。selector 只产生 $\mathcal A_{j,\theta}$；节点根据它得到的 $\chi,\omega$ 更新自己的状态，沿自己的边发送，并向自己的输出端口给值。
-
-所以“区分输入来源”与“区分输出去向”是两个独立能力：前者来自桶中保留的 $i$ 或 $a$，后者来自两个输出函数分别以内部边 $a$ 和外部端口 $o$ 为坐标；不需要二选一。
-
-例如，若 $\operatorname{OutPort}(v)=\{o_0,o_1\}$，并且某次 active 计算给出：
-
-$$
-o^O_{v,\theta}(o_0)=y_0,
-\qquad
-o^O_{v,\theta}(o_1)=y_1,
-$$
-
-则 $Z$ 同时加入 $(\theta,o_0,y_0)$ 与 $(\theta,o_1,y_1)$。它们是两个命名输出，不是图内的两条新消息。
-
-### 2.9 两条互相独立的配置轴
-
-$\tau_j$ 决定 selector 读取哪个值，$\pi_j$ 决定哪些 candidates 采用新状态。它们不是同一件事。
-
-| 条件 | selector 读取 | 状态采用集合 | 完整计算集合 |
-| --- | --- | --- | --- |
-| SD + content | 当前本地内容 | active | active |
-| SD + pre | 旧状态与当前内容 | active | active |
-| BO + content | 当前本地内容 | candidates | active |
-| BO + pre | 旧状态与当前内容 | candidates | active |
-| BO + post | 候选新状态与当前内容 | candidates | active |
-
-数学上还可以定义 SD + post：先为全部 candidates 定义候选新状态并读取它们，选择后只让 active candidates 采用。若使用这种组合，应把它作为独立条件明确记录，而不能用 SD 或 post 中任何一个词代替完整定义。
-
-### 2.10 为什么不能只给每个节点旧式的局部函数
-
-在 selector 已经给出 $\chi,\omega$ 后，式 (8)--(24) 可以合成为节点局部函数：
-
-$$
-\Gamma_v
-\left(
-q^-_{v,\theta},
-\theta,
-B_{v,\theta},
-\chi_{v,\theta},
-\omega_{v,\theta}
-\right)
+q_v'
 =
-\left(
-q^+_{v,\theta},
-o^A_{v,\theta},
-o^O_{v,\theta},
-r_{v,\theta}
-\right).
-\tag{26}
+\begin{cases}
+\widetilde q_v,&v\in O_j(C,A),\\
+q_v,&v\notin O_j(C,A).
+\end{cases}
+\tag{17}
 $$
 
-但 $\chi_{v,\theta}$ 一般依赖同一 region 中全部 candidates 的描述量，所以不能由节点 $v$ 独自从 $(q,\theta,B)$ 算出。
+只有 $v\in A$ 时才应用式 (12) 的 $\operatorname{Full}_v$。因此，以下两个问题被严格分开：
 
-因此，包含 region selector 的一般模型需要：
+1. 节点是否采用候选新状态，由 $v\in O_j(C,A)$ 决定；
+2. 节点是否执行完整输出函数，由 $v\in A$ 决定。
+
+附录 S 把 $\kappa_j=0$ 与 $\kappa_j=1$ 分别对应到 `SD` 与 `BO`。正文只依赖式 (16)，不依赖这两个缩写。
+
+### 5.5 同一时间内的数学依赖顺序
+
+对一个非空候选集合，本模型的定义顺序是：
 
 $$
-\text{节点本地准备}
+\text{完整纤维}
 \longrightarrow
-\text{region 选择}
+(h,\widetilde q,d)
 \longrightarrow
-\text{节点本地完成}.
+A
+\longrightarrow
+q'
+\longrightarrow
+\operatorname{Full}.
+\tag{18}
 $$
 
-把整个 region 收缩成一个节点虽然可以得到某种编码，却不是本文的定义，因为那会隐藏节点各自的状态、出边和完整计算。
+式 (18) 是函数自变量之间的依赖，不是对处理器指令或现实耗时的描述。一个实现可以提前求出某个纯函数值，但不能让后续数学事件读取尚未由式 (17) 确定的状态，也不能在式 (15) 以前发布只允许 active 节点产生的消息。
 
-从此以后，本文把第 1--2 节全部有限集合、函数、初值和约束固定下来所得的数据族，称为一个 **TimedDAG-region-selector 规格**。这个名称没有再加入任何未写出的对象；第 3 节只是在一次输入上求这些已给函数的值。
+区域只计算集合 $A$。消息和外部输出始终由 $v\in A$ 的节点按照自己的式 (12) 产生。
 
-第三次阅读到这里即可停止。此时只需能从一组非空完整桶依次算出 $\mathcal C_{j,\theta}$、$\mathcal A_{j,\theta}$、$q^+_{v,\theta}$、图内消息和外部输出。
+## 6. 完整输入下的直接语义
 
-## 3. 完整输入已知时怎样定义唯一计算
+前五节只给出了固定数据与局部函数。本节把它们组合成一次输入 $x$ 上的唯一完整计算。
 
-### 3.1 为什么按逻辑时间递归
+### 6.1 一个有限逻辑时间上界
 
-区域划分可能把拓扑深度不同的节点放在一起。例如：
-
-$$
-u\longrightarrow v\longrightarrow w,
-$$
-
-而：
+允许长度为零的路径停留在某个 $\gamma(i)$，并规定它的总时延为 $0$。对非空路径 $\zeta=(a_1,\ldots,a_k)$ 定义：
 
 $$
-u,w\in\mathcal R_0,
-\qquad
-v\in\mathcal R_1.
+\Delta(\zeta)=\sum_{\ell=1}^{k}\delta(a_\ell).
 $$
 
-因此一般不能先把 $u$ 的全部逻辑时间处理完，再处理 $v,w$。时间为 $\theta$ 的 $u,w$ 可能需要参加同一次式 (18)。
-
-本文改用逻辑时间递增的递归。正时延保证时间 $\theta$ 新产生的消息只能影响更大的逻辑时间。
-
-### 3.2 一个有限的时间上界
-
-因为节点图有限且无环，从任一输入端口所指节点出发的有向路径只有有限多条。允许只停留在 $\gamma(i)$ 的长度 $0$ 路径，并把它的总时延定义为 $0$。对路径 $\zeta$ 定义：
+因为 $G$ 是有限 DAG，从输入目标节点 $\gamma(i)$ 出发的路径总数有限。定义：
 
 $$
-\Delta(\zeta)=\sum_{a\in\zeta}\delta(a).
+\Delta_{\max}
+=
+\max\{\Delta(\zeta)\mid
+\zeta\text{ 从某个 }\gamma(i)\text{ 出发，包括长度零路径}\}.
 $$
 
 再定义：
 
 $$
-\Delta_{\max}
-=
-\max_{\zeta}\Delta(\zeta),
-$$
-
-其中 $\zeta$ 遍历从某个 $\gamma(i)$ 出发的全部上述路径。最后定义：
-
-$$
 \Theta_{\max}
 =
-\max_{\substack{i\in\mathsf I\\t\in[L_i]}}\iota_i(t)
-+
-\Delta_{\max}.
-\tag{27}
+\max_{i\in\mathsf I,\ k\in[L_i]}\iota_i(k)
++\Delta_{\max}.
+\tag{19}
 $$
 
-任何实际消息都可以沿其因果来源向前追溯到一个外部输入；每经过一条边只增加该边时延。因此任何非空节点事件的逻辑时间都不大于 $\Theta_{\max}$。
+第 6.4 节将证明，任何实际非空节点事件的时间都不大于 $\Theta_{\max}$。
 
-### 3.3 直接递归
+### 6.2 实际外部输入集合
 
-令图内消息集合 $M$ 与外部输出记录集合 $Z$ 初始为空，令每个节点状态为 $q_v^0$。
-
-依次取：
+由式 (3) 的具体输入 $x$ 定义：
 
 $$
-\theta=0,1,\ldots,\Theta_{\max}.
+E_x
+=
+\{(\mathrm{ext},i,k,x_i(k))\mid
+i\in\mathsf I,\ k\in[L_i]\}
+\subseteq\mathsf{Ext}.
+\tag{20}
 $$
 
-在每个 $\theta$，执行以下四步。
+$E_x$ 包含每个输入位置恰好一条记录。
 
-**第一步：构造全部完整桶与 candidates。**
+### 6.3 按逻辑时间递归
+
+对每个节点，把处理时间 $0$ 以前全部事件后的状态定义为：
+
+$$
+q_v^{0}=q_v^{\mathrm{init}}.
+$$
+
+令 $M_{<0}=\varnothing$。依次对：
+
+$$
+\theta=0,1,\ldots,\Theta_{\max}
+$$
+
+执行下列纯数学递归。
+
+#### 第一步：定义完整时间纤维与候选集合
+
+假设更小逻辑时间产生的消息集合 $M_{<\theta}$ 已经定义。令：
+
+$$
+B_{v,\theta}
+=
+B_{v,\theta}(E_x,M_{<\theta}).
+\tag{21}
+$$
+
+这里左边的 $B_{v,\theta}$ 是本次输入的一个确定集合；右边是式 (8) 的集合构造。从现在起，左边称为本次计算在 $(v,\theta)$ 的**完整时间纤维**。
+
+对每个 $j\in J$ 定义：
+
+$$
+\mathcal C_{j,\theta}
+=
+\{v\in\mathcal R_j\mid B_{v,\theta}\ne\varnothing\}.
+\tag{22}
+$$
+
+若 $B_{v,\theta}\ne\varnothing$，称二元组 $(v,\theta)\in V\times\mathbb N$ 为一个**节点事件位置**。若 $\mathcal C_{j,\theta}\ne\varnothing$，称 $(j,\theta)\in J\times\mathbb N$ 为一个**区域选择位置**。这两个名称只指带坐标的二元组，不是 $V$ 或 $J$ 中的新元素。
+
+#### 第二步：为每个候选节点定义本地量
+
+若 $v\in\mathcal C_{j,\theta}$，令它的旧状态为 $q_v^{\theta}$，并定义：
+
+$$
+h_{v,\theta}
+=\operatorname{Agg}_v(\theta,B_{v,\theta}),
+$$
+
+$$
+\widetilde q_{v,\theta}
+=\operatorname{Upd}_v(q_v^{\theta},\theta,h_{v,\theta}).
+$$
+
+再按 $\tau_j$ 取式 (11) 中相应的描述量：
+
+$$
+d_{v,\theta}
+=
+\begin{cases}
+\operatorname{Read}^{0}_v(\theta,h_{v,\theta}),&\tau_j=0,\\
+\operatorname{Read}^{-}_v(q_v^{\theta},\theta,h_{v,\theta}),&\tau_j=-,\\
+\operatorname{Read}^{+}_v(\widetilde q_{v,\theta},\theta,h_{v,\theta}),&\tau_j=+.
+\end{cases}
+\tag{23}
+$$
+
+#### 第三步：每个区域选择一次
 
 定义：
 
 $$
+\mathcal A_{j,\theta}
+=
+\operatorname{Sel}_{j,\mathcal C_{j,\theta}}
+\left(
+\theta,
+(d_{v,\theta})_{v\in\mathcal C_{j,\theta}}
+\right).
+\tag{24}
+$$
+
+当 $\mathcal C_{j,\theta}=\varnothing$ 时，式 (24) 的值按第 5.3 节规定为 $\varnothing$。
+
+#### 第四步：定义时间 $\theta$ 以后的节点状态
+
+对 $v\in\mathcal R_j$ 定义：
+
+$$
+q_v^{\theta+1}
+=
+\begin{cases}
+\widetilde q_{v,\theta},
+&v\in O_j(\mathcal C_{j,\theta},\mathcal A_{j,\theta}),\\
+q_v^{\theta},&\text{其余情形}.
+\end{cases}
+\tag{25}
+$$
+
+不属于候选集合的节点自动落在第二种情形，所以状态不变。
+
+#### 第五步：active 节点产生内部消息与外部输出
+
+对每个 $v\in\mathcal A_{j,\theta}$ 定义：
+
+$$
+(f^A_{v,\theta},f^O_{v,\theta},r_{v,\theta})
+=
+\operatorname{Full}_v
+(q_v^{\theta+1},\theta,h_{v,\theta}).
+\tag{26}
+$$
+
+对候选但不 active 的 $v$，只为记录方便令 $r_{v,\theta}=r_v^\circ$，并且不应用 $\operatorname{Full}_v$。
+
+定义时间 $\theta$ 产生的消息集合：
+
+$$
 \begin{aligned}
-B_{v,\theta}
-={}&
-\{(0,i,t,x_i(t))
-\mid i\in\operatorname{InPort}(v),
-\ t\in[L_i],
-\iota_i(t)=\theta\}
-\\
-&\cup
-\{(1,m)
-\mid m\in M,
-\operatorname{receiver}(m)=v,
-\operatorname{arrival}(m)=\theta\}.
+M_\theta
+=\{&(\mathrm{msg},\theta,a,y)
+\mid
+j\in J,\ v\in\mathcal A_{j,\theta},\\
+&a\in\operatorname{Out}(v),\\
+&f^A_{v,\theta}(a)=y\in P\}.
+\end{aligned}
+\tag{27}
+$$
+
+定义时间 $\theta$ 产生的外部输出记录集合：
+
+$$
+\begin{aligned}
+Z_\theta
+=\{&(\mathrm{out},\theta,o,y)
+\mid
+j\in J,\ v\in\mathcal A_{j,\theta},\\
+&o\in\operatorname{OutPort}(v),\\
+&f^O_{v,\theta}(o)=y\in P\}.
 \end{aligned}
 \tag{28}
 $$
 
-再用式 (15) 得到每个 $\mathcal C_{j,\theta}$。
-
-**第二步：计算 candidates 的本地量。**
-
-对每个 $v\in\mathcal C_{j,\theta}$，用当前节点状态作为 $q^-_{v,\theta}$，计算式 (9)、(11) 和式 (16) 所需的描述量。
-
-式 (11) 在这里定义候选新状态；尚未用它替换节点保存的状态。
-
-**第三步：每个非空 region-time 选择一次。**
-
-对每个满足 $\mathcal C_{j,\theta}\ne\varnothing$ 的 $j$，应用一次式 (18)--(19)，得到 $\mathcal A_{j,\theta}$。
-
-不同 regions 在同一 $\theta$ 不读取彼此的选择结果，所以这些函数作用可以采用任意顺序。
-
-**第四步：状态采用、完整计算、发送与外部输出。**
-
-对每个 candidate 应用式 (20)--(24)，并把节点保存状态改成 $q^+_{v,\theta}$。每当式 (24) 给出 $o^A_{v,\theta}(a)=y\in P$，把消息 $(\theta,a,y)$ 加入 $M$；每当它给出 $o^O_{v,\theta}(o)=y'\in P$，把外部输出记录 $(\theta,o,y')$ 加入 $Z$。
-
-不属于任何 $\mathcal C_{j,\theta}$ 的节点在当前 $\theta$ 不改变状态，也不产生图内消息或外部输出。
-
-### 3.4 当前时间的图内输出不能改变当前候选集合
-
-式 (25) 中产生的图内消息满足：
+最后令：
 
 $$
-\operatorname{arrival}(\theta,a,y)
-=
-\theta+\delta(a)
->
-\theta.
+M_{<\theta+1}=M_{<\theta}\cup M_\theta.
+$$
+
+这就完成从时间 $\theta$ 到 $\theta+1$ 的递归。
+
+注意，由式 (7) 和 $\delta(a)>0$，任意 $m\in M_\theta$ 都满足：
+
+$$
+\operatorname{time}(m)=\theta+\delta(\operatorname{edge}(m))>\theta.
 \tag{29}
 $$
 
-所以第四步新产生的消息不会重新进入第一步的时间 $\theta$ 桶。当前 candidate set 在 selector 作用前已经完整，不会由这次 selector 的结果反过来改变。
+所以时间 $\theta$ 才产生的消息不会反过来改变式 (21) 已经定义的当前时间纤维。
 
-### 3.5 有限性与唯一性
+### 6.4 有限性与唯一性定理
 
-递归只遍历有限个逻辑时间、有限个节点、有限个 regions 和有限个输出端口。每个 candidate 在每条出边和每个相连输出端口至多产生一个值，所以全部函数作用、消息和外部输出记录都有限。
+> [!theorem] 定理 1：完整计算存在、有限且唯一
+> 固定第 1--5 节的全部集合、函数与参数，并给定式 (3) 的输入 $x$。则第 6.3 节唯一确定：
+>
+> - 每个完整时间纤维 $B_{v,\theta}$；
+> - 每个候选集合 $\mathcal C_{j,\theta}$；
+> - 每个 active set $\mathcal A_{j,\theta}$；
+> - 每个节点的状态序列；
+> - 有限内部消息集合 $M^*$；
+> - 有限多端口外部输出集合 $Z^*$；
+> - 全部本地结果记录。
 
-唯一性可以按 $\theta$ 归纳。
+**证明。** 对 $\theta$ 作归纳。
 
-- 时间 $0$ 的桶只由逻辑注入时间为 $0$ 的外部输入决定；全部固定函数因而给出唯一结果。
-- 假设所有小于 $\theta$ 的结果唯一。由式 (29)，到达时间 $\theta$ 的边消息全部来自更小时间事件，所以式 (28) 唯一。式 (8)--(24) 都是函数，故时间 $\theta$ 的结果唯一。
+在 $\theta=0$ 时，$M_{<0}=\varnothing$，所以式 (21) 只由已给的 $E_x$ 唯一确定。第 4--5 节给定的 $\operatorname{Agg}$、$\operatorname{Upd}$、三个 $\operatorname{Read}$、$\operatorname{Sel}$ 与 $\operatorname{Full}$ 都是全函数，因而式 (22)--(28) 依次给出唯一结果。
 
-自然数归纳法因而给出唯一的最终消息集合：
+假设所有小于 $\theta$ 的结果已经唯一确定，则 $M_{<\theta}$ 唯一。式 (21) 因而唯一；随后所有步骤仍是已给函数的求值，所以时间 $\theta$ 的结果唯一。自然数归纳法给出整个递归的唯一性。
 
-$$
-M^*,
-$$
-
-唯一的外部输出记录集合：
-
-$$
-Z^*,
-$$
-
-唯一的最终状态族：
+还需证明没有事件超出式 (19)。每个非空事件至少含有一个到达原子。若它是外部输入记录，该节点是某个 $\gamma(i)$，事件时间是 $\iota_i(k)$。若它是内部消息，则沿消息的发送者继续向前追溯；每追溯一条边就减去一个正时延。由于固定节点图无环，这个过程经过有限条边后到达某个外部输入记录。因此，每个事件时间都可以写成：
 
 $$
-(q_v^{\mathrm{final}})_{v\in V},
+\iota_i(k)+\Delta(\zeta),
 $$
 
-以及唯一的 candidate、active 和观察记录。
+其中 $\zeta$ 是从 $\gamma(i)$ 出发的一条有向路径。它不大于 $\Theta_{\max}$。若该事件再沿出边 $a$ 产生消息，就把 $a$ 接到 $\zeta$ 后面；所得仍是从 $\gamma(i)$ 出发的路径，所以这条新消息的到达时间也不大于 $\Theta_{\max}$。固定时间上界、有限节点、有限边和有限端口共同推出事件、消息和输出记录总数有限。$\square$
 
-把完整结果记录定义为：
+定义：
+
+$$
+M^*=\bigcup_{\theta=0}^{\Theta_{\max}}M_\theta,
+\qquad
+Z^*=\bigcup_{\theta=0}^{\Theta_{\max}}Z_\theta.
+\tag{30}
+$$
+
+最终状态是 $(q_v^{\Theta_{\max}+1})_{v\in V}$。把完整计算记录明确定义为：
 
 $$
 \mathcal T_x
 =
 \left(
-M^*,
-Z^*,
-(q_v^{\mathrm{final}})_{v\in V},
-(\mathcal C_{j,\theta},\mathcal A_{j,\theta})_{j,\theta},
-((q^-_{v,\theta},q^+_{v,\theta},r_{v,\theta}))_{v,\theta}
+(B_{v,\theta})_{\substack{v\in V\\\theta\in[0,\Theta_{\max}+1)}},
+(\mathcal C_{j,\theta},\mathcal A_{j,\theta})_
+{\substack{j\in J\\\theta\in[0,\Theta_{\max}+1)}},
+(q_v^\theta)_
+{\substack{v\in V\\\theta\in[0,\Theta_{\max}+2)}},
+M^*,Z^*,
+(f^A_{v,\theta},f^O_{v,\theta})_
+{\substack{j\in J,\ \theta\in[0,\Theta_{\max}+1)\\
+v\in\mathcal A_{j,\theta}}},
+(r_{v,\theta})_
+{\substack{v\in V,\ \theta\in[0,\Theta_{\max}+1)\\
+B_{v,\theta}\ne\varnothing}}
 \right),
 $$
 
-其中后两个族只在相应 candidate set 或节点桶非空的位置记录。这里 $x=(x_i)_{i\in\mathsf I}$ 是整个输入函数族。固定本文全部结构数据后，用 $\mathbf T$ 表示所有可能的 $\mathcal T_x$ 所成的集合。
+其中时间纤维、选择、逐坐标输出函数值和本地结果的时间坐标满足 $0\le\theta\le\Theta_{\max}$，状态还包含递归结束后的 $\theta=\Theta_{\max}+1$。称 $\mathcal T_x$ 为输入 $x$ 的完整计算记录。
 
-这就是本文的直接数学解释器。它相对于已经给定且可求值的式 (8)、(10)、三个 Read、式 (18) 和式 (23)，只做有限次集合构造和函数作用。
+本文把第 1--5 节的数据以及第 6 节所定义的直接语义合称为一个**带区域选择的 TimedDAG 规格**。
 
-## 4. 消息尚未全部可见时怎样证明候选集合完整
+### 6.5 多输入、多输出不是后续扩展
 
-### 4.1 看见的输入与消息
+多输入直接出现在式 (2)--(4) 与式 (20)--(21) 中。一个完整时间纤维可以同时包含：
 
-第 3 节从完整输入直接定义了 $M^*$。现在用 $n\in\mathbb N$ 表示机器外部操作的先后编号；$n$ 不会传入任何节点函数或 selector。
+- 不同端口产生的记录；
+- 不同入边产生的消息；
+- 外部输入记录与内部消息。
 
-在阶段 $n$，对每个 $i\in\mathsf I$ 设：
+只要这些原子的 $\operatorname{target}$ 与 $\operatorname{time}$ 相同，它们就在式 (21) 的同一个集合中。由式 (4) 的严格递增性，同一输入端口在同一个逻辑时间至多贡献一个位置；不同端口不受这个限制。
 
-$$
-U_{i,n}\subseteq[L_i]
-$$
-
-是端口 $i$ 上已经看见的位置集合，并设：
+多输出直接出现在式 (12) 与式 (28) 中。对每个 $o\in\mathsf O$，可以从 $Z^*$ 取出：
 
 $$
-H_n\subseteq M^*
+Z_o^*
+=
+\{(\operatorname{outtime}(z),\operatorname{outvalue}(z))
+\mid z\in Z^*,\ \operatorname{outport}(z)=o\}.
 $$
 
-是已经看见的消息集合。消息不必按照逻辑到达时间递增进入 $H_n$。
+整个外部结果是由端口标记的函数族 $(Z_o^*)_{o\in\mathsf O}$。单输入或单输出只是在 $\mathsf I$ 或 $\mathsf O$ 恰有一个元素时得到的特例。
 
-定义阶段 $n$ 看见的桶：
+对固定的 $(\theta,o)$，$Z^*$ 中至多有一个值 $y$：端口 $o$ 由式 (2) 指向唯一节点，而该节点的式 (12) 在坐标 $o$ 上只有一个函数值。因此每个 $Z_o^*$ 都是某个有限自然数子集到 $P$ 的函数图。
 
-$$
-\begin{aligned}
-B^{(n)}_{v,\theta}
-={}&
-\{(0,i,t,x_i(t))
-\mid i\in\operatorname{InPort}(v),
-\ t\in U_{i,n},
-\iota_i(t)=\theta\}
-\\
-&\cup
-\{(1,m)
-\mid m\in H_n,
-\operatorname{receiver}(m)=v,
-\operatorname{arrival}(m)=\theta\}.
-\end{aligned}
-\tag{30}
-$$
+## 7. 一个从固定数据开始的完整手算例子
 
-显然：
+本节第一次使用前面全部定义。例子不要求任何外部文档。
+
+### 7.1 固定集合与图
+
+取：
 
 $$
-B^{(n)}_{v,\theta}
-\subseteq
-B_{v,\theta}.
-$$
-
-### 4.2 边与输入的有效封闭下界
-
-给定函数：
-
-$$
-\sigma_n:A\to\mathbb N,
+P=\mathbb N,
 \qquad
-\sigma_n^{\mathrm{in}}:\mathsf I\to\mathbb N.
+V=\{s_0,s_1,a,b\},
+\qquad
+A=\{e_0,e_1\}.
 $$
 
-定义：$\sigma_n(a)=b$ 是阶段 $n$ 关于边 $a$ 的有效封闭下界，当且仅当：
+两条边定义为：
 
 $$
-\forall m\in M^*\setminus H_n,
+\operatorname{src}(e_0)=s_0,
 \quad
-\operatorname{edge}(m)=a
-\Longrightarrow
-\operatorname{arrival}(m)\ge b.
-\tag{31}
-$$
-
-定义：$\sigma_n^{\mathrm{in}}(i)=b$ 是阶段 $n$ 关于输入端口 $i$ 的有效封闭下界，当且仅当：
-
-$$
-\forall t\in[L_i]\setminus U_{i,n},
+\operatorname{dst}(e_0)=a,
 \quad
-\iota_i(t)\ge b.
-\tag{32}
+\delta(e_0)=5,
 $$
 
-正文以后把满足式 (31)--(32) 的数简称为 **seal**。
-
-seal 是关于全部尚未看见消息或输入的全称命题。队列暂时为空、等待很久或某个函数已经返回，都不能单独证明式 (31)--(32)。
-
-seal $=b$ 仍允许以后出现逻辑时间恰好为 $b$ 的输入，所以关闭时间 $\theta$ 需要严格不等式：
-
 $$
-b>\theta.
+\operatorname{src}(e_1)=s_1,
+\quad
+\operatorname{dst}(e_1)=b,
+\quad
+\delta(e_1)=4.
 $$
 
-### 4.3 节点封闭前沿
+这张图只有 $s_0\to a$ 与 $s_1\to b$，所以没有有向环。
 
-对每个节点 $v$，定义非空有限数集：
+取两个输入端口和两个输出端口：
 
 $$
-L_n(v)
+\mathsf I=\{i_0,i_1\},
+\qquad
+\mathsf O=\{o_a,o_b\},
+$$
+
+$$
+\gamma(i_0)=s_0,
+\quad
+\gamma(i_1)=s_1,
+\quad
+\varepsilon(o_a)=a,
+\quad
+\varepsilon(o_b)=b.
+$$
+
+两个输入端口都只有一个位置：
+
+$$
+L_{i_0}=L_{i_1}=1.
+$$
+
+具体输入与时间为：
+
+$$
+x_{i_0}(0)=2,
+\quad
+\iota_{i_0}(0)=0,
+$$
+
+$$
+x_{i_1}(0)=7,
+\quad
+\iota_{i_1}(0)=1.
+$$
+
+区域划分为：
+
+$$
+\mathcal R_0=\{s_0\},
+\qquad
+\mathcal R_1=\{s_1\},
+\qquad
+\mathcal R_2=\{a,b\}.
+$$
+
+### 7.2 局部函数与选择函数
+
+为简化状态，令每个节点的状态集合都是单点集 $\{*\}$，初态为 $*$，更新函数总返回 $*$。令每个本地结果集合也是单点集，并令 $r_v^\circ=*$。
+
+令每个 $X_v=D_v=\mathbb N$，并定义：
+
+$$
+\operatorname{Agg}_v(\theta,B)
 =
-\{\sigma_n(a)\mid a\in\operatorname{In}(v)\}
-\cup
-\{\sigma_n^{\mathrm{in}}(i)
-\mid i\in\operatorname{InPort}(v)\}.
+\sum_{z\in B}\operatorname{value}(z),
 $$
 
-这个集合非空：若 $v$ 本身是某个输入端口的目标，第二个集合非空；否则第 1.2 节的可达条件保证 $v$ 至少有一条入边。
-
-定义节点封闭前沿：
-
 $$
-\lambda_n(v)=\min L_n(v).
-\tag{33}
-$$
-
-若：
-
-$$
-\lambda_n(v)>\theta,
-$$
-
-则节点的每条入边和可能的外部输入都排除了尚未可见的时间 $\theta$ 原子。因此：
-
-$$
-B^{(n)}_{v,\theta}
+\operatorname{Read}^{0}_v(\theta,h)
 =
-B_{v,\theta}.
-\tag{34}
-$$
-
-**证明。** 左边显然包含于右边。若右边存在一个左边没有、来自端口 $i$ 的外部输入原子，式 (32) 与 $\sigma_n^{\mathrm{in}}(i)>\theta$ 排除它；若存在一个左边没有的边消息原子，式 (31) 与相应 $\sigma_n(a)>\theta$ 排除它。因此右边也包含于左边。$\square$
-
-### 4.4 region 封闭前沿
-
-定义：
-
-$$
-\lambda_n(\mathcal R_j)
+\operatorname{Read}^{-}_v(*,\theta,h)
 =
-\min_{v\in\mathcal R_j}\lambda_n(v).
-\tag{35}
+\operatorname{Read}^{+}_v(*,\theta,h)
+=h.
 $$
 
-这个最小值存在，因为 $\mathcal R_j$ 非空且有限。
+各区域都取 $\tau_j=0$ 和 $\kappa_j=0$，并取 $K_0=K_1=K_2=1$。单节点区域 $\mathcal R_0,\mathcal R_1$ 的 selector 在候选非空时选择唯一节点。
 
-定义阶段 $n$ 暂时看见的候选集合：
+区域 $\mathcal R_2$ 取 $K_2=1$，其 selector 选择描述量较大的节点；若相等，固定选择 $a$。这条平局规则使它成为一个确定函数。
 
-$$
-\mathcal C^{(n)}_{j,\theta}
-=
-\{v\in\mathcal R_j
-\mid B^{(n)}_{v,\theta}\ne\varnothing\}.
-\tag{36}
-$$
+$s_0$ 的完整输出函数把 $h$ 沿 $e_0$ 发送；$s_1$ 把 $h$ 沿 $e_1$ 发送。节点 $a,b$ 没有图内出边；若它们 active，则分别把 $h$ 送到 $o_a,o_b$。其他值坐标均取 $\bot$，第三个本地结果坐标恒取 $*$。这样，式 (12) 要求的函数在其整个定义域上都已给定。
 
-### 4.5 候选集合关闭引理
+### 7.3 时间 0 与时间 1
 
-若：
+实际外部输入集合为：
 
 $$
-\lambda_n(\mathcal R_j)>\theta,
+E_x=
+\{(\mathrm{ext},i_0,0,2),
+(\mathrm{ext},i_1,0,7)\}.
 $$
 
-则：
+时间 $0$：
 
 $$
-\mathcal C^{(n)}_{j,\theta}
-=
-\mathcal C_{j,\theta}.
-\tag{37}
+B_{s_0,0}=\{(\mathrm{ext},i_0,0,2)\}.
 $$
 
-**证明。** 由式 (35)，对每个 $v\in\mathcal R_j$ 都有：
+所以 $s_0$ 是区域 $0$ 的唯一候选并被选择，产生：
 
 $$
-\lambda_n(v)>\theta.
-$$
-
-式 (34) 因而给出：
-
-$$
-B^{(n)}_{v,\theta}=B_{v,\theta}.
-$$
-
-所以：
-
-$$
-B^{(n)}_{v,\theta}\ne\varnothing
-\Longleftrightarrow
-B_{v,\theta}\ne\varnothing.
-$$
-
-把满足等价条件的全部 $v\in\mathcal R_j$ 收集起来，就得到式 (37)。$\square$
-
-这个引理是 selector 可以忽略机器消息到达次序的核心理由。它同时说明：必须获得 region 中每个节点的封闭证明，包括最终没有消息的节点。
-
-第四次阅读可以先停在这里，并在不看上面证明的情况下重新证明式 (37)。第 4.6 节以后才讨论状态就绪与实际求值次序。
-
-### 4.6 输入已经完整不等于节点状态已经就绪
-
-式 (37) 只证明时间 $\theta$ 的输入桶和 candidate set 已经完整。若描述量读取 $q^-_{v,\theta}$，还必须保证节点 $v$ 的全部更小逻辑时间非空事件已经完成状态采用。
-
-定义：节点 $v$ 的时间 $\theta$ 状态已经就绪，当且仅当，对每个满足：
-
-$$
-\theta'<\theta,
+m_0=(\mathrm{msg},0,e_0,2),
 \qquad
-B_{v,\theta'}\ne\varnothing
+\operatorname{time}(m_0)=0+5=5.
 $$
 
-的 $\theta'$，式 (22) 已经完成，并且这些状态采用按 $\theta'$ 递增连接起来。
-
-本文先采用下面这个统一而简单的充分条件：region $\mathcal R_j$ 在阶段 $n$ 可以对时间 $\theta$ 应用 selector，当：
-
-1. $\lambda_n(\mathcal R_j)>\theta$；
-2. 每个 $v\in\mathcal C_{j,\theta}$ 的时间 $\theta$ 状态已经就绪；
-3. $(j,\theta)$ 尚未应用过式 (18)。
-
-第一条证明所有 selector 输入桶完整；第二条证明 pre/post 所需状态唯一；第三条防止同一次选择重复发生。
-
-当 $\tau_j=\mathrm{content}$ 时，selector 本身并不读取旧状态，所以第二条不是作出选择的逻辑必要条件。本文的基准解释器仍等待它，是为了让选择后的每个 candidate 都能立即进入状态采用阶段。以后可以把 content 选择提前、再等待状态采用；那只放宽合法求值次序，不改变式 (8)--(25) 定义的结果。
-
-### 4.7 可以提前求值，但不能提前改变语义状态
-
-某个节点自己的桶已经关闭以后，可以先求：
+时间 $1$：
 
 $$
-h_{v,\theta},
+B_{s_1,1}=\{(\mathrm{ext},i_1,0,7)\}.
+$$
+
+所以 $s_1$ 被选择，产生：
+
+$$
+m_1=(\mathrm{msg},1,e_1,7),
 \qquad
-d^{\mathrm{content}}_{v,\theta}.
+\operatorname{time}(m_1)=1+4=5.
 $$
 
-它的旧状态也已经确定以后，还可以求：
+这里 $m_0,m_1$ 的发送时间不同，但逻辑到达时间相同。
+
+### 7.4 时间 5 的共同选择
+
+由式 (21)：
 
 $$
-d^{\mathrm{pre}}_{v,\theta},
+B_{a,5}=\{m_0\},
 \qquad
-\widetilde q_{v,\theta},
+B_{b,5}=\{m_1\}.
+$$
+
+所以区域 $2$ 的完整候选集合是：
+
+$$
+\mathcal C_{2,5}=\{a,b\}.
+$$
+
+本地内容和描述量为：
+
+$$
+h_{a,5}=d_{a,5}=2,
 \qquad
-d^{\mathrm{post}}_{v,\theta}.
+h_{b,5}=d_{b,5}=7.
 $$
 
-这些只是已经定义的函数值。在其他 region 成员尚未就绪时，可以把它们保存在不属于节点持久状态的临时数学变量中。
-
-但在式 (19) 得到 $\mathcal A_{j,\theta}$ 以前，不得：
-
-- 用式 (22) 让未来事件读取 $q^+_{v,\theta}$；
-- 应用只允许 active 节点执行的式 (23)；
-- 产生式 (25) 的图内消息或外部输出记录。
-
-提前求一个纯函数的值不会改变语义；提前发布尚未获准的状态、消息或外部输出会改变语义。
-
-### 4.8 seal 的单调性与不得倒填
-
-随着阶段 $n$ 增加，每个 $U_{i,n}$ 和 $H_n$ 只能增大，每个 $\sigma_n^{\mathrm{in}}(i)$ 与 $\sigma_n(a)$ 只能不减小。
-
-如果已经公布：
+因此：
 
 $$
-\sigma_n(a)=b,
+\mathcal A_{2,5}=\{b\}.
 $$
 
-以后又让一条满足：
+只有 $b$ 应用完整输出函数，于是：
 
 $$
-\operatorname{edge}(m)=a,
+Z_5=\{(\mathrm{out},5,o_b,7)\}.
+$$
+
+$o_a$ 仍然是模型定义中的合法输出端口；本次输入只是在该端口没有产生记录。区域 $\mathcal R_2$ 没有发送任何东西，是节点 $b$ 向自己的输出端口产生了值。
+
+### 7.5 这个例子已经说明什么
+
+这个例子只使用式 (1)--(30)，并说明：
+
+1. 两个外部输入端口可以有不同输入位置和不同注入时间；
+2. 两条路径的总时延可以使它们在同一逻辑时间到达不同节点；
+3. 同一区域的这些节点共同形成一个完整候选集合；
+4. selector 的输入由节点名字标记，不带消息观察次序；
+5. 模型有多个输出端口，即使一次具体计算只在其中一部分端口产生记录。
+
+若再增加两个都指向节点 $a$ 的输入端口，并让它们在时间 $5$ 注入，那么两个外部记录会与 $m_0$ 一同出现在 $B_{a,5}$ 中。节点 $a$ 仍只作为一个候选出现，但 $\operatorname{Agg}_a$ 会接收整个三元素集合。
+
+### 7.6 描述量模式与状态采用模式的四种组合
+
+下面是另一个局部例子，不沿用第 7.1--7.5 节的单点状态集合。单独考察一个已经具有完整候选集合的区域时间位置，设：
+
+$$
+\mathcal C_{j,5}=\{a,b\},
 \qquad
-\operatorname{arrival}(m)<b
+K_j=1,
 $$
 
-的此前未见消息进入 $H_{n'}$，就直接否定式 (31)。这样的过程不是本文的合法异步计算。
-
-同样，若已经公布 $\sigma_n^{\mathrm{in}}(i)=b$，以后才让某个满足 $\iota_i(t)<b$ 的未见输入位置进入 $U_{i,n'}$，就否定式 (32)，也不合法。
-
-## 5. 一般异步解释器需要遵守什么
-
-### 5.1 四类数学作用
-
-对一个非空候选事件，可以把第 3.3 节进一步拆成四类作用：
-
-1. 节点本地准备：由完整桶和旧状态求 $h$、所需描述量及可能的候选新状态；
-2. region 选择：由完整 candidate set 的描述量族求 active set；
-3. 节点状态采用：由 $\pi_j$ 和 active set 求 $q^+$；
-4. active 节点完整计算：求逐出边输出与逐输出端口的值，并产生图内消息和外部输出记录。
-
-这些作用可以在机器中由不同计算步骤完成，但其数学依赖不能颠倒。
-
-### 5.2 一次合法 region 选择
-
-在阶段 $n$，任取满足第 4.6 节三条条件的 $(j,\theta)$。一次合法选择必须：
-
-1. 使用式 (37) 已经固定的完整 $\mathcal C_{j,\theta}$；
-2. 对每个 candidate 使用式 (16) 指定的 $d_{v,\theta}$：content 只由完整桶得到，pre/post 还使用唯一旧状态；
-3. 恰好应用一次式 (18)；
-4. 得到与直接解释器式 (19) 相同的 $\mathcal A_{j,\theta}$。
-
-不能只对机器当前已经完成本地准备的部分 candidates 应用 selector；第 4.5 节的集合相等才允许选择。
-
-### 5.3 一次合法节点完成
-
-region 选择以后，每个 candidate 节点可以分别完成。节点 $v$ 的一次合法完成必须：
-
-1. 使用该 $(j,\theta)$ 已经确定的 $\chi_{v,\theta}$ 与 $\omega_{v,\theta}$；
-2. 按式 (22) 得到唯一的新状态；
-3. 仅在 $\chi_{v,\theta}=1$ 时应用式 (23)；
-4. 仅把式 (24) 中非 $\bot$ 的结果变成相应的图内消息或外部输出记录；
-5. 在同一节点任何更大逻辑时间事件读取状态以前完成式 (22)。
-
-同一 region 中不同 candidate 节点完成的机器先后次序可以不同，因为它们只修改各自的节点状态。由一个 active 节点产生的消息也可以晚于另一个 active 节点的消息才被机器看见。
-
-### 5.4 消息可见与出边 seal 的先后
-
-定义：节点 $v$ 已完成到 $b$，当且仅当：
-
-1. $\lambda_n(v)\ge b$，所以以后不会再发现新的逻辑时间小于 $b$ 的非空桶；
-2. 它的所有逻辑时间小于 $b$ 的非空完整桶都已经完成第 5.3 节。
-
-inactive candidate 也必须完成一次最终判定：
-
-- SD 下，它确定状态保持不变，且没有图内消息或外部输出；
-- BO 下，它确定采用候选新状态，但没有图内消息或外部输出。
-
-节点完成到 $b$ 时，它在所有小于 $b$ 的逻辑时间产生的外部输出记录也已经确定。外部输出不再进入任何节点桶，所以它不参与下面的边 seal 递推。
-
-若 $v$ 已完成到 $b$，它以后尚未发生的事件发送时间都不小于 $b$。所以沿任意 $a\in\operatorname{Out}(v)$，以后尚未产生的消息逻辑到达时间都不小于：
+旧状态与本地内容分别为：
 
 $$
-b+\delta(a).
-$$
-
-还要等待已经产生且到达时间小于 $b+\delta(a)$ 的消息全部进入可见集合 $H_n$。只有这两件事都成立，才能把 $b+\delta(a)$ 作为边 $a$ 的新有效 seal。
-
-因此必须遵守：
-
-$$
-\text{先让实际消息可见}
-\quad\Longrightarrow\quad
-\text{再让越过它的 seal 可见}.
-$$
-
-### 5.5 合法次序可以怎样不同
-
-一个异步解释器可以：
-
-- 先看见逻辑时间较大的消息，后看见逻辑时间较小的消息；
-- 先准备一个尚不能选择的 candidate；
-- 先选择一个逻辑时间较大的独立 region-time；
-- 把同一选择以后彼此独立的节点交给不同求值过程；
-- 在保证状态依赖的前提下改变不同节点完成的先后。
-
-它不可以：
-
-- 在 region 前沿尚未越过 $\theta$ 时固定 candidate set；
-- 用部分桶计算最终描述量；
-- 让机器先完成者改变式 (18) 的输出；
-- 在选择以前提交 SD 的候选状态；
-- 先发布 seal，再补入被该 seal 排除的消息；
-- 对同一 $(j,\theta)$ 选择两次，或对同一 $(v,\theta)$完成两次。
-
-### 5.6 合法次序无关的证明路线
-
-比较任意两个都完成同一个有限逻辑时间边界的合法次序。证明可以按：
-
-$$
-(\theta,p)
-$$
-
-作字典序归纳，其中 $p$ 是第 5.1 节的作用种类编号。
-
-- 式 (34) 保证关闭后的节点桶与直接解释器相同；
-- 式 (37) 保证完整 candidate set 相同；
-- 更小逻辑时间状态已经相同，所以描述量相同；
-- 式 (18) 是函数，所以 active set 相同；
-- 式 (20)--(24) 给出相同的新状态、观察值和输出函数值，式 (25) 因而给出相同的图内消息和外部输出记录。
-
-这给出了证明的骨架。正式定理还需要把已准备位置、已选择位置、已完成位置、可见消息集合和 seal 逐项写成随 $n$ 单调变化的有限集合。
-
-## 6. SD、BO、pre 与 post 的完整手算例子
-
-取一个只有两个 candidates 的 region：
-
-$$
-\mathcal R=\{a,b\},
+q_a^5=0,
+\quad
+q_b^5=6,
 \qquad
-K=1.
-$$
-
-假设时间 $5$ 的两个完整桶都非空，并且式 (9) 给出：
-
-$$
 h_{a,5}=10,
-\qquad
+\quad
 h_{b,5}=1.
 $$
 
-两个节点的旧状态为：
+取 $S_a=S_b=X_a=X_b=D_a=D_b=\mathbb N$，并定义：
 
 $$
-q^-_{a,5}=0,
+\operatorname{Upd}_v(q,\theta,h)=q+h,
+$$
+
+$$
+\operatorname{Read}^{-}_v(q,\theta,h)=q,
 \qquad
-q^-_{b,5}=6.
+\operatorname{Read}^{+}_v(\widetilde q,\theta,h)=\widetilde q.
 $$
 
-对两个节点都定义：
-
-$$
-\operatorname{Update}(q,\theta,h)=q+h,
-$$
-
-$$
-\operatorname{Read}^{\mathrm{pre}}(q,\theta,h)=q,
-$$
-
-$$
-\operatorname{Read}^{\mathrm{post}}(\widetilde q,\theta,h)=\widetilde q.
-$$
-
-selector 选择描述量更大的一个节点。相等时按一个事先给定的固定节点全序选择。
-
-候选新状态为：
+于是候选新状态是：
 
 $$
 \widetilde q_{a,5}=10,
@@ -1491,121 +1226,500 @@ $$
 \widetilde q_{b,5}=7.
 $$
 
-### 6.1 SD + pre
-
-pre 描述量为：
+令 selector 选择描述量较大的一个节点。若 $\tau_j=-$，它读取旧状态 $(0,6)$，所以：
 
 $$
-d_{a,5}=0,
+\mathcal A_{j,5}=\{b\}.
+$$
+
+若 $\tau_j=+$，它读取候选新状态 $(10,7)$，所以：
+
+$$
+\mathcal A_{j,5}=\{a\}.
+$$
+
+再分别代入式 (16)--(17)，得到四种完整结果：
+
+| $(\tau_j,\kappa_j)$ | selector 读取 | $\mathcal A_{j,5}$ | 状态采用集合 | $(q_a^6,q_b^6)$ | 应用 $\operatorname{Full}$ 的节点 |
+| --- | --- | --- | --- | --- | --- |
+| $(-,0)$ | $(0,6)$ | $\{b\}$ | $\{b\}$ | $(0,7)$ | $b$ |
+| $(-,1)$ | $(0,6)$ | $\{b\}$ | $\{a,b\}$ | $(10,7)$ | $b$ |
+| $(+,0)$ | $(10,7)$ | $\{a\}$ | $\{a\}$ | $(10,6)$ | $a$ |
+| $(+,1)$ | $(10,7)$ | $\{a\}$ | $\{a,b\}$ | $(10,7)$ | $a$ |
+
+所以 $\tau_j$ 与 $\kappa_j$ 是两项独立数学参数：前者可能改变 active set，后者可能改变未被选节点的未来状态。附录 S 中的 `pre/post` 与 `SD/BO` 只是这四种数学组合的系统名称。
+
+## 8. 部分可见输入、封闭下界与候选集合关闭
+
+第 6 节直接使用完整的 $E_x$ 与递归产生的 $M^*$。现实求值过程通常不会同时看见这些记录。本节不用现实时间描述这种差异，而是定义一列逐渐增大的有限集合。
+
+### 8.1 观察阶段
+
+取阶段编号 $n\in\mathbb N$。在阶段 $n$，令：
+
+$$
+E_n\subseteq E_x,
 \qquad
-d_{b,5}=6.
+H_n\subseteq M^*,
 $$
 
-因此：
+分别表示已经可见的外部输入记录和内部消息。要求：
 
 $$
-\mathcal A_{\mathcal R,5}=\{b\}.
-$$
-
-SD 只让 active node 采用候选状态，所以：
-
-$$
-q^+_{a,5}=0,
+E_n\subseteq E_{n+1},
 \qquad
-q^+_{b,5}=7.
+H_n\subseteq H_{n+1}.
+\tag{31}
 $$
 
-只有 $b$ 应用式 (23)。
+$n$ 只给观察阶段排序，不传入 $\operatorname{Agg}$、$\operatorname{Upd}$、$\operatorname{Sel}$ 或 $\operatorname{Full}$。特别地，$n$ 与逻辑时间 $\theta$ 是两个不同的自然数变量。
 
-### 6.2 BO + pre
-
-selector 仍然读取 $(0,6)$，所以 active set 仍是：
+定义阶段 $n$ 已看见的时间纤维：
 
 $$
-\mathcal A_{\mathcal R,5}=\{b\}.
+B^{(n)}_{v,\theta}
+=
+B_{v,\theta}(E_n,H_n).
+\tag{32}
 $$
 
-BO 让全部 candidates 采用候选状态，所以：
+由集合包含关系立即得到：
 
 $$
-q^+_{a,5}=10,
+B^{(n)}_{v,\theta}\subseteq B_{v,\theta}.
+$$
+
+这里右边是第 6 节定义的完整纤维。事实上，正时延还给出：
+
+$$
+B_{v,\theta}
+=
+B_{v,\theta}(E_x,M^*),
+$$
+
+因为任何到达时间为 $\theta$ 的实际消息都在小于 $\theta$ 的时间发送，因而已经属于式 (21) 使用的 $M_{<\theta}$。这个等式说明本节确实是在完整记录 $E_x\cup M^*$ 中逐步看见更多元素。
+
+### 8.2 扩充自然数与最小值约定
+
+定义：
+
+$$
+\overline{\mathbb N}=\mathbb N\cup\{\infty\},
+$$
+
+并规定每个 $b\in\mathbb N$ 都满足 $b<\infty$。再规定：
+
+$$
+\min\varnothing=\infty.
+$$
+
+引入 $\infty$ 只为了统一表示“以后没有尚未可见的记录”。它不属于节点函数使用的逻辑时间集合 $\mathbb T$。
+
+### 8.3 输入端口和边的有效下界
+
+在阶段 $n$，给定两个函数：
+
+$$
+\sigma_n^{\mathrm{in}}:\mathsf I\to\overline{\mathbb N},
 \qquad
-q^+_{b,5}=7.
+\sigma_n^{A}:A\to\overline{\mathbb N}.
 $$
 
-仍然只有 $b$ 应用式 (23)。这已经说明 BO 不等于“selector 必须读取更新后状态”。
-
-### 6.3 BO + post
-
-post 描述量为：
+称它们**有效**，当且仅当同时满足：
 
 $$
-d_{a,5}=10,
+\begin{aligned}
+\forall e\in E_x\setminus E_n,\qquad
+&\operatorname{time}(e)
+\ge
+\sigma_n^{\mathrm{in}}(\operatorname{inport}(e)),
+\\
+\forall m\in M^*\setminus H_n,\qquad
+&\operatorname{time}(m)
+\ge
+\sigma_n^{A}(\operatorname{edge}(m)).
+\end{aligned}
+\tag{33}
+$$
+
+附录 S 把 $\sigma$ 称为 seal。式 (33) 才是这个词的数学含义。
+
+例如，$\sigma_n^A(a)=6$ 表示：边 $a$ 上任何尚未可见的实际消息，其逻辑到达时间都不小于 $6$。它仍允许以后看见时间 $6$ 的消息；它排除的是时间小于 $6$ 的尚未可见消息。
+
+若 $\sigma_n^A(a)=\infty$，那么式 (33) 迫使边 $a$ 上没有任何尚未可见的实际消息。
+
+相对于已经定义的完整记录，可以写出每个通道的最大有效下界：
+
+$$
+\widehat\sigma_n^{\mathrm{in}}(i)
+=
+\min\left(
+\{\operatorname{time}(e)\mid
+e\in E_x\setminus E_n,\ \operatorname{inport}(e)=i\}
+\right),
+$$
+
+$$
+\widehat\sigma_n^A(a)
+=
+\min\left(
+\{\operatorname{time}(m)\mid
+m\in M^*\setminus H_n,\ \operatorname{edge}(m)=a\}
+\right).
+$$
+
+空集的最小值按第 8.2 节取 $\infty$。任意不大于相应 $\widehat\sigma$ 的数都是有效下界；大于它的数无效。这个公式只刻画“有效”一词，不是在线算法。
+
+式 (33) 用完整结果 $M^*$ 判断一个下界是否为真，并不允许在线求值者预先读取 $M^*$。在线求值者必须从外部输入源的承诺或第 9.6 节的上游完成条件推出这个全称命题；不能任意填写一个较大的数。
+
+合法的观察过程还要求这些下界不减小：
+
+$$
+\sigma_n^{\mathrm{in}}(i)
+\le\sigma_{n+1}^{\mathrm{in}}(i),
 \qquad
-d_{b,5}=7.
+\sigma_n^A(a)\le\sigma_{n+1}^A(a).
+\tag{34}
 $$
 
-所以 active set 改成：
+### 8.4 节点与区域的封闭前沿
+
+定义节点 $v$ 的封闭前沿：
 
 $$
-\mathcal A_{\mathcal R,5}=\{a\}.
+\lambda_n(v)
+=
+\min
+\left(
+\{\sigma_n^A(a)\mid a\in\operatorname{In}(v)\}
+\cup
+\{\sigma_n^{\mathrm{in}}(i)\mid i\in\operatorname{InPort}(v)\}
+\right).
+\tag{35}
 $$
 
-BO 仍让两个节点采用候选状态：
+若节点没有入边也没有输入端口，括号内是空集，按第 8.2 节规定有 $\lambda_n(v)=\infty$。这种节点的所有完整时间纤维本来就为空。
+
+定义区域的封闭前沿：
 
 $$
-q^+_{a,5}=10,
+\lambda_n(\mathcal R_j)
+=
+\min_{v\in\mathcal R_j}\lambda_n(v).
+\tag{36}
+$$
+
+### 8.5 节点纤维关闭引理
+
+> [!lemma] 引理 2：节点纤维关闭
+> 若 $\lambda_n(v)>\theta$，则：
+> $$
+> B^{(n)}_{v,\theta}=B_{v,\theta}.
+> \tag{37}
+> $$
+
+**证明。** 已知左边包含于右边。若右边还有一个左边没有的元素 $z$，则分两种情况。
+
+若 $z$ 是来自端口 $i$ 的外部输入记录，则 $z\in E_x\setminus E_n$，且 $\operatorname{time}(z)=\theta$。由式 (35) 与 $\lambda_n(v)>\theta$ 可得 $\sigma_n^{\mathrm{in}}(i)>\theta$；这与式 (33) 要求 $\theta\ge\sigma_n^{\mathrm{in}}(i)$ 矛盾。
+
+若 $z$ 是沿边 $a$ 到达的内部消息，同理得到 $\sigma_n^A(a)>\theta$，又与式 (33) 矛盾。因此不存在这样的 $z$，两集合相等。$\square$
+
+严格不等式不能换成 $\lambda_n(v)\ge\theta$。下界等于 $\theta$ 时，式 (33) 仍允许一个尚未可见记录恰好具有时间 $\theta$。
+
+### 8.6 区域候选集合关闭定理
+
+定义阶段 $n$ 看见的候选集合：
+
+$$
+\mathcal C^{(n)}_{j,\theta}
+=
+\{v\in\mathcal R_j
+\mid B^{(n)}_{v,\theta}\ne\varnothing\}.
+$$
+
+> [!theorem] 定理 3：完整候选集合不会再增加
+> 若：
+> $$
+> \lambda_n(\mathcal R_j)>\theta,
+> $$
+> 则：
+> $$
+> \mathcal C^{(n)}_{j,\theta}
+> =
+> \mathcal C_{j,\theta}.
+> \tag{38}
+> $$
+
+**证明。** 由式 (36)，区域中的每个 $v$ 都满足 $\lambda_n(v)>\theta$。引理 2 对每个成员给出：
+
+$$
+B^{(n)}_{v,\theta}=B_{v,\theta}.
+$$
+
+因此对每个 $v\in\mathcal R_j$：
+
+$$
+B^{(n)}_{v,\theta}\ne\varnothing
+\Longleftrightarrow
+B_{v,\theta}\ne\varnothing.
+$$
+
+取所有满足条件的节点，便得到式 (38)。$\square$
+
+定理同时处理“有一个消息的节点”和“完整时间纤维为空的节点”。暂时没有看见到达节点 $c$ 的消息，并不能证明 $c$ 不在候选集合；只有 $\lambda_n(c)>\theta$ 才排除了以后补入时间 $\theta$ 的原子。
+
+### 8.7 用第 7 节例子检查严格不等式
+
+设某个阶段已经看见 $m_0$，但尚未看见 $m_1$。若关于边 $e_1$ 的有效下界是：
+
+$$
+\sigma_n^A(e_1)=5,
+$$
+
+这是可能的，因为尚未可见的 $m_1$ 恰好在时间 $5$ 到达。此时：
+
+$$
+\lambda_n(\mathcal R_2)\le5,
+$$
+
+所以不能对时间 $5$ 使用定理 3。当前看见的集合 $\{a\}$ 不是完整候选集合。
+
+看见 $m_1$ 后，若两条边都再无不可见消息，可以有效地令：
+
+$$
+\sigma_{n'}^A(e_0)=\sigma_{n'}^A(e_1)=\infty.
+$$
+
+于是 $\lambda_{n'}(\mathcal R_2)=\infty>5$，定理 3 才证明候选集合等于 $\{a,b\}$。
+
+### 8.8 输入完整与状态就绪是两个命题
+
+定理 3 只证明时间 $\theta$ 的候选节点和每个候选节点的完整纤维已经确定。若式 (23) 使用 $q_v^\theta$ 或 $\widetilde q_{v,\theta}$，还必须先知道 $q_v^\theta$。
+
+任取一个节点事件位置集合：
+
+$$
+\mathsf{Done}\subseteq V\times\mathbb N,
+$$
+
+并假定 $\mathsf{Done}$ 中的每个位置都已经按式 (25) 完成，而且同一节点在 $\mathsf{Done}$ 中的位置按逻辑时间递增完成。定义：节点 $v$ 在时间 $\theta$ 的旧状态关于 $\mathsf{Done}$ **就绪**，当且仅当所有满足：
+
+$$
+0\le r<\theta,
 \qquad
-q^+_{b,5}=7,
+B_{v,r}\ne\varnothing
 $$
 
-但这次只有 $a$ 应用式 (23)。
+的节点事件位置 $(v,r)$ 都属于 $\mathsf{Done}$。这时这些式 (25) 按 $r$ 递增连接成与第 6 节相同的唯一状态 $q_v^\theta$。
 
-三种条件可合写为：
+所以，一个统一而保守的区域选择条件是：
 
-| 条件 | active set | 最终状态 $(q_a^+,q_b^+)$ |
-| --- | --- | --- |
-| SD + pre | $\{b\}$ | $(0,7)$ |
-| BO + pre | $\{b\}$ | $(10,7)$ |
-| BO + post | $\{a\}$ | $(10,7)$ |
+1. $\lambda_n(\mathcal R_j)>\theta$；
+2. 每个 $v\in\mathcal C_{j,\theta}$ 的旧状态关于当前已完成位置集合 $\mathsf{Done}$ 就绪；
+3. 每个候选描述量已经按式 (23) 求出；
+4. $(j,\theta)$ 尚未应用过式 (24)。
 
-所以 SD/BO 和 pre/post 通常改变状态或输出。它们属于节点与 selector 的数学定义，不是仅仅改变机器求值顺序的选择。
+当 $\tau_j=0$ 时，描述量本身不读取状态，可以先求描述量，再等待状态就绪后采用状态和执行完整函数。这种提前求值不会改变式 (21)--(30) 定义的结果。
 
-## 7. 由一次计算产生的一张规范细分事件 DAG
+## 9. 合法的乱序求值
 
-### 7.1 固定空间图与细分事件图不是同一张图
+第 6 节按逻辑时间递增定义结果，但这不要求实际求值者以完全相同的顺序工作。本节定义哪些次序变化不改变结果。
 
-式 (1) 的 $G$ 在输入以前固定。给定具体 $x$ 并执行第 3 节后，可以从实际发生的函数作用构造另一张图。
+### 9.1 三类完成记录
 
-本文构造的是一张便于证明的规范依赖图，不声称它是唯一或边数最少的依赖图。例如第 4.6 节已经说明，content selector 可以在旧状态就绪前提前求值；规范图仍采用较强的统一次序。删去这种保守先后关系属于调度优化，不改变正文函数值。
-
-对每个 candidate 位置 $(v,\theta)$，按需要引入：
+在观察阶段 $n$，可以另外维护三个有限集合：
 
 $$
-P_{v,\theta}=\text{节点本地准备作用},
+\mathsf{Prepared}_n\subseteq V\times\mathbb N,
 $$
 
 $$
+\mathsf{Selected}_n\subseteq J\times\mathbb N,
+$$
+
+$$
+\mathsf{Completed}_n\subseteq V\times\mathbb N.
+$$
+
+它们分别记录：
+
+- $(v,\theta)$ 的完整纤维和所需本地量已经确定；
+- $(j,\theta)$ 已经应用一次式 (24)；
+- $(v,\theta)$ 已经完成式 (25)--(28) 中属于它的状态与输出判定。
+
+三个集合都只能随 $n$ 增大。记录一个位置的前提是该位置使用的每个函数自变量都已经由第 6 节的相同数学对象确定。此外，内部消息只有在产生它的式 (26)--(27) 已经完成后才可以进入 $H_n$；这保证“看见消息”不先于“定义消息”。
+
+在第 8.8 节的状态就绪定义中，现在取 $\mathsf{Done}=\mathsf{Completed}_n$。
+
+### 9.2 合法选择
+
+在阶段 $n$，对 $(j,\theta)$ 应用式 (24) 是合法的，当且仅当：
+
+1. 定理 3 的前提成立；
+2. 每个 $v\in\mathcal C_{j,\theta}$ 都满足 $(v,\theta)\in\mathsf{Prepared}_n$；
+3. 每个 $v\in\mathcal C_{j,\theta}$ 的旧状态关于 $\mathsf{Completed}_n$ 就绪；
+4. $(j,\theta)\notin\mathsf{Selected}_n$。
+
+合法选择必须把完整函数族：
+
+$$
+(d_{v,\theta})_{v\in\mathcal C_{j,\theta}}
+$$
+
+一次交给式 (24)。不能只对已经较早准备好的真子集作出不可撤销选择。
+
+### 9.3 合法节点完成
+
+若 $v\in\mathcal C_{j,\theta}$，则完成 $(v,\theta)$ 是合法的，当且仅当：
+
+1. $(j,\theta)\in\mathsf{Selected}_n$；
+2. 采用该次选择确定的 $\mathcal A_{j,\theta}$；
+3. 节点的所有更小逻辑时间事件已经完成；
+4. $(v,\theta)\notin\mathsf{Completed}_n$。
+
+合法完成按式 (25) 唯一确定状态。只有 active 节点应用式 (26)，并且只把式 (27)--(28) 中非 $\bot$ 的坐标加入实际消息或输出集合。
+
+同一区域中的不同节点在选择以后可以按不同观察阶段完成，因为它们修改的是不同状态坐标 $S_v$。但同一节点的状态事件必须按逻辑时间递增。
+
+### 9.4 纯函数可以提前求值，语义结果不能提前发布
+
+若 $B_{v,\theta}$ 已经由引理 2 确定，可以先求 $h_{v,\theta}$。若旧状态也已经确定，还可以先求 $\widetilde q_{v,\theta}$ 和三个描述量。
+
+这些值可以保存在临时变量中，但在区域选择以前不得：
+
+- 让更大逻辑时间的事件读取 $\widetilde q_{v,\theta}$；
+- 应用只允许 active 节点执行的 $\operatorname{Full}_v$；
+- 把候选消息加入可见消息集合；
+- 把候选外部输出加入 $Z$。
+
+原因不是“程序步骤必须长得一样”，而是这些动作会改变后续函数的数学自变量。
+
+### 9.5 不得在下界之后倒填
+
+若阶段 $n$ 已经公布有效值 $\sigma_n^A(a)=b$，后续阶段就不能首次加入满足：
+
+$$
+\operatorname{edge}(m)=a,
+\qquad
+\operatorname{time}(m)<b
+$$
+
+的消息。否则式 (33) 在阶段 $n$ 就是假的。
+
+逻辑时间较小的消息可以比逻辑时间较大的消息更晚变得可见，只要此前的有效下界尚未越过它。非法的不是“观察得晚”，而是推翻一个已经用来作出不可撤销选择的全称命题。
+
+### 9.6 边下界怎样由上游完成推出
+
+定义：节点 $v$ 已经**完成到 $b\in\mathbb N$**，当且仅当：
+
+1. $\lambda_n(v)\ge b$，所以它不再有尚未可见的时间小于 $b$ 的输入原子；
+2. 对每个 $\theta<b$，若 $B_{v,\theta}\ne\varnothing$，则 $(v,\theta)\in\mathsf{Completed}_n$。
+
+若 $v$ 已完成到 $b$，则以后尚未发生的节点事件发送时间不小于 $b$。对任意 $a\in\operatorname{Out}(v)$，这些未来消息的到达时间不小于：
+
+$$
+b+\delta(a).
+$$
+
+如果此前已经产生、且到达时间小于 $b+\delta(a)$ 的边 $a$ 消息也全部进入 $H_n$，那么：
+
+$$
+\sigma_n^A(a)=b+\delta(a)
+\tag{39}
+$$
+
+是一个有效下界。
+
+式 (39) 解释了为什么必须先使实际消息可见，再发布越过这些消息的边下界。空队列本身没有出现在证明中；证明使用的是上游完成命题和所有较早已产生消息均已可见这两个条件。
+
+### 9.7 次序无关定理
+
+> [!theorem] 定理 4：合法求值次序不改变完整结果
+> 任取两个过程。假设它们从相同固定规格与输入 $x$ 开始，所有 $\sigma$ 都满足式 (33)--(34)，每一步都满足第 9.2--9.6 节，并且最终完成第 6 节的全部非空事件。则两个过程得到相同的 $\mathcal T_x$。
+
+**证明。** 对二元组 $(\theta,p)$ 作字典序归纳，其中 $p=0,1,2,3$ 依次表示本地准备、区域选择、状态采用、完整输出。
+
+在准备阶段，引理 2 保证所用纤维等于式 (21)，更小逻辑时间的归纳假设保证旧状态等于 $q_v^\theta$，所以式 (23) 的全部量相同。
+
+在选择阶段，定理 3 保证候选集合相同；式 (14) 是函数，因此 active set 相同。
+
+在状态采用与完整输出阶段，式 (16)--(28) 都是函数，因而新状态、消息、外部输出和本地结果相同。对所有有限位置完成归纳，便得到整个记录相同。$\square$
+
+这个定理允许改变独立函数作用的求值先后，但不允许改变函数的输入集合。
+
+## 10. 一次计算产生的事件 DAG
+
+本节构造的是第 6 节直接语义的**值与状态依赖图**。它记录实际原子、状态和选择值从哪些函数作用而来。第 8--9 节在线证明“以后不会再有另一个原子”的封闭证书没有作为顶点加入本图；若研究在线求值者自身的完整操作图，还需另外加入这些证书顶点及其推导边。本文不会把未画出的封闭证明冒充为值依赖边。
+
+### 10.1 事件位置
+
+固定一次输入 $x$ 及其完整记录 $\mathcal T_x$。对第 6.3 节定义的每个节点事件位置 $(v,\theta)$ 引入两个形式符号：
+
+$$
+P_{v,\theta}=\text{本地准备作用},
+\qquad
 U_{v,\theta}=\text{状态采用作用}.
 $$
 
-对每个非空 candidate set，引入：
+对每个非空 $\mathcal C_{j,\theta}$ 引入：
 
 $$
-S_{j,\theta}=\text{region 选择作用}.
+S_{j,\theta}=\text{区域选择作用}.
 $$
 
-对每个 active node，引入：
+对每个 active 位置引入：
 
 $$
-E_{v,\theta}=\text{完整计算、图内发送与外部输出作用}.
+F_{v,\theta}=\text{完整输出作用}.
 $$
 
-这些是一次具体输入产生的函数作用位置。$S_{j,\theta}$ 的存在不表示 $j$ 是固定空间图的消息节点。
+$P,S,U,F$ 是四个互不相同的形式标签。因此，即使下标相同，$P_{v,\theta}$、$U_{v,\theta}$ 与 $F_{v,\theta}$ 也是不同元素；$S_{j,\theta}$ 也不是节点。
 
-### 7.2 同一逻辑时间的因果关系
+定义有限集合：
 
-当 $v\in\mathcal C_{j,\theta}$ 时，加入：
+$$
+\begin{aligned}
+\mathscr V_x^{\mathrm{ev}}
+={}&
+\{P_{v,\theta},U_{v,\theta}\mid
+v\in V,\ \theta\in[0,\Theta_{\max}+1),
+B_{v,\theta}\ne\varnothing\}
+\\
+&\cup
+\{S_{j,\theta}\mid
+j\in J,\ \theta\in[0,\Theta_{\max}+1),
+\mathcal C_{j,\theta}\ne\varnothing\}
+\\
+&\cup
+\{F_{v,\theta}\mid
+j\in J,\ \theta\in[0,\Theta_{\max}+1),
+v\in\mathcal A_{j,\theta}\}.
+\end{aligned}
+$$
+
+这些形式符号是另一张有向图的顶点。它们不是固定节点集合 $V$ 的新元素。
+
+令：
+
+$$
+\mathscr A_x^{\mathrm{ev}}
+\subseteq
+\mathscr V_x^{\mathrm{ev}}
+\times
+\mathscr V_x^{\mathrm{ev}}
+$$
+
+是恰好由第 10.2--10.4 节所列有序对组成的关系；除这些小节列出的有序对以外，不加入其他边。定义事件图：
+
+$$
+\mathscr G_x^{\mathrm{ev}}
+=
+(\mathscr V_x^{\mathrm{ev}},\mathscr A_x^{\mathrm{ev}}).
+$$
+
+### 10.2 同一时间内的依赖边
+
+若 $v\in\mathcal C_{j,\theta}$，令下列两个有序对属于 $\mathscr A_x^{\mathrm{ev}}$：
 
 $$
 P_{v,\theta}
@@ -1613,201 +1727,139 @@ P_{v,\theta}
 S_{j,\theta}
 \longrightarrow
 U_{v,\theta}.
-\tag{38}
 $$
 
-当 $v\in\mathcal A_{j,\theta}$ 时，再加入：
+若 $v\in\mathcal A_{j,\theta}$，再令下列有序对属于 $\mathscr A_x^{\mathrm{ev}}$：
 
 $$
-U_{v,\theta}
+U_{v,\theta}\longrightarrow F_{v,\theta}.
+$$
+
+这些边正是式 (18) 中的依赖。
+
+### 10.3 同一节点的状态依赖
+
+若 $v$ 在 $\theta<\theta'$ 都有非空完整时间纤维，并且二者之间没有 $v$ 的其他非空事件，则令下列有序对属于 $\mathscr A_x^{\mathrm{ev}}$：
+
+$$
+U_{v,\theta}\longrightarrow P_{v,\theta'}.
+$$
+
+它表示 $P_{v,\theta'}$ 使用的旧状态由较早事件决定。
+
+### 10.4 消息依赖
+
+若 $F_{v,\theta}$ 产生消息：
+
+$$
+m=(\mathrm{msg},\theta,a,y),
+$$
+
+则令下列有序对属于 $\mathscr A_x^{\mathrm{ev}}$：
+
+$$
+F_{v,\theta}
 \longrightarrow
-E_{v,\theta}.
-\tag{39}
+P_{\operatorname{dst}(a),\theta+\delta(a)}.
 $$
 
-在 post 条件中，候选新状态的求值属于 $P_{v,\theta}$；$U_{v,\theta}$ 仍表示式 (22) 决定它是否成为未来状态。在 SD + pre 中，程序可以等选择以后才实际求式 (11)，但所得数学值仍由相同输入唯一确定。
+一个目标纤维若含多个消息，其准备顶点就可以有多个消息依赖前驱。
 
-### 7.3 同一节点的状态先后
+### 10.5 事件图无环
 
-若节点 $v$ 的两个非空事件时间满足 $\theta<\theta'$，并且两者之间没有另一个 $v$ 的非空事件，则加入：
+先在 $\mathscr V_x^{\mathrm{ev}}$ 上定义时间函数，使每个形式符号的时间都是其第二个下标：
 
 $$
-U_{v,\theta}
-\longrightarrow
-P_{v,\theta'}.
+\operatorname{etime}(P_{v,\theta})
+=\operatorname{etime}(U_{v,\theta})
+=\operatorname{etime}(S_{j,\theta})
+=\operatorname{etime}(F_{v,\theta})
+=\theta.
+$$
+
+再定义阶段函数：
+
+$$
+p(P_{v,\theta})=0,
+\qquad
+p(S_{j,\theta})=1,
+\qquad
+p(U_{v,\theta})=2,
+\qquad
+p(F_{v,\theta})=3.
+$$
+
+对每个事件顶点 $\xi\in\mathscr V_x^{\mathrm{ev}}$ 定义秩：
+
+$$
+\operatorname{rank}(\xi)
+=
+(\operatorname{etime}(\xi),p(\xi))
+\in\mathbb N\times\{0,1,2,3\}.
 \tag{40}
 $$
 
-这表示时间 $\theta'$ 的旧状态来自更早事件完成后的状态。
-
-### 7.4 消息影响
-
-若 $E_{v,\theta}$ 产生消息：
+这里的字典序定义为：
 
 $$
-m=(\theta,a,y),
+(\theta,p)<_{\mathrm{lex}}(\theta',p')
+\Longleftrightarrow
+\bigl(\theta<\theta'\bigr)
+\qquad\text{或}\qquad
+\bigl(\theta=\theta'\ \text{且}\ p<p'\bigr).
 $$
 
-则加入：
+按这个次序比较秩。同一时间内的依赖严格增加 $p$；状态依赖严格增加 $\theta$；消息依赖由 $\delta(a)>0$ 也严格增加 $\theta$。所以每条事件边都严格增加式 (40)。沿有向边不可能回到原秩，因此事件图没有有向环。
 
-$$
-E_{v,\theta}
-\longrightarrow
-P_{\beta(a),\theta+\delta(a)}.
-\tag{41}
-$$
+由此得到两项不同事实：
 
-若目标桶还包含其他消息，目标准备作用同时依赖那些消息的产生者。
+1. 固定空间图 $G$ 按第 2.2 节的假设是 DAG；
+2. 每次具体输入产生的上述细分事件图也由式 (40) 证明为 DAG。
 
-$E_{v,\theta}$ 产生的外部输出记录没有指向后续节点作用的因果边，因为输出端口不返回图内；它们仍然是这个作用的结果，并被记录在 $Z^*$ 中。
+`TimedDAG` 不是在这两者中二选一。本文的规格以固定空间 DAG 为结构，并且它的每次运行还导出一张依赖于输入的事件 DAG。前者说明允许在哪里传值，后者说明这一次实际发生的函数作用怎样依赖。
 
-式 (41) 只画出了实际消息带来的数值影响。在线判断完整桶时，还需要知道某些边在对应时间没有消息。若把这种证明过程也画成作用位置，可以加入“桶已确定”的证明位置 $\Xi_{v,\theta}$：active 节点的逐边输出判定、inactive 节点的全空输出判定以及上游完成 seal 都指向相应的 $\Xi$。
+### 10.6 区域商图可以有环
 
-因为 $\delta(a)>0$，决定目标时间 $\theta$ 是否有边 $a$ 消息，只涉及发送时间：
-
-$$
-\theta-\delta(a)<\theta.
-$$
-
-所以把这些 seal 与无消息证明也加入以后，它们仍然只从更小逻辑时间指向当前桶确定位置，不会破坏下面的递增量证明。
-
-### 7.5 为什么细分事件图没有环
-
-给四类作用分配阶段编号：
-
-$$
-p(P)=0,
-\qquad
-p(S)=1,
-\qquad
-p(U)=2,
-\qquad
-p(E)=3.
-$$
-
-把一个作用的秩定义为：
-
-$$
-(\theta,p).
-$$
-
-按字典序比较这些二元组。同一逻辑时间的式 (38)--(39) 严格增加 $p$；式 (40) 严格增加 $\theta$；由 $\delta(a)>0$，式 (41) 也严格增加 $\theta$。
-
-因此每条因果边都严格增加 $(\theta,p)$。沿有向边前进不可能回到原来的二元组，所以细分事件图没有有向环。
-
-### 7.6 为什么不需要 region 收缩图无环
-
-只为比较另定义一个关系：
+只为研究区域布局，定义关系：
 
 $$
 Q_\rho
 =
 \{(j,j')\in J\times J
 \mid j\ne j',
-\ \exists a\in A,
-\ \rho(\alpha(a))=j,
-\rho(\beta(a))=j'\}.
+\ \exists a\in A:
+\rho(\operatorname{src}(a))=j,
+\rho(\operatorname{dst}(a))=j'\}.
+\tag{41}
 $$
 
-把 $(J,Q_\rho)$ 称为 region 收缩图。它不是正文消息图的一部分；它只记录是否至少有一条节点边从一个 region 指向另一个 region。
+称 $(J,Q_\rho)$ 为区域商图。它不是消息图。
 
-考虑：
+$\mathcal R_j$ 本身只是一个节点子集。如果把 $G$ 中起点和终点都位于 $\mathcal R_j$ 的边取出来，就得到 $G$ 在该子集上的诱导子图；由于 $G$ 已经是 DAG，这个诱导子图自动无环，不需要再加一条“region 无环”公理。与此不同，式 (41) 把每个节点子集收缩成一个点，所得区域商图可以有环。
 
-$$
-u\xrightarrow{a}v\xrightarrow{b}w,
-$$
-
-并令：
+即使固定节点图是路径：
 
 $$
-u,w\in\mathcal R_0,
-\qquad
-v\in\mathcal R_1.
+u\longrightarrow v\longrightarrow w,
 $$
 
-若把 regions 收缩成点，会画出：
+只要 $u,w\in\mathcal R_0$ 且 $v\in\mathcal R_1$，区域商图就含有：
 
 $$
-\mathcal R_0
-\longrightarrow
-\mathcal R_1
-\longrightarrow
-\mathcal R_0.
+0\longrightarrow1\longrightarrow0.
 $$
 
-但实际消息影响是：
+这不构成事件环。实际消息事件的时间严格增加，最后回到区域 $0$ 时已经是另一个 $(0,\theta')$ 位置。本文因此不要求区域商图无环。
 
-$$
-(u,\theta)
-\longrightarrow
-(v,\theta+\delta(a))
-\longrightarrow
-(w,\theta+\delta(a)+\delta(b)).
-$$
+## 11. 在逻辑时间切面停止与继续
 
-最后一个事件虽然再次属于 $\mathcal R_0$，其逻辑时间已经严格增大。region 名称重复不等于事件位置重复。
+### 11.1 完整切面
 
-因此，region 收缩后的环不妨碍第 7.5 节的证明。区域划分只在同一时间建立式 (38) 的共同选择关系，不是第二张消息图。
+固定 $b\in\mathbb N$，并要求 $0\le b\le\Theta_{\max}+1$。称计算已经完成时间切面 $b$，当且仅当所有满足 $\theta<b$ 的非空候选事件都已经完成选择、状态采用与必要的完整输出，并且这些事件产生的消息和输出已经确定。
 
-### 7.7 正时延是当前证明的必要前提
+这是一个逻辑时间边界。它不包含“在同一次区域选择进行到一半时暂停”的情况。
 
-若允许某条边满足 $\delta(a)=0$，式 (41) 可能从时间 $\theta$ 的阶段 $3$ 指向同一时间的阶段 $0$。这不再严格增加 $(\theta,p)$，并可能让当前选择的输出反过来决定当前候选集合。
-
-因此本文结论依赖：
-
-$$
-\forall a\in A,
-\quad
-\delta(a)>0.
-$$
-
-零时延边必须另行规定同刻依赖怎样求值，不能在本文中悄悄加入。
-
-## 8. 在逻辑时间边界停止与继续
-
-### 8.1 逻辑时间切面
-
-给定 $b\in\mathbb N$，把节点事件位置分成：
-
-$$
-\mathcal E^{<b}
-=
-\{(v,\theta)\mid
-B_{v,\theta}\ne\varnothing,
-\ \theta<b\},
-$$
-
-$$
-\mathcal E^{\ge b}
-=
-\{(v,\theta)\mid
-B_{v,\theta}\ne\varnothing,
-\ \theta\ge b\}.
-$$
-
-对 region 选择位置也定义：
-
-$$
-\mathcal S^{<b}
-=
-\{(j,\theta)\mid
-\mathcal C_{j,\theta}\ne\varnothing,
-\ \theta<b\},
-$$
-
-$$
-\mathcal S^{\ge b}
-=
-\{(j,\theta)\mid
-\mathcal C_{j,\theta}\ne\varnothing,
-\ \theta\ge b\}.
-$$
-
-一个完整的逻辑时间切面要求 $\mathcal E^{<b}$ 中每个 candidate 都已经完成状态采用与必要的完整计算，$\mathcal S^{<b}$ 中每个位置都已经完成选择，并且它们产生的图内消息与外部输出记录都已经确定。
-
-这个定义不允许把同一个 $\theta<b$ 的 region 选择停在一半。机器在任意中间步骤暂停是另一个更丰富的问题。
-
-### 8.2 跨过切面的消息
+### 11.2 跨越切面的内部消息
 
 定义：
 
@@ -1816,40 +1868,33 @@ W_b
 =
 \{m\in M^*\mid
 \operatorname{send}(m)<b
-\le
-\operatorname{arrival}(m)\}.
+\le\operatorname{time}(m)\}.
 \tag{42}
 $$
 
-$W_b$ 中的消息已经由左侧事件产生，但其逻辑到达时间属于右侧。若停止后丢掉它们，右侧某些完整桶会缺少元素。
+$W_b$ 中的消息已经由左侧事件产生，但它们到达的完整时间纤维位于切面右侧。丢掉 $W_b$ 会改变未来某些式 (21)。
 
-再定义已经产生的外部输出前缀：
+### 11.3 切面状态、未来输入和输出前缀
+
+第 6 节的 $q_v^b$ 正好是节点 $v$ 完成所有时间小于 $b$ 的状态事件以后、处理时间 $b$ 以前的状态。
+
+定义未来外部输入记录：
 
 $$
-Z^{<b}
+E_{\ge b}
 =
-\{z\in Z^*\mid\operatorname{otime}(z)<b\}.
+\{e\in E_x\mid\operatorname{time}(e)\ge b\},
 $$
 
-它不影响右侧节点计算，但若恢复后还要重建完整的多端口输出记录，就必须保留它，或者保证它已经由外部接收者可靠保存。
-
-### 8.3 切面处的节点状态
-
-对每个节点 $v$，令 $q_v^b$ 是按逻辑时间递增完成所有满足：
+以及已经产生的外部输出前缀：
 
 $$
-\theta<b,
-\qquad
-B_{v,\theta}\ne\varnothing
+Z_{<b}
+=
+\{z\in Z^*\mid\operatorname{outtime}(z)<b\}.
 $$
 
-的状态采用以后得到的状态。若不存在这样的 $\theta$，令：
-
-$$
-q_v^b=q_v^0.
-$$
-
-在本文的无状态 selector 定义下，一个候选 continuation 是：
+定义切面上的未来计算状态：
 
 $$
 Q_b
@@ -1857,762 +1902,343 @@ Q_b
 \left(
 b,
 (q_v^b)_{v\in V},
-W_b,
-Z^{<b}
+W_b
 \right).
 \tag{43}
 $$
 
-固定图、端口关联、各 $L_i$ 与 $\iota_i$、区域划分和所有函数属于已经给定的数据，不需要重复放进 $Q_b$。
+$Z_{<b}$ 不影响未来节点计算；若要在恢复后重建完整多端口输出记录，则还要保存 $Z_{<b}$ 或保存“这些输出已被外部可靠接收”的等价证据。
 
-### 8.4 右侧外部输入
+### 11.4 分段继续定理
 
-定义从时间 $b$ 开始尚未消费的外部输入集合：
+> [!theorem] 定理 5：完整切面上的继续等于一次算完
+> 从 $Q_b$ 开始，以 $(q_v^b)$ 为初始节点状态，令恢复递归开始时已有消息集合 $M^{\mathrm{res}}_{<b}=W_b$，并只使用 $E_{\ge b}$。随后把式 (21) 改写为：
+> $$
+> B^{\mathrm{res}}_{v,\theta}
+> =
+> B_{v,\theta}(E_{\ge b},M^{\mathrm{res}}_{<\theta})
+> \qquad(\theta\ge b),
+> $$
+> 其余步骤仍按第 6.3 节递归。所得时间不小于 $b$ 的状态、候选集合、active sets、内部消息、外部输出和本地结果，与完整计算 $\mathcal T_x$ 的相应后缀相同。
+
+**证明。** 对 $\theta\ge b$ 归纳。时间 $b$ 的旧状态由式 (43) 与完整计算相同。其外部输入由 $E_{\ge b}$ 相同；所有从左侧跨入的消息恰好是式 (42)，所以时间 $b$ 的完整纤维相同。式 (22)--(28) 都是函数，时间 $b$ 的结果相同。
+
+假设直到 $\theta-1$ 都相同，则右侧已经新产生的消息相同，加上相同的 $W_b$ 与未来外部输入，时间 $\theta$ 的完整纤维相同；再次应用相同函数得到相同结果。归纳完成。$\square$
+
+这个定理说明式 (43) 足以在完整逻辑切面恢复当前的无状态 selector 模型。若以后让 selector 自身跨时间保存状态，该状态也必须加入 $Q_b$。
+
+## 12. 正确性、区域结构与联合求值必须分层
+
+### 12.1 区域前沿由最慢成员决定
+
+由式 (36)，对每个 $v\in\mathcal R_j$：
 
 $$
-X_{\ge b}
+\lambda_n(\mathcal R_j)\le\lambda_n(v).
+$$
+
+例如成员前沿分别为 $100,96,17$ 时，区域前沿是 $17$。前两个节点已经能够证明更远时间的纤维完整，但整个区域在时间不小于 $17$ 处仍可能新增候选成员。
+
+这不是实现策略，而是最小值定义的直接结果。
+
+### 12.2 当前已经关闭的区域时间集合
+
+任取 $c_j\in\mathbb N$，并要求 $0\le c_j\le\Theta_{\max}+1$；把它作为本次要研究的时间区间左端点。定义：
+
+$$
+\mathcal W_{j,n}
 =
-\{(i,t,x_i(t))
-\mid i\in\mathsf I,\ t\in[L_i],
-\iota_i(t)\ge b\}.
+\{\theta\in[c_j,\Theta_{\max}+1)
+\mid
+\theta<\lambda_n(\mathcal R_j),
+\ \mathcal C_{j,\theta}\ne\varnothing\}.
 \tag{44}
 $$
 
-从 $Q_b$ 与式 (44) 继续计算时：
+对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。集合很大只表示有很多区域时间位置的输入完整；它不自动给出一个能同时求值所有递归状态的快速公式。
 
-1. 节点初态取 $q_v^b$；
-2. $W_b$ 中到达时间不小于 $b$ 的消息参加对应完整桶；
-3. 只再处理逻辑时间不小于 $b$ 的外部输入、region 选择和节点事件。
+### 12.3 区域商图无环只是一项可选附加条件
 
-### 8.5 分段计算需要证明什么
+若式 (41) 的 $(J,Q_\rho)$ 恰好无环，可以选择一个区域全序，使每条商图边的起点都排在终点以前；这样的全序称为区域拓扑序。随后可以沿这个次序研究一种更规则的前沿传播方法。这可能帮助构造较大的式 (44)，但它不改变式 (33)--(36) 中任何一个已给下界的数值。
 
-记一次直接完整计算的结果为：
+反之，区域商图有环也不破坏第 6 节的语义、定理 3 或第 10.5 节的事件 DAG 证明。
 
-$$
-\operatorname{Direct}(x).
-$$
-
-记从式 (43)--(44) 继续所得结果为：
+因此：
 
 $$
-\operatorname{Continue}(Q_b,X_{\ge b}).
+\text{区域商图无环}
 $$
 
-需要证明：继续计算产生的所有时间不小于 $b$ 的图内消息、外部输出记录、状态变化、candidate sets、active sets 和观察值，与 $\operatorname{Direct}(x)$ 的相应后缀完全相同；再与 $Z^{<b}$ 合并后，完整外部输出集合仍是 $Z^*$。
+可以是以后性能定理的前提，但不是当前合法性的前提。
 
-证明路线仍是对 $\theta\ge b$ 作归纳。式 (43) 给出相同旧状态，式 (42) 与 (44) 给出相同输入桶来源，此后式 (8)--(25) 产生相同结果。
+### 12.4 联合求值还需要函数的代数性质
 
-若以后加入式 (49) 那样的 selector-history，continuation 还必须保存每个 selector 在切面 $b$ 的状态。若允许停在同一逻辑时间的准备、选择或状态采用之间，还必须保存相应未完成阶段；式 (43) 不声称覆盖那种暂停位置。
-
-## 9. 与较简单 TimedDAG 以及单端口特例的关系
-
-### 9.1 单节点 region 退化为局部节点函数
-
-假设每个 region 都是单节点集合，并规定每个非空候选始终 active、始终采用候选状态。那么：
+固定 $k\in\mathbb N_{>0}$。对每个 $\ell\in\{1,\ldots,k\}$，给定集合 $X_\ell,Y_\ell$ 和函数：
 
 $$
-\chi_{v,\theta}=1,
-\qquad
-\omega_{v,\theta}=1.
+f_\ell:X_\ell\to Y_\ell.
 $$
 
-式 (26) 退化为：
+再给定两个集合 $W_{\mathrm{in}},W_{\mathrm{out}}$。若要用一个联合函数代替逐项求值，至少要构造三个有明确类型的函数：
 
 $$
-F_v(q,\theta,B)
+\operatorname{Pack}:
+\prod_{\ell=1}^{k}X_\ell
+\to W_{\mathrm{in}},
+$$
+
+$$
+\mathcal K:W_{\mathrm{in}}\to W_{\mathrm{out}},
+$$
+
+$$
+\operatorname{Unpack}:
+W_{\mathrm{out}}
+\to\prod_{\ell=1}^{k}Y_\ell,
+$$
+
+并证明对所有 $(z_\ell)_{\ell=1}^{k}\in\prod_{\ell=1}^{k}X_\ell$：
+
+$$
+\operatorname{Unpack}
+\left(
+\mathcal K(\operatorname{Pack}((z_\ell)_{\ell=1}^{k}))
+\right)
 =
-\Gamma_v(q,\theta,B,1,1).
+\left(f_\ell(z_\ell)\right)_{\ell=1}^{k}.
 \tag{45}
 $$
 
-这正是每个节点只依赖自己的旧状态和完整桶的 TimedDAG。因而本文不是删除局部节点模型，而是在它前面加入一次有严格输入边界的区域选择。
+并且右边若含状态递归，必须按第 6 节的状态依赖解释。
 
-### 9.2 单输入是主定义的特例
+定理 3 证明输入不再增加；式 (45) 证明一次联合计算没有改变结果。这是两个不同命题。
 
-第 1.2、1.4 节已经直接使用有限输入端口集 $\mathsf I$。每个端口都有自己的位置集合、值函数、严格递增逻辑注入时间和式 (32) 的 seal；式 (28)、(30) 与 (33) 同时对所有端口生效。
+### 12.5 四层研究顺序
 
-若只要一个输入端口，取：
+可以把后续工作分成四层：
 
-$$
-\mathsf I=\{i_0\}.
-$$
+1. **语义层**：第 1--6 节定义什么结果是正确的；
+2. **知识层**：第 8--9 节证明何时已经知道足够多，可以不可撤销地求值；
+3. **代数层**：证明哪些逐时间函数满足式 (45) 一类联合求值等式；
+4. **实现层**：为已经证明的联合函数寻找具体硬件上的高效程序。
 
-旧式“唯一输入节点”就是 $\gamma(i_0)$；旧式长度 $L$、输入 $x$ 和时间函数 $\iota$ 分别是 $L_{i_0}$、$x_{i_0}$ 和 $\iota_{i_0}$。所以单输入是删去端口下标所得的特例，而多输入不是正文外的后续扩展。
+任一层都不能由后一层的术语替代。区域划分给出共同选择的边界，但不会替任意节点函数制造可联合求值性质。
 
-### 9.3 单输出也是主定义的特例
+## 13. 从当前 TimedDAG 继续扩展时会改变什么
 
-第 1.2、2.8 节已经直接使用有限输出端口集 $\mathsf O$。对每个 $o\in\mathsf O$，从 $Z^*$ 中取出该端口的带时间输出集合：
+本节不是当前定义的一部分，只说明每种扩展会触及哪一条证明。
 
-$$
-Z_o^*
-=
-\{(\theta,y)\mid(\theta,o,y)\in Z^*\}.
-\tag{46}
-$$
+### 13.1 允许固定节点图有环，但仍保持正时延
 
-全部图外输出是函数族：
+若删除第 2.2 节“固定图无环”的条件，而仍保持每条边 $\delta(a)>0$，则对任意固定有限时间上界 $B$，按 $\theta=0,\ldots,B$ 的递归仍然唯一，因为当前消息只能影响更大时间。
 
-$$
-(Z_o^*)_{o\in\mathsf O}.
-$$
+但一次完整运行可能沿有向环不断产生更大时间的消息，不再具有式 (19) 的全局有限上界。因此要改为研究：给定有限逻辑时间切面，是否能在有限工作后完成该切面。定理 1 的“整个运行有限”部分不能原样保留。
 
-不同输出端口可以属于同一节点，也可以属于不同节点；一个端口还可以在多个逻辑时间产生值。若只要一个输出，取 $\mathsf O=\{o_0\}$。因此单输出同样只是主定义的特例。
+### 13.2 允许零时延边
 
-由第 2.8 节的唯一性条件，每个 $Z_o^*$ 是一个从某个有限逻辑时间子集到 $P$ 的函数图。若需要序列表示，只需按 $\theta$ 递增排列；这个排列没有增加新的语义数据。
+若某条边满足 $\delta(a)=0$，时间 $\theta$ 的完整输出可能立即改变同一时间的输入纤维。式 (29) 失效，事件秩可能从阶段 $3$ 指回同一时间的阶段 $0$。
 
-## 10. 一般正确性与大块推进性质分开研究
+这时必须另外定义同刻求值序、固定点、方程求解器或拒绝某些环。不能只把 $0$ 填入现有 $\delta$ 而继续使用当前证明。
 
-### 10.1 region 前沿由最慢成员决定
+### 13.3 节点内部异步计算
 
-由式 (35)：
+在完整纤维已经确定后，一个节点可以把 $\operatorname{Agg}$、$\operatorname{Upd}$、读取函数和 $\operatorname{Full}$ 分成许多内部步骤。只要存在一个删除这些内部中间量的函数，并且删除后得到的状态、消息和输出仍等于式 (9)--(12)，这种分解就没有改变正文语义。
 
-$$
-\lambda_n(\mathcal R_j)
-\le
-\lambda_n(v)
-\qquad
-(v\in\mathcal R_j).
-$$
+若希望在同一逻辑时间的完整纤维尚未确定前，就根据部分原子发布不可撤销状态或图内消息，则已不再实现本文函数。它需要新的节点语义，并必须重新证明候选集合、消息发射和封闭下界之间的关系。
 
-例如：
+### 13.4 为 selector 增加跨时间状态
+
+当前 $\operatorname{Sel}_{j,C}$ 只读取 $\theta$ 与当前描述量族。若为区域 $j$ 增加非空状态集合 $Y_j$，需要把式 (14) 改为：
 
 $$
-\lambda_n(v_1)=100,
-\quad
-\lambda_n(v_2)=96,
-\quad
-\lambda_n(v_3)=17
+\operatorname{Sel}_{j,C}:
+Y_j\times\mathbb N\times\prod_{v\in C}D_v
+\to Y_j\times\mathsf{Allowed}_{j,C}.
 $$
 
-时：
+随后，同一区域的选择必须按时间连接 selector 状态，第 10 节事件图要增加状态边，第 11 节的 $Q_b$ 也要保存切面处的 $Y_j$ 元素。
 
-$$
-\lambda_n(\mathcal R_j)=17.
-$$
+### 13.5 允许一个节点属于多个选择域
 
-前两个节点虽然已经能证明更远时间的桶完整，整个 region 仍然只能安全确定小于 $17$ 的 candidate sets。
+当前满射 $\rho:V\to J$ 保证每个节点恰属一个区域。若一个节点同时参加多个选择，必须定义多个选择结果发生冲突时怎样决定状态采用与完整输出。把 $\rho$ 换成一般关系而不增加冲突规则，不会得到一个完整函数。
 
-### 10.2 已关闭的 region-time 窗口
+## 14. 本文已经证明的结果与尚未证明的结果
 
-若 $c_j$ 是 region 尚未处理的最小逻辑时间，则当前已经具有固定 candidate set 的区间是：
+本文正文已经给出：
 
-$$
-[c_j,\lambda_n(\mathcal R_j)).
-$$
+1. 完整输入下有限且唯一的直接语义（定理 1）；
+2. 节点时间纤维的关闭条件（引理 2）；
+3. 区域候选集合不会再增加的条件（定理 3）；
+4. 在所列合法条件下的求值次序无关（定理 4）；
+5. 完整逻辑时间切面上的继续等于一次算完（定理 5）；
+6. 每次有限运行的规范值与状态依赖事件图无环；
+7. 区域商图不必无环。
 
-其中实际非空 candidate set 的时间数为：
+仍需单独完成的工作包括：
 
-$$
-K^{\mathrm{ready}}_{j,n}
-=
-\left|
-\left\{
-\theta\in[c_j,\lambda_n(\mathcal R_j))
-\mid
-\mathcal C_{j,\theta}\ne\varnothing
-\right\}
-\right|.
-\tag{47}
-$$
+- 把第 9 节的阶段过程实现成最小整数参考解释器，并以随机可见次序检验定理 4；
+- 给出从更受限模型到本文坐标的完整嵌入证明，而不只比较最终输出；
+- 找到能推出较大关闭窗口的区域结构定理；
+- 对具体神经节点证明式 (45) 的联合求值等式与复杂度；
+- 扩展到带正时延环的有限切面语义；
+- 最后才研究零时延环或更一般的 Graph。
 
-式 (47) 是由当前 seal 状态导出的数学量。它没有声称这些事件一定存在高效的联合求值方法。
+## 15. 建议的学习顺序
 
-还可以定义成员前沿偏斜：
+第一次阅读只完成以下步骤：
 
-$$
-\operatorname{Skew}_n(\mathcal R_j)
-=
-\max_{v\in\mathcal R_j}\lambda_n(v)
--
-\min_{v\in\mathcal R_j}\lambda_n(v).
-\tag{48}
-$$
+1. 读第 1--3 节，独立写出一个 $B_{v,\theta}(E,M)$；确认它只是由目标与时间取出的集合。
+2. 读第 4--5 节，给定一个旧状态和非空纤维，依次写出 $h,\widetilde q,d,C,A,O,q'$。
+3. 手算第 7 节，直到能够解释为什么 $m_0,m_1$ 的发送时间不同而到达时间相同。
 
-式 (48) 较大时，一些成员已经知道得很远，但整个 region 仍受最慢成员限制。本文不把偏斜小规定为合法性条件。
+第二次阅读再做：
 
-### 10.3 三层理论
+4. 从式 (33)--(36) 不看证明地重证引理 2 与定理 3。
+5. 构造一个节点最终完整时间纤维为空的例子，说明为什么仍需该节点的前沿越过 $\theta$。
+6. 分别取 $\tau_j=-,+$ 与 $\kappa_j=0,1$，手算四种组合，确认“读取哪个状态”和“采用哪个状态”是不同坐标。
 
-本文建议以后依次研究：
+第三次阅读才做：
 
-1. **一般层**：允许任意区域划分，只证明完整候选集合、唯一计算、合法次序无关和分段继续；
-2. **附加结构层**：研究 region 收缩关系无环、区域局部性或前沿偏斜上界等条件，是否推出更简单的推进顺序和更大的式 (47)；
-3. **联合求值层**：再证明某些 selector、状态更新与完整节点函数，对多个逻辑时间存在与逐时间递归相等的联合求值函数。
+7. 为第 7 节列出 $P,S,U,F$ 事件顶点，并检查每条边都增加式 (40)。
+8. 选择一个切面 $b$，写出 $W_b$，然后检查丢掉它会使哪个未来完整时间纤维缺元素。
+9. 最后研究式 (44)--(45)，不要把较大的关闭窗口误当成已经存在高效联合算法。
 
-region-DAG 可以成为第二层的一种充分条件，但不是第一层的合法性公理。即使 region-DAG 成立，也不能自动推出第三层；一般状态递归仍可能必须逐时间求值。
+## 16. 可选的相关材料
 
-### 10.4 图与划分只给出可用并行性的上界
+本文的数学定义不依赖下列材料。只有在已经能够独立手算第 7 节后，才建议按目的查阅：
 
-固定图、逻辑时延、区域划分和 selector/state 依赖决定哪些数学输入能够同时完整。解释器可以发现并利用这些位置，但不能在式 (37) 不成立时制造一个更大的完整 candidate set。
+- [[timed-dag-v0-learning-note|较小的无显式区域选择学习模型]]；
+- [SettleGraph 的独立语义文档](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/docs/experiment-semantics-and-naming.md)；
+- [[current-mainline|TIDE 当前研究台阶]]。
 
-另一方面，即使式 (47) 很大，也还要证明相应函数确实存在联合求值公式。某些递归可以用结合运算或矩阵公式重写，另一些一般递归可能没有这种性质。
+这些材料中的同名词不能反过来改写本文公式；若两份文档要建立关系，必须给出从一边全部数学坐标到另一边全部数学坐标的函数或关系。
 
-所以高性能结果由两类事实共同决定：
+## 附录 S：计算机系统词汇与正文数学对象的对应（可选）
 
-$$
-\left(
-\text{图与 region 给出的就绪窗口},
-\text{节点函数的可联合求值性质}
-\right).
-$$
+本附录只做翻译，不增加正文定理的前提。每个块默认折叠，可以在遇到相应系统词时再展开。
 
-通用解释器负责保持正确性并利用已经证明的机会；它不负责保证任意合法图都同样快。
-
-### 10.5 可选的 selector-history
-
-本文核心 selector 没有跨逻辑时间可变状态。若以后确实需要，对每个 $j$ 给定非空集合 $H_j$、初值 $s_j^0\in H_j$，并把式 (18) 改成：
-
-$$
-\operatorname{Select}_{j,C}:
-H_j
-\times\mathbb N
-\times\prod_{v\in C}D_v
-\to
-H_j\times\mathsf{Act}_{j,C}.
-\tag{49}
-$$
-
-这时同一 region 的选择还必须按逻辑时间递增更新 $H_j$；式 (43) 也要加入切面处的 selector 状态。
-
-式 (49) 仍然不把 region 变成消息节点，但它会增加跨时间状态依赖，并可能缩小能够联合求值的时间窗口。第一次证明本文模型时不需要加入它。
-
-## 11. 当前证明目标
-
-### 11.1 已经给出证明的两个引理
-
-正文已经证明：
-
-$$
-\lambda_n(v)>\theta
-\Longrightarrow
-B^{(n)}_{v,\theta}=B_{v,\theta},
-$$
-
-以及：
-
-$$
-\lambda_n(\mathcal R_j)>\theta
-\Longrightarrow
-\mathcal C^{(n)}_{j,\theta}
-=
-\mathcal C_{j,\theta}.
-$$
-
-第二个结论正是“selector 的 candidate set 不会再增加”的数学形式。
-
-### 11.2 完整输入下有限且唯一
-
-需要检查第 3 节递归的每一步定义域，并完整证明：
-
-- 每个 $(j,\theta)$ 至多选择一次；
-- 每个 $(v,\theta)$ 至多采用一次状态；
-- 每个 active $(v,\theta)$ 至多沿每条出边产生一条消息；
-- 每个 active $(v,\theta)$ 至多向每个相连输出端口产生一个值；
-- 全部事件、选择、消息和外部输出记录有限；
-- 最终结果唯一。
-
-### 11.3 合法异步次序与直接解释器相同
-
-需要把第 5 节扩写成严格的合法次序定义，再证明任何完成同一有限逻辑时间边界的合法次序都得到相同的：
-
-$$
-(q_v)_{v\in V},
-\qquad
-M,
-\qquad
-Z,
-\qquad
-(\mathcal C_{j,\theta},\mathcal A_{j,\theta})_{j,\theta},
-$$
-
-以及相同的观察记录。证明建议使用第 5.6 节的 $(\theta,p)$ 归纳。
-
-### 11.4 分段继续
-
-需要证明式 (43) 确实保留未来计算所需的全部信息，并证明第 8.5 节要求的前缀加后缀等于一次直接计算。
-
-### 11.5 受限模型的嵌入
-
-需要证明：
-
-1. 式 (45) 的单节点 always-active 条件精确还原局部 TimedDAG；
-2. 给 SettleGraph 选择不发生跨 Token 同刻汇合的时间编码后，附录 S.9 的全坐标翻译成立。
-
-这些目标完成以前，本文仍是学习中的候选定义，不是已经证明完备的通用 Graph 理论。
-
-## 12. 建议的学习顺序
-
-1. 用整数重新手算第 0 节，并分别改变消息的机器可见次序和逻辑时延，确认只有后者可能改变 candidate set。
-2. 取两个输入端口和两个输出端口，按式 (28) 写出一个同时含两个外部输入原子的桶，再按式 (25) 写出两个不同端口的输出记录。
-3. 从式 (31)--(35) 独立证明式 (37)，不看正文证明。
-4. 手算第 6 节，并另造一组让 SD + pre 与 BO + post 的 active set 相同、最终状态不同的数。
-5. 对第 7.6 节的三个节点，列出三个连续逻辑时间的 $P,S,U,E$ 位置，验证每条关系严格增加 $(\theta,p)$。
-6. 选择一个 $b$，手算式 (42)--(44)，检查丢掉 $W_b$ 会使哪个未来桶错误。
-7. 尝试补全第 11.2--11.4 节；遇到缺定义时先修改数学对象，不用程序行为填补定义。
-8. 最后才把这些有限集合和函数逐项翻译成整数参考程序。
-
-完成前七步以前，不需要证明 region-DAG、大块联合求值或硬件性能性质。
-
-## 13. 明确延期的内容
-
-本文暂时不加入：
-
-- 固定节点图中的有向环；
-- 零时延边；
-- 一个节点在同一出边、同一发送时间产生多条消息；
-- selector 读取未声明的跨 region 信息；
-- 随墙钟时间、线程竞争或现实设备负载改变的 selector；
-- 同一节点在同一逻辑时间参加多个 region；
-- 未关闭完整桶就产生不可撤销状态或消息；
-- 迟到消息修改已经发布的 active set；
-- 随机 selector 所需的随机性状态；
-- selector 概率、训练梯度和辅助损失；
-- 任意机器中间步骤上的暂停恢复；
-- region-DAG 推出大块推进的定理；
-- packed attention 或其他联合求值的正确性与复杂度；
-- 无限节点、无限输入或无限时间运行。
-
-这些内容不是被否定，而是不能暗中成为本文定义或证明的前提。下一次扩展每次只应加入其中一项，并重新检查式 (37)、第 7.5 节的递增量和式 (43) 是否仍然充分。
-
-## 14. 相关文档
-
-本文是可独立阅读的完整版本。另一个更小、没有显式 region selector 的学习模型见：
-
-- [[timed-dag-v0-learning-note|TimedDAG-v0：从有限集合与函数开始的定义]]
-
-SettleGraph 当前权威语义见：
-
-- [experiment-semantics-and-naming.md](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/docs/experiment-semantics-and-naming.md)
-
-旧 TIDE 长文只在本文已经提出具体问题时按需查阅，不能用其中未重新定义的术语反过来改变本文对象。
-
-## 附录 S：计算机系统词汇与数学对象的对应（可选）
-
-本附录不是正文数学定义的一部分。下面各块默认折叠；遇到相应词汇时再展开。每个词都说明它是数学对象的简称、导出量、计算机表示，还是尚待证明的性质。
-
-> [!info]- S.0　identifier、schema、semantic coordinate、wall clock 与 chunk
-> **1. identifier、ID（标识符）**
->
-> - 正文直接用集合元素 $v\in V$、$a\in A$、$i\in\mathsf I$、$o\in\mathsf O$ 和 $j\in J$ 区分对象，不需要先把它们编码成字符串。
-> - 若程序必须使用整数，可以给某个有限集合 $X$ 选择一个单射 $\operatorname{id}_X:X\to\mathbb N$。单射表示：
->   $$
->   x\ne x'
->   \Longrightarrow
->   \operatorname{id}_X(x)\ne\operatorname{id}_X(x').
->   $$
-> - “ID 稳定”的最小数学含义是：$\operatorname{id}_X$ 在固定结构数据以后就是同一个函数；它不随第 4 节的阶段 $n$、消息可见次序或本次分块方式改变。
-> - 例如可以固定一个单射 $\operatorname{id}_{\mathrm{event}}:V\times\mathbb N\to\mathbb N$。系统语言“由 schema 和语义坐标决定”在这里恰好表示：编码函数的定义域是规定好的积集合 $V\times\mathbb N$，输入只有 $(v,\theta)$，没有墙钟 $w$、阶段 $n$、线程号或块编号。
->
-> **2. schema（数据形状约定）**
->
-> - 它通常对应一个已经写出的集合或积集合。例如式 (5) 规定消息属于 $\mathbb N\times A\times P$，也就规定了三个坐标各自来自哪个集合。
-> - schema 是计算机保存这些坐标时的类型与字段约定；正文真正使用的是积集合及其投影函数。
-> - 改变字段名但保持这些集合与函数不变，只改变表示；删掉边坐标 $a$ 则可能改变数学对象，因为式 (8) 将不能再区分入边。
->
-> **3. semantic coordinate（语义坐标）**
->
-> - 这不是正文额外假设的一种时间。它只是“用哪个有序组唯一指出一个数学位置”的系统说法。
-> - 本文的例子包括输入位置 $(i,t)$、节点事件位置 $(v,\theta)$、region 选择位置 $(j,\theta)$、图内发送位置 $(\theta,a)$ 和外部输出位置 $(\theta,o)$。
-> - 有序组的坐标来自已经定义的集合；把机器线程号加入日志，不会使线程号自动成为上述有序组的一部分。
->
-> **4. wall clock、machine time（墙钟、机器时间）**
->
-> - 若记录现实完成时刻，可以另取 $w\in\mathbb R_{\ge0}$。正文的 Aggregate、Update、Select 和 Full 都没有 $w$ 这个自变量，所以改变 $w$ 不能改变它们的数学值。
-> - 第 4 节的 $n\in\mathbb N$ 只排列机器操作先后，也不传入这些函数。逻辑时间 $\theta$ 则是消息、桶和状态事件定义中的坐标；三者不能互换。
->
-> **5. chunk、chunk partition（块、分块）**
->
-> - 若待计算的有限位置集合为 $E$，一次分块可数学化为非空子集族 $(E_1,\ldots,E_k)$，满足：
->   $$
->   E=\bigcup_{\ell=1}^k E_\ell,
->   \qquad
->   \ell\ne\ell'
->   \Longrightarrow
->   E_\ell\cap E_{\ell'}=\varnothing.
->   $$
-> - 块只是在一次联合求值中把哪些位置放在一起。正文的语义位置仍是 $(v,\theta)$ 或 $(j,\theta)$，不会因分块边界改变。
-> - 若两种分块得到不同的 $M^*$、$Z^*$、状态或 active sets，至少一种联合程序没有实现正文定义；“本次怎样分块”不是 selector 可以读取的新输入。
-
-> [!info]- S.1　graph、port、node、edge、logical time、message、output 与 bucket
-> **1. graph、spatial graph（图、固定空间图）**
->
-> - 数学对应：式 (1) 的五元组 $G$。
-> - 它在一次输入以前给定，只说明哪些节点之间允许沿边传值及每条边增加多少逻辑时间。
-> - 它不是第 7 节由具体输入产生的细分事件图。
->
-> **2. input/output port、ingress/egress（输入、输出端口）**
->
-> - 数学对应：$\mathsf I,\mathsf O$ 及函数 $\gamma,\varepsilon$。
-> - 输入端口 $i$ 向 $\gamma(i)$ 注入带位置和逻辑时间的外部值；输出端口 $o$ 只接收 $\varepsilon(o)$ 产生的外部输出记录。
-> - 端口不是节点，也不因多个端口连接同一节点而把这些输入合成一个没有身份的值。
->
-> **3. node、receiver（节点、接收节点）**
->
-> - 数学对应：$v\in V$。
-> - 节点持有 $S_v$ 中的私有状态，读取自己的完整桶，沿 $\operatorname{Out}(v)$ 中的边发送，并向 $\operatorname{OutPort}(v)$ 中的外部端口给值。
-> - SettleGraph 的 receiver 翻译到本文时应对应节点，而不是 region。
->
-> **4. edge、channel（边、通道）**
->
-> - 数学对应：$a\in A$；起点、终点和时延分别为 $\alpha(a),\beta(a),\delta(a)$。
-> - 若系统另说“节点计算逻辑耗时”和“传递逻辑耗时”，正文第 1.5 节把二者之和写入 $\delta(a)$；解释器只需读取这个总数。
-> - 实现可以用队列、数组或网络连接表示一条边；这些表示不是数学定义本身。
->
-> **5. logical time（逻辑时间）**
->
-> - 数学对应：$\theta\in\mathbb N$。
-> - 它参与式 (4)、(5)--(6)、完整桶和事件状态先后。
-> - $\theta=5$ 不表示现实经过五秒，也不表示机器执行第五步。
->
-> **6. message、payload（消息、承载值）**
->
-> - 整条消息对应式 (5) 的 $(\theta,a,y)$。
-> - payload 只对应 $y\in P$；发送时间与边身份不是 payload。
-> - logical arrival 对应式 (6)，机器 visibility 对应消息何时进入第 4.1 节的 $H_n$。两者不能混同。
->
-> **7. external output record（外部输出记录）**
->
-> - 数学对应：式 (25) 的 $(\theta,o,y)$ 以及最终集合 $Z^*$。
-> - 输出端口身份 $o$ 与逻辑时间 $\theta$ 都是记录的一部分；多个输出不是把若干值无标记地放进同一个列表。
-> - 外部输出不返回图内，因此不参加节点桶或边 seal。
->
-> **8. bucket、time bucket（桶、同刻输入桶）**
->
-> - 数学对应：第 1.6 节的有限集合 $B_{v,\theta}$。
-> - 同一节点、同一逻辑时间的全部原子只形成一个桶。集合没有消息到达顺序。
-> - 外部输入原子保留端口 $i$，图内消息原子保留边 $a$；式 (8) 因而可以区分输入来源。
-> - 把桶放在一个数组中是表示；是否完整由 seal 证明，不由数组当前是否为空证明。
->
-> **9. DAG**
->
-> - 固定 DAG 表示式 (1) 的节点边图没有有向环。
-> - event DAG 表示第 7 节实际函数作用之间的因果关系没有有向环。
-> - region partition 不是有向图，所以本文不要求它满足 DAG 条件。
-
-> [!info]- S.2　region、selector、candidate、active、Top-K 与 routing
-> **1. region（区域、选择域）**
->
-> - 数学对应：式 (3) 的集合 $\mathcal R_j=\rho^{-1}(j)$。
-> - 它只规定哪些节点在同一逻辑时间共同接受式 (18)。它不持有节点消息，不是固定空间图的新节点。
->
-> **2. region partition（区域划分）**
->
-> - 数学对应：满射 $\rho:V\to J$ 及其互不相交的原像族。
-> - 每个节点恰好属于一个 region 是式 (2)--(3) 的结果，不是程序通过查表偶然做到的性质。
->
-> **3. candidate、reached（候选、已到达）**
->
-> - 数学对应：式 (15) 中满足 $B_{v,\theta}\ne\varnothing$ 的节点。
-> - 某节点已经有一条可见消息只能说明它最终是 candidate；不能说明全部 candidates 已经出现。
-> - candidate set 完整的证明是式 (37)。
+> [!info]- S.1　logical time、machine time、arrival 与 visibility
+> **logical time（逻辑时间）**对应第 2.1 节的 $\theta\in\mathbb N$。内部消息的逻辑到达时间由式 (7) 定义。
 >
-> **4. selector（选择器、门控器）**
+> **machine time / wall clock（机器时间、墙钟时间）**若需要记录，可以另取 $w\in\mathbb R_{\ge0}$。正文所有节点函数和 selector 都没有 $w$ 这个自变量，所以墙钟先后不能改变函数值。
 >
-> - 数学对应：式 (18) 的函数族。
-> - 程序中可以用神经网络、线性函数、固定规则或查表求它；这些只是同一数学函数的可能实现。
-> - selector 的输出是 active set，不是边消息。
+> **visibility（可见）**对应某条记录何时进入第 8.1 节的 $E_n$ 或 $H_n$。观察阶段 $n$ 也不是逻辑时间；它只排列“已经知道哪些记录”。
 >
-> **5. active、selected（激活、被选中）**
->
-> - 数学对应：$v\in\mathcal A_{j,\theta}$，等价于 $\chi_{v,\theta}=1$。
-> - active 决定是否执行式 (23)；是否采用状态还要看 $\omega$。
->
-> **6. Top-K**
->
-> - 它是式 (18) 的一种具体选择函数，且 active set 大小由式 (17) 限制。
-> - 分数相等时必须由固定数学规则给出唯一结果，不能依赖线程完成次序。
->
-> **7. routing、route（路由、实际路径）**
->
-> - 在本文中，它可以由全部 active sets 和实际产生消息的边导出。
-> - selector 不改变固定边集合；它通过决定哪些节点执行式 (23)，改变本次输入实际产生哪些消息。
-> - route 不是输入以前另给的一张动态图。
-
-> [!info]- S.3　proposal、pre/post、observe、commit、SD/BO 与 NodeCompute
-> **1. proposal（候选更新、候选新状态）**
->
-> - 数学对应：式 (11) 的 $\widetilde q_{v,\theta}$。
-> - proposal 是一个纯函数值，不表示式 (22) 已经采用它。
-> - 程序中的临时数组可以表示 proposal，但数组写入时间不进入本文语义。
->
-> **2. content-only、pre-update、post-update**
->
-> - content 对应式 (12)，只读取当前本地内容。
-> - pre 对应式 (13)，读取旧状态 $q^-$ 与当前内容。
-> - post 对应式 (14)，读取候选新状态 $\widetilde q$ 与当前内容。
-> - post 不表示其他事件已经可以读取新状态；未来状态仍由式 (22) 决定。
->
-> **3. Observe set、state update、commit（观察集合、状态更新、提交）**
->
-> - Observe set 对应式 (20) 的 $\mathcal O_{j,\theta}$。
-> - $\omega=1$ 表示采用候选新状态。
-> - commit 的最小数学含义是式 (22)：以后更大逻辑时间事件读取 $q^+$ 而不是 $q^-$。
-> - 这不自动提供数据库事务、断电恢复或某种 CPU 原子指令。
->
-> **4. SD（selected-dispatch）**
->
-> - 数学对应：$\mathcal O_{j,\theta}=\mathcal A_{j,\theta}$。
-> - 只有 active candidates 采用当前内容形成的新状态。
-> - SD 与 pre 是不同坐标；标准 SD 可以使用 content 或 pre。
->
-> **5. BO（broadcast-observe）**
->
-> - 数学对应：$\mathcal O_{j,\theta}=\mathcal C_{j,\theta}$。
-> - 全部 candidates 采用新状态，仍只有 active candidates 完整计算和发送。
-> - BO 与 post 是不同坐标；BO 也可以使用 content 或 pre。
->
-> **6. expensive compute、NodeCompute、full compute（昂贵计算、节点完整计算）**
->
-> - 数学对应：式 (23) 的 $\operatorname{Full}_v$。
-> - 只有 $\chi=1$ 时求值；它读取式 (22) 已经决定的当前计算状态。
-> - “昂贵”不是集合论性质，只说明实现希望避免为 inactive 节点求这个函数。
->
-> **7. Emit、dispatch、send（发射、派发、发送）**
->
-> - 数学对应：从式 (24) 的两个输出函数中取非 $\bot$ 值，并形成式 (25) 的图内消息或外部输出记录。
-> - region 不发送消息或输出；active node 沿自己的固定出边发送，并向自己的命名输出端口给值。
-
-> [!info]- S.4　seal、ready、barrier、frontier、watermark 与异步执行
-> **1. seal（封闭下界）**
->
-> - 精确定义只有式 (31)--(32)。例如 $\sigma_n(a)=b$ 表示边 $a$ 上所有尚未可见消息的逻辑到达时间都不小于 $b$。
-> - 每个输入端口也有自己的 $\sigma_n^{\mathrm{in}}(i)$；一个节点的前沿同时取其所有图内入边与输入端口 seal 的最小值。
-> - seal 是一个带全称量词的数学命题，不是队列中的特殊消息，也不是“已经等了足够久”。
-> - seal $=5$ 仍允许逻辑时间恰好为 $5$ 的消息；关闭桶 $5$ 需要 seal $>5$。
->
-> **2. node frontier（节点输入前沿）**
->
-> - 数学对应：式 (33) 的 $\lambda_n(v)$。
-> - 它是节点全部输入 seal 的最小值。$\lambda_n(v)>\theta$ 推出式 (34)，但不自动表示节点已经计算完这些桶。
->
-> **3. region frontier、region seal（区域前沿、区域 seal）**
->
-> - 数学对应：式 (35) 的 $\lambda_n(\mathcal R_j)$。
-> - 严格说它是各节点前沿的导出最小值。若系统文档简称 region seal，仍必须保留式 (35) 的含义。
-> - 它由最慢成员决定，不替代各条边 seal 的真实性证明。
->
-> **4. ready（就绪）**
->
-> - 它是一个谓词，不是新对象。
-> - “region $(j,\theta)$ ready”至少展开成第 4.6 节三条：候选集合关闭、candidate 旧状态就绪、尚未选择。
-> - 某个数组已经有数据、某个线程空闲或某些 candidates 已完成准备，都不能单独推出 ready。
->
-> **5. barrier（屏障、等待点）**
->
-> - 数学对应：式 (18) 必须等待第 4.6 节条件成立。
-> - 它不表示所有机器线程同时停止；第 4.7 节允许独立准备不对外可见的值。
->
-> **6. asynchronous、out-of-order visibility（异步、乱序可见）**
->
-> - 数学对应：消息进入 $H_n$ 的次序不必服从式 (6) 的逻辑到达时间次序。
-> - 异步不允许越过 seal，也不允许使用部分 candidate set 选择。
->
-> **7. watermark（水位）**
->
-> - 这个系统词用法不统一。若它表示输入已经确定到哪里，可对应式 (33) 或 (35)；若它表示节点已经完成到哪里，应对应第 5.4 节的另一种完成前沿。
-> - 输入前沿与完成前沿是两个数学谓词，不能只因都叫 watermark 就混成一个数。
->
-> **8. late message、no-backdating（迟到消息、不得倒填）**
->
-> - 逻辑时间较小但机器较晚看见的消息不必非法。
-> - 真正非法的是新可见消息满足 $\operatorname{arrival}(m)<\sigma_n(a)$，从而否定已经公布的式 (31)。
+> 一条逻辑到达时间为 $5$ 的消息可以在很晚的观察阶段才进入 $H_n$。只要此前没有发布排除它的有效下界，这仍是合法过程。
 
-> [!info]- S.5　schedule、phase、event、runtime、workspace 与并发
-> **1. schedule（计算次序、调度）**
->
-> - 数学对应：第 5 节所描述的可见集合、seal、已准备位置、已选择位置和已完成位置随 $n$ 增长的序列。
-> - 改变 schedule 可以改变独立作用的机器先后，不能改变式 (18) 或式 (22)--(24) 的输入。
->
-> **2. phase、stage（阶段）**
+> [!info]- S.2　message、port、bucket 与 channel identity
+> **message（消息）**对应 $m=(\mathrm{msg},\eta,a,y)\in\mathsf{Msg}$。payload 只对应 $y$；发送时间 $\eta$ 和边 $a$ 也是完整消息的坐标。
 >
-> - 数学对应：第 7.5 节的 $p\in\{0,1,2,3\}$。
-> - 多个阶段可以具有同一个逻辑时间 $\theta$；阶段编号只表达该事件内部与 selector 之间的因果顺序。
-> - 阶段不是新的模型时间单位，也不表示固定现实耗时。
+> **input/output port（输入、输出端口）**对应 $\mathsf I,\mathsf O$ 与式 (2)。端口不是节点。多个端口可以属于同一节点。
 >
-> **3. event（事件）**
+> **bucket / input bucket / time bucket（输入桶、时间桶）**严格对应式 (8) 的纤维 $B_{v,\theta}(E,M)$。在完整语义里，式 (21) 把它实例化为 $B_{v,\theta}$。
 >
-> - 粗粒度节点事件位置是 $(v,\theta)$；第 7 节为了研究依赖，把它细分为 $P,U,E$，并另加入选择作用 $S$。
-> - 消息不是事件；一个节点事件可以消费多条消息，也可以不产生消息。
->
-> **4. runtime、executor（运行时、执行器）**
->
-> - 指真正维护消息表示、节点状态、seal 和完成记录，并选择合法作用求值的程序。
-> - runtime 是试图实现第 3--5 节的外部对象，不是数学图、selector 或节点函数本身。
->
-> **5. scheduler（调度器）**
->
-> - 数学投影是从当前满足就绪条件的位置中选择下一项或下一组求值。
-> - scheduler 可以影响现实性能，却不能把 $\lambda_n(\mathcal R_j)\le\theta$ 的位置宣布为候选集合完整。
->
-> **6. workspace、temporary buffer（临时工作区、临时缓冲）**
->
-> - 数学对应：第 4.7 节中已经求出、但尚未成为节点持久状态或边消息的纯函数值。
-> - 它可以保存 $h,d,\widetilde q$ 的编码；其他语义事件不得把它误当成式 (22) 已提交的状态。
->
-> **7. concurrency、parallelism（并发、并行）**
->
-> - 若两个作用之间在第 7 节的因果关系中不存在先后路径，数学语义不强迫它们使用某个机器顺序。
-> - 是否真的同时执行还取决于有限资源和具体程序；无因果先后只提供许可，不提供性能保证。
->
-> **8. atomic commit（原子提交）**
->
-> - 当前最小数学含义是：其他语义事件只能读取式 (22) 以前的 $q^-$ 或式 (22) 以后确定的 $q^+$，不能读取未定义的部分状态。
-> - 它不声称整个节点事件是一条处理器原子指令。实现可以分步写内存，但必须证明投影结果符合这个边界。
+> **channel identity（通道身份）**对应内部消息保留的边坐标 $a$；外部输入来源对应端口坐标 $i$。$\operatorname{Agg}_v$ 可以区分它们。数组或队列只是这些有限集合的一种编码。
 
-> [!info]- S.6　chunk、prefill、decode、packing、fast path 与 region-DAG
-> **1. chunk（分块）**
->
-> - 数学上应先说明它对应哪些输入位置或逻辑时间位置。例如式 (47) 计数的是当前已经关闭的非空 region-time 集合。
-> - 一次接口调用或一段连续张量不是天然的语义 chunk；它只是某组数学输入的一种编码。
->
-> **2. prefill**
->
-> - 系统语境通常指一次给出一个已知输入前缀，并联合计算其中许多位置。
-> - 对本文至少需要三项独立证明：相关桶已经关闭；相关 region selections 可以确定；联合节点程序等于逐时间应用式 (8)--(25)。
-> - 较大的式 (47) 只帮助第一、二项，不自动证明第三项。
->
-> **3. decode**
->
-> - 系统语境通常指输入位置逐步增加，每次处理一个或少量新位置。
-> - 若某个 prefill 程序声称与 decode 等价，必须比较图内消息、各端口外部输出、全部状态、candidate sets、active sets 和观察值，而不能只比较最终一个输出张量。
->
-> **4. batching、packing（批处理、紧凑打包）**
->
-> - 假设参考语义已经给出 $k$ 个作用的输入 $z_1,\ldots,z_k$。一个联合程序 $K$ 的正确性至少要求：
->   $$
->   \operatorname{Unpack}
->   \left(
->   K(\operatorname{Pack}(z_1,\ldots,z_k))
->   \right)
->   =
->   \left(
->   f_1(z_1),\ldots,f_k(z_k)
->   \right),
->   \tag{S1}
->   $$
->   其中右边是正文逐项函数的结果。
-> - 一次联合程序调用不会把 $k$ 个不同的 $(v,\theta)$ 变成一个语义事件。
->
-> **5. packed attention**
+> [!info]- S.3　region、candidate、selector、active 与 Top-K
+> **region（区域）**只对应式 (6) 的节点子集 $\mathcal R_j$。它不持有消息和节点状态。
 >
-> - 它是某些具体状态、Read 和 Full 函数的联合求值程序。
-> - seal 证明输入不再改变；packed-attention 等价证明说明对这些固定输入采用联合程序没有改变逐时间结果。两种证明不能互相替代。
+> **candidate（候选）**对应式 (22) 中满足 $B_{v,\theta}\ne\varnothing$ 的节点。
 >
-> **6. region-DAG、region quotient DAG（区域收缩 DAG）**
+> **selector（选择器）**对应式 (14) 的函数族。它的完整输入包括整个候选集合的带节点坐标描述量族。
 >
-> - 数学对应：第 7.6 节定义的关系 $Q_\rho$ 与图 $(J,Q_\rho)$。
-> - 本文核心语义不使用这张图，也不要求它无环。
-> - 它以后可以作为第 10.3 节第二层的附加结构条件，帮助证明 region 拓扑推进；不能作为式 (37) 的隐藏前提。
+> **active / selected（激活、选中）**对应 $v\in\mathcal A_{j,\theta}$。只有 active 节点应用式 (26)。
 >
-> **7. head-of-line blocking（最慢成员阻塞）**
+> **Top-K**只是式 (14) 的一种实例。若分数相等，固定平局规则属于函数定义的一部分。
 >
-> - 一个最小数学表现是某个成员 $v_0$ 使 $\lambda_n(\mathcal R_j)=\lambda_n(v_0)$，而其他成员前沿远大于它。
-> - 式 (48) 可以记录成员差异，但它不是现实耗时，也不单独证明某个硬件程序很慢。
->
-> **8. wavefront（波前推进）**
->
-> - 可指一组已经满足就绪条件、彼此没有因果先后的 $(j,\theta)$ 或细分作用位置。
-> - region 收缩图有环时，可能需要随逻辑时间在多个 regions 之间反复推进；这不等于第 7 节事件图有环。
->
-> **9. fast path、fallback（快速路径、一般后备路径）**
->
-> - 可以先对任意合法划分实现第 5 节的一般解释器，再对满足额外结构和代数条件的对象采用联合程序。
-> - fast path 必须证明投影回正文结果；一般解释器正确不表示所有合法对象都具有相同性能。
+> **routing（路由）**可以从实际 active sets 与式 (27) 真正产生的边消息导出。selector 不修改固定边集合 $A$。
 
-> [!info]- S.7　continuation、checkpoint、replay、projection 与 refinement
-> **1. continuation（续算所需数学状态）**
->
-> - 当前逻辑切面上的候选 continuation 是式 (43) 的 $Q_b$。
-> - 它保存节点状态、跨界消息和已产生的多端口输出前缀；无状态 selector 不需要额外保存 selector 状态。
-> - $Z^{<b}$ 不影响未来计算；保留它只是为了恢复后仍能重建完整输出记录。若外部接收者已经可靠保存此前输出，计算端可以只保存这一事实而不重复保存值。
->
-> **2. checkpoint（检查点、保存点）**
->
-> - checkpoint 是 $Q_b$ 的某种计算机编码。若保存和读取函数为 $\operatorname{save}$ 与 $\operatorname{load}$，基本无损条件是：
->   $$
->   \operatorname{load}(\operatorname{save}(Q_b))=Q_b.
->   \tag{S2}
->   $$
-> - 式 (S2) 不自动证明任意机器中间阶段都能保存；正文只定义完整逻辑时间切面。
->
-> **3. replay、resume（重放、恢复）**
->
-> - 数学对应：从相同 $Q_b$ 和相同式 (44) 再执行未来递归。
-> - 与一次算完相同是第 8.5 节的证明目标，不是 replay 这个词自动保证的性质。
+> [!info]- S.4　content、pre、post、SD、BO 与 expensive compute
+> `content` 对应 $\tau_j=0$ 与式 (11) 的 $d^0$；`pre` 对应 $\tau_j=-$ 与 $d^-$；`post` 对应 $\tau_j=+$ 与 $d^+$。
 >
-> **4. trace（轨迹、记录）**
+> `SD`（selected-dispatch）对应 $\kappa_j=0$，即式 (16) 中只有 active nodes 采用候选新状态。
 >
-> - 可由图内消息、带输出端口的外部输出，以及所有带 $(v,\theta)$ 或 $(j,\theta)$ 标签的 candidate、active、状态和观察值组成。
-> - 墙钟耗时、线程号和日志打印顺序不自动属于语义 trace。
+> `BO`（broadcast-observe）对应 $\kappa_j=1$，即全部 candidates 采用候选新状态，但仍只有 active nodes 执行完整输出函数。
 >
-> **5. projection（投影）**
+> 因此 `content/pre/post` 决定 selector 读取什么；`SD/BO` 决定哪些候选状态被采用。它们是两条独立的配置轴。
 >
-> - 数学上只是函数 $\Pi:X\to Y$，用于从更丰富的实现记录中删除临时数组、线程号等坐标，只保留正文结果。
-> - 删除哪些坐标必须写明；不能只说“忽略实现细节”。
->
-> **6. refinement（精化、实现正确关系）**
->
-> - 若实现运行结果为 $\operatorname{Run}(x,s)$，其中 $s$ 是合法机器调度，参考结果为 $\operatorname{Direct}(x)$，典型证明目标是：
->   $$
->   \forall x,\ \forall s\in\operatorname{Legal}(x),
->   \qquad
->   \Pi(\operatorname{Run}(x,s))
->   =
->   \operatorname{Direct}(x).
->   \tag{S3}
->   $$
-> - 式 (S3) 允许机器步骤不同，但不允许投影后的图内消息、外部输出、状态和选择结果不同。
+> **proposal** 对应候选新状态 $\widetilde q$。**commit** 的最小语义对应式 (25) 使后续事件读取新状态。**expensive compute / NodeCompute** 对应式 (12) 与 (26) 的 $\operatorname{Full}_v$；“昂贵”不是数学性质，只是实现动机。
 
-> [!info]- S.8　四句系统语言的逐句数学翻译
-> **句子一：“selector 所需的输入已经 ready。”**
->
-> 本文基准解释器采用的充分条件是：
->
-> 1. $\lambda_n(\mathcal R_j)>\theta$，所以式 (37) 成立；
-> 2. 每个 candidate 的更小逻辑时间状态事件已经完成；
-> 3. $(j,\theta)$ 尚未选择过。
->
-> 对 pre/post，第二条是 selector 输入定义所需；对 content，它是第 4.6 节为了统一基准次序而采用的保守条件，可以在不改变数学结果时放宽。只说“已经收到一些消息”不能推出第一条。
->
-> **句子二：“BO 读取更新后状态，SD 读取更新前状态。”**
->
-> 这句话把两个坐标混在了一起。应拆成：
->
-> - pre/post 由式 (13)--(14) 决定 selector 读取 $q^-$ 还是 $\widetilde q$；
-> - SD/BO 由式 (20) 决定采用候选状态的是 active set 还是整个 candidate set。
->
-> 因而 BO + pre 是合法条件，SD + post 也可以被单独定义。
->
-> **句子三：“region-DAG 会给出更好的 seal。”**
+> [!info]- S.5　seal、frontier、watermark、ready 与 barrier
+> **seal（封闭下界）**对应式 (33) 中的 $\sigma_n^{\mathrm{in}}(i)$ 或 $\sigma_n^A(a)$。它是关于所有尚未可见记录的全称命题，不是“当前队列为空”。
 >
-> 在固定的 $(U_{i,n})_{i\in\mathsf I},H_n$ 与所有输入、边 seal 下，region-DAG 不改变式 (31)--(35) 的数值。更准确的候选命题是：某些区域结构允许一种计算次序，使各成员前沿更同步、更快地产生较大的式 (47)。这需要另行证明，不能作为 seal 定义的一部分。
+> **node frontier** 对应式 (35)；**region frontier** 对应式 (36)。区域前沿是成员前沿的最小值。
 >
-> **句子四：“奇怪的 region 使高性能 prefill 不可行。”**
+> **watermark** 在不同系统中含义不统一。若它表示“输入已经确定到哪里”，必须明确对应哪一个 $\sigma$ 或 $\lambda$；若它表示“计算已经完成到哪里”，则对应第 9.6 节的另一项完成谓词。两者不能因为同名而合并。
 >
-> 当前可以严格说的是：奇怪的划分可能使式 (35) 长期受某个成员限制，并使式 (47) 很小；通用解释器不能违反这个完整性上界。
+> **ready（就绪）**是一个复合谓词。本文的保守区域就绪条件列在第 8.8 节，既包括候选集合关闭，也包括所需旧状态已经确定。
 >
-> 但要证明任何高性能联合程序都不可能存在，还必须指定计算模型并排除特殊代数重写。本文没有提出这样的下界定理。
+> **barrier（屏障）**是实现等待这些数学条件成立的位置，并不要求所有处理器同时停止。
 
-> [!info]- S.9　SettleGraph 与本文数学对象的对应
-> 把 SettleGraph 放入本文模型时，需要给出一个明确翻译，使：
+> [!info]- S.6　identifier、schema 与 semantic coordinate
+> **identifier / ID（标识符）**在正文中首先就是集合元素本身，例如 $v\in V$、$a\in A$。若程序需要整数，可为有限集合 $X$ 固定单射 $\operatorname{id}_X:X\to\mathbb N$。单射保证不同对象有不同整数。
 >
-> - receiver 对应 $v\in V$；
-> - graph ingress 与 graph egress 分别对应 $\mathsf I$ 和 $\mathsf O$ 中的端口；
-> - receiver state 对应 $S_v$ 中的状态；
-> - 每 Token 的聚合输入对应某个完整桶；
-> - content/pre/post 对应式 (12)--(14)；
-> - selection region 对应式 (3)；
-> - active set 对应式 (19)；
-> - SD/BO 对应式 (20)；
-> - NodeCompute 与 Emit 对应式 (23)--(25)；
-> - `DATA` 对应实际图内消息，`CLOSED` 对应没有图内消息且相应 seal 已经越过该逻辑时间；
-> - 模型最终给外部的命名结果对应 $Z^*$ 中按输出端口标记的记录。
+> **schema（数据形状约定）**对应一个积集合以及各坐标的所属集合。例如 $\mathsf{Msg}$ 规定消息具有标签、发送时间、边和值四个坐标。字段名可以改变；删除边坐标则会改变正文对象。
 >
-> 翻译正确性的目标不是只比较最终一个数，而是比较：
+> **semantic coordinate（语义坐标）**只是用于唯一指出数学位置的有序组。例如节点事件位置是 $(v,\theta)$，区域选择位置是 $(j,\theta)$，输出位置是 $(\theta,o)$。
 >
+> 若定义事件整数编码：
 > $$
-> \text{外部输出、全部状态、active sets、观察记录和逐边结算结果}.
+> \operatorname{id}_{\mathrm{event}}:V\times\mathbb N\to\mathbb N,
+> $$
+> 那么“ID 由 schema 和语义坐标决定”只表示编码函数的输入是 $(v,\theta)$。观察阶段 $n$、线程编号、墙钟时刻和本次分块编号不在其定义域中，所以改变它们不会改变 ID。
+
+> [!info]- S.7　chunk、prefill、decode、packing 与 fast path
+> **chunk（分块）**可以数学化为一个有限位置集合的划分。若 $E=E_1\cup\cdots\cup E_k$ 且各 $E_i$ 两两不交，那么 $(E_i)$ 是一种分块。它不改变位置本身的 $(v,\theta)$ 或 $(j,\theta)$ 坐标。
+>
+> **prefill** 通常表示一次联合处理许多已知输入位置；**decode** 通常表示逐个或小批增加输入位置。要声称二者等价，必须比较第 6 节的状态、内部消息、所有输出端口、候选集合、active sets 和本地结果，而不只是最后一个张量。
+>
+> **packing / packed attention** 是式 (45) 中 $\operatorname{Pack},\mathcal K,\operatorname{Unpack}$ 的具体实现候选。seal 证明输入不会再增加；式 (45) 证明联合求值等于参考递归。两项证明不能互相替代。
+>
+> **fast path** 可以在额外图结构和代数条件成立时使用联合函数；一般路径仍须实现第 6 与第 9 节的语义。
+
+> [!info]- S.8　runtime、scheduler、workspace、commit 与 trace
+> **runtime / executor（运行时、解释器）**是维护可见集合、状态、下界和完成记录，并求正文函数值的程序。它不是固定图本身。
+>
+> **scheduler（调度器）**从当前满足第 9.2--9.3 节条件的位置中选下一项。它可以影响现实性能，不能改变 selector 的数学输入。
+>
+> **workspace（临时工作区）**可以保存第 9.4 节提前求出的 $h,\widetilde q,d$。临时变量不等于式 (25) 已经采用的状态。
+>
+> **atomic commit（原子提交）**在本文中的最小要求是：其他语义事件只能读取式 (25) 确定以前的 $q_v^\theta$ 或确定以后的 $q_v^{\theta+1}$，不能读取一个未由规格定义的中间状态。它不声称使用某条特定处理器原子指令。
+>
+> **trace（轨迹）**可以取为 $\mathcal T_x$ 的某个投影。墙钟耗时、线程号和日志打印顺序只有显式加入结果集合后才属于另一个更丰富的 trace。
+
+> [!info]- S.9　continuation、checkpoint、resume 与 refinement
+> **continuation** 对应式 (43) 的 $Q_b$。**checkpoint** 是 $Q_b$ 的某种可保存编码。
+>
+> 若保存与读取函数分别为 $\operatorname{save}$ 和 $\operatorname{load}$，无损编码至少要求：
+> $$
+> \operatorname{load}(\operatorname{save}(Q_b))=Q_b.
 > $$
 >
-> SettleGraph 按单个 Token 对固定 region 依赖图进行结算；要求 region 收缩图无环，就可以直接给出一个 region 拓扑序。本文则在每个逻辑时间形成 $\mathcal C_{j,\theta}$，并由正时延保证当前图内输出只影响更大时间。第 7.5 节已经用 $(\theta,p)$ 证明细分事件图无环，所以不把 region 收缩图无环作为一般合法性条件。
+> **resume / replay** 对应从相同 $Q_b$ 与 $E_{\ge b}$ 再执行未来递归。定理 5 给出它与一次算完相同的数学目标。
 >
-> 这不表示 SettleGraph 的条件错误。它定义的是一个更受限、可能更容易得到规则计算次序的子类。`fractal-latcarf` 的语义文档仍决定 SettleGraph 一侧的精确定义；本文只提供目标模型中的数学位置，尚未声称已经完成整个翻译证明。
+> **refinement（实现精化）**可以写成：若 $\operatorname{Run}(x,s)$ 是调度 $s$ 下的程序结果，$\Pi$ 删除临时数组、线程号等实现坐标，那么应证明：
+> 令 $\operatorname{Legal}(x)$ 表示所有满足第 9 节条件的阶段序列所成的集合，并令：
+> $$
+> \Pi:\mathsf{ImplTrace}\to\mathsf{SemanticTrace}
+> $$
+> 是从较丰富程序记录中只取正文语义坐标的函数。这时应证明：
+> $$
+> \forall s\in\operatorname{Legal}(x),
+> \qquad
+> \Pi(\operatorname{Run}(x,s))=\mathcal T_x.
+> $$
+
+> [!info]- S.10　SettleGraph 的可选对应
+> 本块只帮助比较两个独立规格，不是阅读正文的前置知识。SettleGraph 一侧的精确定义仍由其自己的语义文档决定。
+>
+> 本块中的 Token 是 SettleGraph 给一个外部输入位置使用的标签，不是本文的内部消息或节点事件。
+>
+> 一个待证明的翻译至少需要逐项给出：
+>
+> - receiver 到 $v\in V$ 的映射；
+> - graph ingress/egress 到 $\mathsf I,\mathsf O$ 的映射；
+> - receiver state 到 $S_v$ 的映射；
+> - 每 Token 聚合输入到某个 $B_{v,\theta}$ 的映射；
+> - AGG-CUSTOM 到保留端口或入边坐标的 $\operatorname{Agg}_v$ 的映射；
+> - selection region 到 $\mathcal R_j$ 的映射；
+> - active set、SD/BO、NodeCompute 与 Emit 到式 (24)--(28) 的映射；
+> - `DATA` 与 `CLOSED` 到实际消息和有效封闭命题的映射。
+>
+> SettleGraph 对每个 Token、每个 region 等待该 Token 的所有相关边结算；本文允许不同输入位置通过逻辑时间映射落入同一个 $(v,\theta)$ 或 $(j,\theta)$。要证明前者是后者的受限情形，必须给出一种时间编码，使不同 Token 不会发生被禁止的同刻汇合，并比较完整状态、消息、输出端口、候选集合和 active sets。

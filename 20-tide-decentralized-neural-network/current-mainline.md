@@ -1,7 +1,7 @@
 ---
 type: current-mainline
 status: active
-as-of: 2026-09-04
+as-of: 2026-09-07
 tags:
   - tide
   - current-mainline
@@ -64,9 +64,9 @@ TimedDAG-v0：节点事件按 (node, logical_time) 形成
 
 若要从头学习同一套 TimedDAG 基础，并进一步加入多输入、多输出以及“不把 region 收缩成节点”的完整候选集合与 selector 语义，见另一份可独立阅读的候选定义：
 
-> [[timed-dag-region-selector-learning-note|TimedDAG：从多输入、多输出到 region 与 selector 的完整数学学习笔记]]
+> [[timed-dag-region-selector-learning-note|带区域选择的 TimedDAG：从零开始的数学定义]]
 
-第二份笔记重新定义固定图、输入输出端口、逻辑时间、消息、桶和 seal，不以前一份为阅读前提。它暂不把 region-DAG 或 packed prefill 当作合法性的组成部分。
+第二份笔记按照严格的数学依赖顺序，先定义固定图、输入输出端口、逻辑时间、消息与时间纤维，再定义封闭下界；“桶”、seal 等系统别名只在文末折叠附录中与数学对象对应。它不以前一份笔记或任何外部讨论为阅读前提，也不把 region-DAG 或 packed prefill 当作合法性的组成部分。
 
 ## TimedDAG-v0 明确不做什么
 
