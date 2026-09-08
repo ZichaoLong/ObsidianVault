@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-07
+as-of: 2026-09-08
 tags:
   - tide
   - timed-dag
@@ -38,7 +38,7 @@ tags:
 正文分成两个层次。
 
 - 第 1--7 节先假定一次输入全部给定，定义唯一的完整结果。这是模型本身的含义。
-- 第 8--9 节再定义一个求值者只逐步看见输入和消息时，怎样证明当前知道的集合已经完整。这只改变求值次序，不改变模型结果。
+- 第 8--9 节再定义阶段化求值轨迹，并把“可见、完成、关闭”对应到其中的函数与集合关系。这只改变求值次序，不改变模型结果。
 
 这个顺序很重要：必须先知道“正确的完整结果是什么”，才能定义“一个尚未看全的求值过程何时已经知道得足够多”。
 
@@ -299,6 +299,7 @@ $$
 i\in\mathsf I,\ k\in[L_i],\ y\in P\}.
 $$
 
+这里 ext 仅表示一个固定的形式符号，与下面的 msg,out 相对应，其作用仅是用来区分记录的种类，方便理解：ext 表示外部输入记录，msg 表示内部消息，out 表示输出记录。
 对 $e=(\mathrm{ext},i,k,y)\in\mathsf{Ext}$ 定义：
 
 $$
@@ -1004,7 +1005,7 @@ $$
 
 本文把第 1--5 节的数据以及第 6 节所定义的直接语义合称为一个**带区域选择的 TimedDAG 规格**。
 
-### 6.6 多输入、多输出不是后续扩展
+### 6.6 多输入、多输出
 
 多输入直接出现在式 (2)--(4) 与式 (20)--(21) 中。一个完整时间纤维可以同时包含：
 
@@ -1293,32 +1294,66 @@ $$
 
 所以 $\tau_j$ 与 $\kappa_j$ 是两项独立数学参数：前者可能改变 active set，后者可能改变未被选节点的未来状态。附录 S 中的 `pre/post` 与 `SD/BO` 只是这四种数学组合的系统名称。
 
-## 8. 部分可见输入、封闭下界与候选集合关闭
+## 8. 阶段化记录、封闭下界与候选集合关闭
 
-第 6 节直接使用完整的 $E_x$ 与递归产生的 $M^*$。现实求值过程通常不会同时看见这些记录。本节不用现实时间描述这种差异，而是定义一列逐渐增大的有限集合。
+第 6 节直接使用完整的 $E_x$ 与递归产生的 $M^*$。本节不再定义另一份计算结果，而是在已经固定的完整记录 $\mathcal T_x$ 上增加一项数学数据：各记录进入一条递增子集链的阶段。附录 S 才把“进入当前子集”翻译成系统语言中的可见或公开。
 
-### 8.1 观察阶段
+### 8.1 阶段编号与阶段秩
 
-取阶段编号 $n\in\mathbb N$。在阶段 $n$，令：
+定义：
 
 $$
-E_n\subseteq E_x,
+\overline{\mathbb N}=\mathbb N\cup\{\infty\},
+$$
+
+并规定每个 $b\in\mathbb N$ 都满足 $b<\infty$，同时规定 $\min\varnothing=\infty$。这里的 $\infty$ 不是逻辑时间，只表示一个元素没有进入所研究的阶段序列。
+
+取两个函数，称为外部记录与内部消息的**阶段秩**：
+
+$$
+\alpha_E:E_x\to\overline{\mathbb N},
 \qquad
-H_n\subseteq M^*,
+\alpha_M:M^*\to\overline{\mathbb N}.
 $$
 
-分别表示已经可见的外部输入记录和内部消息。要求：
+对每个阶段编号 $n\in\mathbb N$，定义：
+
+$$
+E_n
+=\{e\in E_x\mid\alpha_E(e)\le n\},
+\qquad
+H_n
+=\{m\in M^*\mid\alpha_M(m)\le n\}.
+\tag{31}
+$$
+
+由式 (31) 立即得到：
 
 $$
 E_n\subseteq E_{n+1},
 \qquad
 H_n\subseteq H_{n+1}.
-\tag{31}
 $$
 
-$n$ 只给观察阶段排序，不传入 $\operatorname{Agg}$、$\operatorname{Upd}$、$\operatorname{Sel}$ 或 $\operatorname{Full}$。特别地，$n$ 与逻辑时间 $\theta$ 是两个不同的自然数变量。
+反之，任意这样的递增消息链都由 $\alpha_M(m)=\min\{n\mid m\in H_n\}$ 唯一表示。
 
-定义阶段 $n$ 已看见的时间纤维：
+$\alpha_E$ 与 $\alpha_M$ 是在 $x$ 和 $\mathcal T_x$ 之外另行选择的数据。因此 $H_n$ 不是由 $E_n$ 决定的“可计算消息闭包”；它只是式 (31) 给出的 $M^*$ 子集。
+
+若 $\alpha_E(e)=\infty$ 或 $\alpha_M(m)=\infty$，相应元素不会进入任何有限阶段。称这条记录链**穷尽**完整记录，当且仅当：
+
+$$
+\bigcup_{n\in\mathbb N}E_n=E_x,
+\qquad
+\bigcup_{n\in\mathbb N}H_n=M^*.
+$$
+
+这等价于所有阶段秩都有限；由于两个集合有限，也等价于某个 $N$ 满足 $E_N=E_x$ 且 $H_N=M^*$。第 8 节的关闭结论不要求整条链穷尽。
+
+$n$ 只给阶段排序，不传入任何节点函数；它与逻辑时间 $\theta$ 无关。多个元素可以具有相同阶段秩，$\alpha_M$ 也不必随消息的逻辑到达时间递增。
+
+### 8.2 阶段时间纤维
+
+定义阶段 $n$ 的时间纤维：
 
 $$
 B^{(n)}_{v,\theta}
@@ -1341,23 +1376,7 @@ B_{v,\theta}
 B_{v,\theta}(E_x,M^*),
 $$
 
-因为任何到达时间为 $\theta$ 的实际消息都在小于 $\theta$ 的时间发送，因而已经属于式 (21) 使用的 $M_{<\theta}$。这个等式说明本节确实是在完整记录 $E_x\cup M^*$ 中逐步看见更多元素。
-
-### 8.2 扩充自然数与最小值约定
-
-定义：
-
-$$
-\overline{\mathbb N}=\mathbb N\cup\{\infty\},
-$$
-
-并规定每个 $b\in\mathbb N$ 都满足 $b<\infty$。再规定：
-
-$$
-\min\varnothing=\infty.
-$$
-
-引入 $\infty$ 只为了统一表示“以后没有尚未可见的记录”。它不属于节点函数使用的逻辑时间集合 $\mathbb T$。
+因为到达时间为 $\theta$ 的消息都在小于 $\theta$ 的时间发送，已经属于式 (21) 使用的 $M_{<\theta}$。因此，$B^{(n)}_{v,\theta}$ 就是完整记录中阶段秩不大于 $n$ 的 $(v,\theta)$ 纤维。
 
 ### 8.3 输入端口和边的有效下界
 
@@ -1388,9 +1407,39 @@ $$
 
 附录 S 把 $\sigma$ 称为 seal。式 (33) 才是这个词的数学含义。
 
-例如，$\sigma_n^A(a)=6$ 表示：边 $a$ 上任何尚未可见的实际消息，其逻辑到达时间都不小于 $6$。它仍允许以后看见时间 $6$ 的消息；它排除的是时间小于 $6$ 的尚未可见消息。
+为了把这个全称命题改写成集合覆盖关系，对 $i\in\mathsf I$、$a\in A$ 与 $b\in\overline{\mathbb N}$ 定义：
 
-若 $\sigma_n^A(a)=\infty$，那么式 (33) 迫使边 $a$ 上没有任何尚未可见的实际消息。
+$$
+E_x(i,<b)
+=\{e\in E_x\mid
+\operatorname{inport}(e)=i,
+\ \operatorname{time}(e)<b\},
+$$
+
+$$
+M^*(a,<b)
+=\{m\in M^*\mid
+\operatorname{edge}(m)=a,
+\ \operatorname{time}(m)<b\}.
+$$
+
+于是式 (33) 等价于：
+
+$$
+E_x\bigl(i,<\sigma_n^{\mathrm{in}}(i)\bigr)
+\subseteq E_n
+\quad(i\in\mathsf I),
+$$
+
+$$
+M^*\bigl(a,<\sigma_n^A(a)\bigr)
+\subseteq H_n
+\quad(a\in A).
+$$
+
+所以 $\sigma_n^A(a)=b$ 只断言：边 $a$ 上到达时间严格小于 $b$ 的全部实际消息都属于 $H_n$。$|H_n|$ 不出现在条件中；一个较早消息不属于 $H_n$，不能由许多个较晚消息属于 $H_n$ 来补偿。
+
+若 $\sigma_n^A(a)=\infty$，上述包含关系要求边 $a$ 上的全部实际消息都属于 $H_n$。
 
 相对于已经定义的完整记录，可以写出每个通道的最大有效下界：
 
@@ -1412,11 +1461,11 @@ m\in M^*\setminus H_n,\ \operatorname{edge}(m)=a\}
 \right).
 $$
 
-空集的最小值按第 8.2 节取 $\infty$。任意不大于相应 $\widehat\sigma$ 的数都是有效下界；大于它的数无效。这个公式只刻画“有效”一词，不是在线算法。
+空集的最小值按第 8.1 节取 $\infty$。任意不大于相应 $\widehat\sigma$ 的数都是有效下界；大于它的数无效。这个公式只刻画“有效”一词，不是在线算法。
 
 式 (33) 用完整结果 $M^*$ 判断一个下界是否为真，并不允许在线求值者预先读取 $M^*$。在线求值者必须从外部输入源的承诺或第 9.6 节的上游完成条件推出这个全称命题；不能任意填写一个较大的数。
 
-合法的观察过程还要求这些下界不减小：
+合法的阶段化记录链还要求这些下界不减小：
 
 $$
 \sigma_n^{\mathrm{in}}(i)
@@ -1442,7 +1491,7 @@ $$
 \tag{35}
 $$
 
-若节点没有入边也没有输入端口，括号内是空集，按第 8.2 节规定有 $\lambda_n(v)=\infty$。这种节点的所有完整时间纤维本来就为空。
+若节点没有入边也没有输入端口，括号内是空集，按第 8.1 节规定有 $\lambda_n(v)=\infty$。这种节点的所有完整时间纤维本来就为空。
 
 定义区域的封闭前沿：
 
@@ -1468,7 +1517,7 @@ $$
 
 若 $z$ 是沿边 $a$ 到达的内部消息，同理得到 $\sigma_n^A(a)>\theta$，又与式 (33) 矛盾。因此不存在这样的 $z$，两集合相等。$\square$
 
-严格不等式不能换成 $\lambda_n(v)\ge\theta$。下界等于 $\theta$ 时，式 (33) 仍允许一个尚未可见记录恰好具有时间 $\theta$。
+严格不等式不能换成 $\lambda_n(v)\ge\theta$。下界等于 $\theta$ 时，式 (33) 仍允许某个不属于 $E_n\cup H_n$ 的记录恰好具有时间 $\theta$。
 
 ### 8.6 区域候选集合关闭定理
 
@@ -1510,25 +1559,25 @@ $$
 
 取所有满足条件的节点，便得到式 (38)。$\square$
 
-定理同时处理“有一个消息的节点”和“完整时间纤维为空的节点”。暂时没有看见到达节点 $c$ 的消息，并不能证明 $c$ 不在候选集合；只有 $\lambda_n(c)>\theta$ 才排除了以后补入时间 $\theta$ 的原子。
+定理同时处理“有一个消息的节点”和“完整时间纤维为空的节点”。$B^{(n)}_{c,\theta}=\varnothing$ 并不能证明 $c$ 不在完整候选集合；还需要 $\lambda_n(c)>\theta$。
 
 ### 8.7 用第 7 节例子检查严格不等式
 
-设某个阶段已经看见 $m_0$，但尚未看见 $m_1$。若关于边 $e_1$ 的有效下界是：
+设某个阶段满足 $m_0\in H_n$ 且 $m_1\notin H_n$。若边 $e_1$ 的有效下界是：
 
 $$
 \sigma_n^A(e_1)=5,
 $$
 
-这是可能的，因为尚未可见的 $m_1$ 恰好在时间 $5$ 到达。此时：
+这是可能的，因为 $\operatorname{time}(m_1)=5$。此时：
 
 $$
 \lambda_n(\mathcal R_2)\le5,
 $$
 
-所以不能对时间 $5$ 使用定理 3。当前看见的集合 $\{a\}$ 不是完整候选集合。
+所以不能对时间 $5$ 使用定理 3；当前候选集合 $\{a\}$ 不是完整候选集合。
 
-看见 $m_1$ 后，若两条边都再无不可见消息，可以有效地令：
+若在阶段 $n'$，两条边上的全部实际消息都已属于 $H_{n'}$，则可以有效地令：
 
 $$
 \sigma_{n'}^A(e_0)=\sigma_{n'}^A(e_1)=\infty.
@@ -1540,21 +1589,28 @@ $$
 
 定理 3 只证明时间 $\theta$ 的候选节点和每个候选节点的完整纤维已经确定。若式 (23) 使用 $q_v^\theta$ 或 $\widetilde q_{v,\theta}$，还必须先知道 $q_v^\theta$。
 
-任取一个已经完成的节点事件集合：
+任取一个节点事件子集：
 
 $$
 \mathsf{Done}\subseteq\mathcal E_x^{\mathrm{node}},
 $$
 
-并假定 $\mathsf{Done}$ 中的每个节点事件都已经按式 (25) 完成，而且同一节点在 $\mathsf{Done}$ 中的事件按逻辑时间递增完成。定义：节点 $v$ 在时间 $\theta$ 的旧状态关于 $\mathsf{Done}$ **就绪**，当且仅当所有满足：
+对 $v\in V$ 与 $\theta\in\mathbb N$ 定义状态前驱集合：
 
 $$
-0\le r<\theta,
-\qquad
-(v,r)\in\mathcal E_x^{\mathrm{node}}
+\operatorname{StatePred}(v,\theta)
+=
+\{(v,r)\in\mathcal E_x^{\mathrm{node}}\mid r<\theta\}.
 $$
 
-的节点事件 $(v,r)$ 都属于 $\mathsf{Done}$。这时这些式 (25) 按 $r$ 递增连接成与第 6 节相同的唯一状态 $q_v^\theta$。
+定义：节点 $v$ 在时间 $\theta$ 的旧状态关于 $\mathsf{Done}$ **就绪**，当且仅当：
+
+$$
+\operatorname{StatePred}(v,\theta)
+\subseteq\mathsf{Done}.
+$$
+
+$\operatorname{StatePred}(v,\theta)$ 索引的式 (25) 按 $r$ 递增组成第 6 节状态序列的完整前缀；上述包含关系成立时，该前缀已经到达唯一的 $q_v^\theta$。
 
 所以，对区域选择事件 $(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$，一个统一而保守的求值条件是：
 
@@ -1569,40 +1625,90 @@ $$
 
 第 6 节按逻辑时间递增定义结果，但这不要求实际求值者以完全相同的顺序工作。本节定义哪些次序变化不改变结果。
 
-### 9.1 三类完成记录
+### 9.1 阶段化求值轨迹
 
-在观察阶段 $n$，可以另外维护三个有限集合：
-
-$$
-\mathsf{Prepared}_n\subseteq\mathcal E_x^{\mathrm{node}},
-$$
+再取三个阶段秩函数，并对 $n\in\mathbb N$ 定义相应子集：
 
 $$
-\mathsf{Selected}_n\subseteq\mathcal E_x^{\mathrm{sel}},
+\begin{aligned}
+\alpha_P&:\mathcal E_x^{\mathrm{node}}\to\overline{\mathbb N},
+&\mathsf{Prepared}_n
+&=\{e\in\mathcal E_x^{\mathrm{node}}\mid\alpha_P(e)\le n\},\\
+\alpha_S&:\mathcal E_x^{\mathrm{sel}}\to\overline{\mathbb N},
+&\mathsf{Selected}_n
+&=\{s\in\mathcal E_x^{\mathrm{sel}}\mid\alpha_S(s)\le n\},\\
+\alpha_C&:\mathcal E_x^{\mathrm{node}}\to\overline{\mathbb N},
+&\mathsf{Completed}_n
+&=\{e\in\mathcal E_x^{\mathrm{node}}\mid\alpha_C(e)\le n\}.
+\end{aligned}
+\tag{39}
 $$
 
+三个集合分别索引已经确定节点本地量、已经应用式 (24)，以及已经应用式 (25)--(28) 中相应坐标的事件。“prepared”“selected”“completed”在数学上分别就是式 (39) 的成员关系；阶段秩不是事件固有的逻辑时间。
+
+第 8 节的记录链、下界函数和式 (39) 的三条事件链合在一起，称为一条**阶段化求值轨迹**。它合法，当且仅当满足式 (33)--(34)、下面的因果约束以及第 9.2--9.6 节的首次进入条件。本文取 $\mathsf{Prepared}_0=\mathsf{Selected}_0=\mathsf{Completed}_0=\varnothing$。
+
+每条实际消息都有唯一的源节点事件。定义：
+
 $$
-\mathsf{Completed}_n\subseteq\mathcal E_x^{\mathrm{node}}.
+g:M^*\to\mathcal E_x^{\mathrm{node}},
+\qquad
+g(m)=
+\bigl(\operatorname{src}(\operatorname{edge}(m)),
+\operatorname{send}(m)\bigr).
 $$
 
-它们分别记录：
+由式 (27)，$g(m)$ 确实属于节点事件集合。定义源事件已完成的消息集合，并要求：
 
-- $(v,\theta)$ 的完整纤维和所需本地量已经确定；
-- $(j,\theta)$ 已经应用一次式 (24)；
-- $(v,\theta)$ 已经完成式 (25)--(28) 中属于它的状态与输出判定。
+$$
+M_n^{\mathrm{src}}
+=g^{-1}(\mathsf{Completed}_n),
+\qquad
+H_n\subseteq M_n^{\mathrm{src}}
+\qquad(n\in\mathbb N).
+\tag{40}
+$$
 
-三个集合都只能随 $n$ 增大。记录一个事件的前提是该事件使用的每个函数自变量都已经由第 6 节的相同数学对象确定。此外，内部消息只有在产生它的式 (26)--(27) 已经完成后才可以进入 $H_n$；这保证“看见消息”不先于“定义消息”。
+因此 $H_n\subseteq M_n^{\mathrm{src}}\subseteq M^*\subseteq\mathsf{Msg}$。等价地，对每个 $m\in M^*$ 都有 $\alpha_C(g(m))\le\alpha_M(m)$。一般模型允许源事件进入 $\mathsf{Completed}_n$ 后，消息稍后才进入 $H_n$；若研究“完成即进入”的特例，就增加 $H_n=M_n^{\mathrm{src}}$。
 
-在第 8.8 节的状态就绪定义中，现在取 $\mathsf{Done}=\mathsf{Completed}_n$。
+称合法轨迹**完整**，当且仅当存在 $N\in\mathbb N$ 使：
 
-### 9.2 合法选择
+$$
+E_N=E_x,
+\quad H_N=M^*,
+\quad
+\mathsf{Prepared}_N=\mathsf{Completed}_N
+=\mathcal E_x^{\mathrm{node}},
+\quad
+\mathsf{Selected}_N=\mathcal E_x^{\mathrm{sel}}.
+$$
 
-在阶段 $n$，对区域选择事件 $(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$ 应用式 (24) 是合法的，当且仅当：
+所以 $H_n=\varnothing$ 可以是合法轨迹的中间截面，却不能在 $M^*\ne\varnothing$ 时成为完整轨迹的最终截面。
 
-1. 定理 3 的前提成立；
-2. 每个 $v\in\mathcal C_{j,\theta}$ 都满足 $(v,\theta)\in\mathsf{Prepared}_n$；
-3. 每个 $v\in\mathcal C_{j,\theta}$ 的旧状态关于 $\mathsf{Completed}_n$ 就绪；
-4. $(j,\theta)\notin\mathsf{Selected}_n$。
+在第 8.8 节的状态就绪定义中，以下取 $\mathsf{Done}=\mathsf{Completed}_n$。
+
+### 9.2 合法准备与合法选择
+
+为避免“已经”一词隐藏先后关系，定义阶段 $n$ 到 $n+1$ 的首次进入集合：
+
+$$
+\Delta\mathsf{Prepared}_n
+=\mathsf{Prepared}_{n+1}\setminus\mathsf{Prepared}_n,
+$$
+
+并类似定义 $\Delta\mathsf{Selected}_n$ 与 $\Delta\mathsf{Completed}_n$。以下前提都在阶段 $n$ 的集合上检查，因此同一步新增事件不能互为这些前提。
+
+节点事件 $(v,\theta)$ 只有满足下列条件才可属于 $\Delta\mathsf{Prepared}_n$：
+
+1. $\lambda_n(v)>\theta$；
+2. $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Completed}_n$。
+
+进入时，以 $B^{(n)}_{v,\theta}$ 和 $q_v^\theta$ 求出 $h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta}$。引理 2 保证这些值等于第 6 节的相应坐标。
+
+区域选择事件 $(j,\theta)$ 只有满足下列条件才可属于 $\Delta\mathsf{Selected}_n$：
+
+1. $\lambda_n(\mathcal R_j)>\theta$；
+2. 每个 $v\in\mathcal C_{j,\theta}$ 都满足 $(v,\theta)\in\mathsf{Prepared}_n$。
 
 合法选择必须把完整函数族：
 
@@ -1616,16 +1722,14 @@ $$
 
 ### 9.3 合法节点完成
 
-若 $v\in\mathcal C_{j,\theta}$，则完成 $(v,\theta)$ 是合法的，当且仅当：
+若 $v\in\mathcal C_{j,\theta}$，则 $(v,\theta)$ 只有满足下列条件才可属于 $\Delta\mathsf{Completed}_n$：
 
 1. $(j,\theta)\in\mathsf{Selected}_n$；
-2. 采用该次选择确定的 $\mathcal A_{j,\theta}$；
-3. 这个节点的所有更小逻辑时间节点事件已经完成；
-4. $(v,\theta)\notin\mathsf{Completed}_n$。
+2. $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Completed}_n$。
 
-合法完成按式 (25) 唯一确定状态。只有 active 节点应用式 (26)，并且只把式 (27)--(28) 中非 $\bot$ 的坐标加入实际消息或输出集合。
+合法完成使用该次选择确定的 $\mathcal A_{j,\theta}$，并按式 (25) 唯一确定状态。只有 active 节点应用式 (26)，并且只把式 (27)--(28) 中非 $\bot$ 的坐标加入实际消息或输出集合。新消息可以在同一阶段进入 $H_{n+1}$，但式 (40) 禁止它先于源节点事件进入 $\mathsf{Completed}_{n+1}$。
 
-同一区域中的不同节点事件在选择以后可以按不同观察阶段完成，因为它们修改的是不同状态坐标 $S_v$。但同一节点的节点事件必须按逻辑时间递增完成。
+同一区域中的不同节点事件在选择以后可以具有不同完成阶段，因为它们修改的是不同状态坐标 $S_v$。但同一节点的节点事件必须按逻辑时间递增完成。
 
 ### 9.4 纯函数可以提前求值，语义结果不能提前发布
 
@@ -1640,9 +1744,9 @@ $$
 
 原因不是“程序步骤必须长得一样”，而是这些动作会改变后续函数的数学自变量。
 
-### 9.5 不得在下界之后倒填
+### 9.5 有效下界约束消息阶段秩
 
-若阶段 $n$ 已经公布有效值 $\sigma_n^A(a)=b$，后续阶段就不能首次加入满足：
+若有效值 $\sigma_n^A(a)=b$，则式 (33) 要求每个满足：
 
 $$
 \operatorname{edge}(m)=a,
@@ -1650,38 +1754,59 @@ $$
 \operatorname{time}(m)<b
 $$
 
-的消息。否则式 (33) 在阶段 $n$ 就是假的。
+的消息都属于 $H_n$，即 $\alpha_M(m)\le n$。所以这样的消息不可能在更晚阶段首次进入 $H$。
 
-逻辑时间较小的消息可以比逻辑时间较大的消息更晚变得可见，只要此前的有效下界尚未越过它。非法的不是“观察得晚”，而是推翻一个已经用来作出不可撤销选择的全称命题。
+阶段秩不必随逻辑到达时间递增；它只受已经给出的有效下界约束。
 
 ### 9.6 边下界怎样由上游完成推出
 
-定义：节点 $v$ 已经**完成到 $b\in\mathbb N$**，当且仅当：
+定义谓词：
 
-1. $\lambda_n(v)\ge b$，所以它不再有尚未可见的时间小于 $b$ 的输入原子；
-2. 对每个 $\theta<b$，若 $B_{v,\theta}\ne\varnothing$，则 $(v,\theta)\in\mathsf{Completed}_n$。
+$$
+\operatorname{DoneTo}_n(v,b)
+\Longleftrightarrow
+\left(
+\lambda_n(v)\ge b
+\land
+\operatorname{StatePred}(v,b)
+\subseteq\mathsf{Completed}_n
+\right).
+\tag{41}
+$$
 
-若 $v$ 已完成到 $b$，则以后尚未完成的任何节点事件 $(v,\theta)$ 都满足 $\theta\ge b$。对任意 $a\in\operatorname{Out}(v)$，这些节点事件以后可能产生的消息，其到达时间不小于：
+系统语言称 $\operatorname{DoneTo}_n(v,b)$ 为“阶段 $n$ 节点 $v$ 已完成到 $b$”。第一项覆盖时间小于 $b$ 的输入，第二项覆盖相应的全部节点事件；这两个条件不能互相替代。
+
+若 $\operatorname{DoneTo}_n(v,b)$ 成立，则尚未属于 $\mathsf{Completed}_n$ 的任何节点事件 $(v,\theta)$ 都满足 $\theta\ge b$。对任意 $a\in\operatorname{Out}(v)$，这些事件对应消息的到达时间不小于：
 
 $$
 b+\delta(a).
 $$
 
-如果此前已经产生、且到达时间小于 $b+\delta(a)$ 的边 $a$ 消息也全部进入 $H_n$，那么：
+如果还满足：
+
+$$
+M_n^{\mathrm{src}}
+\cap M^*\bigl(a,<b+\delta(a)\bigr)
+\subseteq H_n,
+$$
+
+那么：
 
 $$
 \sigma_n^A(a)=b+\delta(a)
-\tag{39}
+\tag{42}
 $$
 
 是一个有效下界。
 
-式 (39) 解释了为什么必须先使实际消息可见，再发布越过这些消息的边下界。空队列本身没有出现在证明中；证明使用的是上游完成命题和所有较早已产生消息均已可见这两个条件。
+事实上，任取 $m\in M^*(a,<b+\delta(a))$，都有 $\operatorname{send}(m)<b$，故 $g(m)\in\operatorname{StatePred}(v,b)\subseteq\mathsf{Completed}_n$。于是 $m$ 属于上述交集，并由附加条件属于 $H_n$；再用式 (33) 即得结论。
+
+式 (42) 使用的是谓词 (41) 和两个有限集合的包含关系，而不是“当前队列为空”。附录 S 把前者翻译为上游完成，把后者翻译为较早消息均已可见。
 
 ### 9.7 次序无关定理
 
 > [!theorem] 定理 4：合法求值次序不改变完整结果
-> 任取两个过程。假设它们从相同固定规格与输入 $x$ 开始，所有 $\sigma$ 都满足式 (33)--(34)，每一步都满足第 9.2--9.6 节，并且最终完成 $\mathcal E_x^{\mathrm{node}}$ 中的全部节点事件。则两个过程得到相同的 $\mathcal T_x$。
+> 任取两条从相同固定规格与输入 $x$ 开始的完整合法阶段化求值轨迹。则两条轨迹中的函数值、状态、消息与输出都等于同一个 $\mathcal T_x$。
 
 **证明。** 对二元组 $(\theta,p)$ 作字典序归纳，其中 $p=0,1,2,3$ 依次表示本地准备、区域选择、状态采用、完整输出。
 
@@ -1868,8 +1993,10 @@ $$
 =
 (\operatorname{etime}(\xi),p(\xi))
 \in\mathbb N\times\{0,1,2,3\}.
-\tag{40}
+\tag{43}
 $$
+
+这个秩由事件坐标固定，只用于证明无环；它不是第 8--9 节可随轨迹改变的阶段秩 $\alpha_E,\alpha_M,\alpha_P,\alpha_S,\alpha_C$。
 
 这里的字典序定义为：
 
@@ -1881,12 +2008,12 @@ $$
 \bigl(\theta=\theta'\ \text{且}\ p<p'\bigr).
 $$
 
-按这个次序比较秩。同一时间内的依赖严格增加 $p$；状态依赖严格增加 $\theta$；消息依赖由 $\delta(a)>0$ 也严格增加 $\theta$。所以每条事件边都严格增加式 (40)。沿有向边不可能回到原秩，因此事件图没有有向环。
+按这个次序比较秩。同一时间内的依赖严格增加 $p$；状态依赖严格增加 $\theta$；消息依赖由 $\delta(a)>0$ 也严格增加 $\theta$。所以每条事件边都严格增加式 (43)。沿有向边不可能回到原秩，因此事件图没有有向环。
 
 由此得到两项不同事实：
 
 1. 固定空间图 $G$ 按第 2.2 节的假设是 DAG；
-2. 每次具体输入产生的上述细分事件图也由式 (40) 证明为 DAG。
+2. 每次具体输入产生的上述细分事件图也由式 (43) 证明为 DAG。
 
 `TimedDAG` 不是在这两者中二选一。本文的规格以固定空间 DAG 为结构，并且它的每次运行还导出一张依赖于输入的事件 DAG。前者说明允许在哪里传值，后者说明这一次实际发生的函数作用怎样依赖。
 
@@ -1902,12 +2029,12 @@ Q_\rho
 \ \exists a\in A:
 \rho(\operatorname{src}(a))=j,
 \rho(\operatorname{dst}(a))=j'\}.
-\tag{41}
+\tag{44}
 $$
 
 称 $(J,Q_\rho)$ 为区域商图。它不是消息图。
 
-$\mathcal R_j$ 本身只是一个节点子集。如果把 $G$ 中起点和终点都位于 $\mathcal R_j$ 的边取出来，就得到 $G$ 在该子集上的诱导子图；由于 $G$ 已经是 DAG，这个诱导子图自动无环，不需要再加一条“region 无环”公理。与此不同，式 (41) 把每个节点子集收缩成一个点，所得区域商图可以有环。
+$\mathcal R_j$ 本身只是一个节点子集。如果把 $G$ 中起点和终点都位于 $\mathcal R_j$ 的边取出来，就得到 $G$ 在该子集上的诱导子图；由于 $G$ 已经是 DAG，这个诱导子图自动无环，不需要再加一条“region 无环”公理。与此不同，式 (44) 把每个节点子集收缩成一个点，所得区域商图可以有环。
 
 即使固定节点图是路径：
 
@@ -1945,7 +2072,7 @@ W_b
 \{m\in M^*\mid
 \operatorname{send}(m)<b
 \le\operatorname{time}(m)\}.
-\tag{42}
+\tag{45}
 $$
 
 $W_b$ 中的每条消息都已经由某个满足 $\theta<b$ 的完整输出作用事件 $F_{v,\theta}$ 产生，但它到达的完整时间纤维位于切面右侧。丢掉 $W_b$ 会改变未来某些式 (21)。
@@ -1980,7 +2107,7 @@ b,
 (q_v^b)_{v\in V},
 W_b
 \right).
-\tag{43}
+\tag{46}
 $$
 
 $Z_{<b}$ 不影响未来节点计算；若要在恢复后重建完整多端口输出记录，则还要保存 $Z_{<b}$ 或保存“这些输出已被外部可靠接收”的等价证据。
@@ -1997,11 +2124,11 @@ $Z_{<b}$ 不影响未来节点计算；若要在恢复后重建完整多端口�
 > $$
 > 其余步骤仍按第 6.3 节递归。所得时间不小于 $b$ 的状态、候选集合、active sets、内部消息和外部输出，与完整计算 $\mathcal T_x$ 的相应后缀相同。
 
-**证明。** 对 $\theta\ge b$ 归纳。时间 $b$ 的旧状态由式 (43) 与完整计算相同。其外部输入由 $E_{\ge b}$ 相同；所有从左侧跨入的消息恰好是式 (42)，所以时间 $b$ 的完整纤维相同。按式 (22)--(28) 依次求值时，每一步都由已给函数和集合构造唯一确定，因此时间 $b$ 的结果相同。
+**证明。** 对 $\theta\ge b$ 归纳。时间 $b$ 的旧状态由式 (46) 与完整计算相同。其外部输入由 $E_{\ge b}$ 相同；所有从左侧跨入的消息恰好是式 (45)，所以时间 $b$ 的完整纤维相同。按式 (22)--(28) 依次求值时，每一步都由已给函数和集合构造唯一确定，因此时间 $b$ 的结果相同。
 
 假设直到 $\theta-1$ 都相同，则右侧已经新产生的消息相同，加上相同的 $W_b$ 与未来外部输入，时间 $\theta$ 的完整纤维相同；再次应用相同函数得到相同结果。归纳完成。$\square$
 
-这个定理说明式 (43) 足以在完整逻辑切面恢复当前的无状态 selector 模型。若以后让 selector 自身跨时间保存状态，该状态也必须加入 $Q_b$。
+这个定理说明式 (46) 足以在完整逻辑切面恢复当前的无状态 selector 模型。若以后让 selector 自身跨时间保存状态，该状态也必须加入 $Q_b$。
 
 ## 12. 正确性、区域结构与联合求值必须分层
 
@@ -2028,14 +2155,14 @@ $$
 \mid
 \theta<\lambda_n(\mathcal R_j),
 \ \mathcal C_{j,\theta}\ne\varnothing\}.
-\tag{44}
+\tag{47}
 $$
 
 对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。集合很大只表示有很多区域时间位置的输入完整；它不自动给出一个能同时求值所有递归状态的快速公式。
 
 ### 12.3 区域商图无环只是一项可选附加条件
 
-若式 (41) 的 $(J,Q_\rho)$ 恰好无环，可以选择一个区域全序，使每条商图边的起点都排在终点以前；这样的全序称为区域拓扑序。随后可以沿这个次序研究一种更规则的前沿传播方法。这可能帮助构造较大的式 (44)，但它不改变式 (33)--(36) 中任何一个已给下界的数值。
+若式 (44) 的 $(J,Q_\rho)$ 恰好无环，可以选择一个区域全序，使每条商图边的起点都排在终点以前；这样的全序称为区域拓扑序。随后可以沿这个次序研究一种更规则的前沿传播方法。这可能帮助构造较大的式 (47)，但它不改变式 (33)--(36) 中任何一个已给下界的数值。
 
 反之，区域商图有环也不破坏第 6 节的语义、定理 3 或第 10.5 节的事件 DAG 证明。
 
@@ -2082,21 +2209,21 @@ $$
 \right)
 =
 \left(f_\ell(z_\ell)\right)_{\ell=1}^{k}.
-\tag{45}
+\tag{48}
 $$
 
 并且右边若含状态递归，必须按第 6 节的状态依赖解释。
 
-定理 3 证明输入不再增加；式 (45) 证明一次联合计算没有改变结果。这是两个不同命题。
+定理 3 证明输入不再增加；式 (48) 证明一次联合计算没有改变结果。这是两个不同命题。
 
 ### 12.5 四层研究顺序
 
 可以把后续工作分成四层：
 
-1. **语义层**：第 1--6 节定义什么结果是正确的；
-2. **知识层**：第 8--9 节证明何时已经知道足够多，可以不可撤销地求值；
-3. **代数层**：证明哪些逐时间函数满足式 (45) 一类联合求值等式；
-4. **实现层**：为已经证明的联合函数寻找具体硬件上的高效程序。
+1. **语义层**：第 1--6 节定义映射 $x\mapsto\mathcal T_x$；
+2. **阶段层**：第 8--9 节定义阶段秩、合法轨迹与关闭条件；
+3. **代数层**：证明哪些逐时间函数满足式 (48) 一类联合求值等式；
+4. **实现层**：选定计算模型、算法与成本函数以后研究效率。
 
 任一层都不能由后一层的术语替代。区域划分给出共同选择的边界，但不会替任意节点函数制造可联合求值性质。
 
@@ -2152,10 +2279,10 @@ $$
 
 仍需单独完成的工作包括：
 
-- 把第 9 节的阶段过程实现成最小整数参考解释器，并以随机可见次序检验定理 4；
+- 把第 9 节的阶段轨迹实现成最小整数参考解释器，并以随机合法阶段秩检验定理 4；
 - 给出从更受限模型到本文坐标的完整嵌入证明，而不只比较最终输出；
 - 找到能推出较大关闭窗口的区域结构定理；
-- 对具体神经节点证明式 (45) 的联合求值等式与复杂度；
+- 对具体神经节点证明式 (48) 的联合求值等式与复杂度；
 - 扩展到带正时延环的有限切面语义；
 - 最后才研究零时延环或更一般的 Graph。
 
@@ -2175,9 +2302,9 @@ $$
 
 第三次阅读才做：
 
-7. 为第 7 节列出 $P,S,U,F$ 事件顶点，并检查每条边都增加式 (40)。
+7. 为第 7 节列出 $P,S,U,F$ 事件顶点，并检查每条边都增加式 (43)。
 8. 选择一个切面 $b$，写出 $W_b$，然后检查丢掉它会使哪个未来完整时间纤维缺元素。
-9. 最后研究式 (44)--(45)，不要把较大的关闭窗口误当成已经存在高效联合算法。
+9. 最后研究式 (47)--(48)，不要把较大的关闭窗口误当成已经存在高效联合算法。
 
 ## 16. 可选的相关材料
 
@@ -2191,19 +2318,23 @@ $$
 
 ## 附录 S：计算机系统词汇与正文数学对象的对应（可选）
 
-本附录只做翻译，不增加正文定理的前提。每个块默认折叠，可以在遇到相应系统词时再展开。
+本附录只做翻译，不增加正文定理的前提。系统词的含义依赖所选模型；以下对应只适用于本文已经定义的数学对象。
 
-> [!info]- S.1　logical time、machine time、arrival 与 visibility
-> **logical time（逻辑时间）**对应第 2.1 节的 $\theta\in\mathbb N$。内部消息的逻辑到达时间由式 (7) 定义。
+> [!info]- S.1　semantics、logical time、stage 与 visibility
+> **semantics（语义）**对应固定规格下由定理 1 唯一确定的映射 $x\mapsto\mathcal T_x$。两个过程“语义相同”表示它们得到相同的 $\mathcal T_x$，或得到事先明确指定的同一投影。
 >
-> **machine time / wall clock（机器时间、墙钟时间）**若需要记录，可以另取 $w\in\mathbb R_{\ge0}$。正文所有节点函数和 selector 都没有 $w$ 这个自变量，所以墙钟先后不能改变函数值。
+> **logical time（逻辑时间）**对应第 2.1 节的 $\theta\in\mathbb N$；内部消息的逻辑到达时间由式 (7) 定义。**machine time / wall clock（机器时间、墙钟时间）**若需记录，要另加坐标 $w\in\mathbb R_{\ge0}$。
 >
-> **visibility（可见）**对应某条记录何时进入第 8.1 节的 $E_n$ 或 $H_n$。观察阶段 $n$ 也不是逻辑时间；它只排列“已经知道哪些记录”。
+> **stage（阶段）**对应第 8.1 节的索引 $n$。它排列阶段化轨迹，不是逻辑时间或墙钟时间。
 >
-> 一条逻辑到达时间为 $5$ 的消息可以在很晚的观察阶段才进入 $H_n$。只要此前没有发布排除它的有效下界，这仍是合法过程。
+> 外部记录的 **visibility（可见）**对应 $\alpha_E(e)\le n$，内部消息的 **visibility / publication（可见、公开）**对应 $\alpha_M(m)\le n$。它们不等于“可以由现有数据推导”；消息还须满足式 (40) 的源事件约束。
+>
+> 本文只有一个全局 $H_n$。若不同消费者可以在不同阶段得到同一消息，必须另加消费者坐标并定义 $H_{c,n}$；这不是当前模型的一部分。
 
 > [!info]- S.2　message、port、bucket 与 channel identity
-> **message（消息）**对应 $m=(\mathrm{msg},\eta,a,y)\in\mathsf{Msg}$。payload 只对应 $y$；发送时间 $\eta$ 和边 $a$ 也是完整消息的坐标。
+> **message（消息）**的类型是 $m=(\mathrm{msg},\eta,a,y)\in\mathsf{Msg}$；一次输入实际产生的消息构成 $M^*\subseteq\mathsf{Msg}$。payload 只对应 $y$，发送时间 $\eta$ 和边 $a$ 也是消息坐标。
+>
+> 在完整语义中，**produced / generated（产生）**对应 $m\in M^*$；在阶段 $n$，源事件已经完成对应 $m\in M_n^{\mathrm{src}}$。它仍不推出 $m\in H_n$。
 >
 > **input/output port（输入、输出端口）**对应 $\mathsf I,\mathsf O$ 与式 (2)。端口不是节点。多个端口可以属于同一节点。
 >
@@ -2214,11 +2345,11 @@ $$
 > [!info]- S.3　region、candidate、selector、active 与 Top-K
 > **region（区域）**只对应式 (6) 的节点子集 $\mathcal R_j$。它不持有消息和节点状态。
 >
-> **candidate（候选）**对应式 (22) 中满足 $B_{v,\theta}\ne\varnothing$ 的节点。
+> **candidate（候选）**在完整记录中对应式 (22) 的 $\mathcal C_{j,\theta}$；阶段 $n$ 暂得的候选是第 8.6 节的 $\mathcal C^{(n)}_{j,\theta}$。式 (38) 成立时二者才相等。
 >
 > **selector（选择器）**对应式 (14) 的函数族。它的完整输入包括整个候选集合的带节点坐标描述量族。
 >
-> **active / selected（激活、选中）**对应 $v\in\mathcal A_{j,\theta}$。只有 active 节点应用式 (26)。
+> **active node / selected node（激活、选中节点）**对应 $v\in\mathcal A_{j,\theta}$。只有这类节点应用式 (26)；$\mathsf{Selected}_n$ 则是已应用区域选择事件的集合，不是 active nodes 的集合。
 >
 > **Top-K**只是式 (14) 的一种实例。若分数相等，固定平局规则属于函数定义的一部分。
 >
@@ -2233,16 +2364,20 @@ $$
 >
 > 因此 `content/pre/post` 决定 selector 读取什么；`SD/BO` 决定哪些候选状态被采用。它们是两条独立的配置轴。
 >
-> **proposal** 对应候选新状态 $\widetilde q$。**commit** 的最小语义对应式 (25) 使同一节点在更大逻辑时间的本地准备作用事件读取新状态。**expensive compute / NodeCompute** 对应式 (12) 与 (26) 的 $\operatorname{Full}_v$；“昂贵”不是数学性质，只是实现动机。
+> **proposal** 对应候选新状态 $\widetilde q$。**state commit（状态提交）**对应式 (25) 的状态采用作用 $U_{v,\theta}$。它不同于节点事件进入 $\mathsf{Completed}_n$，也不同于消息进入 $H_n$；单独使用 `commit` 时必须说明是哪一种。**expensive compute / NodeCompute** 对应式 (12) 与 (26) 的 $\operatorname{Full}_v$；“昂贵”不是数学性质。
 
-> [!info]- S.5　seal、frontier、watermark、ready 与 barrier
-> **seal（封闭下界）**对应式 (33) 中的 $\sigma_n^{\mathrm{in}}(i)$ 或 $\sigma_n^A(a)$。它是关于所有尚未可见记录的全称命题，不是“当前队列为空”。
+> [!info]- S.5　seal、frontier、watermark、closure 与 ready
+> **seal（封闭下界）**对应式 (33) 的 $\sigma$。例如边 seal 为 $b$ 精确表示 $M^*(a,<b)\subseteq H_n$，不是“当前队列为空”。
+>
+> 系统中的 seal 控制记录对应 $\sigma_n$ 到 $\sigma_{n+1}$ 的变化；正文只规定该值何时有效，不规定控制记录的编码或证明算法。
 >
 > **node frontier** 对应式 (35)；**region frontier** 对应式 (36)。区域前沿是成员前沿的最小值。
 >
-> **watermark** 在不同系统中含义不统一。若它表示“输入已经确定到哪里”，必须明确对应哪一个 $\sigma$ 或 $\lambda$；若它表示“计算已经完成到哪里”，则对应第 9.6 节的另一项完成谓词。两者不能因为同名而合并。
+> **closed / closure（关闭）**对应式 (37) 的纤维相等或式 (38) 的候选集合相等。seal 是推出关闭的前提，二者不是同一个对象。
 >
-> **ready（就绪）**是一个复合谓词。本文的保守区域就绪条件列在第 8.8 节，既包括候选集合关闭，也包括所需旧状态已经确定。
+> **watermark** 若表示“输入确定到哪里”，对应某个 $\sigma$ 或 $\lambda$；若表示“节点完成到哪里”，对应式 (41) 的 $\operatorname{DoneTo}_n(v,b)$。必须注明采用哪一种。
+>
+> **ready（就绪）**对应第 8.8 节的 $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Done}$；区域选择还要满足第 9.2 节的纤维关闭与准备条件。
 >
 > **barrier（屏障）**是实现等待这些数学条件成立的位置，并不要求所有处理器同时停止。
 
@@ -2268,30 +2403,36 @@ $$
 > \operatorname{id}_{\mathrm{event},x}:
 > \mathsf{EventRef}_x\to\mathbb N.
 > $$
-> 外层标签先把不同层次的事件变成不同编码对象，随后单射保证不同编码对象不会共用一个整数。这里 $\mathsf{EventRef}_x$ 只是一项编码域，不把三种事件合并成同一种语义作用。这项编码固定在输入 $x$ 的完整事件集合上；在同一次计算中，观察阶段 $n$、线程编号、墙钟时刻和本次分块编号都不在编码函数的输入中，所以改变它们不会改变 ID。若还要求不同输入之间共享稳定整数 ID，就需要另外在一个与输入无关的全局坐标域上固定编码；这不是本文语义的前提。
+> 外层标签先把不同层次的事件变成不同编码对象，随后单射保证不同编码对象不会共用一个整数。这里 $\mathsf{EventRef}_x$ 只是一项编码域，不把三种事件合并成同一种语义作用。这项编码固定在输入 $x$ 的完整事件集合上；阶段 $n$、线程编号、墙钟时刻和本次分块编号都不在编码函数的输入中，所以改变它们不会改变 ID。若还要求不同输入之间共享稳定整数 ID，就需要另外在一个与输入无关的全局坐标域上固定编码；这不是本文语义的前提。
 
 > [!info]- S.7　chunk、prefill、decode、packing 与 fast path
-> **chunk（分块）**可以数学化为一个选定有限事件集合的划分，并且必须先说明采用节点事件、区域选择事件还是函数作用事件这一粒度。若 $\mathscr E=\mathscr E_1\cup\cdots\cup\mathscr E_k$ 且各 $\mathscr E_i$ 两两不交，那么 $(\mathscr E_i)$ 是 $\mathscr E$ 的一种分块。它不改变任何事件原有的标签或语义坐标。
+> **input chunk（输入分块）**可以对应 $E_{n+1}\setminus E_n$；同一批进入 $H$ 的消息对应 $H_{n+1}\setminus H_n$。**compute chunk（计算分块）**则是某类事件集合的划分。两者必须区分。
+>
+> 若 $\mathscr E=\mathscr E_1\cup\cdots\cup\mathscr E_k$ 且各 $\mathscr E_i$ 两两不交，那么 $(\mathscr E_i)$ 是事件集合 $\mathscr E$ 的一种分块；还须说明 $\mathscr E$ 采用节点事件、区域选择事件还是函数作用事件。
 >
 > **prefill** 通常表示一次联合处理许多已知输入位置；**decode** 通常表示逐个或小批增加输入位置。要声称二者等价，必须比较第 6 节的状态、内部消息、所有输出端口、候选集合和 active sets，而不只是最后一个张量。
 >
-> **packing / packed attention** 是式 (45) 中 $\operatorname{Pack},\mathcal K,\operatorname{Unpack}$ 的具体实现候选。seal 证明输入不会再增加；式 (45) 证明联合求值等于参考递归。两项证明不能互相替代。
+> **packing / packed attention** 是式 (48) 中 $\operatorname{Pack},\mathcal K,\operatorname{Unpack}$ 的具体实现候选。seal 证明输入不会再增加；式 (48) 证明联合求值等于参考递归。两项证明不能互相替代。
 >
 > **fast path** 可以在额外图结构和代数条件成立时使用联合函数；一般路径仍须实现第 6 与第 9 节的语义。
 
 > [!info]- S.8　runtime、scheduler、workspace、commit 与 trace
-> **runtime / executor（运行时、解释器）**是维护可见集合、状态、下界和完成记录，并求正文函数值的程序。它不是固定图本身。
+> **compute / evaluate（计算、求值）**在正文中只指取已给全函数的函数值；本文没有定义指令集或成本函数。因此“可求值”不包含时间复杂度结论。
 >
-> **scheduler（调度器）**从当前满足第 9.2--9.3 节条件的区域选择事件或节点事件中选下一项。它可以影响现实性能，不能改变 selector 的数学输入。
+> **runtime / executor（运行时、解释器）**若符合本文模型，应产生第 9.1 节的一条合法阶段化求值轨迹，并使函数值等于 $\mathcal T_x$ 的相应坐标。它不是固定图本身。
+>
+> **scheduler（调度器）**选择哪些合格事件进入第 9.2--9.3 节的 $\Delta\mathsf{Prepared}_n,\Delta\mathsf{Selected}_n,\Delta\mathsf{Completed}_n$。它决定相应事件的阶段秩，不能改变 $\mathcal T_x$。
 >
 > **workspace（临时工作区）**可以保存第 9.4 节提前求出的 $h,\widetilde q,d$。临时变量不等于式 (25) 已经采用的状态。
 >
+> **event completion（事件完成）**对应 $(v,\theta)\in\mathsf{Completed}_n$，即 $\alpha_C((v,\theta))\le n$。**completed to $b$（完成到 $b$）**对应式 (41) 的复合谓词。二者都不等于消息可见。
+>
 > **atomic commit（原子提交）**在本文中的最小要求是：依赖该状态的后继函数作用事件只能读取式 (25) 确定以前的 $q_v^\theta$ 或确定以后的 $q_v^{\theta+1}$，不能读取一个未由规格定义的中间状态。它不声称使用某条特定处理器原子指令。
 >
-> **trace（轨迹）**可以取为 $\mathcal T_x$ 的某个投影。墙钟耗时、线程号和日志打印顺序只有显式加入结果集合后才属于另一个更丰富的 trace。
+> **semantic trace（语义记录）**对应唯一的 $\mathcal T_x$；**staged execution trace（阶段化求值轨迹）**对应第 9.1 节的集合与函数序列，同一 $x$ 可以有多条。程序日志若还含墙钟、线程号等坐标，则是更丰富的第三种 trace。
 
 > [!info]- S.9　continuation、checkpoint、resume 与 refinement
-> **continuation** 对应式 (43) 的 $Q_b$。**checkpoint** 是 $Q_b$ 的某种可保存编码。
+> **continuation** 对应式 (46) 的 $Q_b$。**checkpoint** 是 $Q_b$ 的某种可保存编码。
 >
 > 若保存与读取函数分别为 $\operatorname{save}$ 和 $\operatorname{load}$，无损编码至少要求：
 > $$
@@ -2300,12 +2441,17 @@ $$
 >
 > **resume / replay** 对应从相同 $Q_b$ 与 $E_{\ge b}$ 再执行未来递归。定理 5 给出它与一次算完相同的数学目标。
 >
-> **refinement（实现精化）**可以写成：若 $\operatorname{Run}(x,s)$ 是调度 $s$ 下的程序结果，$\Pi$ 删除临时数组、线程号等实现坐标，那么应证明：
-> 令 $\operatorname{Legal}(x)$ 表示所有满足第 9 节条件的阶段序列所成的集合，并令：
+> **refinement（实现精化）**需要先给出调度集合 $\mathsf{Sched}$、程序记录集合 $\mathsf{ImplTrace}$ 以及函数：
 > $$
-> \Pi:\mathsf{ImplTrace}\to\mathsf{SemanticTrace}
+> \operatorname{Run}:
+> \left(\prod_{i\in\mathsf I}P^{[L_i]}\right)
+> \times\mathsf{Sched}
+> \to\mathsf{ImplTrace},
+> \qquad
+> \Pi:\mathsf{ImplTrace}\to
+> \{\mathcal T_x\mid x\in\prod_{i\in\mathsf I}P^{[L_i]}\}.
 > $$
-> 是从较丰富程序记录中只取正文语义坐标的函数。这时应证明：
+> 其中 $\Pi$ 删除实现坐标。令 $\operatorname{Legal}(x)\subseteq\mathsf{Sched}$ 包含恰好那些产生完整合法阶段轨迹的调度；精化目标是：
 > $$
 > \forall s\in\operatorname{Legal}(x),
 > \qquad
@@ -2326,6 +2472,7 @@ $$
 > - AGG-CUSTOM 到保留端口或入边坐标的 $\operatorname{Agg}_v$ 的映射；
 > - selection region 到 $\mathcal R_j$ 的映射；
 > - active set、SD/BO、NodeCompute 与 Emit 到式 (24)--(28) 的映射；
-> - `DATA` 与 `CLOSED` 到实际消息和有效封闭命题的映射。
+> - 已生成 `DATA` 到 $m\in M_n^{\mathrm{src}}$、已进入接收侧输入的 `DATA` 到 $m\in H_n$ 的映射；
+> - 边 $a$ 在 $b$ 前 `CLOSED` 到 $M^*(a,<b)\subseteq H_n$ 的映射。
 >
 > SettleGraph 对每个 Token、每个 region 等待该 Token 的所有相关边结算；本文允许不同输入位置通过逻辑时间映射落入同一个 $(v,\theta)$ 或 $(j,\theta)$。要证明前者是后者的受限情形，必须给出一种时间编码，使不同 Token 不会发生被禁止的同刻汇合，并比较完整状态、消息、输出端口、候选集合和 active sets。
