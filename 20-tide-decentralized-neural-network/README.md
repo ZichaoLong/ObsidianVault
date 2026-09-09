@@ -121,13 +121,14 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 ## 文档地图
 
-当前学习层只增加三份面向当前台阶的文档，不改变下面七份核心研究资料的职责：
+当前学习层只增加四份面向当前台阶的文档，不改变下面七份核心研究资料的职责：
 
 | 文档 | 用途 |
 | --- | --- |
 | [[current-mainline]] | 当前台阶、下一台阶、延期范围和退出条件 |
 | [[timed-dag-v0-learning-note]] | 从有限集合与函数出发，定义跨 Token 同刻汇合及其分步证明任务 |
 | [[timed-dag-region-selector-learning-note]] | 可独立阅读：按严格依赖顺序从集合与函数定义多输入、多输出 TimedDAG，再定义不收缩 region 的同刻完整候选集合与 selector 语义 |
+| [[timed-dag-chunk-prefill-learning-note]] | 以前一份完整 TimedDAG 教材为唯一前置：定义路径支持、交错、时间 tile、selector closure 与严格分层 region，并证明该受限类的 exact chunk-prefill 外层扫描 |
 
 当前核心研究线保留七个职责文件：
 
@@ -143,7 +144,7 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 建议阅读顺序：
 
-1. 当前可执行主线：先读 [[current-mainline]] 与 `fractal-latcarf` SettleGraph；随后可在“小步 TimedDAG-v0” [[timed-dag-v0-learning-note]] 和“从零定义 region selector 的完整数学版本” [[timed-dag-region-selector-learning-note]] 之间按学习目的选择，后者不以前者或任何外部讨论为前置。
+1. 当前可执行主线：先读 [[current-mainline]] 与 `fractal-latcarf` SettleGraph；随后可在“小步 TimedDAG-v0” [[timed-dag-v0-learning-note]] 和“从零定义 region selector 的完整数学版本” [[timed-dag-region-selector-learning-note]] 之间按学习目的选择，后者不以前者或任何外部讨论为前置。读完完整数学版本后，如需研究 chunk prefill，再读 [[timed-dag-chunk-prefill-learning-note]]。
 2. 战略与模型：本页 -> [[tide-model-architecture-and-training]]。
 3. Graph 收缩线数学：[[tide-mathematical-foundations]] -> [[adaptive-routing-prefill-lower-bound]]。
 4. Checkpoint 生长研究：[[tide-model-architecture-and-training]] -> [[tide-runtime-validation-and-status]]；当前实验执行见 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md)。

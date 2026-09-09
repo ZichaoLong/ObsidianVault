@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-08
+as-of: 2026-09-09
 tags:
   - tide
   - timed-dag
@@ -2310,6 +2310,7 @@ $$
 
 本文的数学定义不依赖下列材料。只有在已经能够独立手算第 7 节后，才建议按目的查阅：
 
+- [[timed-dag-chunk-prefill-learning-note|以本文为唯一前置的 chunk prefill、时间 tile 与严格分层 region 续篇]]；
 - [[timed-dag-v0-learning-note|较小的无显式区域选择学习模型]]；
 - [SettleGraph 的独立语义文档](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/docs/experiment-semantics-and-naming.md)；
 - [[current-mainline|TIDE 当前研究台阶]]。
