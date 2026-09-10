@@ -14,7 +14,7 @@ tags:
 > 本页是 TIDE 线的总览与研究资料库入口，只负责项目命名、对象边界、战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。当前学习与开发从 [[current-mainline]] 开始。正式数学见 [[tide-mathematical-foundations]] 和 [[adaptive-routing-prefill-lower-bound]]；TIDE Architecture / Network 候选、checkpoint 生长的设计动机与诊断坐标见 [[tide-model-architecture-and-training]]；TIDE Engine 的工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。当前 checkpoint 生长实验的配置、工作流、gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
 
 > [!important] 当前学习与开发入口
-> 如果目标是沿一条可以手算、实现和逐级证明的路线继续推进，请先读 [[current-mainline|TIDE 当前主线]]，再读 [[timed-dag-v0-learning-note|TimedDAG-v0 数学学习笔记]]。本页以下七份职责文档是总研究资料库，不要求在开始下一步实验前从头读完。
+> 如果目标是沿一条可以手算、实现和逐级证明的路线继续推进，请先读 [[current-mainline|TIDE 当前主线]]，再读 [[timed-dag-region-selector-learning-note|TimedDAG 数学教材]]；研究分块预填充时继续读 [[timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]]。本页以下七份职责文档是总研究资料库，不要求在开始下一步实验前从头读完。
 
 ## 命名与对象边界
 
@@ -121,14 +121,13 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 ## 文档地图
 
-当前学习层只增加四份面向当前台阶的文档，不改变下面七份核心研究资料的职责：
+当前学习层保留三份面向当前台阶的文档，不改变下面七份核心研究资料的职责：
 
 | 文档 | 用途 |
 | --- | --- |
 | [[current-mainline]] | 当前台阶、下一台阶、延期范围和退出条件 |
-| [[timed-dag-v0-learning-note]] | 从有限集合与函数出发，定义跨 Token 同刻汇合及其分步证明任务 |
-| [[timed-dag-region-selector-learning-note]] | 可独立阅读：按严格依赖顺序从集合与函数定义多输入、多输出 TimedDAG，再定义不收缩 region 的同刻完整候选集合与 selector 语义 |
-| [[timed-dag-chunk-prefill-learning-note]] | 以前一份完整 TimedDAG 教材为唯一前置：定义路径支持、交错、时间 tile、selector closure 与严格分层 region，并证明该受限类的 exact chunk-prefill 外层扫描 |
+| [[timed-dag-region-selector-learning-note]] | 可独立阅读：按严格依赖顺序从集合与函数定义多输入、多输出 TimedDAG、region selector 与 selector-history |
+| [[timed-dag-chunk-prefill-learning-note]] | 以前一份 TimedDAG 教材为唯一前置：定义路径支持、交错、时间 tile、selector closure 与严格分层 region，并证明该受限类的 exact chunk-prefill 外层扫描 |
 
 当前核心研究线保留七个职责文件：
 
@@ -144,7 +143,7 @@ dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态�
 
 建议阅读顺序：
 
-1. 当前可执行主线：先读 [[current-mainline]] 与 `fractal-latcarf` SettleGraph；随后可在“小步 TimedDAG-v0” [[timed-dag-v0-learning-note]] 和“从零定义 region selector 的完整数学版本” [[timed-dag-region-selector-learning-note]] 之间按学习目的选择，后者不以前者或任何外部讨论为前置。读完完整数学版本后，如需研究 chunk prefill，再读 [[timed-dag-chunk-prefill-learning-note]]。
+1. 当前学习主线：先读 [[current-mainline]]；再读可独立阅读的 [[timed-dag-region-selector-learning-note|TimedDAG 数学教材]]；如需研究 chunk prefill，继续读 [[timed-dag-chunk-prefill-learning-note]]。`fractal-latcarf` 中的 SettleGraph 是独立的 checkpoint 生长线语义，二者的形式嵌入仍需另证。
 2. 战略与模型：本页 -> [[tide-model-architecture-and-training]]。
 3. Graph 收缩线数学：[[tide-mathematical-foundations]] -> [[adaptive-routing-prefill-lower-bound]]。
 4. Checkpoint 生长研究：[[tide-model-architecture-and-training]] -> [[tide-runtime-validation-and-status]]；当前实验执行见 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md)。

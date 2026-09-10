@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-09
+as-of: 2026-09-10
 tags:
   - tide
   - timed-dag
@@ -10,6 +10,7 @@ tags:
   - logical-time
   - region
   - selector
+  - selector-history
   - mathematics
   - learning-note
 ---
@@ -17,7 +18,7 @@ tags:
 # TimedDAG 的分块预填充：支持集、时间切面与分层区域
 
 > [!summary] 本文的阅读前提
-> 本文只以 [[timed-dag-region-selector-learning-note|《带区域选择的 TimedDAG：从零开始的数学定义》]] 为前置。前置文档定义的节点、边、正时延、输入记录、时间纤维、节点状态、区域、selector、完整计算、阶段化轨迹、seal、事件图与切面状态，在本文中直接使用。
+> 本文只以 [[timed-dag-region-selector-learning-note|《带区域选择的 TimedDAG：从零开始的数学定义》]] 为前置。前置文档定义的节点、边、正时延、输入记录、时间纤维、节点状态、区域、selector-history、selector、完整计算、阶段化轨迹、seal、事件图与切面状态，在本文中直接使用。
 >
 > 本文研究一个比“能否正确执行”更窄的问题：哪些 TimedDAG 结构允许一个统一外层执行器把连续输入按大时间块交给节点或区域，而不被空间依赖强迫退化为逐 token、逐事件调用。
 
@@ -39,7 +40,8 @@ tags:
 2. 路径时延不交错且 selector closure 相容时，可以使用按 token 对齐的节点 tile。
 3. 路径时延交错时，仍可使用按逻辑时间对齐的 tile；必须保存跨切面的在途消息。
 4. 若 region 内没有空间边，且所有跨 region 边服从一个严格区域次序，则每个封闭时间块可以按区域次序扫描，每个 region 只访问一次。
-5. selector 是否能跨整个时间块联合求值，仍是独立于 seal 与拓扑的 backend 义务。
+5. 在严格分层类中，selector-history 可以在一次 region tile 内顺序扫描；若节点另有精确 batch witness，随后仍可按节点批量应用昂贵的完整输出函数。这不自动给出低 span。
+6. 任一大 tile 的精确联合求值，仍是独立于 seal 与拓扑的 backend 义务。
 
 ## 1. 从前置文档导入的对象
 
@@ -79,6 +81,12 @@ B_{v,\theta},
 \mathcal A_{j,\theta}.
 $$
 
+区域 $j$ 在时间 $\theta$ 以前的 selector-history 记为 $y_j^\theta$。前置文档的 selector step 同时确定：
+
+$$
+(\mathcal A_{j,\theta},y_j^{\theta+1}).
+$$
+
 节点在时间 $\theta$ 的准备、状态采用与完整输出作用仍记为：
 
 $$
@@ -89,13 +97,19 @@ U_{v,\theta},
 F_{v,\theta},
 $$
 
-区域选择作用记为 $S_{j,\theta}$。
+区域选择作用记为 $S_{j,\theta}$；它就是上述 selector step 的函数作用。
 
-本文不会改变这些对象的定义。一个实现只要声称“等于 TimedDAG 语义”，比较对象仍然是前置文档第 6 节定义的完整计算记录 $\mathcal T_x$。
+本文不会改变这些对象的定义。一个实现只要声称“等于 TimedDAG 语义”，比较对象仍然是前置文档第 6 节定义的完整计算记录 $\mathcal T_x$，其中包括完整 selector-history 序列。
 
 ### 1.2 正则单输入流
 
-为了把路径时延与 token 位置分开，本文先研究一个输入端口 $i_\star$。令它的目标节点为：
+为了把路径时延与 token 位置分开，本文先研究单输入情形：
+
+$$
+\mathsf I=\{i_\star\}.
+$$
+
+令唯一输入端口的目标节点为：
 
 $$
 s=\gamma(i_\star)\in V.
@@ -403,36 +417,44 @@ $$
 
 ### 4.1 输入前缀与扩展
 
-固定 $q\in\mathbb N_{>0}$，并要求 $q\le L$。记：
+固定 $q\in\{0,\ldots,L\}$。记：
 
 $$
 x_{<q}=(x(0),\ldots,x(q-1)).
 $$
 
-称另一个输入序列 $y$ 是 $x_{<q}$ 的扩展，当且仅当 $y$ 的长度至少为 $q$，并且：
+其中规定 $x_{<0}$ 是空序列。称同一定长规格中的另一个输入序列：
 
 $$
-y(t)=x(t)
+x':[L]\to P
+$$
+
+是 $x_{<q}$ 的扩展，当且仅当：
+
+$$
+x'(t)=x(t)
 \qquad(0\le t<q).
 $$
 
-扩展中的第一个新 token 最早在逻辑时间 $Dq$ 出现。
+任何未由该前缀固定的 token 都有位置 $t\ge q$，因而输入时间不小于 $Dq$。
 
-一个有限前缀的完整事件可能在 $Dq$ 以前已经全部结束。遇到这种情形，本文把前置文档的状态作规范的空闲延拓：在原有限上界以后令所有时间纤维为空、节点状态保持不变，并且不增加事件或消息，直到时间 $Dq$。这个延拓只为定义下一输入切面处的状态，不改变原完整计算记录中的任何对象。
+某次完整计算中的全部事件可能在 $Dq$ 以前已经结束。若其有限时间上界小于 $Dq$，本文把前置文档的状态作规范的空闲延拓：在原有限上界以后令所有时间纤维为空、节点状态与 selector-history 保持不变，并且不增加事件或消息，直到时间 $Dq$。这个延拓只为定义下一输入切面处的状态，不改变原完整计算记录中的任何对象。
 
 > [!theorem] 定理 4：标量输入切面以下的前缀不变性
 > 对任意两个具有相同前 $q$ 个 token 的输入，二者完整计算在所有 $\theta<Dq$ 的下列对象相同：
 >
 > - 每个节点时间纤维；
 > - 每个候选集合与 active set；
-> - 每个节点状态、状态采用与完整输出作用；
+> - 每个节点状态、selector-history、状态采用与完整输出作用；
 > - 这些作用产生的内部消息与外部输出记录。
 
 **证明。** 对 $\theta=0,1,\ldots,Dq-1$ 作归纳。
 
+两次计算来自同一个固定规格，所以初始节点状态 $(q_v^0)_{v\in V}$ 与初始 selector-history $(y_j^0)_{j\in J}$ 相同。
+
 在时间 $\theta$，两个输入包含相同的外部记录，因为所有新增 token 的输入时间都不小于 $Dq$。到达时间 $\theta$ 的任意内部消息都由更小逻辑时间的完整输出作用产生，这是 $\delta(a)>0$ 的结果。归纳假设保证这些作用及其消息相同，所以全部 $B_{v,\theta}$ 相同。
 
-随后，前置文档式 (22)--(28) 中的聚合、候选状态、描述量、选择、状态采用和完整输出都是固定函数。相同的旧状态与时间纤维产生相同结果。归纳完成。$\square$
+随后，前置文档式 (22)--(28) 中的聚合、候选状态、描述量、选择、状态采用和完整输出都是固定函数。相同的旧节点状态、旧 selector-history 与时间纤维产生相同的 active set、新历史及其余结果。归纳完成。$\square$
 
 定理 4 不要求路径不交错，也不要求区域商图无环。它只使用规则输入时间与正边时延。
 
@@ -455,6 +477,7 @@ Q_{c_q}
 \left(
 c_q,
 (q_v^{c_q})_{v\in V},
+(y_j^{c_q})_{j\in J},
 W_{c_q}
 \right)
 \tag{19}
@@ -462,7 +485,7 @@ $$
 
 是一个对所有未来扩展都安全的 continuation 状态。
 
-若下一次又公开 token $q,\ldots,q+T-1$，新的安全切面是：
+若下一次又公开 token $q,\ldots,q+T-1$，其中 $T\in\mathbb N_{>0}$ 且 $q+T\le L$，新的安全切面是：
 
 $$
 c_{q+T}=D(q+T).
@@ -481,7 +504,7 @@ $$
 
 ### 4.3 跨切面消息不是错误
 
-一个较早 token 的慢路径消息可以在 $c_{q+T}$ 以后才到达。只要它已经在切面左侧产生，就属于前置文档定义的 $W_{c_{q+T}}$。若它还要经过后续节点才能继续产生消息，则相应节点状态与已有在途消息共同保存于式 (19)。
+一个较早 token 的慢路径消息可以在 $c_{q+T}$ 以后才到达。只要它已经在切面左侧产生，就属于前置文档定义的 $W_{c_{q+T}}$。若它还要经过后续节点才能继续产生消息，则相应节点状态、selector-history 与已有在途消息共同保存于式 (19)。
 
 因此：
 
@@ -625,7 +648,7 @@ e_t\leadsto\xi
 \tag{31}
 $$
 
-$T(v,\theta)$ 描述空间路径可以把哪些 token 带到一个坐标；$\operatorname{Anc}(\xi)$ 描述一个具体函数作用实际可能依赖哪些输入。selector 边和节点状态边会使后者比前者更大。
+$T(v,\theta)$ 描述空间路径可以把哪些 token 带到一个坐标；$\operatorname{Anc}(\xi)$ 描述一个具体函数作用实际可能依赖哪些输入。selector-history 边和节点状态边会使后者比前者更大：较早输入可以经 $y_j^\theta$ 改变较晚时间的选择。
 
 若外部输出记录 $z$ 由事件 $F_{v,\theta}$ 产生，定义：
 
@@ -680,7 +703,7 @@ $$
 \operatorname{Ref}_K:X_K\to Y_K.
 $$
 
-定义 $X_K$ 为 tile $K$ 的全部合法边界状态与边界记录所成的集合，定义 $Y_K$ 为相应的应提交状态、选择、内部消息和外部输出所成的集合。$\operatorname{Ref}_K$ 内部仍严格遵守函数作用事件图的依赖顺序。
+定义 $X_K$ 为 tile $K$ 的全部合法边界节点状态、边界 selector-history 与边界记录所成的集合，定义 $Y_K$ 为相应的应提交节点状态、selector-history、选择、逐坐标完整输出函数值、内部消息和外部输出所成的集合。$\operatorname{Ref}_K$ 内部仍严格遵守函数作用事件图的依赖顺序。
 
 一个 backend tile witness 由函数：
 
@@ -736,12 +759,12 @@ $$
 其中：
 
 1. `RunTile` 使用式 (34) 的 witness；
-2. `commit` 完成相应状态采用作用；
+2. `commit` 采用相应节点状态与 selector-history；
 3. `publish` 把实际输出消息加入阶段集合 $H_n$；
 4. 新 seal 只在前置文档式 (33) 的集合包含成立时推进。
 
 > [!proposition] 命题 5：精确 tile 替换不改变完整结果
-> 若一列两两不交的 tile 恰好覆盖全部函数作用事件，每个 tile 运行前满足式 (33)，每个 backend 满足式 (34)，并且所有状态提交与消息公开都遵守前置文档的事件依赖，则用这些 tile 替换逐事件求值不会改变 $\mathcal T_x$。
+> 若一列两两不交的 tile 恰好覆盖全部函数作用事件，每个 tile 运行前满足式 (33)，每个 backend 满足式 (34)，并且所有节点状态与 selector-history 提交、消息公开都遵守前置文档的事件依赖，则用这些 tile 替换逐事件求值不会改变 $\mathcal T_x$。
 
 **证明。** 函数作用事件图是有限 DAG。按其任一拓扑序归纳。一个 tile 的外部前驱已经与参考计算相同；式 (34) 因而使 tile 的全部输出与参考计算相同。提交和公开又只把这些相同结果交给后继。覆盖全部事件后，完整计算记录相同。$\square$
 
@@ -770,10 +793,12 @@ B_{v,\theta}\ne\varnothing\}.
 \tag{36}
 $$
 
+同一选择作用还读取 $y_j^\theta$，并通过前置文档的 selector step 同时产生 $\mathcal A_{j,\theta}$ 与 $y_j^{\theta+1}$。
+
 所有 $v\in\mathcal C_{j,\theta}$ 的准备作用都是 $S_{j,\theta}$ 的前驱。因而，一个包含 $S_{j,\theta}$ 的 tile 必须同时满足：
 
 $$
-\{P_{v,\theta}mid
+\{P_{v,\theta}\mid
 v\in\mathcal C_{j,\theta}
 \}
 \subseteq
@@ -782,6 +807,8 @@ v\in\mathcal C_{j,\theta}
 $$
 
 式 (37) 称为该 tile 在 $(j,\theta)$ 的 **selector closure**。region 首先是这种语义同步域，不是处理器并行分组或内存放置声明。
+
+此外，$S_{j,\theta}$ 的前一个同区域选择作用必须已经完成或与它一同位于保持该依赖的 tile 内；tile 从中间时间开始时，则必须把左边界 history 作为 $X_K$ 的一部分。式 (37) 只写同刻候选 closure，不替代这条跨时间依赖。
 
 ### 7.2 一个不会产生真实联合候选的充分条件
 
@@ -794,7 +821,7 @@ $$
 \tag{38}
 $$
 
-那么 selector 在每个时间至多读取一个候选节点。此时，即使一个 region 含有许多节点，也不会在同一时间产生跨节点竞争。
+那么 selector 在每个时间至多读取一个候选节点。此时，即使一个 region 含有许多节点，也不会在同一时间产生跨节点竞争；同一个 region 的 selector-history 仍可把不同时刻的选择串联起来。
 
 式 (38) 可以由互不相交的结构支持集保证。例如 16 节点链取 $\theta_{r,t}=16t+r$ 时，不同节点时间坐标具有不同的模 $16$ 余数，所以全局单 region 仍满足式 (38)。
 
@@ -832,7 +859,7 @@ $$
 
 若第一种情形成立，引理 1 排除该节点在 $\theta$ 成为候选；若第二种情形成立，前置文档的纤维关闭引理固定其完整时间纤维。因此式 (39) 足以固定 $\mathcal C_{j,\theta}$。
 
-式 (39) 只改进关闭证明，不自动证明跨多个 $\theta$ 的 selector 可以联合求值。
+式 (39) 只改进关闭证明，不自动证明跨多个 $\theta$ 的 selector 可以联合求值，也不证明当前 $y_j^\theta$ 已经就绪。
 
 ## 8. 区域商图与严格分层 region
 
@@ -927,6 +954,8 @@ $$
 
 严格分层时，同一 region 中的两个节点之间不存在有向路径：路径上的每条边都严格增加 $\ell$，不可能从 $j$ 出发又回到 $j$。所以每个 region 是空间可达偏序中的一个反链。
 
+region 私有的 selector-history 只连接同一 $j$ 的不同逻辑时间，不向 $Q_\rho$ 增加空间边，所以式 (42) 不需因它而加强。若以后允许多个 region 共享可变 history，就必须另行定义控制依赖图，并重新检查它与 $Q_\rho$ 的并图；当前模型不含这种共享。
+
 若所有节点都属于同一个 region，式 (42) 只有在 $A=\varnothing$ 时才能成立。因此，全局单 selector 的非平凡链不属于这个充分条件所定义的类；它仍可能因式 (38) 等其他结构而可批量化。
 
 ## 9. 严格分层类的通用分块算法
@@ -942,29 +971,32 @@ $$
 对 region $j$，假设已经给定：
 
 1. 每个 $v\in\mathcal R_j$ 在时间 $b$ 的状态 $q_v^b$；
-2. 全部 $B_{v,\theta}$，其中 $v\in\mathcal R_j$ 且 $\theta\in I$；
-3. 所有从切面左侧跨入 $I$ 的内部消息。
+2. region 在时间 $b$ 的 selector-history $y_j^b$；
+3. 全部 $B_{v,\theta}$，其中 $v\in\mathcal R_j$ 且 $\theta\in I$；
+4. 所有从切面左侧跨入 $I$ 的内部消息。
 
-定义 $X_{j,I}$ 为所有满足上述三项条件的合法边界数据所成的集合，定义 $Y_{j,I}$ 为相应 active sets、终止状态、内部消息与外部输出所成的集合。定义全函数：
+定义 $\mathsf{TileIn}_{j,I}$ 为所有满足上述四项条件的合法边界数据所成的集合。定义 $\mathsf{TileOut}_{j,I}$ 为相应 active sets、区间内的完整节点状态与 selector-history 序列、逐坐标完整输出函数值、内部消息和外部输出所成的集合；其中状态序列包括左边界以后直至时间 $c$ 的全部坐标。定义全函数：
 
 $$
 \operatorname{RefRegionTile}_{j,I}:
-X_{j,I}\to Y_{j,I},
+\mathsf{TileIn}_{j,I}\to\mathsf{TileOut}_{j,I},
 $$
 
-其函数值由下列递归给出：按 $\theta=b,b+1,\ldots,c-1$，对该 region 应用前置文档的聚合、候选状态、描述量、selector、状态采用和完整输出规则。空纤维保持状态不变。
+其函数值由下列递归给出：按 $\theta=b,b+1,\ldots,c-1$，对该 region 应用前置文档的聚合、候选状态、描述量、selector step、状态采用和完整输出规则。空纤维保持节点状态与 selector-history 不变。
 
 一个实现函数：
 
 $$
 \operatorname{RunRegionTile}_{j,I}:
-X_{j,I}\to Y_{j,I}
+\mathsf{TileIn}_{j,I}\to\mathsf{TileOut}_{j,I}
 $$
 
 是精确的，当且仅当它与 $\operatorname{RefRegionTile}_{j,I}$ 是同一个函数。换言之，它对所有合法输入都产生相同的：
 
 - active sets；
-- region 终止状态；
+- $(q_v^\theta)_{v\in\mathcal R_j,\ \theta\in[b,c+1)}$；
+- $(y_j^\theta)_{\theta\in[b,c+1)}$；
+- 每个 active 坐标的完整输出函数值；
 - 内部消息；
 - 外部输出。
 
@@ -991,7 +1023,7 @@ $$
 1. 收集 $\mathcal R_{j_r}$ 在 $[b,c)$ 的外部输入、跨切面消息和来自已完成 region 的消息；
 2. 用 seal 证明这些时间纤维完整；
 3. 调用一次 $\operatorname{RunRegionTile}_{j_r,[b,c)}$；
-4. 提交 region 中所有节点的新状态；
+4. 提交 region 中所有节点的新状态与 region 的新 selector-history；
 5. 公开发往后续 region 的消息，并推进相应边 seal。
 
 全部 region 完成后，保存 $Q_c$。
@@ -1000,7 +1032,7 @@ $$
 > 假设：
 >
 > 1. region 划分满足式 (42)；
-> 2. 切面 $b$ 已经完成，$c>b$ 是本轮目标切面，并且所有时间小于 $c$ 的外部输入都已经被 seal；
+> 2. 含 $(q_v^b)_{v\in V}$ 与 $(y_j^b)_{j\in J}$ 的切面 $b$ 已经完成，$c>b$ 是本轮目标切面，并且所有时间小于 $c$ 的外部输入都已经被 seal；
 > 3. 每个 $\operatorname{RunRegionTile}_{j,[b,c)}$ 都满足精确性契约，并公开它产生的全部实际消息。
 >
 > 则第 9.2 节的算法与前置文档在 $[b,c)$ 上的直接语义相同，而且每个 region 在本轮恰好调用一次。
@@ -1009,9 +1041,9 @@ $$
 
 考虑当前 region $j_r$。由式 (42)，进入 $j_r$ 的任意空间边只能来自 $\ell$ 更小的 region。因此，到达 $[b,c)$ 的消息要么已经属于切面 $b$ 保存的跨界消息，要么由此前已经运行的 region tile 产生。region 内没有空间边，所以当前 region 的完整输出不会反过来增加本 region 的任何时间纤维。来自 $\ell$ 更大 region 的边也不存在。
 
-此前 region 已经完成所有发送时间小于 $c$ 的作用，并公开相应实际消息，所以其出边 seal 可以推进到至少 $c$。结合已经给定的外部输入 seal，当前 region 在整个 $[b,c)$ 上的全部时间纤维可以在一次调用前固定。精确性契约保证该调用产生与参考规则相同的选择、状态和输出。它的所有跨 region 输出只流向后续 region，不要求重新访问已经完成的 region。
+此前 region 已经完成所有发送时间小于 $c$ 的作用，并公开相应实际消息，所以其出边 seal 可以推进到至少 $c$。结合已经给定的外部输入 seal，当前 region 在整个 $[b,c)$ 上的全部时间纤维可以在一次调用前固定。当前 region 的 selector-history 只按逻辑时间在本 region 内递推；它不增加任何输入纤维。精确性契约保证该调用产生与参考规则相同的选择、节点状态、selector-history 和输出。它的所有跨 region 输出只流向后续 region，不要求重新访问已经完成的 region。
 
-归纳到 $j_m$ 后，区间中每个节点的状态和输出都与直接语义相同。前置文档的切面继续定理再给出相同的 $Q_c$。$\square$
+归纳到 $j_m$ 后，区间中的节点状态、selector-history 和输出都与直接语义相同。前置文档的切面继续定理再给出相同的 $Q_c$。$\square$
 
 ### 9.3 chunk prefill 推论
 
@@ -1035,26 +1067,46 @@ $$
 
 式 (44) 是 tile 边界的比例，不是总算术工作量的加速比。
 
-### 9.4 selector 的时间扫描仍是独立问题
+### 9.4 节点状态与 selector-history 的控制扫描
 
-严格分层消除了 region 内消息反馈，但节点状态仍可能满足跨时间递归。特别是，当 selector 描述量读取旧状态或候选新状态时，时间 $\theta+1$ 的 selector 输入可能依赖时间 $\theta$ 的选择结果。
+严格分层消除了 region 内消息反馈，但节点状态与 selector-history 仍可能跨时间递归。特别是，时间 $\theta+1$ 的 selector 输入可以经 $q_v^{\theta+1}$ 或 $y_j^{\theta+1}$ 依赖时间 $\theta$ 的选择结果。因此，定理 7 保证一次 region API 调用和一次空间扫描，却不保证 region 内部具有与 $T$ 无关的并行深度。
 
-因此，定理 7 保证一次 region API 调用和一次空间扫描，却不保证 region 内部具有与 $T$ 无关的并行深度。
+不过，当前语义还给出一个重要的两阶段求值次序。对固定 region，可以先按 $\theta$ 扫描：
 
-若还要证明 selector 自身可以跨时间并行，需要增加至少一种结构：
+$$
+\left(
+(B_{v,\theta})_{v\in\mathcal R_j},
+(q_v^\theta)_{v\in\mathcal R_j},
+y_j^\theta
+\right)
+\longmapsto
+\left(
+(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta})_
+{v\in\mathcal C_{j,\theta}},
+\mathcal A_{j,\theta},
+(q_v^{\theta+1})_{v\in\mathcal R_j},
+y_j^{\theta+1}
+\right).
+$$
 
-1. selector 描述量不读取递归状态；
-2. 状态转移可以写成结合的 scan；
-3. 给出一个满足式 (34) 的专用时间批量 backend；
-4. 接受 tile 内部的顺序控制扫描，但把昂贵节点作用按 active 坐标重新打包。
+这一步不必先应用任何 $\operatorname{Full}_v$：前置文档式 (14) 的 selector step 不读取完整输出，而式 (42) 既排除了 region 内消息边，也使当前 region 的输出只流向严格更后层，不能经下游路径返回当前 region。扫描结束后，每个 active 完整输出作用的 $(q_v^{\theta+1},\theta,h_{v,\theta})$ 都已经确定，因而可以按节点收集 active 坐标，再交给该节点的批量 backend。
 
-第四种情形仍可能具有实际价值：region 内没有空间边，所以 selector 扫描确定 active sets 后，可以按节点收集整个时间块的 active 坐标，再调用节点的大块 kernel。本文不从任意全函数自动推出这种 kernel 的效率。
+所以要区分：
+
+1. **外层大 tile**：定理 7 已经给出；
+2. **tile 内控制扫描**：可以顺序包含在一次 packed API 或设备编译循环中；
+3. **昂贵节点计算的批量化**：需要各节点另给精确 batch witness，但可以在控制扫描后按节点打包；
+4. **低 span**：只有状态转移可结合 scan、可 causal-bulk，或另有专用算法时才能声称。
+
+把 $\operatorname{Agg}$、$\operatorname{Upd}$、$\operatorname{Read}$ 与 $\operatorname{SelStep}$ 称为“轻量控制”是额外成本假设，不是集合论结论。类似地，固定集合 $Y_j$ 不保证其机器编码大小有界；实际高性能 profile 还应要求 history 的表示与一步更新时间不随已处理 token 数增长。
 
 ## 10. 典型拓扑
 
 ### 10.1 串行 Transformer block
 
 把每个 block 作为一个节点，并让每个节点单独构成一个 region。region 内自然无边，区域商图就是原链，所以式 (42) 成立。
+
+普通 Transformer 可以把每个 $Y_j$ 取为单点集，或让 selector-history 不改变 always-active 选择；这样新增坐标不会改变通常的 chunk prefill。
 
 若节点 backend 已经证明 causal attention、SSM 或 FFN 的 chunk 求值与逐 token 语义相同，则定理 7 的 region 顺序就是普通 block 顺序：
 
@@ -1071,7 +1123,7 @@ $$
 
 可以把同一 MoE 层的全部专家放入一个 region，并要求专家之间没有空间边。前一 region 的 router 或输入节点产生候选描述，当前 selector 在每个时间选择 active experts。
 
-对一个完整时间块，先求出 active sets。对专家 $e$ 定义其 active 坐标集合：
+selector-history 可以保存各专家的饱和计数或固定精度移动平均负载，并让后续选择读取这些数值。对一个完整时间块，先沿时间扫描 history 并求出 active sets。对专家 $e$ 定义其 active 坐标集合：
 
 $$
 T_e
@@ -1082,7 +1134,7 @@ e\in\mathcal A_{\rho(e),\theta}\}.
 \tag{45}
 $$
 
-随后把 $T_e$ 对应的输入打包交给 expert tile。式 (45) 允许不同专家获得不同大小的批次；算法存在性不保证每个 $T_e$ 都足够大，也不保证负载均衡。
+随后把 $T_e$ 对应的输入打包交给 expert tile。式 (45) 允许不同专家获得不同大小的批次；算法存在性不保证每个 $T_e$ 都足够大，也不保证负载均衡。history 扫描顺序执行并不要求把昂贵 expert 计算也拆成逐时间调用。
 
 ### 10.3 真正的 graded DAG
 
@@ -1120,7 +1172,7 @@ $$
 
 此时 $J$ 只有一个元素，区域商图没有跨区域边，因而平凡无环。但这没有说明 region 内部能否批量化。
 
-若式 (38) 成立，全局 selector 每次至多处理一个候选，可能不妨碍节点 chunk。若许多拓扑层在同一时间成为候选，全局 selector 会形成跨节点屏障，节点级整块顺序一般不再成立。
+若式 (38) 成立，全局 selector 每次至多处理一个候选，但共享的 selector-history 仍会把不同时刻串联起来；只有这种依赖可由一次 tile 内扫描承接时，它才可能不妨碍节点 chunk。若许多拓扑层在同一时间成为候选，全局 selector 还会形成跨节点屏障，节点级整块顺序一般不再成立。
 
 这说明：
 
@@ -1171,7 +1223,8 @@ $$
 3. **来源可辨识性**：$\operatorname{Agg}_v$ 是否保留了需要的边、端口或时间信息；
 4. **状态稳定性**：不同时间尺度是否造成不可控制的状态增长或梯度路径；
 5. **边界成本**：$W_b$ 的大小、drain 延迟和 halo 是否可接受；
-6. **selector 负载**：active 坐标是否足以形成有用批次。
+6. **selector 负载**：active 坐标是否足以形成有用批次；
+7. **history 闭环**：负载反馈是否稳定，history 的表示与更新时间是否保持有界。
 
 TimedDAG 语义允许这些结构，但不替模型设计或训练实验回答上述问题。
 
@@ -1179,7 +1232,7 @@ TimedDAG 语义允许这些结构，但不替模型设计或训练实验回答�
 
 本文已经得到的正向结论可以按强度排列为：
 
-1. **任意正时延 TimedDAG**：定理 4 给出安全标量输入切面，前置文档给出精确 continuation。
+1. **任意正时延 TimedDAG**：定理 4 给出安全标量输入切面，前置文档给出包含节点状态、selector-history 与在途消息的精确 continuation。
 2. **路径时延跨度有界**：式 (23)--(27) 给出 chunk 边界厚度的结构尺度。
 3. **graded DAG**：引理 3 给出节点级 token 对齐切面。
 4. **严格分层 region**：定理 7 给出每个时间块只扫描一次所有 region 的算法。
@@ -1189,7 +1242,7 @@ TimedDAG 语义允许这些结构，但不替模型设计或训练实验回答�
 
 1. 所有 TimedDAG 都具有不被切碎的大 tile 计划；
 2. 区域商图无环单独足以推出高性能；
-3. 任意 selector 或节点状态递归都可以低深度并行；
+3. 任意 selector、selector-history 或节点状态递归都可以低深度并行；
 4. $T-h$ 可以被解释成一个与后 $h$ 个 token 完全分离的 token 子问题；
 5. tile 数量少自动表示实际运行时间短；
 6. 多时间尺度汇合一定有利于训练或模型效果。
@@ -1221,9 +1274,9 @@ $$
 2. 对 16 节点单位时延链，分别取 $D=1$ 与 $D=16$，计算 $w(v_r)$、$h(v_r)$ 和 $\Delta_{\max}$。
 3. 把链 $v_0\to\cdots\to v_5$ 分成连续 region 与奇偶 region，分别写出 $Q_\rho$。
 4. 给定一个严格分层函数 $\ell$，证明同一 region 中不存在两个互相可达的不同节点。
-5. 对一个长度 $T$ 的输入，在纸上写出 $Q_{DT}$ 中必须保留的状态与跨界消息；解释为什么不能只保存最后一个节点的状态。
+5. 对一个长度 $T$ 的输入，在纸上写出 $Q_{DT}$ 中必须保留的节点状态、selector-history 与跨界消息；解释为什么不能只保存最后一个节点的状态。
 6. 构造一个所有节点共用 selector、但满足式 (38) 的例子；再构造一个不满足式 (38) 并迫使对角时间波前的例子。
-7. 为一个两专家 MoE region 写出式 (45) 的两个 active 坐标集合，并说明空集合为什么不破坏算法正确性。
+7. 为一个两专家 MoE region 写出累计激活次数 history，手算式 (45) 的两个 active 坐标集合；说明为何可以先完成 history 扫描，再按专家批量应用 $\operatorname{Full}$。
 8. 给出一个满足式 (29) 的两路径 DAG，并检查某个自回归输出是否满足式 (32)。
 
 ---
@@ -1246,22 +1299,22 @@ $$
 > `tail` 是有限输入最后一个主切面以后的剩余事件。`drain` 表示输入已经声明结束后，把这些剩余事件推进到完整终点。
 
 > [!info]- S.4　tile、kernel 与 launch
-> `tile` 对应式 (33) 的有限事件集合及其边界输入。`kernel` 对应式 (34) 中的联合函数 $\mathcal K$。`launch count` 对应外层调用多少次这样的联合函数。
+> `tile` 对应式 (33) 的有限事件集合及其边界输入；边界状态同时包括节点状态与 selector-history。`kernel` 对应式 (34) 中的联合函数 $\mathcal K$。`launch count` 对应外层调用多少次这样的联合函数。
 >
 > 少量 launch 不等于少量算术工作；整个参考递归若被隐藏进一次全图调用，launch count 就不再是有意义的性能指标。
 
 > [!info]- S.5　region、selector 与 placement
-> `region` 对应 $\rho$ 的一个纤维 $\mathcal R_j$。`selector` 对应固定时间上式 (36) 的完整候选集合上的函数。
+> `region` 对应 $\rho$ 的一个纤维 $\mathcal R_j$。`selector` 对应固定时间上式 (36) 的完整候选集合及旧 history 上的函数；`selector-history` 对应 $y_j^\theta$，不是任一节点的 $q_v^\theta$。
 >
 > region 不是设备、线程组、并行域或内存位置。实现可以让一个 region 跨设备，也可以把多个 region 放在同一设备；若要讨论局部性，必须另给 placement 与成本模型。
 
 > [!info]- S.6　ready 与 selector closure
 > 一个 tile 的输入纤维已被 seal，并且满足式 (33) 的外部依赖条件时，可以称它为 `ready`。若 tile 含区域选择作用，还必须满足式 (37) 的 selector closure。
 >
-> “某节点当前有输入”不足以证明 selector ready，因为同一区域、同一时间仍可能出现尚未公开的其他候选节点。
+> “某节点当前有输入”不足以证明 selector ready，因为同一区域、同一时间仍可能出现尚未公开的其他候选节点；当前 selector-history 也必须由左边界或前一选择作用确定。
 
-> [!info]- S.7　state scan
-> `state scan` 表示按时间组合节点状态转移。若转移具有结合的函数复合表示，可以采用 parallel scan；若没有这种结构，`RunRegionTile` 内部可能仍需顺序处理状态。
+> [!info]- S.7　state 与 selector-history scan
+> `state scan` 表示按时间组合节点状态或 selector-history 转移。若转移具有结合的函数复合表示，可以采用 parallel scan；若没有这种结构，`RunRegionTile` 内部可能仍需顺序处理状态。
 >
 > 本文的大块调度定理不把任意状态递归自动视为可并行 scan。
 
@@ -1272,6 +1325,6 @@ $$
 > `causal leakage` 在本文中表示某个用于预测位置 $r+1$ 的输出违反式 (32)，即它在增广事件图中依赖了位置大于 $r$ 的输入。逻辑时间递增本身不能排除这种 token 次序泄漏。
 
 > [!info]- S.10　高性能通用 prefill
-> 本文的 `通用` 只针对已经明示的结构类和 backend 契约；`高性能` 只表示外层没有把随 $T$ 增长的主要节点工作预先拆成 $T$ 次小调用。
+> 本文的 `通用` 只针对已经明示的结构类和 backend 契约；`高性能` 只表示外层没有把随 $T$ 增长的主要节点工作预先拆成 $T$ 次小调用。在严格分层类且每个节点已有精确 batch witness 时，一次 packed API 内顺序扫描轻量节点状态与 selector-history，再批量应用昂贵 $\operatorname{Full}$，符合这个口径。
 >
-> 要进一步声称低 span、work-efficient、设备高利用率或端到端加速，必须另外给出计算模型、成本函数、具体 backend 和测量结果。
+> 这个口径不等于低 span。要进一步声称 low-span、work-efficient、设备高利用率或端到端加速，必须另外给出计算模型、成本函数、具体 backend 和测量结果。

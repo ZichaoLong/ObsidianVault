@@ -1,12 +1,13 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-09
+as-of: 2026-09-10
 tags:
   - tide
   - timed-dag
   - region
   - selector
+  - selector-history
   - logical-time
   - mathematics
   - learning-note
@@ -15,7 +16,7 @@ tags:
 # 带区域选择的 TimedDAG：从零开始的数学定义
 
 > [!summary] 本文的阅读前提
-> 本文只假设读者熟悉集合、函数、自然数、有限求和、最小值和数学归纳法。有向图、逻辑时间、输入端口、消息、时间纤维、区域、候选集合、选择函数、封闭下界以及事件图都会在本文中重新定义。
+> 本文只假设读者熟悉集合、函数、自然数、有限求和、最小值和数学归纳法。有向图、逻辑时间、输入端口、消息、时间纤维、区域、候选集合、选择函数、选择历史、封闭下界以及事件图都会在本文中重新定义。
 >
 > 本文的每一项定义都写在文内，其他文档与讨论均不是阅读前提。标题中的 `region`、`selector` 和完整 `TimedDAG` 规格只是待定义对象的名称；它们分别在第 2.4、5.3、6.5 节获得精确定义。
 >
@@ -32,8 +33,9 @@ tags:
 4. 到达同一节点、同一时间的全部外部输入和内部消息被共同处理；
 5. 节点集合被划分为若干区域；同一区域中，在同一时间收到至少一个输入的全部节点共同参加一次选择；
 6. 只有在能够证明这组节点不会再增加时，在线求值过程才可以作出选择；
-7. 区域不是节点，不接收消息，也不发送消息；
-8. 区域之间不要求构成 DAG。
+7. 每个区域的 selector 可以保存一个显式的跨时间历史状态；
+8. 区域不是节点，不接收普通消息，也不发送普通消息；
+9. 区域之间不要求构成 DAG。
 
 正文分成两个层次。
 
@@ -95,6 +97,8 @@ $$
 $$
 
 因此，$(d_v)_{v\in C}$ 表示“由 $v$ 标记的函数坐标族”，不是一个依赖排列顺序的列表。若 $C=\{a,b\}$，那么 $(d_v)_{v\in C}$ 就是同时规定 $d(a)$ 与 $d(b)$；交换纸面上书写 $a,b$ 的顺序不会改变这个函数。
+
+当 $C=\varnothing$ 时，上式的积集合只含唯一的空函数；本文把这个空函数记为 $()$。
 
 ### 1.3 一个表示“不产生值”的符号
 
@@ -282,7 +286,7 @@ $$
 
 从现在起，集合 $\mathcal R_j$ 的系统别名是 **region**，中文称为区域。式 (5)--(6) 是这个词在正文中的全部基础含义：每个节点恰好属于一个区域。
 
-区域没有自己的入边、出边或状态。$J$ 上目前也没有定义任何边。第 10.6 节会为了比较额外构造一张区域商图，但那张商图不参与本模型的消息传递。
+区域作为节点子集没有自己的入边、出边或节点状态。第 5.3 节会另外为每个 $j\in J$ 定义 selector-history；它不属于任何 $S_v$，也不直接接收或发送原子。$J$ 上目前没有定义任何边。第 10.6 节会为了比较额外构造一张区域商图，但那张商图不参与本模型的消息传递。
 
 ## 3. 外部输入记录、内部消息与时间纤维
 
@@ -545,9 +549,9 @@ $$
 
 不同出边和不同输出端口是函数的不同坐标。因此模型直接支持一个节点向多个内部去向和多个外部去向给出不同的值。
 
-## 5. 区域候选集合、选择函数与状态采用
+## 5. 区域候选集合、选择函数、选择历史与状态采用
 
-本节在第 2.4 节的节点划分上定义共同选择。所有对象都只涉及同一个逻辑时间。
+本节在第 2.4 节的节点划分上定义共同选择。本次选择只读取同一逻辑时间的候选描述量，但 selector-history 会连接同一区域在不同时间的选择。
 
 ### 5.1 候选节点集合
 
@@ -582,7 +586,15 @@ $$
 
 若 $v\in\mathcal R_j$，则该区域为节点 $v$ 使用式 (11) 中的 $d^{\tau_j}$。区域中的所有候选节点使用同一种模式，但各节点的读取函数可以不同。
 
-### 5.3 选择函数
+### 5.3 带历史的选择函数
+
+对每个 $j\in J$，给定非空集合 $Y_j$ 和元素：
+
+$$
+y_j^{\mathrm{init}}\in Y_j.
+$$
+
+$Y_j$ 称为区域 $j$ 的**选择历史状态集合**，$y_j^{\mathrm{init}}$ 是初始选择历史。
 
 对每个 $j\in J$ 固定整数：
 
@@ -601,25 +613,32 @@ $$
 再给定全函数族：
 
 $$
-\operatorname{Sel}_{j,C}:
-\mathbb N\times\prod_{v\in C}D_v
-\to\mathsf{Allowed}_{j,C}.
+\operatorname{SelStep}_{j,C}:
+Y_j\times\mathbb N\times\prod_{v\in C}D_v
+\to\mathsf{Allowed}_{j,C}\times Y_j.
 \tag{14}
 $$
 
-并规定 $\operatorname{Sel}_{j,\varnothing}$ 的值是 $\varnothing$。
-
-若某个时间的完整候选集合是 $C$，候选描述量族是 $(d_v)_{v\in C}$，定义：
+对空候选集合，规定：
 
 $$
-A
+\operatorname{SelStep}_{j,\varnothing}(y,\theta,())
+=(\varnothing,y).
+$$
+
+若某个时间的完整候选集合是 $C$，选择以前的历史是 $y\in Y_j$，候选描述量族是 $(d_v)_{v\in C}$，定义：
+
+$$
+(A,y')
 =
-\operatorname{Sel}_{j,C}
-(\theta,(d_v)_{v\in C}).
+\operatorname{SelStep}_{j,C}
+\left(y,\theta,(d_v)_{v\in C}\right).
 \tag{15}
 $$
 
-从现在起，式 (14) 的系统别名是 **selector**，式 (15) 的集合 $A$ 称为 active set，其中的元素称为 active nodes。由值域定义自动得到：
+这里 $y'$ 是本次选择以后的历史。式 (15) 的两个输出属于同一个确定函数值，因此 $y'$ 可以记录 $A$、候选集合、描述量或由它们算出的数值摘要。它不能读取尚未应用的 $\operatorname{Full}_v$ 输出，因为这些输出不在式 (14) 的定义域中。
+
+从现在起，式 (14) 的系统别名是 **selector step**，简称 selector；$y$ 的系统别名是 **selector-history**。式 (15) 的集合 $A$ 称为 active set，其中的元素称为 active nodes。由值域定义自动得到：
 
 $$
 A\subseteq C,
@@ -627,7 +646,9 @@ A\subseteq C,
 |A|\le K_j.
 $$
 
-式 (14) 没有规定必须按最大分数选择。最大值、Top-$K$、固定查表或任何别的确定性规则都可以成为一个具体的 $\operatorname{Sel}_{j,C}$。若规则可能遇到相等描述量，必须把确定的平局规则写进函数；不得让观察顺序代替函数定义。
+式 (14) 没有规定必须按最大分数选择。最大值、Top-$K$、固定查表或任何别的确定性规则都可以成为一个具体的 $\operatorname{SelStep}_{j,C}$。若规则可能遇到相等描述量，必须把确定的平局规则写进函数；不得让观察顺序代替函数定义。
+
+若 $Y_j$ 是单点集，就精确退化为不保存历史的 selector。若取 $Y_j=\mathbb N^{\mathcal R_j}$，其元素可以记录区域内各节点过去被选择的次数；取实数坐标族还可以记录确定性移动平均。这里的“概率”只能是状态中保存的数值；若要让选择本身随机，还必须另给概率空间和随机变量，当前确定性规格没有暗中加入它们。
 
 ### 5.4 哪些候选节点采用候选新状态
 
@@ -673,21 +694,18 @@ $$
 对一个非空候选集合，本模型的定义顺序是：
 
 $$
-\text{完整纤维}
-\longrightarrow
-(h,\widetilde q,d)
-\longrightarrow
-A
-\longrightarrow
-q'
-\longrightarrow
-\operatorname{Full}.
+\begin{aligned}
+(q,B)&\longrightarrow(h,\widetilde q,d),\\
+(y,d)&\longrightarrow(A,y'),\\
+(A,q,\widetilde q)&\longrightarrow q',\\
+(q',\theta,h)&\longrightarrow\operatorname{Full}.
+\end{aligned}
 \tag{18}
 $$
 
-式 (18) 是函数自变量之间的依赖，不是对处理器指令或现实耗时的描述。一个实现可以提前求出某个纯函数值，但不能让后续函数作用读取尚未由式 (17) 确定的状态，也不能在式 (15) 以前发布只允许 active 节点产生的消息。
+式 (18) 是函数自变量之间的依赖，不是对处理器指令或现实耗时的描述。一个实现可以提前求出某个纯函数值，但不能让后续函数作用读取尚未由式 (15) 或 (17) 确定的状态，也不能在式 (15) 以前发布只允许 active 节点产生的消息。特别地，本次 $\operatorname{Full}$ 不参与本次 selector-history 更新。
 
-区域只计算集合 $A$。消息和外部输出始终由 $v\in A$ 的节点按照自己的式 (12) 产生。
+区域选择作用只确定 $(A,y')$。普通消息和外部输出仍始终由 $v\in A$ 的节点按照式 (12) 产生。
 
 ## 6. 完整输入下的直接语义
 
@@ -744,6 +762,14 @@ $E_x$ 包含每个输入位置恰好一条记录。
 $$
 q_v^{0}=q_v^{\mathrm{init}}.
 $$
+
+对每个区域，同时定义递归开始时的选择历史：
+
+$$
+y_j^0=y_j^{\mathrm{init}}.
+$$
+
+以后，$y_j^\theta$ 表示处理时间 $\theta$ 的区域选择以前的历史；上标是逻辑时间切面，不是已经发生的选择次数。
 
 令 $M_{<0}=\varnothing$。依次对：
 
@@ -807,17 +833,24 @@ $$
 定义：
 
 $$
-\mathcal A_{j,\theta}
+(\mathcal A_{j,\theta},y_j^{\theta+1})
 =
-\operatorname{Sel}_{j,\mathcal C_{j,\theta}}
+\operatorname{SelStep}_{j,\mathcal C_{j,\theta}}
 \left(
+y_j^\theta,
 \theta,
 (d_{v,\theta})_{v\in\mathcal C_{j,\theta}}
 \right).
 \tag{24}
 $$
 
-当 $\mathcal C_{j,\theta}=\varnothing$ 时，式 (24) 的值按第 5.3 节规定为 $\varnothing$。
+当 $\mathcal C_{j,\theta}=\varnothing$ 时，第 5.3 节的规定给出：
+
+$$
+\mathcal A_{j,\theta}=\varnothing,
+\qquad
+y_j^{\theta+1}=y_j^\theta.
+$$
 
 #### 第四步：定义时间 $\theta$ 以后的节点状态
 
@@ -882,7 +915,7 @@ $$
 M_{<\theta+1}=M_{<\theta}\cup M_\theta.
 $$
 
-这就完成从时间 $\theta$ 到 $\theta+1$ 的递归。
+这就同时完成节点状态与选择历史从时间 $\theta$ 到 $\theta+1$ 的递归。
 
 注意，由式 (7) 和 $\delta(a)>0$，任意 $m\in M_\theta$ 都满足：
 
@@ -932,7 +965,7 @@ $$
 \mid\mathcal C_{j,\theta}\ne\varnothing\}.
 $$
 
-其中的元素 $(j,\theta)$ 称为输入 $x$ 的一个**区域选择事件**。它表示把区域 $j$ 在时间 $\theta$ 的整个候选描述量族一次交给式 (24)。当候选集合为空时，式 (24) 仍有规定值 $\varnothing$，但本文不把这个没有候选节点的平凡位置收入 $\mathcal E_x^{\mathrm{sel}}$。
+其中的元素 $(j,\theta)$ 称为输入 $x$ 的一个**区域选择事件**。它表示把区域 $j$ 在时间 $\theta$ 的旧选择历史与整个候选描述量族一次交给式 (24)，并共同确定 active set 与下一选择历史。当候选集合为空时，式 (24) 仍规定 active set 为空、选择历史不变，但本文不把这个恒等位置收入 $\mathcal E_x^{\mathrm{sel}}$。
 
 由式 (22) 立即得到：
 
@@ -955,6 +988,7 @@ $$
 > - 每个完整时间纤维 $B_{v,\theta}$；
 > - 每个候选集合 $\mathcal C_{j,\theta}$；
 > - 每个 active set $\mathcal A_{j,\theta}$；
+> - 每个区域的 selector-history 序列；
 > - 节点事件集合 $\mathcal E_x^{\mathrm{node}}$ 与区域选择事件集合 $\mathcal E_x^{\mathrm{sel}}$；
 > - 每个节点的状态序列；
 > - 有限内部消息集合 $M^*$；
@@ -962,7 +996,7 @@ $$
 
 **证明。** 对 $\theta$ 作归纳。
 
-在 $\theta=0$ 时，$M_{<0}=\varnothing$，所以式 (21) 只由已给的 $E_x$ 唯一确定。第 4--5 节给定的 $\operatorname{Agg}$、$\operatorname{Upd}$、三个 $\operatorname{Read}$、$\operatorname{Sel}$ 与 $\operatorname{Full}$ 都是全函数，因而按式 (22)--(28) 依次求值会给出唯一结果。
+在 $\theta=0$ 时，$M_{<0}=\varnothing$，所以式 (21) 只由已给的 $E_x$ 唯一确定。第 4--5 节给定的 $\operatorname{Agg}$、$\operatorname{Upd}$、三个 $\operatorname{Read}$、$\operatorname{SelStep}$ 与 $\operatorname{Full}$ 都是全函数；已知 $y_j^0$ 后，式 (24) 还同时唯一确定 $\mathcal A_{j,0}$ 与 $y_j^1$。因而按式 (22)--(28) 依次求值会给出唯一结果。
 
 假设所有小于 $\theta$ 的结果已经唯一确定，则 $M_{<\theta}$ 唯一。式 (21) 因而唯一；随后所有步骤仍是已给函数的求值，所以时间 $\theta$ 的结果唯一。自然数归纳法给出整个递归的唯一性。
 
@@ -972,7 +1006,7 @@ $$
 \iota_i(k)+\Delta(\zeta),
 $$
 
-其中 $\zeta$ 是从 $\gamma(i)$ 出发的一条有向路径。它不大于 $\Theta_{\max}$。若这个节点事件沿出边 $a$ 产生消息，就把 $a$ 接到 $\zeta$ 后面；所得仍是从 $\gamma(i)$ 出发的路径，所以这条新消息的到达时间也不大于 $\Theta_{\max}$。固定时间上界、有限节点、有限边和有限端口共同推出两个事件集合、消息集合和输出记录集合均有限。$\square$
+其中 $\zeta$ 是从 $\gamma(i)$ 出发的一条有向路径。它不大于 $\Theta_{\max}$。若这个节点事件沿出边 $a$ 产生消息，就把 $a$ 接到 $\zeta$ 后面；所得仍是从 $\gamma(i)$ 出发的路径，所以这条新消息的到达时间也不大于 $\Theta_{\max}$。固定时间上界、有限节点、有限区域、有限边和有限端口共同推出两类事件集合、两类状态坐标族、消息集合和输出记录集合均有限。$\square$
 
 定义：
 
@@ -983,7 +1017,15 @@ Z^*=\bigcup_{\theta=0}^{\Theta_{\max}}Z_\theta.
 \tag{30}
 $$
 
-最终状态是 $(q_v^{\Theta_{\max}+1})_{v\in V}$。把完整计算记录明确定义为：
+最终节点状态和最终选择历史分别是：
+
+$$
+(q_v^{\Theta_{\max}+1})_{v\in V},
+\qquad
+(y_j^{\Theta_{\max}+1})_{j\in J}.
+$$
+
+把完整计算记录明确定义为：
 
 $$
 \mathcal T_x
@@ -994,6 +1036,8 @@ $$
 {\substack{j\in J\\\theta\in[0,\Theta_{\max}+1)}},
 (q_v^\theta)_
 {\substack{v\in V\\\theta\in[0,\Theta_{\max}+2)}},
+(y_j^\theta)_
+{\substack{j\in J\\\theta\in[0,\Theta_{\max}+2)}},
 M^*,Z^*,
 (f^A_{v,\theta},f^O_{v,\theta})_
 {\substack{j\in J,\ \theta\in[0,\Theta_{\max}+1)\\
@@ -1001,7 +1045,7 @@ v\in\mathcal A_{j,\theta}}}
 \right),
 $$
 
-其中时间纤维、选择和逐坐标输出函数值的时间坐标满足 $0\le\theta\le\Theta_{\max}$，状态还包含递归结束后的 $\theta=\Theta_{\max}+1$。称 $\mathcal T_x$ 为输入 $x$ 的完整计算记录。
+其中时间纤维、选择和逐坐标输出函数值的时间坐标满足 $0\le\theta\le\Theta_{\max}$，两类状态还包含递归结束后的 $\theta=\Theta_{\max}+1$。称 $\mathcal T_x$ 为输入 $x$ 的完整计算记录。
 
 本文把第 1--5 节的数据以及第 6 节所定义的直接语义合称为一个**带区域选择的 TimedDAG 规格**。
 
@@ -1134,6 +1178,8 @@ $$
 $$
 
 各区域都取 $\tau_j=0$ 和 $\kappa_j=0$，并取 $K_0=K_1=K_2=1$。单节点区域 $\mathcal R_0,\mathcal R_1$ 的 selector 在候选非空时选择唯一节点。
+
+本例先令每个 $Y_j=\{*\}$、$y_j^{\mathrm{init}}=*$；每个 selector step 的第二个输出仍为 $*$。因此，本例的选择历史不携带额外信息。
 
 区域 $\mathcal R_2$ 取 $K_2=1$，其 selector 选择描述量较大的节点；若相等，固定选择 $a$。这条平局规则使它成为一个确定函数。
 
@@ -1271,6 +1317,8 @@ $$
 \widetilde q_{b,5}=7.
 $$
 
+本例取 $Y_j=\{*\}$，使 selector-history 不影响下面的比较。
+
 令 selector 选择描述量较大的一个节点。若 $\tau_j=-$，它读取旧状态 $(0,6)$，所以：
 
 $$
@@ -1294,9 +1342,42 @@ $$
 
 所以 $\tau_j$ 与 $\kappa_j$ 是两项独立数学参数：前者可能改变 active set，后者可能改变未被选节点的未来状态。附录 S 中的 `pre/post` 与 `SD/BO` 只是这四种数学组合的系统名称。
 
+### 7.7 一个会影响未来选择的历史
+
+只考察区域 $\mathcal R_j=\{a,b\}$，取：
+
+$$
+Y_j=\mathbb N^{\{a,b\}},
+\qquad
+y_j^0(a)=y_j^0(b)=0,
+\qquad K_j=1.
+$$
+
+定义 selector step 在候选非空时选择历史计数最小的候选，计数相等时固定令 $a$ 排在 $b$ 前；随后只把被选节点的计数加一。假设时间 $0$ 与 $2$ 的候选集合都是 $\{a,b\}$，时间 $1$ 的候选集合为空。于是：
+
+$$
+\mathcal A_{j,0}=\{a\},
+\qquad
+(y_j^1(a),y_j^1(b))=(1,0),
+$$
+
+$$
+y_j^2=y_j^1,
+$$
+
+$$
+\mathcal A_{j,2}=\{b\},
+\qquad
+(y_j^3(a),y_j^3(b))=(1,1).
+$$
+
+时间 $2$ 的描述量即使与时间 $0$ 相同，旧历史不同也会改变 active set。这里的 $y_j^\theta$ 是递归状态，不是把全部过去事件原样保存的一份日志。
+
 ## 8. 阶段化记录、封闭下界与候选集合关闭
 
 第 6 节直接使用完整的 $E_x$ 与递归产生的 $M^*$。本节不再定义另一份计算结果，而是在已经固定的完整记录 $\mathcal T_x$ 上增加一项数学数据：各记录进入一条递增子集链的阶段。附录 S 才把“进入当前子集”翻译成系统语言中的可见或公开。
+
+本节的 $H_n$ 是已经进入阶段 $n$ 的**内部消息集合**；它与式 (14) 的 selector-history 状态 $y_j^\theta$ 是两种不同对象。
 
 ### 8.1 阶段编号与阶段秩
 
@@ -1585,7 +1666,7 @@ $$
 
 于是 $\lambda_{n'}(\mathcal R_2)=\infty>5$，定理 3 才证明候选集合等于 $\{a,b\}$。
 
-### 8.8 输入完整与状态就绪是两个命题
+### 8.8 输入完整、节点状态与选择历史就绪是三个命题
 
 定理 3 只证明时间 $\theta$ 的候选节点和每个候选节点的完整纤维已经确定。若式 (23) 使用 $q_v^\theta$ 或 $\widetilde q_{v,\theta}$，还必须先知道 $q_v^\theta$。
 
@@ -1612,14 +1693,38 @@ $$
 
 $\operatorname{StatePred}(v,\theta)$ 索引的式 (25) 按 $r$ 递增组成第 6 节状态序列的完整前缀；上述包含关系成立时，该前缀已经到达唯一的 $q_v^\theta$。
 
+再任取一个区域选择事件子集：
+
+$$
+\mathsf{Selected}\subseteq\mathcal E_x^{\mathrm{sel}}.
+$$
+
+对区域 $j$ 定义选择历史前驱集合：
+
+$$
+\operatorname{HistPred}(j,\theta)
+=
+\{(j,r)\in\mathcal E_x^{\mathrm{sel}}\mid r<\theta\}.
+$$
+
+定义区域 $j$ 在时间 $\theta$ 的旧选择历史关于 $\mathsf{Selected}$ **就绪**，当且仅当：
+
+$$
+\operatorname{HistPred}(j,\theta)
+\subseteq\mathsf{Selected}.
+$$
+
+候选集合为空的时间只应用恒等规则，不产生区域选择事件；因此，上述集合恰好索引所有真正改变或读取历史的较早 selector step。包含关系成立时，这些步骤按时间组成唯一的 $y_j^\theta$。
+
 所以，对区域选择事件 $(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$，一个统一而保守的求值条件是：
 
 1. $\lambda_n(\mathcal R_j)>\theta$；
 2. 每个 $v\in\mathcal C_{j,\theta}$ 的旧状态关于当前已完成节点事件集合 $\mathsf{Done}$ 就绪；
-3. 每个候选描述量已经按式 (23) 求出；
-4. $(j,\theta)$ 尚未应用过式 (24)。
+3. $\operatorname{HistPred}(j,\theta)\subseteq\mathsf{Selected}$；
+4. 每个候选描述量已经按式 (23) 求出；
+5. $(j,\theta)$ 尚未应用过式 (24)。
 
-当 $\tau_j=0$ 时，描述量本身不读取状态，可以先求描述量，再等待状态就绪后采用状态和执行完整函数。这种提前求值不会改变式 (21)--(30) 定义的结果。
+当 $\tau_j=0$ 时，描述量本身不读取节点状态，可以先求描述量，再等待节点状态与 selector-history 就绪后选择、采用状态和执行完整函数。这种提前求值不会改变式 (21)--(30) 定义的结果。
 
 ## 9. 合法的乱序求值
 
@@ -1644,7 +1749,7 @@ $$
 \tag{39}
 $$
 
-三个集合分别索引已经确定节点本地量、已经应用式 (24)，以及已经应用式 (25)--(28) 中相应坐标的事件。“prepared”“selected”“completed”在数学上分别就是式 (39) 的成员关系；阶段秩不是事件固有的逻辑时间。
+三个集合分别索引已经确定节点本地量、已经应用式 (24) 并同时确定 active set 与下一选择历史，以及已经应用式 (25)--(28) 中相应坐标的事件。“prepared”“selected”“completed”在数学上分别就是式 (39) 的成员关系；阶段秩不是事件固有的逻辑时间。
 
 第 8 节的记录链、下界函数和式 (39) 的三条事件链合在一起，称为一条**阶段化求值轨迹**。它合法，当且仅当满足式 (33)--(34)、下面的因果约束以及第 9.2--9.6 节的首次进入条件。本文取 $\mathsf{Prepared}_0=\mathsf{Selected}_0=\mathsf{Completed}_0=\varnothing$。
 
@@ -1708,7 +1813,8 @@ $$
 区域选择事件 $(j,\theta)$ 只有满足下列条件才可属于 $\Delta\mathsf{Selected}_n$：
 
 1. $\lambda_n(\mathcal R_j)>\theta$；
-2. 每个 $v\in\mathcal C_{j,\theta}$ 都满足 $(v,\theta)\in\mathsf{Prepared}_n$。
+2. 每个 $v\in\mathcal C_{j,\theta}$ 都满足 $(v,\theta)\in\mathsf{Prepared}_n$；
+3. $\operatorname{HistPred}(j,\theta)\subseteq\mathsf{Selected}_n$。
 
 合法选择必须把完整函数族：
 
@@ -1716,9 +1822,9 @@ $$
 (d_{v,\theta})_{v\in\mathcal C_{j,\theta}}
 $$
 
-一次交给式 (24)。不能只对已经较早准备好的真子集作出不可撤销选择。
+与旧选择历史 $y_j^\theta$ 一次交给式 (24)。不能只对已经较早准备好的真子集作出不可撤销选择，也不能跳过一个尚未应用的较早 selector step。
 
-若 $\mathcal C_{j,\theta}=\varnothing$，则 $(j,\theta)\notin\mathcal E_x^{\mathrm{sel}}$。此时式 (24) 的值已经按定义等于 $\varnothing$，不需要执行选择作用，也不在 $\mathsf{Selected}_n$ 中留下记录。
+若 $\mathcal C_{j,\theta}=\varnothing$，则 $(j,\theta)\notin\mathcal E_x^{\mathrm{sel}}$。此时式 (24) 已按定义令 active set 为空并保持历史，不需要执行选择作用，也不在 $\mathsf{Selected}_n$ 中留下记录。
 
 ### 9.3 合法节点完成
 
@@ -1733,7 +1839,7 @@ $$
 
 ### 9.4 纯函数可以提前求值，语义结果不能提前发布
 
-若 $B_{v,\theta}$ 已经由引理 2 确定，可以先求 $h_{v,\theta}$。若旧状态也已经确定，还可以先求 $\widetilde q_{v,\theta}$ 和三个描述量。
+若 $B_{v,\theta}$ 已经由引理 2 确定，可以先求 $h_{v,\theta}$。若旧状态也已经确定，还可以先求 $\widetilde q_{v,\theta}$ 和三个描述量。若旧选择历史尚未就绪，则仍不能提前确定式 (24) 的任一输出。
 
 这些值可以保存在临时变量中，但在区域选择以前不得：
 
@@ -1806,13 +1912,15 @@ $$
 ### 9.7 次序无关定理
 
 > [!theorem] 定理 4：合法求值次序不改变完整结果
-> 任取两条从相同固定规格与输入 $x$ 开始的完整合法阶段化求值轨迹。则两条轨迹中的函数值、状态、消息与输出都等于同一个 $\mathcal T_x$。
+> 任取两条从相同固定规格与输入 $x$ 开始的完整合法阶段化求值轨迹。则两条轨迹中的函数值、节点状态、选择历史、消息与输出都等于同一个 $\mathcal T_x$。
 
 **证明。** 对二元组 $(\theta,p)$ 作字典序归纳，其中 $p=0,1,2,3$ 依次表示本地准备、区域选择、状态采用、完整输出。
 
 在准备阶段，引理 2 保证所用纤维等于式 (21)，更小逻辑时间的归纳假设保证旧状态等于 $q_v^\theta$，所以式 (23) 的全部量相同。
 
-在选择阶段，定理 3 保证候选集合相同；式 (14) 是函数，因此 active set 相同。
+在选择阶段，定理 3 保证候选集合相同；更小逻辑时间的归纳假设与历史就绪条件保证旧选择历史相同。式 (14) 是函数，因此 active set 与下一选择历史都相同。
+
+若 $\mathcal C_{j,\theta}=\varnothing$，式 (24) 的恒等规则直接给出 $y_j^{\theta+1}=y_j^\theta$，故这些不产生选择事件的历史坐标也相同。
 
 在状态采用与完整输出阶段，式 (16)、(25)--(28) 的每一步都由已经固定的输入和全函数唯一确定，因而新状态、消息和外部输出相同。对有限集合 $\mathcal E_x^{\mathrm{node}}$ 与 $\mathcal E_x^{\mathrm{sel}}$ 中的全部事件完成归纳，便得到整个记录相同。$\square$
 
@@ -1820,7 +1928,7 @@ $$
 
 ## 10. 一次计算产生的事件 DAG
 
-第 6.4 节把 $(v,\theta)$ 作为一个完整的节点事件。但一个节点事件内部既有本地准备和状态采用，同一区域的多个节点事件又共同依赖一次区域选择。为了表示这些依赖，本节把节点事件与区域选择事件进一步拆成较细的**函数作用事件**，再构造它们之间的值与状态依赖图。
+第 6.4 节把 $(v,\theta)$ 作为一个完整的节点事件。但一个节点事件内部既有本地准备和状态采用，同一区域的多个节点事件又共同依赖一次区域选择。为了表示这些依赖，本节把节点事件与区域选择事件进一步拆成较细的**函数作用事件**，再构造它们之间的值、节点状态与 selector-history 依赖图。
 
 第 8--9 节在线证明“以后不会再有另一个原子”的封闭证书没有作为函数作用事件加入本图。若研究在线求值者自身的完整操作图，还需另外加入这些证书及其推导关系；本文不会把未画出的封闭证明冒充为值依赖边。
 
@@ -1848,7 +1956,7 @@ $$
 S_{j,\theta}=(\mathrm{select},j,\theta),
 $$
 
-称为该区域选择事件的**选择作用事件**。若 $v\in\mathcal A_{j,\theta}$，再定义：
+称为该区域选择事件的**选择作用事件**。它是式 (24) 的一次函数作用，同时产生 $\mathcal A_{j,\theta}$ 与 $y_j^{\theta+1}$。若 $v\in\mathcal A_{j,\theta}$，再定义：
 
 $$
 F_{v,\theta}=(\mathrm{full},v,\theta),
@@ -1918,7 +2026,7 @@ $$
 
 这些边正是式 (18) 中的依赖。
 
-### 10.3 同一节点的状态依赖
+### 10.3 节点状态与 selector-history 的跨时间依赖
 
 若：
 
@@ -1943,6 +2051,30 @@ U_{v,\theta}\longrightarrow P_{v,\theta'}.
 $$
 
 它表示 $P_{v,\theta'}$ 使用的旧状态由前一个节点事件的状态采用作用 $U_{v,\theta}$ 决定。
+
+类似地，若：
+
+$$
+(j,\theta),(j,\theta')\in\mathcal E_x^{\mathrm{sel}},
+\qquad
+\theta<\theta',
+$$
+
+并且不存在满足：
+
+$$
+\theta<r<\theta',
+\qquad
+(j,r)\in\mathcal E_x^{\mathrm{sel}}
+$$
+
+的 $r\in\mathbb N$，则令：
+
+$$
+S_{j,\theta}\longrightarrow S_{j,\theta'}
+$$
+
+属于 $\mathscr A_x^{\mathrm{ev}}$。候选集合为空的中间时间只保持历史，所以 $S_{j,\theta'}$ 读取的 $y_j^{\theta'}$ 由前一个实际选择作用确定。这里没有从 $F_{v,\theta}$ 指向后续 $S_{j,\theta'}$ 的 history 边；式 (14) 已经排除了这种直接依赖。不过，过去的完整输出仍可经普通消息影响未来的描述量和选择，例如形成 $F_{v,\theta}\to P_{w,\theta'}\to S_{j,\theta'}$ 的消息依赖路径。
 
 ### 10.4 消息依赖
 
@@ -2008,7 +2140,7 @@ $$
 \bigl(\theta=\theta'\ \text{且}\ p<p'\bigr).
 $$
 
-按这个次序比较秩。同一时间内的依赖严格增加 $p$；状态依赖严格增加 $\theta$；消息依赖由 $\delta(a)>0$ 也严格增加 $\theta$。所以每条事件边都严格增加式 (43)。沿有向边不可能回到原秩，因此事件图没有有向环。
+按这个次序比较秩。同一时间内的依赖严格增加 $p$；节点状态与 selector-history 依赖严格增加 $\theta$；消息依赖由 $\delta(a)>0$ 也严格增加 $\theta$。所以每条事件边都严格增加式 (43)。沿有向边不可能回到原秩，因此事件图没有有向环。
 
 由此得到两项不同事实：
 
@@ -2048,7 +2180,7 @@ $$
 0\longrightarrow1\longrightarrow0.
 $$
 
-这不构成函数作用事件图中的有向环。即使某次计算确实沿这两条空间边依次产生消息，每条消息依赖边也会因 $\delta(a)>0$ 而严格增加逻辑时间。若第一条消息由逻辑时间 $\theta$ 的节点事件产生，那么返回区域 $0$ 时，对应的节点事件与区域选择事件具有某个逻辑时间 $\theta'>\theta$。本文因此不要求区域商图无环。
+这不构成函数作用事件图中的有向环。即使某次计算确实沿这两条空间边依次产生消息，每条消息依赖边也会因 $\delta(a)>0$ 而严格增加逻辑时间。若第一条消息由逻辑时间 $\theta$ 的节点事件产生，那么返回区域 $0$ 时，对应的节点事件与区域选择事件具有某个逻辑时间 $\theta'>\theta$。selector-history 只给同一个 $j$ 的选择事件增加跨时间边，不增加式 (44) 的跨区域边。本文因此不要求区域商图无环。
 
 ## 11. 在逻辑时间切面停止与继续
 
@@ -2060,7 +2192,7 @@ $$
 2. 每个满足 $(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$ 且 $\theta<b$ 的区域选择事件都已经完成 $S_{j,\theta}$；
 3. 上述完整输出作用事件产生的内部消息和外部输出都已经确定。
 
-这是一个逻辑时间边界。它不包含“在同一次区域选择进行到一半时暂停”的情况。
+这是一个逻辑时间边界。第二项也保证每个 $y_j^b$ 已经确定。它不包含“在同一次区域选择进行到一半时暂停”的情况。
 
 ### 11.2 跨越切面的内部消息
 
@@ -2080,6 +2212,8 @@ $W_b$ 中的每条消息都已经由某个满足 $\theta<b$ 的完整输出作�
 ### 11.3 切面状态、未来输入和输出前缀
 
 第 6 节的 $q_v^b$ 正好是节点 $v$ 完成所有满足 $\theta<b$ 的状态采用作用事件 $U_{v,\theta}$ 以后、处理逻辑时间 $b$ 的任何节点事件以前的状态。
+
+同样，$y_j^b$ 是区域 $j$ 完成所有满足 $\theta<b$ 的选择作用事件以后、处理时间 $b$ 的任何区域选择事件以前的历史；候选为空的时间只作恒等传递。
 
 定义未来外部输入记录：
 
@@ -2105,6 +2239,7 @@ Q_b
 \left(
 b,
 (q_v^b)_{v\in V},
+(y_j^b)_{j\in J},
 W_b
 \right).
 \tag{46}
@@ -2115,20 +2250,20 @@ $Z_{<b}$ 不影响未来节点计算；若要在恢复后重建完整多端口�
 ### 11.4 分段继续定理
 
 > [!theorem] 定理 5：完整切面上的继续等于一次算完
-> 从 $Q_b$ 开始，以 $(q_v^b)$ 为初始节点状态，令恢复递归开始时已有消息集合 $M^{\mathrm{res}}_{<b}=W_b$，并只使用 $E_{\ge b}$。随后把式 (21) 改写为：
+> 从 $Q_b$ 开始，以 $(q_v^b)$ 为初始节点状态、以 $(y_j^b)$ 为初始选择历史，令恢复递归开始时已有消息集合 $M^{\mathrm{res}}_{<b}=W_b$，并只使用 $E_{\ge b}$。随后把式 (21) 改写为：
 > $$
 > B^{\mathrm{res}}_{v,\theta}
 > =
 > B_{v,\theta}(E_{\ge b},M^{\mathrm{res}}_{<\theta})
 > \qquad(\theta\ge b),
 > $$
-> 其余步骤仍按第 6.3 节递归。所得时间不小于 $b$ 的状态、候选集合、active sets、内部消息和外部输出，与完整计算 $\mathcal T_x$ 的相应后缀相同。
+> 其余步骤仍按第 6.3 节递归。所得时间不小于 $b$ 的节点状态、选择历史、候选集合、active sets、内部消息和外部输出，与完整计算 $\mathcal T_x$ 的相应后缀相同。
 
-**证明。** 对 $\theta\ge b$ 归纳。时间 $b$ 的旧状态由式 (46) 与完整计算相同。其外部输入由 $E_{\ge b}$ 相同；所有从左侧跨入的消息恰好是式 (45)，所以时间 $b$ 的完整纤维相同。按式 (22)--(28) 依次求值时，每一步都由已给函数和集合构造唯一确定，因此时间 $b$ 的结果相同。
+**证明。** 对 $\theta\ge b$ 归纳。时间 $b$ 的旧节点状态与旧选择历史都由式 (46) 给出，并与完整计算相同。其外部输入由 $E_{\ge b}$ 相同；所有从左侧跨入的消息恰好是式 (45)，所以时间 $b$ 的完整纤维相同。按式 (22)--(28) 依次求值时，每一步都由已给函数和集合构造唯一确定，因此时间 $b$ 的结果相同。
 
 假设直到 $\theta-1$ 都相同，则右侧已经新产生的消息相同，加上相同的 $W_b$ 与未来外部输入，时间 $\theta$ 的完整纤维相同；再次应用相同函数得到相同结果。归纳完成。$\square$
 
-这个定理说明式 (46) 足以在完整逻辑切面恢复当前的无状态 selector 模型。若以后让 selector 自身跨时间保存状态，该状态也必须加入 $Q_b$。
+这个定理说明式 (46) 中的节点状态、selector-history 与跨界消息共同足以在完整逻辑切面继续当前模型。
 
 ## 12. 正确性、区域结构与联合求值必须分层
 
@@ -2158,7 +2293,7 @@ $$
 \tag{47}
 $$
 
-对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。集合很大只表示有很多区域时间位置的输入完整；它不自动给出一个能同时求值所有递归状态的快速公式。
+对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。集合很大只表示有很多区域时间位置的输入完整；它不自动给出一个能同时求值所有节点状态与 selector-history 递归的快速公式。
 
 ### 12.3 区域商图无环只是一项可选附加条件
 
@@ -2212,7 +2347,7 @@ $$
 \tag{48}
 $$
 
-并且右边若含状态递归，必须按第 6 节的状态依赖解释。
+并且右边若含状态递归，必须按第 6 节的节点状态与 selector-history 依赖解释。
 
 定理 3 证明输入不再增加；式 (48) 证明一次联合计算没有改变结果。这是两个不同命题。
 
@@ -2249,17 +2384,11 @@ $$
 
 若希望在同一逻辑时间的完整纤维尚未确定前，就根据部分原子发布不可撤销状态或图内消息，则已不再实现本文函数。它需要新的节点语义，并必须重新证明候选集合、消息发射和封闭下界之间的关系。
 
-### 13.4 为 selector 增加跨时间状态
+### 13.4 让 selector-history 读取完整输出
 
-当前 $\operatorname{Sel}_{j,C}$ 只读取 $\theta$ 与当前描述量族。若为区域 $j$ 增加非空状态集合 $Y_j$，需要把式 (14) 改为：
+当前式 (14) 只允许 selector step 读取旧历史、逻辑时间和当前描述量，并在 $\operatorname{Full}$ 以前确定新历史。若要让 $y_j^{\theta+1}$ 读取某个 $f^A_{v,\theta}$ 或 $f^O_{v,\theta}$，就必须改变式 (14)，并把历史更新从当前选择作用中拆出。
 
-$$
-\operatorname{Sel}_{j,C}:
-Y_j\times\mathbb N\times\prod_{v\in C}D_v
-\to Y_j\times\mathsf{Allowed}_{j,C}.
-$$
-
-随后，同一区域的选择必须按时间连接 selector 状态，第 10 节事件图要增加状态边，第 11 节的 $Q_b$ 也要保存切面处的 $Y_j$ 元素。
+事件图随后会出现从 $F_{v,\theta}$ 到后续历史更新或选择作用的边。直接语义仍需重新规定更新发生在哪个逻辑时间；第 10 节的依赖图、第 11 节的 continuation，以及“先确定整个时间块的 route、再批量应用 $\operatorname{Full}$”的求值次序都要重新证明。
 
 ### 13.5 允许一个节点属于多个选择域
 
@@ -2274,8 +2403,9 @@ $$
 3. 区域候选集合不会再增加的条件（定理 3）；
 4. 在所列合法条件下的求值次序无关（定理 4）；
 5. 完整逻辑时间切面上的继续等于一次算完（定理 5）；
-6. 每次有限运行的规范值与状态依赖事件图无环；
-7. 区域商图不必无环。
+6. selector-history 的唯一递归、跨时间依赖与切面保存；
+7. 每次有限运行的规范值与状态依赖事件图无环；
+8. 区域商图不必无环。
 
 仍需单独完成的工作包括：
 
@@ -2291,18 +2421,18 @@ $$
 第一次阅读只完成以下步骤：
 
 1. 读第 1--3 节，独立写出一个 $B_{v,\theta}(E,M)$；确认它只是由目标与时间取出的集合。
-2. 读第 4--5 节，给定一个旧状态和非空纤维，依次写出 $h,\widetilde q,d,C,A,O,q'$。
+2. 读第 4--5 节，给定一个旧节点状态、旧选择历史和非空纤维，依次写出 $h,\widetilde q,d,C,(A,y'),O,q'$。
 3. 手算第 7 节，直到能够解释为什么 $m_0,m_1$ 的发送时间不同而到达时间相同。
 
 第二次阅读再做：
 
 4. 从式 (33)--(36) 不看证明地重证引理 2 与定理 3。
 5. 构造一个节点最终完整时间纤维为空的例子，说明为什么仍需该节点的前沿越过 $\theta$。
-6. 分别取 $\tau_j=-,+$ 与 $\kappa_j=0,1$，手算四种组合，确认“读取哪个状态”和“采用哪个状态”是不同坐标。
+6. 分别取 $\tau_j=-,+$ 与 $\kappa_j=0,1$，手算四种组合，确认“读取哪个状态”和“采用哪个状态”是不同坐标；再手算第 7.7 节的两次历史更新。
 
 第三次阅读才做：
 
-7. 为第 7 节列出 $P,S,U,F$ 事件顶点，并检查每条边都增加式 (43)。
+7. 为第 7 节列出 $P,S,U,F$ 事件顶点，并检查节点状态边、selector-history 边和消息边都增加式 (43)。
 8. 选择一个切面 $b$，写出 $W_b$，然后检查丢掉它会使哪个未来完整时间纤维缺元素。
 9. 最后研究式 (47)--(48)，不要把较大的关闭窗口误当成已经存在高效联合算法。
 
@@ -2311,7 +2441,6 @@ $$
 本文的数学定义不依赖下列材料。只有在已经能够独立手算第 7 节后，才建议按目的查阅：
 
 - [[timed-dag-chunk-prefill-learning-note|以本文为唯一前置的 chunk prefill、时间 tile 与严格分层 region 续篇]]；
-- [[timed-dag-v0-learning-note|较小的无显式区域选择学习模型]]；
 - [SettleGraph 的独立语义文档](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/docs/experiment-semantics-and-naming.md)；
 - [[current-mainline|TIDE 当前研究台阶]]。
 
@@ -2344,11 +2473,13 @@ $$
 > **channel identity（通道身份）**对应内部消息保留的边坐标 $a$；外部输入来源对应端口坐标 $i$。$\operatorname{Agg}_v$ 可以区分它们。数组或队列只是这些有限集合的一种编码。
 
 > [!info]- S.3　region、candidate、selector、active 与 Top-K
-> **region（区域）**只对应式 (6) 的节点子集 $\mathcal R_j$。它不持有消息和节点状态。
+> **region（区域）**只对应式 (6) 的节点子集 $\mathcal R_j$。它不持有普通消息和节点状态；由 $j$ 索引的 selector 另有选择历史 $y_j^\theta$。
 >
 > **candidate（候选）**在完整记录中对应式 (22) 的 $\mathcal C_{j,\theta}$；阶段 $n$ 暂得的候选是第 8.6 节的 $\mathcal C^{(n)}_{j,\theta}$。式 (38) 成立时二者才相等。
 >
-> **selector（选择器）**对应式 (14) 的函数族。它的完整输入包括整个候选集合的带节点坐标描述量族。
+> **selector（选择器）**对应式 (14) 的一步全函数族。它的完整输入包括旧选择历史，以及整个候选集合的带节点坐标描述量族。
+>
+> **selector-history（选择历史）**对应 $y_j^\theta\in Y_j$。它可以编码累计激活次数、移动平均、最近激活位置或预算，但不是程序日志，也不必逐项保留过去。若 $Y_j$ 为单点集，就没有有效历史信息。
 >
 > **active node / selected node（激活、选中节点）**对应 $v\in\mathcal A_{j,\theta}$。只有这类节点应用式 (26)；$\mathsf{Selected}_n$ 则是已应用区域选择事件的集合，不是 active nodes 的集合。
 >
@@ -2365,7 +2496,7 @@ $$
 >
 > 因此 `content/pre/post` 决定 selector 读取什么；`SD/BO` 决定哪些候选状态被采用。它们是两条独立的配置轴。
 >
-> **proposal** 对应候选新状态 $\widetilde q$。**state commit（状态提交）**对应式 (25) 的状态采用作用 $U_{v,\theta}$。它不同于节点事件进入 $\mathsf{Completed}_n$，也不同于消息进入 $H_n$；单独使用 `commit` 时必须说明是哪一种。**expensive compute / NodeCompute** 对应式 (12) 与 (26) 的 $\operatorname{Full}_v$；“昂贵”不是数学性质。
+> **proposal** 对应候选新状态 $\widetilde q$。**state commit（状态提交）**对应式 (25) 的节点状态采用作用 $U_{v,\theta}$；选择作用 $S_{j,\theta}$ 则同时确定下一 selector-history。二者都不同于节点事件进入 $\mathsf{Completed}_n$，也不同于消息进入 $H_n$；单独使用 `commit` 时必须说明提交哪一种对象。**expensive compute / NodeCompute** 对应式 (12) 与 (26) 的 $\operatorname{Full}_v$；“昂贵”不是数学性质。
 
 > [!info]- S.5　seal、frontier、watermark、closure 与 ready
 > **seal（封闭下界）**对应式 (33) 的 $\sigma$。例如边 seal 为 $b$ 精确表示 $M^*(a,<b)\subseteq H_n$，不是“当前队列为空”。
@@ -2378,7 +2509,7 @@ $$
 >
 > **watermark** 若表示“输入确定到哪里”，对应某个 $\sigma$ 或 $\lambda$；若表示“节点完成到哪里”，对应式 (41) 的 $\operatorname{DoneTo}_n(v,b)$。必须注明采用哪一种。
 >
-> **ready（就绪）**对应第 8.8 节的 $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Done}$；区域选择还要满足第 9.2 节的纤维关闭与准备条件。
+> **ready（就绪）**对节点状态对应第 8.8 节的 $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Done}$，对选择历史对应 $\operatorname{HistPred}(j,\theta)\subseteq\mathsf{Selected}$；区域选择还要满足第 9.2 节的纤维关闭与准备条件。
 >
 > **barrier（屏障）**是实现等待这些数学条件成立的位置，并不要求所有处理器同时停止。
 
@@ -2387,7 +2518,7 @@ $$
 >
 > **schema（数据形状约定）**对应一个积集合以及各坐标的所属集合。例如 $\mathsf{Msg}$ 规定消息具有标签、发送时间、边和值四个坐标。字段名可以改变；删除边坐标则会改变正文对象。
 >
-> **semantic coordinate（语义坐标）**是在已经说明对象类型后，用于唯一指出该类型中数学对象的有序组。节点事件的语义坐标是 $(v,\theta)$，区域选择事件的语义坐标是 $(j,\theta)$，函数作用事件还包含 $\mathrm{prep}$、$\mathrm{select}$、$\mathrm{adopt}$ 或 $\mathrm{full}$ 标签；输出位置的坐标是 $(\theta,o)$。
+> **semantic coordinate（语义坐标）**是在已经说明对象类型后，用于唯一指出该类型中数学对象的有序组。节点事件的语义坐标是 $(v,\theta)$，区域选择事件的语义坐标是 $(j,\theta)$，函数作用事件还包含 $\mathrm{prep}$、$\mathrm{select}$、$\mathrm{adopt}$ 或 $\mathrm{full}$ 标签；其中 $\mathrm{select}$ 同时产生 active set 与下一选择历史。输出位置的坐标是 $(\theta,o)$。
 >
 > 若三类事件需要共享一个整数 ID 空间，先取三个两两不同的标签 $\mathrm{node},\mathrm{sel},\mathrm{act}$，并定义有限编码域：
 > $$
@@ -2411,7 +2542,7 @@ $$
 >
 > 若 $\mathscr E=\mathscr E_1\cup\cdots\cup\mathscr E_k$ 且各 $\mathscr E_i$ 两两不交，那么 $(\mathscr E_i)$ 是事件集合 $\mathscr E$ 的一种分块；还须说明 $\mathscr E$ 采用节点事件、区域选择事件还是函数作用事件。
 >
-> **prefill** 通常表示一次联合处理许多已知输入位置；**decode** 通常表示逐个或小批增加输入位置。要声称二者等价，必须比较第 6 节的状态、内部消息、所有输出端口、候选集合和 active sets，而不只是最后一个张量。
+> **prefill** 通常表示一次联合处理许多已知输入位置；**decode** 通常表示逐个或小批增加输入位置。要声称二者等价，必须比较第 6 节的节点状态、selector-history、内部消息、所有输出端口、候选集合和 active sets，而不只是最后一个张量。
 >
 > **packing / packed attention** 是式 (48) 中 $\operatorname{Pack},\mathcal K,\operatorname{Unpack}$ 的具体实现候选。seal 证明输入不会再增加；式 (48) 证明联合求值等于参考递归。两项证明不能互相替代。
 >
@@ -2422,18 +2553,18 @@ $$
 >
 > **runtime / executor（运行时、解释器）**若符合本文模型，应产生第 9.1 节的一条合法阶段化求值轨迹，并使函数值等于 $\mathcal T_x$ 的相应坐标。它不是固定图本身。
 >
-> **scheduler（调度器）**选择哪些合格事件进入第 9.2--9.3 节的 $\Delta\mathsf{Prepared}_n,\Delta\mathsf{Selected}_n,\Delta\mathsf{Completed}_n$。它决定相应事件的阶段秩，不能改变 $\mathcal T_x$。
+> **scheduler（调度器）**选择哪些合格事件进入第 9.2--9.3 节的 $\Delta\mathsf{Prepared}_n,\Delta\mathsf{Selected}_n,\Delta\mathsf{Completed}_n$。选择事件还必须满足 selector-history 就绪条件。调度器决定相应事件的阶段秩，不能改变 $\mathcal T_x$。
 >
 > **workspace（临时工作区）**可以保存第 9.4 节提前求出的 $h,\widetilde q,d$。临时变量不等于式 (25) 已经采用的状态。
 >
 > **event completion（事件完成）**对应 $(v,\theta)\in\mathsf{Completed}_n$，即 $\alpha_C((v,\theta))\le n$。**completed to $b$（完成到 $b$）**对应式 (41) 的复合谓词。二者都不等于消息可见。
 >
-> **atomic commit（原子提交）**在本文中的最小要求是：依赖该状态的后继函数作用事件只能读取式 (25) 确定以前的 $q_v^\theta$ 或确定以后的 $q_v^{\theta+1}$，不能读取一个未由规格定义的中间状态。它不声称使用某条特定处理器原子指令。
+> **atomic commit（原子提交）**在本文中的最小要求是：节点状态后继只能读取式 (25) 确定以前的 $q_v^\theta$ 或确定以后的 $q_v^{\theta+1}$；选择历史后继只能读取式 (24) 确定以前的 $y_j^\theta$ 或确定以后的 $y_j^{\theta+1}$。二者都不能读取规格未定义的中间状态。这不声称使用某条特定处理器原子指令。
 >
 > **semantic trace（语义记录）**对应唯一的 $\mathcal T_x$；**staged execution trace（阶段化求值轨迹）**对应第 9.1 节的集合与函数序列，同一 $x$ 可以有多条。程序日志若还含墙钟、线程号等坐标，则是更丰富的第三种 trace。
 
 > [!info]- S.9　continuation、checkpoint、resume 与 refinement
-> **continuation** 对应式 (46) 的 $Q_b$。**checkpoint** 是 $Q_b$ 的某种可保存编码。
+> **continuation** 对应式 (46) 的 $Q_b$，其中同时含节点状态、selector-history 与跨界消息。**checkpoint** 是 $Q_b$ 的某种可保存编码。
 >
 > 若保存与读取函数分别为 $\operatorname{save}$ 和 $\operatorname{load}$，无损编码至少要求：
 > $$
@@ -2473,7 +2604,8 @@ $$
 > - AGG-CUSTOM 到保留端口或入边坐标的 $\operatorname{Agg}_v$ 的映射；
 > - selection region 到 $\mathcal R_j$ 的映射；
 > - active set、SD/BO、NodeCompute 与 Emit 到式 (24)--(28) 的映射；
+> - selector-history 的 owner、初态、更新与切面状态到 $Y_j,y_j^{\mathrm{init}},\operatorname{SelStep}_{j,C},y_j^b$ 的映射；
 > - 已生成 `DATA` 到 $m\in M_n^{\mathrm{src}}$、已进入接收侧输入的 `DATA` 到 $m\in H_n$ 的映射；
 > - 边 $a$ 在 $b$ 前 `CLOSED` 到 $M^*(a,<b)\subseteq H_n$ 的映射。
 >
-> SettleGraph 对每个 Token、每个 region 等待该 Token 的所有相关边结算；本文允许不同输入位置通过逻辑时间映射落入同一个 $(v,\theta)$ 或 $(j,\theta)$。要证明前者是后者的受限情形，必须给出一种时间编码，使不同 Token 不会发生被禁止的同刻汇合，并比较完整状态、消息、输出端口、候选集合和 active sets。
+> SettleGraph 对每个 Token、每个 region 等待该 Token 的所有相关边结算；本文允许不同输入位置通过逻辑时间映射落入同一个 $(v,\theta)$ 或 $(j,\theta)$。若一个 SettleGraph profile 没有有效 selector-history，可把它映为单点集合 $Y_j$。要证明前者是后者的受限情形，必须给出一种时间编码，使不同 Token 不会发生被禁止的同刻汇合，并比较完整节点状态、selector-history、消息、输出端口、候选集合和 active sets。

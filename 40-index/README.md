@@ -30,7 +30,8 @@ tags:
 ## TIDE
 
 - [[20-tide-decentralized-neural-network/current-mainline|TIDE 当前主线]]
-- [[20-tide-decentralized-neural-network/timed-dag-v0-learning-note|TimedDAG-v0 数学学习笔记]]
+- [[20-tide-decentralized-neural-network/timed-dag-region-selector-learning-note|TimedDAG 数学教材]]
+- [[20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]]
 - [[20-tide-decentralized-neural-network/README|TIDE 总览]]
 - [[20-tide-decentralized-neural-network/tide-model-architecture-and-training|模型架构与训练]]
 - [[20-tide-decentralized-neural-network/tide-mathematical-foundations|数学基础]]
