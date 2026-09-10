@@ -2372,6 +2372,8 @@ $$
 
 但一次完整运行可能沿有向环不断产生更大时间的消息，不再具有式 (19) 的全局有限上界。因此要改为研究：给定有限逻辑时间切面，是否能在有限工作后完成该切面。定理 1 的“整个运行有限”部分不能原样保留。
 
+这一推广现已在续篇 [[positive-delay-graph-finite-cut-learning-note|《正时延有向图的有限切面语义》]] 中完成。续篇不改写本文的 TimedDAG 定义，而是以相容的有限 cut 记录代替全局有限完整记录，并证明 seal、continuation 与 cut composition。
+
 ### 13.2 允许零时延边
 
 若某条边满足 $\delta(a)=0$，时间 $\theta$ 的完整输出可能立即改变同一时间的输入纤维。式 (29) 失效，事件秩可能从阶段 $3$ 指回同一时间的阶段 $0$。
@@ -2413,7 +2415,7 @@ $$
 - 给出从更受限模型到本文坐标的完整嵌入证明，而不只比较最终输出；
 - 找到能推出较大关闭窗口的区域结构定理；
 - 对具体神经节点证明式 (48) 的联合求值等式与复杂度；
-- 扩展到带正时延环的有限切面语义；
+- 对本文以外更一般的动态 firing、无限 batch 或隐藏 microstep 重新证明有限切面局部有限性；正时延微节点 Graph 的有限切面语义已由续篇完成；
 - 最后才研究零时延环或更一般的 Graph。
 
 ## 15. 建议的学习顺序
@@ -2441,6 +2443,7 @@ $$
 本文的数学定义不依赖下列材料。只有在已经能够独立手算第 7 节后，才建议按目的查阅：
 
 - [[timed-dag-chunk-prefill-learning-note|以本文为唯一前置的 chunk prefill、时间 tile 与严格分层 region 续篇]]；
+- [[positive-delay-graph-finite-cut-learning-note|以本文为唯一前置的正时延有环 Graph、finite-cut 与 SCC 边界续篇]]；
 - [SettleGraph 的独立语义文档](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/docs/experiment-semantics-and-naming.md)；
 - [[current-mainline|TIDE 当前研究台阶]]。
 
