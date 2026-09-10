@@ -10,7 +10,7 @@ tags:
   - delayed-graph
 ---
 
-# TIDE 当前主线：从正时延有环 Graph 到 structural SCC lowering
+# TIDE 当前主线：从正时延有环 Graph 到 SCC 的外层保块 lowering
 
 > [!summary] 本页只回答三个问题
 > 1. TimedDAG 当前已经得到什么？
@@ -24,7 +24,9 @@ tags:
 ```text
 Graph 收缩线：TimedDAG（固定空间 DAG）
 → 正时延有环图的 finite-cut 语义【当前已闭合】
-→ structural SCC 的低-span chunk lowering【当前下一台阶】
+→ dependency-complete SCC 的 exact 外层保块【当前下一台阶】
+→ 低-span lowering
+→ hardware lowering
 
 checkpoint 生长线：SettleGraph
 → 训练、推理与性能验证
@@ -37,12 +39,12 @@ checkpoint 生长线：SettleGraph
 当前正典由三份文档组成：
 
 1. [[timed-dag-region-selector-learning-note|《带区域选择的 TimedDAG：从零开始的数学定义》]]：定义多输入、多输出、正时延空间 DAG、时间纤维、节点状态、region selector、selector-history、seal、合法阶段轨迹、事件 DAG 与 continuation，并证明有限唯一性、关闭、次序无关和切面继续。
-2. [[timed-dag-chunk-prefill-learning-note|《TimedDAG 的分块预填充：支持集、时间切面与分层区域》]]：区分语义存在性、大块外层调度、低 span 与硬件性能；给出 graded DAG 的节点级 token 对齐切面，以及严格分层 region 的 exact chunk-prefill 外层算法。
+2. [[timed-dag-chunk-prefill-learning-note|《TimedDAG 的分块预填充：支持集、时间切面与分层区域》]]：区分语义存在性、[[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|节点级时间批暴露]]、低 span 与硬件性能；给出 graded DAG 的节点级 token 对齐切面，以及严格分层 region 的 exact chunk-prefill 外层算法。
 3. [[positive-delay-graph-finite-cut-learning-note|《正时延有向图的有限切面语义：从 TimedDAG 到有环 Graph》]]：允许固定消息图含环，证明 finite-cut 存在唯一性与定量有限性、finite-cut 事件 DAG、seal 推进、continuation sufficiency 和 cut composition；并给出 SCC-local region 条件下的 exact message-SCC 外层调度及跨 SCC selector 反例。
 
 旧的 TimedDAG-v0 学习笔记已由第一份教材的一般定义取代。旧笔记中的实现细节仍可从 Git 历史查阅，但不再作为当前定义入口。
 
-这三份教材已经把一般空间 DAG 的 correctness、若干 DAG 高性能 prefill 充分条件，以及正时延有环图的 finite-cut correctness 分开。它们尚未证明：任意 TimedDAG 或 structural SCC 都有低-span prefill、SettleGraph 已形式嵌入，或任意 selector-history 都能并行扫描。
+这三份教材已经把一般空间 DAG 的 correctness、若干 DAG 的节点级时间批暴露充分条件，以及正时延有环图的 finite-cut correctness 分开。它们尚未证明：任意 TimedDAG 或 structural SCC 都有节点级时间批暴露或低-span prefill、SettleGraph 已形式嵌入，或任意 selector-history 都能并行扫描。
 
 ## 独立的 checkpoint 生长线：SettleGraph
 
@@ -69,7 +71,7 @@ SettleGraph 的主体结构看起来可以落在 TimedDAG 严格分层类的更�
 1. 把 TimedDAG 的逐逻辑时间递归推广为有限 cut 上的语义；
 2. 证明每个合法有限 cut 的存在唯一性与有限抽象函数作用数；在局部函数有终止实现时再推出有限工作；
 3. 定义并闭合 seal、continuation 与 cut composition；
-4. 给出 SCC-local profile 的 exact message-SCC 外层调度，并把低 span 留给下一台阶。
+4. 给出 SCC-local profile 的 exact message-SCC 外层调度，但不从一次宏调用推出外层保块或低 span。
 
 一次开放执行可以永不全局停止；这不妨碍某个得到足够输入 seal 的有限 cut 在有限工作后完成。structural SCC 只给出图论分解，不自动给出 SCC 内部语义、终止性或并行算法。
 
@@ -84,19 +86,19 @@ SettleGraph 的主体结构看起来可以落在 TimedDAG 严格分层类的更�
 - [x] seal、完成谓词与正时延传播给出不允许未来回写过去的硬进展证书；
 - [x] [reference interpreter](examples/positive_delay_graph_reference.py) 已对延迟自环、两节点环、随机 cut 划分和随机 ready-event 调度比较 $B,\mathcal C,\mathcal A,q,y,M,Z,W$ 投影。
 
-这些条件现已满足。下一台阶只对具体 SCC profile 登记 sequential fallback、packed loop、scan、固定轮展开或其他 lowering，并分别证明其 work、span、memory 与 communication。
+这些条件现已满足。下一台阶先对具体 SCC profile 登记 sequential fallback 与 heavy/control 成本划分，再寻找 heavy/control 阶段数有界的 exact 外层保块 lowering；低 span 与硬件性能是后续台阶。
 
-## Graph 线下一台阶：有代数见证的 structural SCC
+## Graph 线下一台阶：dependency-complete SCC 的外层保块
 
-当前问题不再是“正时延环能否精确继续”，而是：哪些 dependency-complete structural SCC 具有真正降低序列轴 span 的区间求值器。
+当前问题不再是“正时延环能否精确继续”，而是：哪些 dependency-complete structural SCC 具有有界的 heavy/control 阶段，使固定节点的昂贵时间事件可分成不随 chunk 长度 $T$ 增长的有限批次。控制扫描的 span 可以是 $\Theta(T)$；这仍满足 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|节点级时间批暴露]]，但尚未得到低 span。
 
 研究顺序固定为：
 
 1. 从 message SCC 与跨 SCC selector 反例出发，定义包含 selector owner、history 和所有可变状态依赖的 dependency-complete SCC 边界；
 2. 为每个 SCC 保留逐边 identity、时延、输入输出投影与 continuation，先与微观 reference trace 对拍 exact sequential fallback；
-3. 首先研究 affine/associative scan、固定轮展开与 causal-bulk 等具有明确复合代数的子类；
-4. 对每个子类分别证明 work、span、memory、communication 和 cut composition；
-5. 无法给出低-span witness 的 SCC 明确登记为 sequential fallback，不因封装成一次 API 就称为高性能。
+3. 固定 control/heavy 成本 profile，首先寻找 bounded heavy/control phases 的子类，并证明每个节点的 heavy batch 数具有与 $T$ 无关的上界；
+4. 再对 affine/associative scan、固定轮展开与 causal-bulk 等子类研究低-span witness，最后单独测量 hardware lowering；
+5. 对每个子类分别证明 exactness、work、span、memory、communication 和 cut composition；一次 packed API 只是一种封装，不是外层保块或低 span 的证据。
 
 ## 明确延期
 
@@ -114,13 +116,13 @@ SettleGraph 的主体结构看起来可以落在 TimedDAG 严格分层类的更�
 
 1. 先读 [[timed-dag-region-selector-learning-note]]，手算直接递归、selector-history、seal 与 continuation。
 2. Graph 线随后读 [[positive-delay-graph-finite-cut-learning-note]]，理解为什么空间环不破坏 finite-cut 递归，并手算 $W_b$ 与 cut composition。
-3. 研究空间 DAG 的 chunk lowering 时读 [[timed-dag-chunk-prefill-learning-note]]，区分安全时间切面、严格分层充分条件、tile witness 与低 span。
+3. 研究空间 DAG 的 chunk lowering 时读 [[timed-dag-chunk-prefill-learning-note]]，区分安全时间切面、节点级时间批暴露、低 span 与硬件性能。
 4. checkpoint 生长实验按需阅读并运行 `fractal-latcarf` 的 SettleGraph 语义与 reference。
 5. 旧长文只作为材料来源，不反向改写新教材中的已定义对象。
 
 ## 本页维护规则
 
 1. 本页保持短小，只记录当前台阶、下一台阶、延期范围和退出条件。
-2. 每次只允许一个 Graph 线“下一台阶”；当前只研究正时延 structural SCC 的 lowering，不同时加入零时延、偏序时间和 solver。
+2. 每次只允许一个 Graph 线“下一台阶”；当前只研究正时延 dependency-complete SCC 的 exact 外层保块，不同时加入零时延、偏序时间和 solver。
 3. 只有产生稳定语义、reference、证明或反例后，才把结论整合进 TIDE 长文。
 4. 动态工程状态必须带日期和 commit；未提交 WIP 不进入能力声明。

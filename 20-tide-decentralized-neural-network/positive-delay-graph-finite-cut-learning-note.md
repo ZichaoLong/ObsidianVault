@@ -19,10 +19,12 @@ tags:
 > [!summary] 本文的阅读前提
 > 本文只以 [[timed-dag-region-selector-learning-note|《带区域选择的 TimedDAG：从零开始的数学定义》]] 为前置，不以前置 chunk-prefill 教材、旧的 TIDE 长文或任何 runtime 实现。读者应当已经知道时间纤维、节点状态、region selector、selector-history 和正整数边时延的定义；本文会把发生变化的对象与全部主递归重新写出。
 >
+> 第 10 节会引用 [[timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]] 中的性能术语；这只是可选的术语来源，不是 finite-cut 语义的阅读前提。
+>
 > 本文允许固定节点图含有向环，但仍要求每条边具有严格正时延。核心对象不再是“一次最终结束的完整计算”，而是每个有限逻辑时间切面以下的唯一记录。
 
 > [!tip] 建议分三次阅读
-> 第一次读第 1--4 节，目标是理解为什么一个全局永不结束的自环仍在每个有限切面上存在唯一有限结果。第二次读第 5--8 节，手算 seal、在途消息和两段继续。第三次才读第 9--10 节的 SCC 与 span；SCC 不是理解 finite-cut 语义的前置。
+> 第一次读第 1--4 节，目标是理解为什么一个全局永不结束的自环仍在每个有限切面上存在唯一有限结果。第二次读第 5--8 节，手算 seal、在途消息和两段继续。第三次才读第 9--10 节的 SCC 与外层 lowering；SCC 不是理解 finite-cut 语义的前置。
 
 本文只做一项结构推广：固定消息图不再要求无环。它保留以下约束：
 
@@ -1226,7 +1228,7 @@ $$
 
 式 (38) 保证任何 selector 及其全部候选节点、历史状态和状态采用事件都在同一 SCC 内。固定一个 SCC 后，再对逻辑时间作归纳，式 (17) 保证内部反馈只从更小时间到更大时间。因此该 SCC 的受限记录逐项等于全图直接递归的相应投影。完成全部 SCC 后，按 owner SCC 不交并合便得到相同的节点、selector、消息与输出记录；节点状态与 selector-history 也按 owner SCC 并合，而式 (31) 给出的各 $W_b$ 投影按目标 SCC 并合，于是得到同一个 $Q_b$。$\square$
 
-定理 12 给出 exact 外层框架，但没有证明 SCC 内的时间循环是低 span。把整个 SCC 放进一次 API 调用，也可能只是在调用内部顺序执行 $b-a$ 次。
+定理 12 给出 exact 外层框架，但没有证明 SCC 内的昂贵节点作用可以按时间整批暴露。把整个 SCC 放进一次 API 调用，也可能只是在调用内部让控制作用与昂贵作用交替执行 $b-a$ 次。即使以后证明了这种整批暴露，也仍不自动得到低 span：selector-history 的控制扫描可以保持线性。
 
 还有一个容易忽略的边界：若 message graph 本身是 DAG，则它的 SCC 都是单点，式 (38) 会迫使每个 region 也是单点。因此，式 (38) 绝不能倒过来成为整篇教材的基础假设；一般多节点 region 已由第 1--8 节覆盖，只是不能直接按 message SCC 独立求值。
 
@@ -1250,25 +1252,33 @@ $v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示选择
 
 例如有路径 $u\to v\to w$，但 $u,w$ 属于同一 region。式 (39) 不仅会合并 $u,w,s_j$，还会把路径中间的 $v$ 合并进同一 SCC；只把 region 直接碰到的两个 message SCC 生硬粘在一起，可能留下宏观环。
 
-$G^\dagger=(V^\dagger,E^\dagger)$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把 $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。对 dependency-complete SCC 建立完整多端口宏契约和 lowering，留作下一阶段研究。
+$G^\dagger=(V^\dagger,E^\dagger)$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把 $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。对 dependency-complete SCC 建立完整多端口宏契约，并判断哪些子类具有外层保块 lowering，留作下一阶段研究。
 
-## 10. correctness 不推出低 span
+## 10. correctness、外层保块与低 span 是不同层级
 
 ### 10.1 本文已经得到哪一级算法
 
 定理 8 给出有限 cut 的顺序 reference interpreter；定理 10 给出任意完整时间切分的组合律；定理 12 在额外 locality 条件下给出 message SCC 的拓扑外层调度。这三项都属于 exact correctness 与 finite progress。
 
-它们没有单独给出：
+它们没有单独给出任何一种性能结论。以下三层尤其不能混为一谈：
 
-- 次线性的 token-axis span；
-- work-efficient parallel scan；
-- 一次大型张量 kernel；
-- GPU/NPU 的高利用率；
-- 边界通信量足够小。
+1. 外层调度是否保留节点作用沿逻辑时间成批执行的机会；
+2. 控制与数据依赖是否具有低 span 或 work-efficient scan；
+3. 给定 backend 上是否真正获得较高的硬件利用率。
 
 这些结论必须在选定计算模型、局部函数表示与成本函数以后另证。
 
-### 10.2 单个 SCC 也可以保持线性依赖链
+### 10.2 第一性能台阶：节点级时间批暴露
+
+本文后续所谓**外层保块**，采用 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|TimedDAG chunk-prefill 教材中的正式定义]]。先固定一个成本 profile，区分 selector、selector-history 等控制作用与指定的昂贵节点作用。对两个切面之间宽度为 $T$ 的逻辑时间区间，exact 外层 lowering 可以顺序扫描控制作用；但外层 heavy/control 阶段数，以及每个节点的昂贵时间 batch 数，都必须由固定系统数据的常数控制，而不随 $T$ 或本次输入增长。最强情形是每个节点一批；“主体时间块一批，加上常数个边界批”也属于这一层级。
+
+换成本文的记号，就是在正式定义中用 $[a,b)$ 代替 $I_{q,T}$，令 $T=b-a$，并用左右切面 $Q_a,Q_b$ 代替 $Q_{Dq},Q_{D(q+T)}$；其余量化及“不得预知尚未求值结果”的要求不变。
+
+这个定义只约束外层调度不要把昂贵节点计算拆成随 $T$ 增长的许多调用。它允许 selector-history 具有 $\Theta(T)$ 的顺序控制 span，也不研究 batch kernel 内部怎样实现。因此这里的“高性能 prefill”若不加限定，精确含义只是这一第一性能台阶，而不是低 span 或实测加速。
+
+batch 的坐标是节点时间事件 $(v,\theta)$，不是预先附着于某个 token 的工作单位。同一时间纤维可以汇合来自不同 token 的信号；只要外层仍能收集相应节点时间事件，信号交错本身就不否定批量暴露。某个具体 profile 若能证明“$T-h$ 尺度的主体区加 $h$ 尺度的边界区”，并且 $h$ 只依赖固定系统数据而不随 $T$ 增长，这只是有界批次数的一种 witness，而不是按 token 身份切开语义。
+
+### 10.3 真正的外层保块障碍
 
 考虑延迟为 $1$ 的自环，其中状态满足：
 
@@ -1276,11 +1286,20 @@ $$
 q^{\theta+1}=f_\theta(q^\theta),
 $$
 
-并且每个 $f_\theta$ 只能作为黑盒查询。若 $f_{\theta+1}$ 的有效输入必须等待 $q^{\theta+1}$，那么长度为 $T$ 的 cut 含有长度为 $T$ 的状态依赖链。structural SCC 只有一个，把它命名为一个宏节点不会缩短这条链。
+并且每个 $f_\theta$ 只能作为黑盒查询。若 $f_{\theta+1}$ 的有效输入必须等待 $q^{\theta+1}$，那么宽度为 $T$ 的逻辑时间区间含有长度为 $T$ 的状态依赖链。structural SCC 只有一个，把它命名为一个宏节点不会缩短这条链。
 
-任意 selector-history 递归同样可能如此：较早 route 改变状态或反馈消息，继而改变较晚候选描述量和 route。这时一般不能先独立算出整个大块 route，再把昂贵节点计算全部按 node 打包。
+这条线性链本身还不必破坏第 10.2 节的第一性能台阶：若 $f_\theta$ 只是廉价控制，扫描结束后才调用不再反馈到本块控制的昂贵作用，后者仍可按 node 打包。真正的障碍是随 $T$ 增长的 heavy/control 交替，例如：
 
-### 10.3 哪些额外结构可能产生 scan
+$$
+\text{heavy}_{\theta}
+\longrightarrow \text{control}_{\theta+1}
+\longrightarrow \text{heavy}_{\theta+1}
+\longrightarrow \cdots .
+$$
+
+若较早昂贵输出经节点状态或反馈消息改变较晚候选描述量和 route，外层就必须反复等待昂贵作用以后才能确定下一批参数，所需 batch 数可能增长为 $\Theta(T)$。任意 selector-history 递归只有在造成这种反馈时才成为外层保块的反例；顺序 history 扫描本身不是反例。
+
+### 10.4 在外层保块之上，何时还能得到 scan
 
 递归并不必然顺序。若：
 
@@ -1297,16 +1316,15 @@ $$
 \tag{40}
 $$
 
-式 (40) 对复合封闭且满足结合律，所以在具体线性代数计算模型下可以研究 parallel prefix scan。更一般的正面 profile 还可能包括：
+式 (40) 对复合封闭且满足结合律，所以在具体线性代数计算模型下可以研究 parallel prefix scan。可能缩短控制 span 的正面 profile 还包括：
 
 - 固定轮数展开；
 - 具有紧凑结合摘要的递归；
 - 已证明等价的 causal-bulk kernel；
-- 顺序控制扫描后，把不再影响后续控制的昂贵节点作用按 node packed。
 
-最后一种优化有额外前提：被推迟的节点作用不能经反馈消息或状态改变本块后续 selector。只知道“它们都在同一个 SCC”远远不够。
+与这些 low-span witness 不同，“顺序控制扫描后，把不再影响后续控制的昂贵节点作用按 node packed”只证明第 10.2 节的外层保块。它的额外前提正是：被推迟的节点作用不能经反馈消息或状态改变本块后续 selector。只知道“它们都在同一个 SCC”远远不够。
 
-### 10.4 SCC profile 应分别登记什么
+### 10.5 SCC profile 应分别登记什么
 
 对每个值得研究的 SCC 子类，应分别登记：
 
@@ -1314,13 +1332,15 @@ $$
 | --- | --- |
 | reference semantics | 是否等于第 2 节的微观递归？ |
 | finite-cut progress | 对哪些 sealed cuts 必然返回？ |
-| work | 总 primitive 数怎样随 cut 长度增长？ |
-| span | 最长依赖链怎样增长？ |
+| cost profile | 哪些作用是控制，哪些节点作用是昂贵计算？ |
+| temporal batch exposure | 外层 heavy/control 阶段需要多少轮；每个节点的昂贵时间事件需要多少批；二者是否与 $T$ 无关？ |
+| work | 总 primitive 数怎样随有限时间区间的宽度增长？ |
+| control span | 控制扫描的最长依赖链怎样增长？是否有代数 scan witness？ |
 | memory | continuation、临时量和批量张量多大？ |
 | communication | 跨 SCC 的逐边消息与 seal 有多少？ |
 | lowering witness | sequential loop、packed loop、scan、fixed unfold 还是专用 kernel？ |
 
-`sequential fallback` 是合法的 correctness 实现类别，不应伪装成低 span；`packed API` 说明调用边界，并不自动说明其内部复杂度。
+`sequential fallback` 是合法的 correctness 实现类别。一次 `packed API` 也不自动证明外层保块：必须说明外层阶段数与每个节点在整个有限时间区间上所需的调用数都不随区间宽度 $T$ 增长。即使这一点成立，它仍不自动说明调用内部复杂度、控制 span 或硬件性能。
 
 ## 11. 已证明结果、开放问题与练习
 
@@ -1342,7 +1362,8 @@ $$
 - 任意共享可变状态或来源未声明的公共 context；
 - 任意 region 下按 message SCC 独立求值；
 - dependency-complete SCC 的通用多端口 runtime；
-- 任意 SCC 具有低 span 或高性能 chunk lowering；
+- 任意 SCC 都具有节点级时间批暴露；
+- 任意具有这种批量暴露的 SCC 还具有低 span；
 - 图结构本身推出某种硬件利用率。
 
 ### 11.3 建议练习
@@ -1357,15 +1378,16 @@ $$
 
 ## 12. 下一研究台阶
 
-本文已经把“正时延有环 Graph 是否具有无歧义 finite-cut 语义”闭合为肯定答案。下一步不是立即加入零时延，而是从第 10.4 节的登记表中选择具体 structural SCC 子类，分别寻找并证明低-span chunk lowering。
+本文已经把“正时延有环 Graph 是否具有无歧义 finite-cut 语义”闭合为肯定答案。下一步不是立即加入零时延，也不是直接要求低 span，而是从第 10.5 节的登记表中选择具体 structural SCC 子类，寻找 exact 且具有节点级时间批暴露的外层 lowering。这里允许控制、selector 与 selector-history 顺序扫描；第一目标只是证明外层没有把昂贵节点作用拆成随推进区间宽度增长的许多批。
 
 优先顺序应当是：
 
 1. 为 dependency-complete SCC 定义保留 edge identity 的输入、输出与 continuation 投影；
 2. 先实现并对拍 exact sequential fallback；
-3. 从 affine/associative scan、固定轮展开和 causal-bulk 等具有明确代数结构的子类开始；
-4. 对每个子类同时给出正面 lowering witness 与不能覆盖的最小反例；
-5. 最后才讨论硬件映射。
+3. 固定 control/heavy 成本 profile，寻找外层阶段数与每节点 batch 数都不随推进区间宽度增长的子类；
+4. 对每个子类同时给出正面外层保块 witness，以及造成 $\Theta(T)$ 次 heavy/control 交替的最小反例；
+5. 再为其中具有 affine/associative、固定轮展开或 causal-bulk 结构的子类研究低-span lowering；
+6. 最后才讨论 kernel 内部实现与硬件映射。
 
 零时延 SCC、一般 solver、偏序时间、backpressure 和任意 partial/divergent local function 继续延期。
 
@@ -1411,12 +1433,12 @@ $$
 >
 > **dependency-complete static graph** 对应式 (39)。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息。
 
-> [!info]- S.6　correctness、packed API、work 与 span
-> **exact / correctness** 表示实现记录等于本文指定的完整记录或明确投影。**packed API** 只表示许多作用进入一次调用；调用内部仍可顺序循环。
+> [!info]- S.6　correctness、外层保块、work 与 span
+> **exact / correctness** 表示实现记录等于本文指定的完整记录或明确投影。**节点级时间批暴露**要求固定 control/heavy profile 后，外层阶段数与每个节点在宽度为 $T$ 的有限时间区间上所需的昂贵时间 batch 数都由固定系统数据的常数控制；正式定义见 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|TimedDAG chunk-prefill 教材第 6.4 节]]。
 >
-> **work** 是所选计算模型中的总操作量，**span** 是无限处理器假设下的最长依赖链成本。两者都没有由“这是一个 SCC”或“这是一次函数调用”定义。
+> 控制或 selector-history 可以顺序扫描；交错信号也可以在同一节点时间纤维中汇合。真正破坏这一性质的是必须随 $T$ 反复进行“昂贵作用—后续控制—昂贵作用”。单个 `packed API` 只说明调用边界，不能自行证明 batch 数有界。
 >
-> 式 (40) 是可能获得 scan 的代数 witness；任意递归式本身不是 witness。硬件性能还要另外记录张量形状、内存访问、通信与 backend 测量。
+> **work** 是所选计算模型中的总操作量，**span** 是无限处理器假设下的最长依赖链成本。式 (40) 是可能获得 scan 的代数 witness；任意递归式本身不是 witness。外层保块、低 span 与硬件性能是逐层增强的命题，硬件性能还要另外记录张量形状、内存访问、通信与 backend 测量。
 
 > [!info]- S.7　参数共享与状态共享
 > 多个节点函数使用同一个固定参数，对应这些函数具有同一个参数坐标。在一次前向语义中该坐标不被事件改写，所以不会增加 finite-cut 事件依赖边；训练时，共享参数的梯度是各使用点贡献之和。
@@ -1426,7 +1448,7 @@ $$
 ## 可选相关材料
 
 - [[timed-dag-region-selector-learning-note|前置：TimedDAG 的完整数学语义]]；
-- [[timed-dag-chunk-prefill-learning-note|空间 DAG 子类的 chunk-prefill 充分条件]]；
+- [[timed-dag-chunk-prefill-learning-note|节点级时间批暴露的正式定义与空间 DAG 充分条件]]；
 - [[adaptive-routing-prefill-lower-bound|黑盒自适应路由为什么一般不能自动低 span]]；
 - [[current-mainline|TIDE 当前 Graph 线入口]]。
 

@@ -46,7 +46,7 @@ TIDE 总体目标是研究同时具有下列性质的自回归神经系统：
 3. 每个输入位置只激活全部潜在计算中的稀疏子集。
 4. `prefill` 与逐位置 `decode` 保持同一 reference semantics。
 5. 有限 chunk 的执行能暴露完整的数据、状态、控制、可见性和提交依赖。
-6. 经证明可批量化的 node、kernel 或 subgraph 可以获得低 span 实现；无法批量化的部分显式承担顺序成本。
+6. 对 node、kernel 或 subgraph，先证明外层调度能暴露不随 chunk 长度增长的有限个昂贵计算批次，再单独研究低 span 与硬件实现；无法批量化的部分显式承担顺序成本。
 
 固定拓扑本身不表示度有界；在每条直接连接都占用单节点资源的成本口径下，单节点成本上界才推出统一的度上界。有界度再与可达容量增长共同要求多跳、逐级、层次化或空间化扩展，而不是一步平铺访问全部容量。
 
@@ -58,9 +58,9 @@ TIDE 总体目标是研究同时具有下列性质的自回归神经系统：
 - **旧显式 allocator profile 尚缺的正向结果**：其中的空间拓扑序构造不自动推出该 profile 的时间分块组合律。完整 model-level `prefill = decode` 仍需从逐绝对轮次节点转移证明窗口折叠，并为各 node/subgraph 给出低-span execution witness；下段微节点正时延 Graph 的新 composition 定理不会自动补上这项旧规格的嵌入证明。
 - **反向结果**：若模型类别允许任意、不可组合的 pointer-chasing 式自适应 routing，则不存在对该类别所有实例都有效的 exact、work-efficient、次线性 adaptive-depth prefill。该下界不能未经 embedding 证明就直接套到每个具体 selector。
 
-对本文当前的具体微节点正时延 Graph，finite-cut 存在唯一性、定量局部有限性、seal、continuation 与 cut composition 已在 [[positive-delay-graph-finite-cut-learning-note]] 中证明，并有最小 reference。对一般 static schema Graph 求 structural SCC 并得到 condensation DAG 仍只是一项图论分解：跨 SCC 的 region selector 或共享可变状态可能使纯消息边界不完整；即使边界完整，SCC 也不自动具有低 span。旧长文中的一般 SCC macro contract 仍是更宽 profile 的候选接口，不因这个具体正面结果自动成为通用定理。
+对本文当前的具体微节点正时延 Graph，finite-cut 存在唯一性、定量局部有限性、seal、continuation 与 cut composition 已在 [[positive-delay-graph-finite-cut-learning-note]] 中证明，并有最小 reference。对一般 static schema Graph 求 structural SCC 并得到 condensation DAG 仍只是一项图论分解：跨 SCC 的 region selector 或共享可变状态可能使纯消息边界不完整；即使边界完整，SCC 也不自动具有节点级时间批暴露或低 span。旧长文中的一般 SCC macro contract 仍是更宽 profile 的候选接口，不因这个具体正面结果自动成为通用定理。
 
-因此，“能精确执行”“有限前缀必然返回”“是否整体静止”“能否沿序列批量执行”必须分别登记。高性能有限前缀执行依次接受 semantic、progress、parallel-complexity 与 hardware-lowering 四道 gate；这些 gate 是设计审查框架，不是只看 Graph 拓扑即可得到的完备分类。
+因此，“能精确执行”“有限前缀必然返回”“是否整体静止”“外层是否保块”“是否低 span”必须分别登记。性能研究依次区分 semantic、progress、exact outer-bulk、parallel-complexity 与 hardware-lowering；这些层次是设计审查框架，不是只看 Graph 拓扑即可得到的完备分类。exact outer-bulk 的规范定义见 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|节点级时间批暴露]]：每个控制扫描可以串行，但外层 heavy/control 阶段数与固定节点的昂贵事件 batch 数都不得随 chunk 长度增长。
 
 LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden reference，不是理论必须完整复刻的终点。若 LH 的 selector、状态副作用或交错控制链破坏高性能 prefill，可以在不放弃总体目标的前提下简化、替代或移出 strict family。
 
@@ -91,7 +91,7 @@ Tide 当前最大的科学不确定性仍是 learning value：局部通信、持
 
 dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态架构限制；前者不是通往后者的中间拓扑。一般 static schema Graph 的 SCC condensation 又是第三种对象，不能与二者混写。condensation DAG 只规定宏节点之间的无环连接，不替宏节点内部选择 fixed-round 展开、scan、solver、sequential fallback 或其他求值语义。
 
-它主要承担四项职责：寻找理论上限，给出 correctness 与 complexity 边界，识别会破坏 chunk composition 或低 span 的机制，并为局部通信、超稀疏和训练稳定性提供设计约束。LH 是这条路线的重要早期动机和机制样本，但不是必须逐项保留的终点。历史 HB-Lattice 是从一般空间 DAG 走向层级局部结构的中间直觉；当前 HB-Sliced 是消除“空间平面、模型阶段和 runtime lowering”混写后的正式继承者。
+它主要承担四项职责：寻找理论上限，给出 correctness 与 complexity 边界，识别会破坏 chunk composition、外层保块或低 span 的机制，并为局部通信、超稀疏和训练稳定性提供设计约束。LH 是这条路线的重要早期动机和机制样本，但不是必须逐项保留的终点。历史 HB-Lattice 是从一般空间 DAG 走向层级局部结构的中间直觉；当前 HB-Sliced 是消除“空间平面、模型阶段和 runtime lowering”混写后的正式继承者。
 
 ### Checkpoint 生长线
 
@@ -227,8 +227,8 @@ Tide 正式数学文档遵守以下规则：
 1. 以 [[positive-delay-graph-finite-cut-learning-note]] 已证明的微观 finite-cut 语义、continuation 与 composition 为 reference，不再把旧的一般 SCC macro 候选契约当作基础定义。
 2. 从跨 message-SCC selector 反例出发，定义包含 selector owner、selector-history 和全部可变状态依赖的 dependency-complete SCC；固定共享参数不形成前向事件边。
 3. 为每个 SCC 保留逐边 identity、时延、输入输出投影与 continuation，先实现和对拍 exact `sequential-fallback`。
-4. 优先研究具有明确代数见证的 `associative/affine scan`、`fixed-round unfold` 与 `causal-bulk` 子类，再分别证明 lowering contract。
-5. 把 semantic、progress、work/span/memory/communication 与 hardware measurement 分账；一次 packed macro API 或 condensation DAG 都不自动表示低 span。
+4. 固定 control/heavy 成本 profile，优先寻找 bounded heavy/control phases 的 SCC 子类，并证明每个节点的昂贵时间事件只需不随 chunk 长度 $T$ 增长的有限批次；这对应 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|exact outer-bulk]]。
+5. 在此之后研究 `associative/affine scan`、`fixed-round unfold` 与 `causal-bulk` 的低-span witness，再单独测量 hardware lowering；一次 packed macro API 或 condensation DAG 本身不证明外层保块或低 span。
 6. 对具体 stateful selector 判断它落入结构化可并行特例，还是能嵌入自适应路由下界。
 
 ### Checkpoint 生长线
@@ -264,17 +264,18 @@ Tide 正式数学文档遵守以下规则：
 - 独立 Tide CPU kernels 在当前覆盖配置和 hidden/cache mode 上数值对齐 native LH。
 - Transformer/Mamba 主力 kernel family 已有构造性 chunk correctness 证明路线。
 - 单步精确状态嵌入、有限 DAG 节点细化和 token-local 固定 merge 分支已有明确前提下的闭包定理。
+- 严格分层 TimedDAG 已有 exact 节点级时间批暴露充分条件；控制扫描可具有 $\Theta(T)$ span，因此该结论本身不声称低 span。
 - 显式 allocator 的一般空间 DAG 已证明常数次空间拓扑遍历，但没有自动证明时间分块组合律。
 - 任意有限 static schema Graph 的 structural SCC 与 condensation DAG 分解成立；这只是图论结构结论，不包含 SCC 内部求值或性能结论。
 - 自适应路由下界已在明确的 deterministic exact black-box query model 中证明。
 - HB-Line-v0 reference 已验证 toy 语义下 depth-major chunk、token-major decode 和分段 continuation 的 artifact equality。
 - 两条路线是否最终汇合仍是研究假设，而不是当前结论。
-- 四道 gate、正交 execution profile 和候选 SCC macro contract 已形成设计框架，但具体 family 仍需逐项提交证明、实现或测量证据。
+- semantic、progress、exact outer-bulk、parallel-complexity、hardware-lowering 的分层审查和候选 SCC macro contract 已形成设计框架，但具体 family 仍需逐项提交证明、实现或测量证据。
 
 当前不能主张：
 
-- 任意一般 Graph 都有高性能 chunk prefill。
-- SCC 分解、宏节点封装或 termination certificate 本身解决了循环求值、有限前缀组合或低 span。
+- 任意一般 Graph 都有节点级时间批暴露或低-span chunk prefill。
+- SCC 分解、宏节点封装或 termination certificate 本身解决了循环求值、有限前缀组合、外层保块或低 span。
 - 当前完整 LH 自动满足 strict model-level `prefill = decode`。
 - 任意具体 selector 已经落入自适应路由下界。
 - CPU 数值对齐证明了模型可训练性、scaling 或性能优势。
