@@ -19,14 +19,14 @@ tags:
 > [!summary] 本文的阅读前提
 > 本文只以 [[timed-dag-region-selector-learning-note|《带区域选择的 TimedDAG：从零开始的数学定义》]] 为前置，不以前置 chunk-prefill 教材、旧的 TIDE 长文或任何 runtime 实现。读者应当已经知道时间纤维、节点状态、region selector、selector-history 和正整数边时延的定义；本文会把发生变化的对象与全部主递归重新写出。
 >
-> 第 10 节会引用 [[timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]] 中的性能术语；这只是可选的术语来源，不是 finite-cut 语义的阅读前提。
+> 第 10 节会在本文内重新定义所需的外层性能概念；[[timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]] 只提供更完整的 DAG 正例，不是本文的阅读前提。
 >
 > 本文允许固定节点图含有向环，但仍要求每条边具有严格正时延。核心对象不再是“一次最终结束的完整计算”，而是每个有限逻辑时间切面以下的唯一记录。
 
 > [!tip] 建议分三次阅读
 > 第一次读第 1--4 节，目标是理解为什么一个全局永不结束的自环仍在每个有限切面上存在唯一有限结果。第二次读第 5--8 节，手算 seal、在途消息和两段继续。第三次才读第 9--10 节的 SCC 与外层 lowering；SCC 不是理解 finite-cut 语义的前置。
 
-本文只做一项结构推广：固定消息图不再要求无环。它保留以下约束：
+本文只做一项结构推广：固定消息图不再要求无环。这里的 **Tide** 是研究线名称，不是另一个尚未定义的数学对象。本文保留以下约束：
 
 1. 节点、边、端口和 region 的集合有限；
 2. 每条消息边的时延属于 $\mathbb N_{>0}$；
@@ -46,10 +46,20 @@ tags:
 $$
 \mathbb N=\{0,1,2,\ldots\},
 \qquad
+\mathbb N_{>0}=\{1,2,3,\ldots\},
+\qquad
 [r,s)=\{\theta\in\mathbb N\mid r\le\theta<s\},
 $$
 
 以及有限子集集合 $\mathcal P_{\mathrm{fin}}(X)$。固定非空承载值集合 $P$，另取 $\bot\notin P$，并令 $P_\bot=P\cup\{\bot\}$。
+
+对 $L\in\mathbb N$，本文写：
+
+$$
+[L]=\{0,1,\ldots,L-1\};
+$$
+
+特别地，$[0]=\varnothing$。
 
 本文把 cut 译为**逻辑时间切面**。切面 $b\in\mathbb N$ 把逻辑时间分成 $[0,b)$ 与 $[b,\infty)$。它不是图论中把顶点分成两组的 edge cut，也不是墙钟截止时刻。
 
@@ -65,6 +75,8 @@ G=(V,A,\operatorname{src},\operatorname{dst},\delta),
 $$
 
 其中 $V$ 是有限非空节点集合，$A$ 是有限边标识符集合，$\operatorname{src},\operatorname{dst}:A\to V$ 分别给出边的起点与终点。不同边可以有相同起点和终点；边标识符仍然不同。
+
+式 (1) 单独称为**正时延消息图**。本文所说的一个完整 **PositiveDelayGraph 规格**，则由式 (1) 连同第 1.3--1.5 节的端口、输入时间、region、状态空间和全部函数共同组成。因而“消息图有环”只陈述 $G$ 的性质，不会抹去 selector 或状态带来的依赖。
 
 与 TimedDAG 唯一的图结构差别是：本文不要求 $G$ 无环。例如，允许：
 
@@ -86,6 +98,8 @@ $$
 
 到达。因此，空间上返回旧节点不表示逻辑时间返回过去。
 
+若消息图 $G$ 无环、第 1.3 节的输出端口集合 $\mathsf O\ne\varnothing$，并且每个输入位置集合都是非空有限初始区间，则恰好得到前置教材中的 TimedDAG 特例；允许空输入端口或 $\mathsf O=\varnothing$ 只是无关紧要的边界扩展。本文主要放宽的是消息图无环与输入总长度有限这两项限制。
+
 对 $v\in V$ 定义 $\operatorname{In}(v)$ 与 $\operatorname{Out}(v)$，含义仍分别是以 $v$ 为终点和起点的边集合。
 
 ### 1.3 端口、region 与局部有限输入历史
@@ -106,7 +120,7 @@ $$
 
 每个节点恰属一个 $\mathcal R_j$。region 不是普通消息节点；它不增加一条未声明来源的输入边。
 
-为了同时覆盖有限输入与可以继续增长的输入流，对每个 $i\in\mathsf I$ 选择一个位置集合 $K_i$：它或者等于某个有限初始区间 $[L_i]$，或者等于 $\mathbb N$。再给定：
+为了同时覆盖有限输入与可以继续增长的输入流，对每个 $i\in\mathsf I$ 选择一个位置集合 $K_i$：它或者等于某个有限初始区间 $[L_i]$（其中 $L_i\in\mathbb N$），或者等于 $\mathbb N$。再给定：
 
 $$
 x_i:K_i\to P,
@@ -162,7 +176,14 @@ $$
 
 外部输出记录仍写成 $(\mathrm{out},\theta,o,y)$；它的输出时间、端口和值分别是 $\theta,o,y$。
 
-令 $\mathsf{Atom}=\mathsf{Ext}\cup\mathsf{Msg}$，并令 $\mathsf{Atom}_v$ 是目标为 $v$ 的原子集合。对每个 $v\in V$，给定非空集合 $S_v,X_v,D_v$、初态 $q_v^{\mathrm{init}}\in S_v$，以及全函数：
+令 $\mathsf{Atom}=\mathsf{Ext}\cup\mathsf{Msg}$，并令 $\mathsf{Atom}_v$ 是目标为 $v$ 的原子集合。对每个 $v\in V$，定义：
+
+$$
+\operatorname{OutPort}(v)
+=\{o\in\mathsf O\mid\varepsilon(o)=v\}.
+$$
+
+再给定非空集合 $S_v,X_v,D_v$、初态 $q_v^{\mathrm{init}}\in S_v$，以及全函数：
 
 $$
 \begin{aligned}
@@ -185,7 +206,7 @@ S_v\times\mathbb N\times X_v
 \tag{5}
 $$
 
-这里 $\operatorname{OutPort}(v)=\{o\in\mathsf O\mid\varepsilon(o)=v\}$。$\operatorname{Agg}_v$ 虽然在所有有限子集上有定义，正文只在非空、同一时间的纤维上调用它。
+$\operatorname{Agg}_v$ 虽然在所有有限子集上有定义，正文只在非空、同一时间的纤维上调用它。
 
 ### 1.5 selector-history 与状态采用
 
@@ -468,7 +489,7 @@ $$
 
 这里每个成员都有限；整个族不必在某个有限 $b$ 后保持不变。
 
-> [!theorem] 定理 3：sealed-prefix invariance
+> [!theorem] 定理 3：输入前缀不变性（input-prefix invariance）
 > 若两份输入历史 $x,x'$ 满足 $E_{x,<b}=E_{x',<b}$，而固定图、局部函数、初始节点状态与初始 selector-history 相同，则：
 > $$
 > \mathcal T_{x,<b}=\mathcal T_{x',<b}.
@@ -476,7 +497,7 @@ $$
 
 **证明。** 再次对 $\theta<b$ 归纳。未来时间不小于 $b$ 的外部记录从未进入式 (10) 的当前纤维；由更早时间产生的内部消息又由归纳假设相同。$\square$
 
-这个定理才是“未来输入不能改写已封闭过去”的数学内容。它不是根据一次实验观察出来的经验性质。
+这个定理只比较两个完整数学输入历史：若它们在切面左侧相同，未来输入就不能改变左侧记录。在线求值者怎样知道自己已经取得完整前缀，要到第 5 节用 source seal 回答；该知识不是定理 3 的前提中暗含的能力。
 
 ## 3. 三个最小例子
 
@@ -541,7 +562,9 @@ $$
 
 ### 4.1 四类事件
 
-固定 $b$ 与 $\mathcal T_{x,<b}$。若 $B_{v,\theta}\ne\varnothing$，定义本地准备与状态采用事件：
+固定 $b$ 与 $\mathcal T_{x,<b}$，并取四个两两不同的标签
+$\mathrm{prep},\mathrm{select},\mathrm{adopt},\mathrm{full}$。若
+$B_{v,\theta}\ne\varnothing$，定义本地准备与状态采用事件：
 
 $$
 P_{v,\theta}=(\mathrm{prep},v,\theta),
@@ -561,19 +584,59 @@ $$
 F_{v,\theta}=(\mathrm{full},v,\theta).
 $$
 
-其中都要求 $\theta<b$。这四类带不同首坐标的有序组两两不同。
+其中都要求 $\theta<b$。相应的四个事件集合是：
+
+$$
+\begin{aligned}
+\mathscr V^P_{x,<b}
+&=\{P_{v,\theta}\mid(v,\theta)\in\mathcal E^{\mathrm{node}}_{x,<b}\},\\
+\mathscr V^U_{x,<b}
+&=\{U_{v,\theta}\mid(v,\theta)\in\mathcal E^{\mathrm{node}}_{x,<b}\},\\
+\mathscr V^S_{x,<b}
+&=\{S_{j,\theta}\mid(j,\theta)\in\mathcal E^{\mathrm{sel}}_{x,<b}\},\\
+\mathscr V^F_{x,<b}
+&=\{F_{v,\theta}\mid
+\theta<b, v\in\mathcal A_{\rho(v),\theta}\}.
+\end{aligned}
+$$
+
+四类有序组的首坐标不同，因而这些集合两两不交。写 $\sqcup$ 表示不交并，并定义：
+
+$$
+\mathscr V^{\mathrm{ev}}_{x,<b}
+=\mathscr V^P_{x,<b}\sqcup\mathscr V^S_{x,<b}
+\sqcup\mathscr V^U_{x,<b}\sqcup\mathscr V^F_{x,<b}.
+$$
 
 ### 4.2 直接依赖边
+
+本节的事件图采用**边关系**表示：边集是下列笛卡尔积的一个子集：
+
+$$
+\mathscr V^{\mathrm{ev}}_{x,<b}
+\times\mathscr V^{\mathrm{ev}}_{x,<b}.
+$$
+
+与式 (1) 的消息图不同，每条事件边
+没有另设边标识符。
 
 函数作用事件之间只加入以下直接依赖：
 
 1. 同一时间的函数依赖：
    $$
    P_{v,\theta}\longrightarrow S_{j,\theta}
-   \longrightarrow U_{v,\theta}
-   \longrightarrow F_{v,\theta},
+   \longrightarrow U_{v,\theta},
+   \qquad
+   P_{v,\theta}\longrightarrow U_{v,\theta},
    $$
-   其中 $j=\rho(v)$、$v\in\mathcal C_{j,\theta}$，最后一个事件只在 $v$ active 时存在；
+   其中 $j=\rho(v)$、$v\in\mathcal C_{j,\theta}$；若 $v$ active，再加入：
+   $$
+   U_{v,\theta}\longrightarrow F_{v,\theta},
+   \qquad
+   P_{v,\theta}\longrightarrow F_{v,\theta}.
+   $$
+   其中 $P_{v,\theta}\to U_{v,\theta}$ 记录状态采用直接读取准备所得的候选新状态，
+   $P_{v,\theta}\to F_{v,\theta}$ 记录完整输出直接读取准备所得的本地内容；
 2. 同一节点相邻两个实际节点事件之间的状态边：
    $$
    U_{v,\theta}\longrightarrow P_{v,\theta'}
@@ -590,7 +653,28 @@ $$
    P_{v,\eta+\delta(a)}.
    $$
 
-第 2、3 项中的“相邻”表示两者之间没有同一节点或同一 region 的另一个实际事件。传递依赖由有向路径表示，不重复加入全部远距离边。
+第 2、3 项中的“相邻”表示两者之间没有同一节点或同一 region 的另一个实际事件。
+即使 $P\to U$ 与 $P\to F$ 已分别被同刻路径蕴含，仍因它们表示直接函数自变量而保留；
+其余间接依赖只由有向路径表示，不重复加入全部远距离边。
+
+令：
+
+$$
+\mathscr E^{\mathrm{ev}}_{x,<b}
+\subseteq
+\mathscr V^{\mathrm{ev}}_{x,<b}
+\times\mathscr V^{\mathrm{ev}}_{x,<b}
+$$
+
+**恰好**由上述四类有序事件对组成，并正式定义 finite-cut 函数作用事件图：
+
+$$
+\mathscr G^{\mathrm{ev}}_{x,<b}
+=\bigl(\mathscr V^{\mathrm{ev}}_{x,<b},
+\mathscr E^{\mathrm{ev}}_{x,<b}\bigr).
+$$
+
+“恰好”排除了任何未声明的依赖边；间接依赖只由这张图中的有向路径表示。
 
 ### 4.3 事件秩
 
@@ -606,7 +690,7 @@ $$
 \tag{23}
 $$
 
-并在 $\mathbb N\times\{0,1,2,3\}$ 上使用字典序。
+并在 $\mathbb N\times\{0,1,2,3\}$ 上使用字典序：$(\theta,r)<_{\mathrm{lex}}(\theta',r')$ 当且仅当 $\theta<\theta'$，或 $\theta=\theta'$ 且 $r<r'$。
 
 > [!theorem] 定理 4：finite-cut 事件图是有限 DAG
 > 第 4.1--4.2 节定义的事件图有限，并且每条依赖边都严格增加式 (23) 的秩。因此它不含有向环。
@@ -691,6 +775,10 @@ $$
 
 式 (25) 是本文中 seal 的全部数学含义。它是关于“所有较早记录”的全称命题；$E^\circ$ 或 $H$ 当前没有新增元素并不能推出这个命题。
 
+这里定义的只是相对于完整实际消息集 $M^\infty$ 的**外延有效性**，不是让在线求值者预知未来消息的办法。定理 8 会给出一条不读取未来消息的构造轨迹；研究任意在线暴露顺序时，还必须沿用前置教材的源事件约束，也就是上面的合法阶段条件：只有相应 $F_{v,\theta}$ 完成以后，其消息才可进入 $H$。
+
+定理 3 从外部比较两个完整输入历史，并不告诉在线求值者何时已经看全前缀。若 $\sigma^{\mathrm{in}}(i)\ge b$ 对每个输入端口成立，则式 (25) 的第一行正是这种知识：$E^\circ$ 已包含所有时间小于 $b$ 的源记录。source seal 因而是识别定理 3 所讨论输入前缀的一份证明，而不是另一种输入值。
+
 ### 5.2 节点前沿与纤维关闭
 
 定义：
@@ -751,14 +839,14 @@ $$
 
 这里 $(v,\theta)\in\mathsf{Done}$ 表示：$P_{v,\theta}$、相应的
 $S_{\rho(v),\theta}$ 与 $U_{v,\theta}$ 已经完成；若 $v$ active，则
-$F_{v,\theta}$ 也已经完成，它产生的输出已经确定，并且它产生的每条内部消息都已经纳入当前 $H$。这一定义把“函数已经返回”与“结果已经进入当前数学记录”一并包括在 completed 中。定义：
+$F_{v,\theta}$ 也已经完成，它产生的输出已经确定，并且它产生的每条内部消息都已经纳入当前 $H$。这一定义把“函数已经返回”与“结果已经进入当前数学记录”一并包括在 $\mathsf{Done}$ 的成员关系中。对 $r\in\mathbb N$，定义：
 
 $$
 \operatorname{DoneTo}(v,r)
 \Longleftrightarrow
 \left(
 \lambda(v)\ge r
-\ \land\ 
+\ \land\
 \{(v,\theta)\mid\theta<r,\ B_{v,\theta}\ne\varnothing\}
 \subseteq\mathsf{Done}
 \right).
@@ -766,6 +854,8 @@ $$
 $$
 
 第一项证明时间小于 $r$ 的输入纤维已经关闭；第二项证明其中实际存在的节点事件已经完成。两项不能互相替代。
+
+这里的 $\mathsf{Done}$ 特意比前置 TimedDAG 教材中的 $\operatorname{Completed}_n$ 更强：后者允许完整输出先完成、消息随后才进入公开集合；本文的成员关系已经要求相应内部消息属于 $H$。这个加强正是下一个引理可以直接使用 $m\in H$ 的原因。
 
 > [!lemma] 引理 7：正时延出边的 seal 推进
 > 设 $a\in\operatorname{Out}(v)$。若 $\operatorname{DoneTo}(v,r)$ 成立，则以下取值有效：
@@ -780,7 +870,7 @@ $$
 \operatorname{send}(m)+\delta(a)<r+\delta(a),
 $$
 
-所以 $\operatorname{send}(m)<r$。令 $\theta=\operatorname{send}(m)$；消息的存在蕴含源节点 $v$ 在时间 $\theta$ active，因而 $B_{v,\theta}\ne\varnothing$。式 (28) 给出 $(v,\theta)\in\mathsf{Done}$，而 completed 的定义又给出 $m\in H$。故式 (25) 的第二项成立。$\square$
+所以 $\operatorname{send}(m)<r$。令 $\theta=\operatorname{send}(m)$；消息的存在蕴含源节点 $v$ 在时间 $\theta$ active，因而 $B_{v,\theta}\ne\varnothing$。式 (28) 给出 $(v,\theta)\in\mathsf{Done}$，而 $\mathsf{Done}$ 的成员定义又给出 $m\in H$。故式 (25) 的第二项成立。$\square$
 
 正时延还提供一个不需要任何消息已经产生的初始事实：
 
@@ -834,14 +924,21 @@ $\sigma^A_\theta(c)=\theta+\delta(c)\ge\theta+1$；输入端口 seal 也至少�
 
 ### 6.1 完整切面
 
-称求值已经完成 cut $b$，当且仅当：
+对一份满足第 5.3 节成员含义的合法部分记录，定义：
 
-1. 所有 $\theta<b$ 的实际节点事件都已经完成本地准备与状态采用；
-2. 所有 $\theta<b$ 的实际 region 选择事件都已经完成，并确定相应 active set 与下一 selector-history；
-3. 所有 $\theta<b$ 的 active 节点都已经完成 $\operatorname{Full}$；
-4. 这些完整输出作用产生的内部消息与外部输出已经确定。
+$$
+\operatorname{CutDone}(b)
+\Longleftrightarrow
+\mathcal E^{\mathrm{node}}_{x,<b}\subseteq\mathsf{Done}.
+$$
 
-这一定义不允许停在一次式 (13) 的中间，也不允许把已经求出但尚未纳入边界记录的消息留在隐藏临时变量中。
+称求值**完成 cut $b$**，当且仅当 $\operatorname{CutDone}(b)$ 成立。每个实际选择事件至少有一个候选节点，所以这个集合包含关系同时蕴含：全部 $\theta<b$ 的准备、选择与状态采用已经完成；全部 active 节点的 $\operatorname{Full}$ 已经完成；并且：
+
+$$
+M_{<b}^{\mathrm{send}}\subseteq H.
+$$
+
+外部输出则是这些已完成 $\operatorname{Full}$ 值中的 $Z_{<b}$ 坐标；若另设当前已交付输出集合 $Z^\circ$，外部交付完成还要单独要求 $Z_{<b}\subseteq Z^\circ$。它不参与本文的未来递归。因此，$\operatorname{CutDone}(b)$ 不允许停在一次式 (13) 的中间，也不允许把已经求出但尚未纳入 $H$ 的内部消息留在隐藏临时变量中。
 
 ### 6.2 跨越切面的在途消息
 
@@ -901,13 +998,24 @@ $$
 四个坐标分别保存：
 
 1. 绝对逻辑时间；
-2. 每个节点完成时间 $<b$ 的状态采用以后所得状态；
-3. 每个 region 完成时间 $<b$ 的 selector step 以后所得历史；
+2. 每个节点完成所有逻辑时间 $\theta<b$ 的作用后所得状态；
+3. 每个 region 完成所有逻辑时间 $\theta<b$ 的 selector step 后所得历史；
 4. 已由左侧产生、但将在右侧到达的消息。
+
+把第 3.3 节的单节点自环继续手算三步，可以同时看见这些对象。设唯一外部输入在时间 $0$ 到达，输入端口 seal 为 $\infty$，$\delta(a)=2$，并记时间 $0,2$ 发出的消息为 $m_0,m_2$。完成 $[0,b)$ 后可取 $H_b=\bigcup_{\eta<b}M_\eta$、$\sigma_b^A(a)=b+2$；于是 $\lambda_b(v)=b+2$。因为只有一个节点和一个 region，表中省略状态族的下标。前四个切面为：
+
+| $b$ | $H_b$ | $\sigma_b^A(a)=\lambda_b(v)$ | 已成立的完成谓词 | $W_b$ | $Q_b$ |
+| ---: | --- | ---: | --- | --- | --- |
+| $0$ | $\varnothing$ | $2$ | $\operatorname{DoneTo}(v,0)$ | $\varnothing$ | $(0,q^0,y^0,\varnothing)$ |
+| $1$ | $\{m_0\}$ | $3$ | $\operatorname{DoneTo}(v,1)$ | $\{m_0\}$ | $(1,q^1,y^1,\{m_0\})$ |
+| $2$ | $\{m_0\}$ | $4$ | $\operatorname{DoneTo}(v,2)$ | $\{m_0\}$ | $(2,q^2,y^2,\{m_0\})$ |
+| $3$ | $\{m_0,m_2\}$ | $5$ | $\operatorname{DoneTo}(v,3)$ | $\{m_2\}$ | $(3,q^3,y^3,\{m_2\})$ |
+
+$H_b$ 是累计记录，所以 $m_0$ 在时间 $2$ 被消费后仍留在其中；$W_b$ 只保留跨越当前切面的消息。$\sigma_b^A,\lambda_b$ 是从完成事实推出的进展证书，不是 $Q_b$ 的坐标。
 
 $b$ 不能一般地从其余坐标恢复，因为式 (5)--(6) 的函数允许显式读取逻辑时间。$Q_b$ 也没有保存过去输出 $Z_{<b}$：这些输出不参与未来节点递归。若目标还包括恢复完整输出日志或保证外部 exactly-once 交付，则必须另存 $Z_{<b}$ 或一份交付账本。
 
-$Q_b$ 是**语义 continuation**，不是式 (25) 的在线进展证书：它不保存已经消费的全部历史消息，也不保存 source seal。定理 9 假定 $Q_b$ 确实来自一个已完成的合法 cut。在线恢复还要可信地知道这一来源，并取得覆盖目标区间的输入端口 seal。
+$Q_b$ 是**语义 continuation**，不是式 (25) 的在线进展证书：它不保存已经消费的全部历史消息，也不保存 source seal。第 6.4 节的 continuation sufficiency 定理假定 $Q_b$ 确实来自一个已完成的合法 cut。在线恢复还要可信地知道这一来源，并取得覆盖目标区间的输入端口 seal。
 
 更明确地说，令 $E^{\ge b}\subseteq E_x$ 是恢复后已经取得、时间不小于 $b$ 的外部记录，$H^{\ge b}$ 是恢复后新发送且已经纳入记录的消息。输入端口的相对覆盖条件是：
 
@@ -963,7 +1071,7 @@ W_c
 =
 \left\{m\in
 W_b\cup\bigcup_{\eta\in[b,c)}M^{b\to c}_\eta
-\ \middle|\ 
+\ \middle|\
 \operatorname{time}(m)\ge c
 \right\}.
 $$
@@ -1008,7 +1116,7 @@ $$
 - 事件坐标按逻辑时间不交地并合；
 - 新消息按发送时间不交地并合；
 - 两份边界状态与 selector-history 在时间 $b$ 的共同坐标上识别一次；
-- $W_b$ 只作为第二段的输入边界，不作为新 artifact 重复出现。
+- $W_b$ 只作为第二段的输入边界，不作为本段新生成的记录重复出现。
 
 空区间记录是这个粘合的单位元。
 
@@ -1037,7 +1145,7 @@ $$
 
 **证明。** 第一段在时间 $b$ 给出的节点状态与 selector-history，按定义就是一次执行到达同一切面时的相应坐标。第一段给出的 $W_b$ 恰好包含所有更早产生而将在时间不小于 $b$ 到达的消息。
 
-因此，一次执行与分段执行在时间 $b$ 的式 (34) 具有相同自变量。假设两者直到 $\theta-1$ 相同，则它们已经新产生的消息相同，时间 $\theta$ 的纤维以及式 (11)--(16) 的全部函数值也相同。对 $\theta\in[b,c)$ 归纳，得到两段未来记录相同。
+因此，一次执行的式 (10) 与分段执行的式 (34) 虽取自不同的原始并集，但在时间 $b$ 按目标节点与到达时间过滤后产生相同纤维：第一段的 $W_b$ 恰好保留更早产生且到达时间不小于 $b$ 的消息，到达时间小于 $b$ 的记录则都被过滤掉。假设两者直到 $\theta-1$ 相同，则它们已经新产生的消息相同，时间 $\theta$ 的纤维以及式 (11)--(16) 的全部函数值也相同。对 $\theta\in[b,c)$ 归纳，得到两段未来记录相同。
 
 在切面 $c$，两种执行都对“先前 $W_a$ 与区间 $[a,c)$ 新消息”的整个并集应用 $\operatorname{time}(m)\ge c$ 这一过滤条件，所以最终 $W_c$、节点状态和 selector-history 也相同。规范粘合的定义随后给出式 (36)。$\square$
 
@@ -1073,7 +1181,9 @@ $$
 4. 在源完整输出事件以前公开相应消息；
 5. 用线程完成顺序替代 selector 的确定平局规则。
 
-由定理 4，cut 内的全部函数作用形成有限 DAG。任意拓扑序都给出相同函数值；seal 另行证明这个有限事件集合已经完整，而不是只看见了其中一个真子集。
+由定理 4，略去式 (13) 中空候选集合的恒等位置后，第 4.1 节定义的全部实际函数作用事件形成有限 DAG。这里的拓扑序是事件顶点的一个
+全序，并要求每条边的起点都排在终点以前。任意拓扑序都给出相同函数值；seal
+另行证明这个有限事件集合已经完整，而不是只看见了其中一个真子集。
 
 ### 8.2 最小 reference interpreter 契约
 
@@ -1093,16 +1203,19 @@ $$
 正确性测试至少比较：
 
 $$
-B,\mathcal C,\mathcal A,q,y,M,Z,W
+B,\mathcal C,h,\widetilde q,d,\mathcal A,q,y,
+f^A,f^O,M,Z,W
 $$
 
-以及逐边消息身份；只比较最终输出 payload 不足以检验定理 10。
+以及逐边消息身份。这里 $h,\widetilde q,d,f^A,f^O$ 也可以由已比较的自变量和固定函数逐项重建，但测试若直接保存它们，更容易定位首个分歧；只比较最终输出 payload 不足以检验定理 10。
 
-本文附带的最小可执行见证是 [positive_delay_graph_reference.py](examples/positive_delay_graph_reference.py)。它用延迟自环和两节点环检查一次执行与多种 cut 切分，并故意展示丢失 $W_b$ 会怎样破坏恢复。它还从 reference trace 构造第 4 节的事件 DAG，以随机 ready-event 拓扑序重新求值完整 cut。该程序是定理的可执行样例，不代替上述证明。
+本文附带的最小可执行见证是 [positive_delay_graph_reference.py](examples/positive_delay_graph_reference.py)。它用延迟自环和两节点环检查一次执行与多种 cut 切分，并故意展示丢失 $W_b$ 会怎样破坏恢复。它还从 reference trace 构造一张与第 4 节事件图具有相同传递闭包的稀疏调度图：只省略已经分别由 $P\to S\to U$ 与 $P\to S\to U\to F$ 蕴含的 $P\to U$、$P\to F$，再以随机 ready-event 拓扑序重新求值完整 cut。该程序是定理的可执行样例，不代替上述证明。
 
 ### 8.3 随机调度对拍的边界
 
-附带解释器已经随机选择当前无未完成前驱的事件，并把所得完整 artifact 与直接递归逐项比较。这个测试使用已经由 reference recursion 确定的有限事件集合，检验的是依赖边与次序无关。
+附带解释器已经随机选择当前无未完成前驱的事件，并把所得完整记录与 continuation
+同直接递归逐项比较。这个测试使用已经由 reference recursion 确定的有限事件集合，
+检验的是这张稀疏调度图的前驱关系足以支持与直接递归相同、且不依赖所选拓扑序的重求值。
 
 若进一步模拟在线 closure，还应随机延迟消息进入 $H$，但只有在相应源事件完成以后才允许进入，并用式 (25) 检查每次 seal 推进。那会检验进展证书的实现，而不是为定理 4 增加另一种事件语义。
 
@@ -1114,14 +1227,23 @@ finite-cut 语义已经在任意正时延消息图上成立，不需要先求 SC
 
 ### 9.1 message SCC 与 condensation DAG
 
+本节约定“可达”允许长度为 $0$ 的路径；因此每个节点都可达自身。
+
 对 $u,v\in V$，定义：
 
 $$
-\begin{aligned}
 u\sim_G v
-&\Longleftrightarrow
+\Longleftrightarrow
 u\text{ 在 }G\text{ 中可达 }v
-\text{ 且 }v\text{ 在 }G\text{ 中可达 }u,\\
+\text{ 且 }v\text{ 在 }G\text{ 中可达 }u.
+\tag{37}
+$$
+
+$\sim_G$ 是等价关系：长度为 $0$ 的可达给出自反性，定义本身给出对称性，
+有向路径的拼接给出传递性。因此可以定义它的等价类集合及分量间边关系：
+
+$$
+\begin{aligned}
 \mathcal S_G&=V/{\sim_G},\\
 E_{\mathrm{cond}}
 &=\{(C,D)\in\mathcal S_G^2\mid
@@ -1129,10 +1251,9 @@ C\ne D,\ \exists a\in A:\
 \operatorname{src}(a)\in C,\
 \operatorname{dst}(a)\in D\}.
 \end{aligned}
-\tag{37}
 $$
 
-$\mathcal S_G$ 的元素称为 **message structural SCC**，$(\mathcal S_G,E_{\mathrm{cond}})$ 称为 message condensation graph。宏边界仍必须保留每个原边 $a$ 的身份、端点和时延；式 (37) 中的有序对不能代替实际消息端口。
+$\mathcal S_G$ 的元素称为 **message structural SCC**，$(\mathcal S_G,E_{\mathrm{cond}})$ 称为 message condensation graph。宏边界仍必须保留每个原边 $a$ 的身份、端点和时延；$E_{\mathrm{cond}}$ 中的有序对不能代替实际消息端口。
 
 > [!theorem] 定理 11：message condensation graph 是 DAG
 > $(\mathcal S_G,E_{\mathrm{cond}})$ 不含有向环。
@@ -1215,7 +1336,7 @@ $$
 $$
 M^{D\to C}_{[a,b)}
 =\left\{m\in\bigcup_{\theta\in[a,b)}M_\theta
-\ \middle|\ 
+\ \middle|\
 \operatorname{src}(\operatorname{edge}(m))\in D,
 \operatorname{target}(m)\in C
 \right\}.
@@ -1234,13 +1355,8 @@ $$
 
 ### 9.4 dependency-complete 静态图
 
-第 4 节的事件图随输入历史与 cut 改变。记它为：
-
-$$
-\mathscr G^{\mathrm{ev}}_{x,<b}
-=\bigl(\mathscr V^{\mathrm{ev}}_{x,<b},
-\mathscr E^{\mathrm{ev}}_{x,<b}\bigr).
-$$
+沿用第 4.2 节已经正式定义的事件图
+$\mathscr G^{\mathrm{ev}}_{x,<b}$。它随输入历史与 cut 改变。
 
 为了寻找不随一次运行改变的宏边界，先把每个事件投影到持有相应节点状态或
 selector-history 的对象。取与 $V$ 不交的带标签集合
@@ -1259,7 +1375,8 @@ $$
 
 > [!definition] dependency-complete 静态图
 > 顶点集为 $V^\dagger=V\sqcup\{s_j\mid j\in J\}$ 的有向图
-> $\Gamma=(V^\dagger,E_\Gamma)$ 称为对本文事件语义
+> $\Gamma=(V^\dagger,E_\Gamma)$，其中
+> $E_\Gamma\subseteq V^\dagger\times V^\dagger$，称为对本文事件语义
 > **dependency-complete**，若对
 > 任意合法输入历史 $x$、任意 cut $b$，以及
 > 任意 $(e,e')\in\mathscr E^{\mathrm{ev}}_{x,<b}$，都有
@@ -1269,9 +1386,18 @@ $$
 > \bigl(\operatorname{own}(e),\operatorname{own}(e')\bigr)\in E_\Gamma.
 > $$
 
-换言之，删去连续重复的 owner 后，每条实际事件路径都投影成 $\Gamma$ 中的一条
-有向游走。这个定义只要求静态图不漏掉第 4.2 节的直接依赖，不要求每条静态边
-都在每次运行中出现。
+换言之，把一条实际事件路径投影到 owner 并删去连续重复项以后，所得有限顶点
+序列的每对相邻项都是 $\Gamma$ 的一条边。这个定义只要求静态图不漏掉第 4.2
+节的直接依赖，不要求每条静态边都在每次运行中出现。
+
+对任一固定的 dependency-complete 图 $\Gamma$，定义 $z\sim_\Gamma z'$ 当且仅当
+$z,z'$ 在 $\Gamma$ 中互相可达。与 $\sim_G$ 相同，它也是等价关系。令：
+
+$$
+\mathcal S_\Gamma=V^\dagger/{\sim_\Gamma}.
+$$
+
+$\mathcal S_\Gamma$ 才是相对于这张固定静态图的 SCC 集合。换用一张经过证明的更小静态图，可能改变这些等价类，因此后文所有这类 SCC 都明确带上 $\Gamma$。
 
 现在定义一个无需分析具体函数即可构造的静态图：
 
@@ -1287,18 +1413,22 @@ E^\dagger
 \tag{39}
 $$
 
-$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示选择结果可能改变节点的状态采用或完整输出。对式 (39) 求 SCC，会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
+记 $G^\dagger=(V^\dagger,E^\dagger)$。
+$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示选择结果可能改变节点的状态采用或完整输出。$\mathcal S_{G^\dagger}$ 会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
 
-> [!theorem] 命题 13：$G^\dagger$ 是 dependency-complete 静态图
-> 式 (39) 的 $G^\dagger=(V^\dagger,E^\dagger)$ 满足上述定义。
+> [!proposition] 命题 13：$G^\dagger$ 是 dependency-complete 静态图
+> 式 (39) 的 $G^\dagger$ 满足上述定义。
 
 **证明。** 逐类检查第 4.2 节的直接事件边。同刻边
 $P_{v,\theta}\to S_{j,\theta}$ 投影成 $v\to s_j$，而
 $S_{j,\theta}\to U_{v,\theta}$ 投影成 $s_j\to v$；两者都在式 (39)
-中。$U_{v,\theta}\to F_{v,\theta}$ 的 owner 相同。节点状态边两端都由
-$v$ 持有，selector-history 边两端都由 $s_j$ 持有。最后，消息边
+中。$P_{v,\theta}\to U_{v,\theta}$、$U_{v,\theta}\to F_{v,\theta}$ 与
+$P_{v,\theta}\to F_{v,\theta}$ 的 owner 都相同。节点状态边两端都由 $v$
+持有，selector-history 边两端都由 $s_j$ 持有。最后，消息边
 $F_{u,\eta}\to P_{v,\eta+\delta(a)}$ 投影成原消息边 $u\to v$，也在
 式 (39) 中。直接依赖已经穷尽，结论成立。$\square$
+
+除非明确换用另一张已证明 dependency-complete 的静态图，第 10--12 节固定取 $\Gamma=G^\dagger$，因而 $\mathcal S_\Gamma=\mathcal S_{G^\dagger}$。下文所谓宏分量均指某个明确的 $C\in\mathcal S_\Gamma$。
 
 下面用同一个例子区分四张容易混淆的图。取正时延消息图 $G$ 恰为
 
@@ -1362,30 +1492,306 @@ $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代
 
 ## 10. correctness、外层保块与低 span 是不同层级
 
+本节说的 **work** 是所选计算模型中的总 primitive 成本，**span** 是同一模型下依赖图中最长路径的成本；二者都必须先指定各类函数作用的成本，不能从逻辑时间本身读出。
+
 ### 10.1 本文已经得到哪一级算法
 
-定理 8 给出有限 cut 的顺序 reference interpreter；定理 10 给出任意完整时间切分的组合律；定理 12 在额外 locality 条件下给出 message SCC 的拓扑外层调度。这三项都属于 exact correctness 与 finite progress。
+定理 8、10、12 分别给出 finite-cut 顺序求值、切面组合与式 (38) 的
+SCC-local 条件下的 message-SCC 调度；命题 13 只给出静态依赖包络。它们属于
+exact correctness 或 finite progress，尚不推出性能。
 
-命题 13 只把直接事件依赖安全地投影到一张静态图；它没有增加另一种
-interpreter、finite-cut 进展证明或性能结论。
-
-它们没有单独给出任何一种性能结论。以下三层尤其不能混为一谈：
-
-1. 外层调度是否保留节点作用沿逻辑时间成批执行的机会；
-2. 控制与数据依赖是否具有低 span 或 work-efficient scan；
-3. 给定 backend 上是否真正获得较高的硬件利用率。
-
-这些结论必须在选定计算模型、局部函数表示与成本函数以后另证。
+后文依次区分三个更强层级：外层是否保留节点时间批，给定成本模型后的 work/span，以及具体 backend 的硬件表现。前一层成立不自动推出后一层；第 10.2 节只定义第一层。
 
 ### 10.2 第一性能台阶：节点级时间批暴露
 
-本文后续所谓**外层保块**，采用 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|TimedDAG chunk-prefill 教材中的正式定义]]。先固定一个成本 profile，区分 selector、selector-history 等控制作用与指定的昂贵节点作用。对两个切面之间宽度为 $T$ 的逻辑时间区间，exact 外层 lowering 可以顺序扫描控制作用；但外层 heavy/control 阶段数，以及每个节点的昂贵时间 batch 数，都必须由固定系统数据的常数控制，而不随 $T$ 或本次输入增长。最强情形是每个节点一批；“主体时间块一批，加上常数个边界批”也属于这一层级。
+先固定一份不含 $\operatorname{Full}$ 的**无限日程骨架**
+$\mathfrak B_\infty$。对每个 $i\in\mathsf I$，先固定严格递增的共同注入日程
+$\bar\iota_i:\mathbb N\to\mathbb N$。为使不同输入长度具有共同的函数类型，定义：
 
-换成本文的记号，就是在正式定义中用 $[a,b)$ 代替 $I_{q,T}$，令 $T=b-a$，并用左右切面 $Q_a,Q_b$ 代替 $Q_{Dq},Q_{D(q+T)}$；其余量化及“不得预知尚未求值结果”的要求不变。
+$$
+\mathsf{Ext}_\infty
+=\{(\mathrm{ext},i,k,y)\mid
+i\in\mathsf I,\ k\in\mathbb N,\ y\in P\}.
+$$
 
-这个定义只约束外层调度不要把昂贵节点计算拆成随 $T$ 增长的许多调用。它允许 selector-history 具有 $\Theta(T)$ 的顺序控制 span，也不研究 batch kernel 内部怎样实现。因此这里的“高性能 prefill”若不加限定，精确含义只是这一第一性能台阶，而不是低 span 或实测加速。
+对 $e=(\mathrm{ext},i,k,y)\in\mathsf{Ext}_\infty$，令
+$\operatorname{target}(e)=\gamma(i)$、
+$\operatorname{time}(e)=\bar\iota_i(k)$、$\operatorname{value}(e)=y$。
+再令：
 
-batch 的坐标是节点时间事件 $(v,\theta)$，不是预先附着于某个 token 的工作单位。同一时间纤维可以汇合来自不同 token 的信号；只要外层仍能收集相应节点时间事件，信号交错本身就不否定批量暴露。某个具体 profile 若能证明“$T-h$ 尺度的主体区加 $h$ 尺度的边界区”，并且 $h$ 只依赖固定系统数据而不随 $T$ 增长，这只是有界批次数的一种 witness，而不是按 token 身份切开语义。
+$$
+\mathsf{Atom}_\infty
+=\mathsf{Ext}_\infty\cup\mathsf{Msg},
+\qquad
+\mathsf{Atom}_{\infty,v}
+=\{z\in\mathsf{Atom}_\infty\mid\operatorname{target}(z)=v\}.
+$$
+
+骨架还包含第 1 节的图、端口、region、容量与模式、状态空间、初态，全部
+$\operatorname{Upd},\operatorname{Read},\operatorname{SelStep}$，以及共同全函数：
+
+$$
+\operatorname{Agg}_v^\infty:
+\mathbb N\times
+\mathcal P_{\mathrm{fin}}(\mathsf{Atom}_{\infty,v})
+\longrightarrow X_v.
+$$
+
+对长度向量
+$\mathbf L=(L_i)_{i\in\mathsf I}\in\mathbb N^{\mathsf I}$，令：
+
+$$
+\begin{aligned}
+K_i^{\mathbf L}&=[L_i],
+&
+\iota_i^{\mathbf L}
+&=\bar\iota_i\!\upharpoonright_{[L_i]},\\
+\mathsf{Ext}_{\mathbf L}
+&=\{(\mathrm{ext},i,k,y)\in\mathsf{Ext}_\infty\mid k<L_i\},
+&
+\mathsf{Atom}_{\mathbf L,v}
+&=\mathsf{Atom}_{\infty,v}
+\cap(\mathsf{Ext}_{\mathbf L}\cup\mathsf{Msg}),\\
+\operatorname{Agg}_v^{\mathbf L}
+&=\operatorname{Agg}_v^\infty\!
+\upharpoonright_{
+\mathbb N\times
+\mathcal P_{\mathrm{fin}}(\mathsf{Atom}_{\mathbf L,v})}.
+\end{aligned}
+$$
+
+因此改变 $\mathbf L$ 只取共同对象的限制，不会暗中更换 aggregation 规则。
+令：
+
+$$
+\mathcal O_v
+=(P_\bot)^{\operatorname{Out}(v)}
+\times(P_\bot)^{\operatorname{OutPort}(v)}.
+$$
+
+再固定一个非空的 admissible $\operatorname{Full}$ **解释类**
+$\mathfrak F$。它的元素是函数族
+$\mathbf F=(F_v)_{v\in V}$，其中：
+
+$$
+F_v:S_v\times\mathbb N\times X_v\longrightarrow\mathcal O_v.
+$$
+
+若不利用 $\operatorname{Full}$ 的额外结构，$\mathfrak F$ 可取全部这种全函数族；
+也可用明确写出的统一结构契约限制它。后文计划只能使用这份共同契约，不能读取
+当前 $\mathbf F$ 的身份。对每个 $\mathbf F\in\mathfrak F$ 与 $\mathbf L$，
+记 $\mathfrak G_{\mathbf L}^{\mathbf F}$ 为令
+$K_i=K_i^{\mathbf L}$、$\iota_i=\iota_i^{\mathbf L}$，把第 1 节的
+$\mathsf{Ext},\mathsf{Atom}_v,\operatorname{Agg}_v$ 分别取成
+$\mathsf{Ext}_{\mathbf L},\mathsf{Atom}_{\mathbf L,v},\operatorname{Agg}_v^{\mathbf L}$，
+并令 $\operatorname{Full}_v=F_v$ 得到的规格。
+成本 profile 把 $F_v$ 查询视为昂贵作用，把骨架函数与 seal bookkeeping
+视为控制作用。
+
+固定 $\mathbf F,\mathbf L$ 与 $a<b$，并写 $T=b-a$。令
+$Q_a^{\mathbf F}(x)$ 表示输入
+$x=(x_i:[L_i]\to P)_{i\in\mathsf I}$ 的规范递归在完整 cut $a$ 上产生的
+式 (33) continuation。定义
+$\omega=(Q_a,E,\sigma^{\mathrm{in}})\in\Omega_{\mathbf L,a,b}^{\mathbf F}$，
+当且仅当存在上述输入 $x$，使：
+
+$$
+\begin{aligned}
+Q_a&=Q_a^{\mathbf F}(x),\\
+E&=E_{x,[a,b)},\\
+\sigma^{\mathrm{in}}&\in\overline{\mathbb N}^{\mathsf I},\\
+\sigma^{\mathrm{in}}(i)&\ge b
+\quad\text{且}\quad
+E_x(i,<\sigma^{\mathrm{in}}(i))
+\subseteq E_{x,<a}\cup E
+\qquad(i\in\mathsf I).
+\end{aligned}
+$$
+
+最后一行正是式 (25) 相对于 $E_{x,<a}\cup E$ 有效。对固定
+$\mathbf F$，所有这些三元组都属于共同集合：
+
+$$
+\left(
+\{a\}\times\prod_{v\in V}S_v
+\times\prod_{j\in J}Y_j
+\times\mathcal P_{\mathrm{fin}}(\mathsf{Msg})
+\right)
+\times\mathcal P_{\mathrm{fin}}(\mathsf{Ext}_\infty)
+\times\overline{\mathbb N}^{\mathsf I}.
+$$
+
+因此可以取普通并集：
+
+$$
+\Omega_{a,b}^{\mathbf F}
+=\bigcup_{\mathbf L\in\mathbb N^{\mathsf I}}
+\Omega_{\mathbf L,a,b}^{\mathbf F}.
+$$
+
+相同可见元组在这个并集中只算同一个元素；$\mathbf L$ 与见证 $x$ 不是计划可读
+坐标。即使同一 $\omega$ 有两个不同的 $\mathbf L,x$ 见证，它们也从相同
+$Q_a$ 和区间输入 $E$ 开始；source seal 排除区间内遗漏输入，而两边的
+aggregation 都是同一个 $\operatorname{Agg}_v^\infty$ 在当前纤维上的值。
+按 $\theta=a,\ldots,b-1$ 归纳，式 (34) 与式 (11)--(16) 的全部坐标因此相同。
+所以对固定 $\mathbf F$，$\omega$ 唯一确定参考区间记录
+$\mathcal U_{x,[a,b)}^{\mathbf F}$ 与 $Q_b^{\mathbf F}$。
+下文用 $q_v^\theta(\mathbf F,\omega)$、
+$h_{v,\theta}(\mathbf F,\omega)$ 和
+$\mathcal A_{j,\theta}^{\mathbf F}(\omega)$ 表示这份唯一参考记录中的相应坐标。
+
+定义 active 时间集合：
+
+$$
+\Lambda_v^{\mathbf F}([a,b);\omega)
+=\{\theta\in[a,b)\mid
+v\in\mathcal A_{\rho(v),\theta}^{\mathbf F}(\omega)\}.
+$$
+
+对 $\mathbf F\in\mathfrak F$ 与非空有限
+$\Theta\subseteq\mathbb N$，定义该解释下的合法 batch 输入域：
+
+$$
+\mathsf{Adm}_{v,\Theta}^{\mathbf F}
+=\left\{
+\left(
+q_v^{\theta+1}(\mathbf F,\omega),
+\theta,
+h_{v,\theta}(\mathbf F,\omega)
+\right)_{\theta\in\Theta}
+\ \middle|\
+\begin{array}{l}
+\mathbf L\in\mathbb N^{\mathsf I},\
+a,b\in\mathbb N,\ a<b,\\
+\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F},\
+\Theta\subseteq
+\Lambda_v^{\mathbf F}([a,b);\omega)
+\end{array}
+\right\}.
+$$
+
+元组一律按 $\theta$ 递增排列。再令：
+
+$$
+\mathsf{BOut}_{v,\Theta}
+=\prod_{\theta\in\Theta}\mathcal O_v.
+$$
+
+一次显式 batch query 写成
+$\mathsf{Query}(v,\Theta,\xi)$，其中
+$\xi=((s_\theta,\theta,h_\theta))_{\theta\in\Theta}$ 且
+$\xi\in\mathsf{Adm}_{v,\Theta}^{\mathbf F}$。query 的语法不携带
+$\mathbf F$；在解释
+$\mathbf F$ 下，它的唯一精确回答由下列全函数给出：
+
+$$
+\begin{aligned}
+\operatorname{BatchFull}_{v,\Theta}^{\mathbf F}
+&:\mathsf{Adm}_{v,\Theta}^{\mathbf F}
+\longrightarrow\mathsf{BOut}_{v,\Theta},\\
+\operatorname{BatchFull}_{v,\Theta}^{\mathbf F}(\xi)
+&=\left(F_v(s_\theta,\theta,h_\theta)\right)_{\theta\in\Theta}.
+\end{aligned}
+$$
+
+这族等式是解释类上的逐坐标精确 batch 契约；具体 backend witness 还须实现
+相应函数，本文不由此声称 batch 内部高效。
+
+一个**外层阶段**
+$\pi_r=(\mathsf{Ctrl}_r,\mathsf{Batch}_r)$ 有两个依次发生的部分。
+$\mathsf{Ctrl}_r$ 是有限条因果合法的骨架作用及其值；
+$\mathsf{Batch}_r$ 是随后一次确定的有限组 $\mathsf{Query}$。确定它时，每个
+query 的输入及第 4.2 节中的全部事件前驱都必须已经由
+$\omega$、较早阶段或 $\mathsf{Ctrl}_r$ 确定。batch 开始以后，本阶段不再求
+新的控制值；回答及由它们产生的消息、输出只在阶段末一起进入
+$\mathsf{Pub}_r$。
+
+在第 $r$ 个阶段已经完成 $k$ 条控制作用的决策点，定义**可见 transcript**：
+
+$$
+\mathfrak t_{r,k}
+=\left(
+\omega,
+(\pi_s,\mathsf{Pub}_s)_{s<r},
+\mathsf{Ctrl}_{r,\le k}
+\right),
+$$
+
+其中 $\mathsf{Ctrl}_{r,\le k}$ 同时记录已经发生的骨架作用及其值。一个
+**因果外层策略** $\mathscr S$ 是从 $(a,b,\mathfrak t_{r,k})$ 到下一动作的
+同一个确定函数；下一动作可以是求一个当前合法的骨架作用，或确定
+$\mathsf{Batch}_r$ 并结束本阶段，或在阶段边界且目标 cut 已完成时停止。
+$\mathbf F$ 不是它的自变量。因此两个解释若给出相同的
+$(a,b,\mathfrak t_{r,k})$，$\mathscr S$ 必须给出相同动作；只有显式 query
+返回不同回答以后，后续动作才可分岔。
+
+query 以外的求值器只含 $\mathfrak B_\infty$ 的函数与确定的集合
+bookkeeping。所以新的 $F_v$ 值，以及由它产生的消息或输出记录，只能经显式
+query 回答进入 $\mathsf{Pub}_r$；不得由控制作用复现、内联或免费产生。
+transcript 也不含 $\mathbf L$、见证 $x$、区间外输入或尚未回答的参考
+$F_v$ 值。这些条件合起来就是本文的**因果且无 oracle**要求。
+
+这里的 $r$ 是 heavy/control barrier 的外层阶段号，不是前置教材阶段化暴露
+$E_n,H_n$ 的索引 $n$，也不是逻辑时间 $\theta$；三者之间没有预设相等关系。
+
+固定 $\mathscr S$ 和回答解释 $\mathbf F$。若一次运行有限停止，记其阶段序列为：
+
+$$
+\Pi_{a,b}^{\mathbf F}(\omega)
+=(\pi_1,\ldots,\pi_{N_{\mathbf F}(a,b,\omega)}).
+$$
+
+称这次运行 **exact**，若最终记录与 continuation 恰等于
+$(\mathcal U_{x,[a,b)}^{\mathbf F},Q_b^{\mathbf F})$，包括越过右切面的新消息；
+并且对每个 $v$，令 $m=m_{v,\mathbf F}(a,b,\omega)$ 后，全部 query 恰为：
+
+$$
+\mathsf{Query}(v,\Theta_{v,1},\xi_{v,1}),\ldots,
+\mathsf{Query}(v,\Theta_{v,m},\xi_{v,m}).
+$$
+
+这里 $\xi_{v,k}$ 是相应参考坐标组成的元组，并且：
+
+$$
+\Lambda_v^{\mathbf F}([a,b);\omega)
+=\bigsqcup_{k=1}^{m_{v,\mathbf F}(a,b,\omega)}
+\Theta_{v,k}.
+$$
+
+因此 exact 运行既不能遗漏或重复 active 坐标，也不能额外探测
+$F_v$。active 集为空时约定 $m_{v,\mathbf F}(a,b,\omega)=0$。
+
+称解释类 $(\mathfrak B_\infty,\mathfrak F)$ 具有
+**节点级时间批暴露**或**外层保块**，若量词顺序为：
+
+$$
+\begin{aligned}
+\exists\mathscr S,\ B_{\mathrm{stage}}\in\mathbb N,\
+(B_v)_{v\in V}\in\mathbb N^V,\quad
+\forall\mathbf F\in\mathfrak F,
+\forall\mathbf L\in\mathbb N^{\mathsf I},\\
+\forall a,b\in\mathbb N\ (a<b),\
+\forall\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F}:
+\quad
+\begin{cases}
+\text{上述运行 exact},\\
+N_{\mathbf F}(a,b,\omega)\le B_{\mathrm{stage}},\\
+m_{v,\mathbf F}(a,b,\omega)\le B_v
+\quad(v\in V).
+\end{cases}
+\end{aligned}
+$$
+
+策略和界必须先于 $\mathbf F$ 选择；这些界也不能依赖 $\mathbf L$、区间宽度
+$T$ 或实例 $\omega$。解释类可以携带明确的共同结构契约，但若
+$\mathfrak F$ 只是单点集，这个全称量词本身不足以见证 black-box 隔离：
+策略可能把唯一函数硬编码进去。此时还须另证策略只使用上述骨架与 query
+指令集，或改用足以区分相关回答的非平凡解释类。
+
+这个定义允许 $\Theta(T)$ 的顺序控制扫描，也允许同阶段 query 进入一个
+packed API；它只保护昂贵作用的外层分块，不给出 work、span 或硬件性能结论。
+相较于 TimedDAG chunk-prefill 教材对单输入流、对齐 cuts 的同类规则，这里对
+所有 $a<b$ 和多端口长度向量同时量化，是一个 interval-uniform 强化。
 
 ### 10.3 真正的外层保块障碍
 
@@ -1395,7 +1801,7 @@ $$
 q^{\theta+1}=f_\theta(q^\theta),
 $$
 
-并且每个 $f_\theta$ 只能作为黑盒查询。若 $f_{\theta+1}$ 的有效输入必须等待 $q^{\theta+1}$，那么宽度为 $T$ 的逻辑时间区间含有长度为 $T$ 的状态依赖链。structural SCC 只有一个，把它命名为一个宏节点不会缩短这条链。
+并且每个 $f_\theta$ 只能作为黑盒查询。若 $f_{\theta+1}$ 的有效输入必须等待 $q^{\theta+1}$，那么宽度为 $T$ 的逻辑时间区间含有长度为 $T$ 的状态依赖链。固定 $\Gamma=G^\dagger$ 时，$\mathcal S_\Gamma$ 只有一个分量；把它命名为宏节点不会缩短这条链。
 
 这条线性链本身还不必破坏第 10.2 节的第一性能台阶：若 $f_\theta$ 只是廉价控制，扫描结束后才调用不再反馈到本块控制的昂贵作用，后者仍可按 node 打包。真正的障碍是随 $T$ 增长的 heavy/control 交替，例如：
 
@@ -1406,14 +1812,15 @@ $$
 \longrightarrow \cdots .
 $$
 
-若较早昂贵输出经节点状态或反馈消息改变较晚候选描述量和 route，外层就必须反复等待昂贵作用以后才能确定下一批参数，所需 batch 数可能增长为 $\Theta(T)$。任意 selector-history 递归只有在造成这种反馈时才成为外层保块的反例；顺序 history 扫描本身不是反例。
+若较早昂贵输出经反馈消息以及由此引起的节点状态变化，改变较晚候选描述量和 route，外层就必须反复等待昂贵作用以后才能确定下一批参数，所需 batch 数可能增长为 $\Theta(T)$。任意 selector-history 递归只有在造成这种反馈时才成为外层保块的反例；顺序 history 扫描本身不是反例。
 
-可以把严格分层类与一般反馈类的差别看成事件块之间的差别。记一个 control-only 事件块为 $\mathsf C$，同一节点的一批昂贵作用为 $\mathsf F$；严格分层中的精确分块见 [[timed-dag-chunk-prefill-learning-note#9.4 严格分层类的节点级时间批暴露|TimedDAG chunk-prefill 教材第 9.4 节]]。严格分层只允许
+可以把严格分层类与一般反馈类的差别看成事件块之间的差别。这里“严格分层”指存在 $\ell:J\to\mathbb N$，使每条消息边 $a$ 都满足
+$\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a)))$；它是消息图无环的一个特例。记一个 control-only 事件块为 $\mathsf C$，同一节点的一批昂贵作用为 $\mathsf F$。其精确分块证明见 [[timed-dag-chunk-prefill-learning-note#9.4 严格分层类的节点级时间批暴露|TimedDAG chunk-prefill 教材第 9.4 节]]；这里只使用它允许的形状：
 
 $$
 \mathsf C_j\longrightarrow\mathsf F_v
 \longrightarrow\mathsf C_k,
-\qquad v\in\mathcal R_j,
+\qquad j,k\in J,\quad v\in\mathcal R_j,
 \quad \ell(k)>\ell(j),
 $$
 
@@ -1425,13 +1832,74 @@ $$
 \longrightarrow\cdots .
 $$
 
-后一条阶梯并不与定理 4 冲突：静态图可以有环，而任一 finite cut 中展开后的事件图仍是有限 DAG；返回边只是从较早时间指向较晚时间。若一个总逻辑时延为 $d$ 的静态反馈环持续被激活，并且较早昂贵输出在函数上确实改变后续控制、从而迫使后续昂贵作用等待，那么宽度为 $T$ 的区间可能出现约 $T/d$ 轮交替。静态上“存在环”本身不能推出相应的批次数下界：还须依次检查环是否实际激活、数值是否影响后续控制，以及这种影响是否真的阻断下一批昂贵作用。
+后一条阶梯并不与定理 4 冲突：静态图可以有环，而任一 finite cut 中展开后的事件图仍是有限 DAG；返回边只是从较早时间指向较晚时间。要量化静态环可能多快返回，必须先给静态边补上来源与权重。
 
-因此，若 $K$ 与 $T$ 无关，固定至多 $K$ 轮返回仍可能保持 $O(1)$ 的节点级时间批暴露；$O(\log T)$、$o(T)$ 等增长率也可作为以后研究的弱化 profile。这里的交替轮数只是寻找正类与反例的候选指标，不是本文已经证明的结构定理。要得到外层保块上界，还必须给出一个因果、满足 no-oracle 要求的统一调度 witness，不能只在完整运行结束后观察事件图。
+为了使“反馈时延”无歧义，给默认静态图 $G^\dagger$ 定义保留平行消息边的带标签多重图。令：
+
+$$
+\begin{aligned}
+\widehat A^\dagger
+={}&\{m_a=(\mathrm{message},a)\mid a\in A\}\\
+&\sqcup\{r_{v,j}=(\mathrm{read},v,j)
+\mid j\in J, v\in\mathcal R_j\}\\
+&\sqcup\{c_{j,v}=(\mathrm{control},j,v)
+\mid j\in J, v\in\mathcal R_j\}.
+\end{aligned}
+$$
+
+三个标签使边标识符集合两两不交。定义其起点、终点与权重：
+
+$$
+\begin{array}{c|ccc}
+e&\widehat{\operatorname{src}}(e)
+&\widehat{\operatorname{dst}}(e)&w(e)\\ \hline
+m_a&\operatorname{src}(a)&\operatorname{dst}(a)&\delta(a)\\
+r_{v,j}&v&s_j&0\\
+c_{j,v}&s_j&v&0
+\end{array}
+$$
+
+于是：
+
+$$
+\widehat G^\dagger
+=\left(
+V^\dagger,\widehat A^\dagger,
+\widehat{\operatorname{src}},
+\widehat{\operatorname{dst}},w
+\right)
+$$
+
+是一张有向带权多重图；忘掉边标识符与权重并合并平行边，恰得到式 (39) 的 $G^\dagger$。
+
+对 $n\in\mathbb N_{>0}$，称
+$\zeta=(e_1,\ldots,e_n)\in(\widehat A^\dagger)^n$ 为闭游走，若：
+
+$$
+\widehat{\operatorname{dst}}(e_r)
+=\widehat{\operatorname{src}}(e_{r+1})
+\quad(1\le r<n),
+\qquad
+\widehat{\operatorname{dst}}(e_n)
+=\widehat{\operatorname{src}}(e_1).
+$$
+
+定义它的**消息时延**：
+
+$$
+d_{\mathrm{fb}}(\zeta)
+=\sum_{r=1}^{n}w(e_r).
+$$
+
+它只累计原消息边的逻辑时延；read/control 边不是零时延消息。第 4.2 节中同 owner 的节点状态等待与 selector-history 等待在 dependency-complete 投影中由 owner 相等吸收，没有成为 $\widehat G^\dagger$ 的边，因此也不计入 $d_{\mathrm{fb}}$；这不是断言它们不耗逻辑时间。若换用另一张 $\Gamma$，必须另给保留来源标签的多重图，才能定义同类时延。
+
+$d_{\mathrm{fb}}$ 不是完整事件路径的总时长；一条实际实现该闭游走的事件路径还可能含有上述同 owner 等待。当 $d_{\mathrm{fb}}(\zeta)>0$ 时，$T/d_{\mathrm{fb}}(\zeta)$ 因而只是潜在返回轮数的量级启发，不是拓扑定理。要接近这个轮数，闭游走必须在所考察输入上持续实例化，较早数值必须在函数意义上改变后续控制，而且这项依赖必须真正阻塞下一次昂贵 batch。具体运行的动态事件图 $\mathscr G^{\mathrm{ev}}_{x,<b}$ 的 owner 投影也可能只实现静态包络边的一部分；这张图按第 4.2 节保守记录函数作用依赖，本身也未必是最小的数值敏感图。零消息时延的 control 闭游走则不能用这个商估计逻辑时间返回周期。
+
+因此，若某个与 $T$ 无关的常数 $R$ 保证至多发生 $R$ 轮有效返回，并且其余依赖可按第 10.2 节成批安排，就仍可能保持 $O(1)$ 的节点级时间批暴露；$O(\log T)$、$o(T)$ 等增长率也可作为以后研究的弱化 profile。这里的交替轮数只是寻找正类与反例的候选指标，不是本文已经证明的结构定理。要得到外层保块上界，还必须给出一个因果、满足 no-oracle 要求的统一调度 witness，不能只在完整运行结束后观察事件图。
 
 ### 10.4 在外层保块之上，何时还能得到 scan
 
-递归并不必然顺序。若：
+递归并不必然只能顺序求值。取域 $\mathbb F$ 上的向量空间 $\mathcal Q$，记 $\operatorname{End}_{\mathbb F}(\mathcal Q)$ 为 $\mathcal Q$ 上线性算子的集合，并设 $q^\theta,c_\theta\in\mathcal Q$、$A_\theta\in\operatorname{End}_{\mathbb F}(\mathcal Q)$。若：
 
 $$
 q^{\theta+1}=A_\theta q^\theta+c_\theta,
@@ -1446,17 +1914,17 @@ $$
 \tag{40}
 $$
 
-式 (40) 对复合封闭且满足结合律，所以在具体线性代数计算模型下可以研究 parallel prefix scan。可能缩短控制 span 的正面 profile 还包括：
+式 (40) 对复合封闭且满足结合律，所以在具体线性代数计算模型下可以研究 parallel prefix scan。这里还必须在 scan 开始以前取得全部系数 $(A_\theta,c_\theta)$；若后一个系数要等待前缀状态或尚未查询的 $\operatorname{Full}$ 值，结合律本身并没有暴露可并行的输入序列。可能缩短控制 span 的正面 profile 还包括：
 
 - 固定轮数展开；
 - 具有紧凑结合摘要的递归；
 - 已证明等价的 causal-bulk kernel；
 
-与这些 low-span witness 不同，“顺序控制扫描后，把不再影响后续控制的昂贵节点作用按 node packed”只证明第 10.2 节的外层保块。它的额外前提正是：被推迟的节点作用不能经反馈消息或状态改变本块后续 selector。只知道“它们都在同一个 SCC”远远不够。
+与这些 low-span witness 不同，“顺序控制扫描后，把不再影响后续控制的昂贵节点作用按 node packed”只证明第 10.2 节的外层保块。它的额外前提正是：被推迟的节点作用不能经反馈消息及其随后引起的状态变化改变本块后续 selector。只知道“它们都在同一个 $C\in\mathcal S_\Gamma$”远远不够。
 
-### 10.5 SCC profile 应分别登记什么
+### 10.5 固定 $\Gamma$ 的 SCC profile 应分别登记什么
 
-对每个值得研究的 SCC 子类，应分别登记：
+对固定 dependency-complete 图 $\Gamma$ 的每个候选分量 $C\in\mathcal S_\Gamma$，应分别登记：
 
 | 项目 | 要回答的问题 |
 | --- | --- |
@@ -1467,17 +1935,17 @@ $$
 | work | 总 primitive 数怎样随有限时间区间的宽度增长？ |
 | control span | 控制扫描的最长依赖链怎样增长？是否有代数 scan witness？ |
 | memory | continuation、临时量和批量张量多大？ |
-| communication | 跨 SCC 的逐边消息与 seal 有多少？ |
+| communication | 跨 $\mathcal S_\Gamma$ 分量的逐边消息与 seal 有多少？ |
 | lowering witness | sequential loop、packed loop、scan、fixed unfold 还是专用 kernel？ |
 
-`sequential fallback` 是合法的 correctness 实现类别。一次 `packed API` 也不自动证明外层保块：必须说明外层阶段数与每个节点在整个有限时间区间上所需的调用数都不随区间宽度 $T$ 增长。即使这一点成立，它仍不自动说明调用内部复杂度、控制 span 或硬件性能。
+`sequential fallback` 只见证 correctness；`packed API` 只有显式满足第 10.2 节的分解与一致界时才见证外层保块，仍不见证其内部 span 或硬件表现。
 
 ## 11. 已证明结果、开放问题与练习
 
 ### 11.1 本文已经证明
 
 1. 任意有限 cut 的直接记录存在、唯一且结构有限（定理 1）；
-2. 不同 cuts 构成相容族，输入未来不能改写已封闭前缀（推论 2、定理 3）；
+2. 不同 cuts 构成相容族，相同输入前缀给出相同 cut trace（推论 2、定理 3）；
 3. 每个 finite cut 的函数作用事件图是有限 DAG（定理 4）；
 4. seal 推出纤维与候选集合关闭，节点完成沿正时延边推进 seal（引理 5、定理 6、引理 7）；
 5. 获得 source seal 的任意有限 cut 都有有限的顺序推进结构（定理 8）；
@@ -1492,9 +1960,9 @@ $$
 - 允许无限节点、无限同刻 firing、无限 batch 或隐藏 microstep 后的局部有限性；
 - 任意共享可变状态或来源未声明的公共 context；
 - 任意 region 下按 message SCC 独立求值；
-- dependency-complete SCC 的通用多端口 runtime；
-- 任意 SCC 都具有节点级时间批暴露；
-- 任意具有这种批量暴露的 SCC 还具有低 span；
+- $\mathcal S_\Gamma$ 中任意分量的通用多端口 runtime；
+- $\mathcal S_\Gamma$ 中任意分量都具有节点级时间批暴露；
+- 任意具有这种批量暴露的 $\mathcal S_\Gamma$ 分量还具有低 span；
 - 图结构本身推出某种硬件利用率。
 
 ### 11.3 建议练习
@@ -1504,21 +1972,19 @@ $$
 3. 不看证明，重新用 $\delta(a)>0$ 证明定理 4；指出证明的哪一步在 $\delta(a)=0$ 时失效。
 4. 构造一个 $q_v^b$ 全部相同但 $y_j^b$ 不同的例子，说明只保存节点状态为何不充分。
 5. 构造两个输入历史，它们在 $[0,b)$ 相同、在 $[b,\infty)$ 不同，并直接验证定理 3。
-6. 对第 9.4 节的三节点例子，分别画出消息图 $G$、区域商图 $(J,Q_\rho)$、静态图 $G^\dagger$ 和一次 finite-cut 事件图；计算前三张图的 SCC，并验证最后一张图的每条直接边都满足 dependency-complete 条件。
+6. 对第 9.4 节的三节点例子，分别画出消息图 $G$、区域商图 $(J,Q_\rho)$、静态图 $G^\dagger$ 和一次 finite-cut 事件图；计算前三张图的 SCC，验证 dependency-complete 条件，并求闭游走 $u\to v\to w\to s_A\to u$ 的消息时延。
 7. 给出一种递归摘要及其结合复合律；再给出一种没有紧凑闭合摘要的黑盒递归。
 
 ## 12. 下一研究台阶
 
-本文已经把“正时延有环 Graph 是否具有无歧义 finite-cut 语义”闭合为肯定答案。下一步不是立即加入零时延，也不是直接要求低 span，而是从第 10.5 节的登记表中选择具体 structural SCC 子类，寻找 exact 且具有节点级时间批暴露的外层 lowering。这里允许控制、selector 与 selector-history 顺序扫描；第一目标只是证明外层没有把昂贵节点作用拆成随推进区间宽度增长的许多批。
+本文已经把“正时延有环 Graph 是否具有无歧义 finite-cut 语义”闭合为肯定答案。下一步不是立即加入零时延，也不是直接要求低 span，而是从固定 $\Gamma$ 的 $\mathcal S_\Gamma$ 中选择具体子类，寻找 exact 且具有节点级时间批暴露的外层 lowering。这里允许控制、selector 与 selector-history 顺序扫描；第一目标只是证明外层没有把昂贵节点作用拆成随推进区间宽度增长的许多批。
 
 优先顺序应当是：
 
-1. 为 dependency-complete SCC 定义保留 edge identity 的输入、输出与 continuation 投影；
-2. 先实现并对拍 exact sequential fallback；
-3. 固定 control/heavy 成本 profile，寻找外层阶段数与每节点 batch 数都不随推进区间宽度增长的子类；
-4. 对每个子类同时给出正面外层保块 witness，以及造成 $\Theta(T)$ 次 heavy/control 交替的最小反例；
-5. 再为其中具有 affine/associative、固定轮展开或 causal-bulk 结构的子类研究低-span lowering；
-6. 最后才讨论 kernel 内部实现与硬件映射。
+1. 为 $C\in\mathcal S_\Gamma$ 定义保留 edge identity 的输入、输出与 continuation 投影，并先实现、对拍 exact sequential fallback；
+2. 固定 control/heavy 成本 profile，寻找阶段数与每节点 batch 数一致有界的子类；对每个子类同时给出正面 witness 和造成 $\Theta(T)$ 次交替的最小反例；
+3. 再为具有 affine/associative、固定轮展开或 causal-bulk 结构的子类研究低-span lowering；
+4. 最后讨论 kernel 内部实现与硬件映射。
 
 零时延 SCC、一般 solver、偏序时间、backpressure 和任意 partial/divergent local function 继续延期。
 
@@ -1534,14 +2000,18 @@ $$
 > **finite-cut productivity** 对应定理 8：获得足够 source seal 后，所要求的有限切面能由有限个抽象函数作用完成。它不等于全局 termination。
 
 > [!info]- S.2　visibility、publication、seal 与 closure
-> 当前已“可见或公开”的外部记录和内部消息分别对应 $E^\circ$ 与 $H$ 的成员关系。一条消息可以已经由源事件产生但尚未进入 $H$；正文要求它不能反过来先于源事件公开。
+> 当前已“可见或公开”的外部输入记录和内部消息分别对应 $E^\circ$ 与 $H$ 的成员关系；若另行跟踪已交付外部输出，则对应第 6.1 节可选集合 $Z^\circ$ 的成员关系。一条消息可以已经由源事件产生但尚未进入 $H$；正文要求它不能反过来先于源事件公开。
+>
+> 本文有意用“是否属于相应当前集合”这一个成员谓词抽象 visibility 与 publication。若某个实现还要区分 produced、committed、published、consumer-visible 或 acknowledged，就必须为这些阶段分别增加集合及其单调包含关系；不能把这种更细状态偷偷塞回同一个 $H$。
 >
 > **seal** 对应式 (25) 的集合覆盖命题。**closure** 对应式 (27) 的纤维等式或定理 6 的候选集合等式。seal 是推出 closure 的充分信息，不是同一个对象。
 >
 > **queue empty** 只描述某个当前编码中没有元素，不能证明式 (25) 中关于全部未来的全称命题。
 
-> [!info]- S.3　completed、hard watermark 与 no-backdating
-> 节点 **completed to $r$** 对应式 (28) 的复合谓词：输入纤维已经关闭，并且所有实际较早节点事件已经完成。
+> [!info]- S.3　state adoption、completed、hard watermark 与 no-backdating
+> **state adoption / state commit** 对应事件 $U_{v,\theta}$ 以及式 (14)：在 selector 已经给出 active set 以后，节点状态坐标由 $q_v^\theta$ 变成唯一的 $q_v^{\theta+1}$。它不是把任意临时张量写入共享存储。
+>
+> 节点 **completed to $r$** 对应式 (28) 的复合谓词：输入纤维已经关闭，并且所有实际较早节点事件已经完成。本文的 $(v,\theta)\in\mathsf{Done}$ 还要求 active $\operatorname{Full}$ 所产生的每条内部消息已经属于 $H$；这比前置 TimedDAG 教材中允许消息稍后公开的 $\operatorname{Completed}_n$ 更强。
 >
 > 输出端口在 cut $b$ 的 **hard output watermark** 表示：以后不可能再产生输出时间小于 $b$ 的新记录。定理 8 的按时间递增完成给出这一事实。
 >
@@ -1562,24 +2032,22 @@ $$
 >
 > **macro node** 若采用 message SCC，必须满足式 (38) 或另证 selector/control/state 依赖没有跨边界。否则 message SCC 只是图论集合，不是语义封闭模块。
 >
-> **dependency-complete static graph** 的正式定义见第 9.4 节：每次运行的直接事件边经 owner 投影后，都必须留在同一 owner 或落到一条静态边上。式 (39) 给出一个安全但不必最小的构造，命题 13 证明其 dependency-complete。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息；它也不是 seal 或 closure 的在线证书，其 SCC 不自动获得宏 runtime 或性能保证。
+> **dependency-complete static graph** 的正式定义见第 9.4 节：每次运行的直接事件边经 owner 投影后，都必须留在同一 owner 或落到一条静态边上。固定这样的 $\Gamma$ 后，其宏候选是明确的 $\mathcal S_\Gamma$；本文默认 $\Gamma=G^\dagger$。式 (39) 给出这个安全但不必最小的构造，命题 13 证明其 dependency-complete。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息；它也不是 seal 或 closure 的在线证书，$\mathcal S_\Gamma$ 中的分量不自动获得宏 runtime 或性能保证。
 
 > [!info]- S.6　correctness、外层保块、work 与 span
-> **exact / correctness** 表示实现记录等于本文指定的完整记录或明确投影。**节点级时间批暴露**要求固定 control/heavy profile 后，外层阶段数与每个节点在宽度为 $T$ 的有限时间区间上所需的昂贵时间 batch 数都由固定系统数据的常数控制；正式定义见 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|TimedDAG chunk-prefill 教材第 6.4 节]]。
+> **exact / correctness** 表示所得记录等于本文指定的完整记录或明确投影。**cost profile** 是对控制与昂贵作用的附加分类。**节点级时间批暴露 / 外层保块**对应第 10.2 节同一个 action-level transcript 策略：它只经显式 query 取得 $\operatorname{Full}$ 值，并对解释类 $\mathfrak F$、输入长度、任意区间及合法实例统一 exact；$B_{\mathrm{stage}},B_v$ 也按相同量词一致有界。外层阶段号 $r$ 不等于阶段化暴露索引 $n$ 或逻辑时间 $\theta$。
 >
-> 控制或 selector-history 可以顺序扫描；交错信号也可以在同一节点时间纤维中汇合。真正破坏这一性质的是必须随 $T$ 反复进行“昂贵作用—后续控制—昂贵作用”。单个 `packed API` 只说明调用边界，不能自行证明 batch 数有界。
->
-> **work** 是所选计算模型中的总操作量，**span** 是无限处理器假设下的最长依赖链成本。式 (40) 是可能获得 scan 的代数 witness；任意递归式本身不是 witness。外层保块、低 span 与硬件性能是逐层增强的命题，硬件性能还要另外记录张量形状、内存访问、通信与 backend 测量。
+> 控制可以顺序扫描，交错信号也可在同一时间纤维汇合；只有必须反复等待“昂贵作用—后续控制—昂贵作用”时，batch 数才可能随 $T$ 增长。`packed API` 只是若干已定义 batch 的共同调用边界。**work/span** 对应第 10 节开头的成本量，式 (40) 是一种 scan witness；硬件性能还需另外的设备成本模型与测量。
 
 > [!info]- S.7　参数共享与状态共享
-> 多个节点函数使用同一个固定参数，对应这些函数具有同一个参数坐标。在一次前向语义中该坐标不被事件改写，所以不会增加 finite-cut 事件依赖边；训练时，共享参数的梯度是各使用点贡献之和。
+> 多个节点函数使用同一个固定参数，对应这些函数具有同一个参数坐标。在一次前向语义中该坐标不被事件改写，所以不会增加 finite-cut 事件依赖边。在损失是可微标量、并采用通常的反向模式微分时，共享参数的总梯度是各使用点对该参数贡献的和；不满足这些微分前提时，本文不使用这句话定义“梯度”。
 >
-> 多个节点读写同一可变状态则会产生额外的版本与次序依赖。本文只允许每个 $q_v$ 由节点 $v$ 持有、每个 $y_j$ 由 region selector $j$ 持有；若放宽，必须重定义 continuation 和 dependency-complete SCC。
+> 多个节点读写同一可变状态则会产生额外的版本与次序依赖。本文只允许每个 $q_v$ 由节点 $v$ 持有、每个 $y_j$ 由 region selector $j$ 持有；若放宽，必须重定义 continuation 和固定 $\Gamma$ 及其 $\mathcal S_\Gamma$。
 
 ## 可选相关材料
 
 - [[timed-dag-region-selector-learning-note|前置：TimedDAG 的完整数学语义]]；
-- [[timed-dag-chunk-prefill-learning-note|节点级时间批暴露的正式定义与空间 DAG 充分条件]]；
+- [[timed-dag-chunk-prefill-learning-note|节点级时间批暴露在空间 DAG 上的正例]]；
 - [[adaptive-routing-prefill-lower-bound|黑盒自适应路由为什么一般不能自动低 span]]；
 - [[current-mainline|TIDE 当前 Graph 线入口]]。
 
