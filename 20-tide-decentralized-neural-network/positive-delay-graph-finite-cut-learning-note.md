@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-10
+as-of: 2026-09-11
 tags:
   - tide
   - positive-delay-graph
@@ -1298,6 +1298,27 @@ $$
 $$
 
 若较早昂贵输出经节点状态或反馈消息改变较晚候选描述量和 route，外层就必须反复等待昂贵作用以后才能确定下一批参数，所需 batch 数可能增长为 $\Theta(T)$。任意 selector-history 递归只有在造成这种反馈时才成为外层保块的反例；顺序 history 扫描本身不是反例。
+
+可以把严格分层类与一般反馈类的差别看成事件块之间的差别。记一个 control-only 事件块为 $\mathsf C$，同一节点的一批昂贵作用为 $\mathsf F$；严格分层中的精确分块见 [[timed-dag-chunk-prefill-learning-note#9.4 严格分层类的节点级时间批暴露|TimedDAG chunk-prefill 教材第 9.4 节]]。严格分层只允许
+
+$$
+\mathsf C_j\longrightarrow\mathsf F_v
+\longrightarrow\mathsf C_k,
+\qquad v\in\mathcal R_j,
+\quad \ell(k)>\ell(j),
+$$
+
+所以每次经过昂贵作用，region 层次都严格上升。一般正时延反馈则可能沿逻辑时间展开为
+
+$$
+\mathsf C^{(1)}\longrightarrow\mathsf F^{(1)}
+\longrightarrow\mathsf C^{(2)}\longrightarrow\mathsf F^{(2)}
+\longrightarrow\cdots .
+$$
+
+后一条阶梯并不与定理 4 冲突：静态图可以有环，而任一 finite cut 中展开后的事件图仍是有限 DAG；返回边只是从较早时间指向较晚时间。若一个总逻辑时延为 $d$ 的静态反馈环持续被激活，并且较早昂贵输出在函数上确实改变后续控制、从而迫使后续昂贵作用等待，那么宽度为 $T$ 的区间可能出现约 $T/d$ 轮交替。静态上“存在环”本身不能推出相应的批次数下界：还须依次检查环是否实际激活、数值是否影响后续控制，以及这种影响是否真的阻断下一批昂贵作用。
+
+因此，若 $K$ 与 $T$ 无关，固定至多 $K$ 轮返回仍可能保持 $O(1)$ 的节点级时间批暴露；$O(\log T)$、$o(T)$ 等增长率也可作为以后研究的弱化 profile。这里的交替轮数只是寻找正类与反例的候选指标，不是本文已经证明的结构定理。要得到外层保块上界，还必须给出一个因果、满足 no-oracle 要求的统一调度 witness，不能只在完整运行结束后观察事件图。
 
 ### 10.4 在外层保块之上，何时还能得到 scan
 

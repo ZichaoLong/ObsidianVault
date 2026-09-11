@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-10
+as-of: 2026-09-11
 tags:
   - tide
   - timed-dag
@@ -1129,7 +1129,64 @@ $$
 
 严格分层消除了 region 内消息反馈，但节点状态与 selector-history 仍可能跨时间递归。特别是，时间 $\theta+1$ 的 selector 输入可以经 $q_v^{\theta+1}$ 或 $y_j^{\theta+1}$ 依赖时间 $\theta$ 的选择结果。因此，定理 7 保证一次区域扫描，却不保证区域内部具有与 $T$ 无关的并行深度。
 
-不过，当前语义给出下列两阶段求值次序。对固定 region，先按 $\theta$ 扫描控制作用：
+这个区别可以直接从事件图中看出。固定前置文档的一次完整输入 $x$ 及由它决定的事件图，再固定 $I=[b,c)$。对每个 region $j$ 和节点 $v$，把区间内实际存在的事件分成控制块与完整输出块；这个分块不增加或删除事件：
+
+$$
+\begin{aligned}
+\mathsf C_j(I)
+:={}&
+\{P_{w,\theta}\in\mathscr V_x^{\mathrm{ev}}\mid
+w\in\mathcal R_j,\ \theta\in I\}
+\cup
+\{U_{w,\theta}\in\mathscr V_x^{\mathrm{ev}}\mid
+w\in\mathcal R_j,\ \theta\in I\}
+\\
+&\cup
+\{S_{j,\theta}\in\mathscr V_x^{\mathrm{ev}}\mid
+\theta\in I\},
+\\
+\mathsf F_v(I)
+:={}&
+\{F_{v,\theta}\in\mathscr V_x^{\mathrm{ev}}\mid
+\theta\in I\}.
+\end{aligned}
+$$
+
+时间 $b$ 的节点状态、selector-history 与从左侧跨入区间的在途消息由边界 $Q_b$ 提供。时间 $c$ 的节点状态与 selector-history，以及所有发送时间小于 $c$、到达时间不小于 $c$ 的在途消息，则属于右边界 $Q_c$。两个边界都不算作区间内部的事件块。给非空事件块赋字典序块秩：
+
+$$
+R_{\mathrm{blk}}(\mathsf C_j(I))=(\ell(j),0),
+\qquad
+R_{\mathrm{blk}}(\mathsf F_v(I))=(\ell(\rho(v)),1).
+$$
+
+$P\to S\to U$、节点状态边与 selector-history 边都留在同一个 $\mathsf C_j(I)$；$U_{v,\theta}\to F_{v,\theta}$ 从 $\mathsf C_j(I)$ 指向 $\mathsf F_v(I)$，严格增加秩的第二坐标；消息边 $F_{v,\theta}\to P_{w,\theta+\delta(a)}$ 由式 (46) 满足 $\ell(\rho(v))<\ell(\rho(w))$，严格增加第一坐标。因此，每条跨块依赖都严格增加块秩。把每个非空块收缩为一个顶点，所得块图至多有 $|J|+|V|$ 个顶点，不随 $|I|$（因而也不随主时间块的 $T$）增长。按这个秩排列以后，它呈现为块上三角形：
+
+```text
+Q_b 中到达时间落在 I 内的消息、外部输入、较低层 Full
+              │
+              ▼
+┌────────────────────────────────┐
+│ C_j(I)：区间内全部 P / S / U    │
+│ state 与 history 可有 Θ(|I|) 顺序扫描 │
+└───────────────┬────────────────┘
+                │ Full 的全部自变量已经确定
+       ┌────────┼────────┐
+       ▼        ▼        ▼
+    F_v1(I)  F_v2(I)  …  F_vk(I)
+      一批      一批        一批
+       └────────┬────────┘
+                ├── 跨界在途消息 ──→ Q_c
+                │ 区间内只流向 ℓ 更高的控制块
+                ▼
+          C_k(I),  ℓ(k) > ℓ(j)
+
+Q_b 中越过 c 的旧在途消息 ────────────→ Q_c
+```
+
+控制块内部可以很长，但一个 Full 结果不能返回本控制块。若允许这种返回，展开以后就可能出现随时间反复延伸的 $\operatorname{Full}\to\mathrm{control}\to\operatorname{Full}$ 拉链，并迫使时间块继续拆批。
+
+这个块分解给出下列两阶段求值次序。对固定 region，先按 $\theta$ 扫描控制作用：
 
 $$
 \left(
