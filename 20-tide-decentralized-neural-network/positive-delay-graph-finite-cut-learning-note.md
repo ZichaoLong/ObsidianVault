@@ -1234,7 +1234,46 @@ $$
 
 ### 9.4 dependency-complete 静态图
 
-若不愿施加式 (38)，可以先增加 selector-owner 顶点。取与 $V$ 不交的带标签集合 $\{s_j\mid j\in J\}$，定义静态依赖图：
+第 4 节的事件图随输入历史与 cut 改变。记它为：
+
+$$
+\mathscr G^{\mathrm{ev}}_{x,<b}
+=\bigl(\mathscr V^{\mathrm{ev}}_{x,<b},
+\mathscr E^{\mathrm{ev}}_{x,<b}\bigr).
+$$
+
+为了寻找不随一次运行改变的宏边界，先把每个事件投影到持有相应节点状态或
+selector-history 的对象。取与 $V$ 不交的带标签集合
+$\{s_j\mid j\in J\}$，定义：
+
+$$
+\begin{aligned}
+\operatorname{own}(P_{v,\theta})
+&=\operatorname{own}(U_{v,\theta})
+=\operatorname{own}(F_{v,\theta})=v,\\
+\operatorname{own}(S_{j,\theta})&=s_j.
+\end{aligned}
+$$
+
+这里的 $s_j$ 只是 selector $j$ 及其历史 $y_j$ 的 owner 标识，不是消息节点。
+
+> [!definition] dependency-complete 静态图
+> 顶点集为 $V^\dagger=V\sqcup\{s_j\mid j\in J\}$ 的有向图
+> $\Gamma=(V^\dagger,E_\Gamma)$ 称为对本文事件语义
+> **dependency-complete**，若对
+> 任意合法输入历史 $x$、任意 cut $b$，以及
+> 任意 $(e,e')\in\mathscr E^{\mathrm{ev}}_{x,<b}$，都有
+> $$
+> \operatorname{own}(e)=\operatorname{own}(e')
+> \quad\text{或}\quad
+> \bigl(\operatorname{own}(e),\operatorname{own}(e')\bigr)\in E_\Gamma.
+> $$
+
+换言之，删去连续重复的 owner 后，每条实际事件路径都投影成 $\Gamma$ 中的一条
+有向游走。这个定义只要求静态图不漏掉第 4.2 节的直接依赖，不要求每条静态边
+都在每次运行中出现。
+
+现在定义一个无需分析具体函数即可构造的静态图：
 
 $$
 \begin{aligned}
@@ -1248,17 +1287,87 @@ E^\dagger
 \tag{39}
 $$
 
-$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示选择结果可能改变节点的状态采用或完整输出；$y_j$ 由 $s_j$ 唯一持有。对式 (39) 求 SCC，会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
+$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示选择结果可能改变节点的状态采用或完整输出。对式 (39) 求 SCC，会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
 
-例如有路径 $u\to v\to w$，但 $u,w$ 属于同一 region。式 (39) 不仅会合并 $u,w,s_j$，还会把路径中间的 $v$ 合并进同一 SCC；只把 region 直接碰到的两个 message SCC 生硬粘在一起，可能留下宏观环。
+> [!theorem] 命题 13：$G^\dagger$ 是 dependency-complete 静态图
+> 式 (39) 的 $G^\dagger=(V^\dagger,E^\dagger)$ 满足上述定义。
 
-$G^\dagger=(V^\dagger,E^\dagger)$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把 $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。对 dependency-complete SCC 建立完整多端口宏契约，并判断哪些子类具有外层保块 lowering，留作下一阶段研究。
+**证明。** 逐类检查第 4.2 节的直接事件边。同刻边
+$P_{v,\theta}\to S_{j,\theta}$ 投影成 $v\to s_j$，而
+$S_{j,\theta}\to U_{v,\theta}$ 投影成 $s_j\to v$；两者都在式 (39)
+中。$U_{v,\theta}\to F_{v,\theta}$ 的 owner 相同。节点状态边两端都由
+$v$ 持有，selector-history 边两端都由 $s_j$ 持有。最后，消息边
+$F_{u,\eta}\to P_{v,\eta+\delta(a)}$ 投影成原消息边 $u\to v$，也在
+式 (39) 中。直接依赖已经穷尽，结论成立。$\square$
+
+下面用同一个例子区分四张容易混淆的图。取正时延消息图 $G$ 恰为
+
+```text
+u → v → w
+```
+
+并令 $\mathcal R_A=\{u,w\}$、$\mathcal R_B=\{v\}$。记两条边的时延为
+$d_1,d_2>0$。本节只为比较而定义区域商图边集：
+
+$$
+Q_\rho
+=\left\{
+\bigl(\rho(\operatorname{src}(a)),\rho(\operatorname{dst}(a))\bigr)
+\ \middle|\
+a\in A,\ \rho(\operatorname{src}(a))\ne\rho(\operatorname{dst}(a))
+\right\}.
+$$
+
+四张图分别为：
+
+| 图 | 在这个例子中的形状 | 它说明什么 |
+| --- | --- | --- |
+| 消息图 $G$ | $u\to v\to w$ | 是 DAG；三个 message SCC 都是单点。 |
+| 区域商图 $(J,Q_\rho)$ | $A\to B\to A$ | 收缩 region 会产生环，但它不是事件环。 |
+| 静态图 $G^\dagger$ | 增加 $u,w\leftrightarrow s_A$ 与 $v\leftrightarrow s_B$ | 含有 $u\to v\to w\to s_A\to u$，且五个顶点都在同一 SCC。 |
+| 一次运行的 $\mathscr G^{\mathrm{ev}}_{x,<b}$ | 只含本次实际存在的带时间事件 | 仍由定理 4 保证是有限 DAG。 |
+
+例如，若 $F_{u,\theta}$ 产生第一条消息，$v$ 随后 active 并产生第二条消息，
+且 $b>\theta+d_1+d_2$，事件图便含有路径
+
+$$
+\begin{aligned}
+F_{u,\theta}
+&\longrightarrow P_{v,\theta+d_1}
+\longrightarrow S_{B,\theta+d_1}
+\longrightarrow U_{v,\theta+d_1}
+\longrightarrow F_{v,\theta+d_1}\\
+&\longrightarrow P_{w,\theta+d_1+d_2}
+\longrightarrow S_{A,\theta+d_1+d_2}.
+\end{aligned}
+$$
+
+若 $u$ 在最后一个时间也成为候选并被选中，这条路径还可继续到
+$U_{u,\theta+d_1+d_2}\to F_{u,\theta+d_1+d_2}$。其 owner 已经沿
+$G^\dagger$ 返回 $u$，事件却到达了更晚时间的另一个 $F_u$，并未返回
+$F_{u,\theta}$。所以 $G^\dagger$ 的静态环不是 finite-cut 事件环。
+
+式 (39) 是安全但不必最小的静态包络：它不检查某类事件是否对所有合法输入都
+不可能出现。若另行证明某对 owner 之间的全部直接依赖在每个合法运行中都不会
+实例化，可以删去这对 owner 之间的静态边。只看到某次输入没有激活它，不足以
+这样做。若还要利用“selector 在整个定义域上与某个输入坐标无关”来删边，则须
+先相应细化第 4.2 节的保守事件依赖关系，再对
+细化后的关系证明 dependency-complete。
+
+$G^\dagger$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把
+$v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻
+依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。命题 13 只证明它是安全的静态边界；
+它还丢弃了平行消息边的身份。后续宏 runtime 仍须保留每个 $a\in A$，并另外
+证明完整多端口契约与外层保块。
 
 ## 10. correctness、外层保块与低 span 是不同层级
 
 ### 10.1 本文已经得到哪一级算法
 
 定理 8 给出有限 cut 的顺序 reference interpreter；定理 10 给出任意完整时间切分的组合律；定理 12 在额外 locality 条件下给出 message SCC 的拓扑外层调度。这三项都属于 exact correctness 与 finite progress。
+
+命题 13 只把直接事件依赖安全地投影到一张静态图；它没有增加另一种
+interpreter、finite-cut 进展证明或性能结论。
 
 它们没有单独给出任何一种性能结论。以下三层尤其不能混为一谈：
 
@@ -1374,7 +1483,8 @@ $$
 5. 获得 source seal 的任意有限 cut 都有有限的顺序推进结构（定理 8）；
 6. 节点状态、selector-history、绝对时间与跨界消息构成充分 continuation（定理 9）；
 7. 任意完整时间切分满足 cut composition（定理 10）；
-8. message condensation graph 是 DAG；在 SCC-local region profile 下，可以按其拓扑序精确构造一个 cut（定理 11--12）。
+8. message condensation graph 是 DAG；在 SCC-local region profile 下，可以按其拓扑序精确构造一个 cut（定理 11--12）；
+9. owner 投影把每次运行的直接事件依赖健全地抽象到式 (39) 的 dependency-complete 静态图（命题 13）。
 
 ### 11.2 本文没有证明
 
@@ -1394,7 +1504,7 @@ $$
 3. 不看证明，重新用 $\delta(a)>0$ 证明定理 4；指出证明的哪一步在 $\delta(a)=0$ 时失效。
 4. 构造一个 $q_v^b$ 全部相同但 $y_j^b$ 不同的例子，说明只保存节点状态为何不充分。
 5. 构造两个输入历史，它们在 $[0,b)$ 相同、在 $[b,\infty)$ 不同，并直接验证定理 3。
-6. 为一个跨 message-SCC 的二节点 region 画出 $P,S,U,F$ 依赖，比较式 (37) 与式 (39) 的 SCC。
+6. 对第 9.4 节的三节点例子，分别画出消息图 $G$、区域商图 $(J,Q_\rho)$、静态图 $G^\dagger$ 和一次 finite-cut 事件图；计算前三张图的 SCC，并验证最后一张图的每条直接边都满足 dependency-complete 条件。
 7. 给出一种递归摘要及其结合复合律；再给出一种没有紧凑闭合摘要的黑盒递归。
 
 ## 12. 下一研究台阶
@@ -1452,7 +1562,7 @@ $$
 >
 > **macro node** 若采用 message SCC，必须满足式 (38) 或另证 selector/control/state 依赖没有跨边界。否则 message SCC 只是图论集合，不是语义封闭模块。
 >
-> **dependency-complete static graph** 对应式 (39)。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息。
+> **dependency-complete static graph** 的正式定义见第 9.4 节：每次运行的直接事件边经 owner 投影后，都必须留在同一 owner 或落到一条静态边上。式 (39) 给出一个安全但不必最小的构造，命题 13 证明其 dependency-complete。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息；它也不是 seal 或 closure 的在线证书，其 SCC 不自动获得宏 runtime 或性能保证。
 
 > [!info]- S.6　correctness、外层保块、work 与 span
 > **exact / correctness** 表示实现记录等于本文指定的完整记录或明确投影。**节点级时间批暴露**要求固定 control/heavy profile 后，外层阶段数与每个节点在宽度为 $T$ 的有限时间区间上所需的昂贵时间 batch 数都由固定系统数据的常数控制；正式定义见 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|TimedDAG chunk-prefill 教材第 6.4 节]]。
