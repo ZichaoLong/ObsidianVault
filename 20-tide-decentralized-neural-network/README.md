@@ -20,9 +20,9 @@ tags:
 
 | 层级 | 当前定义 | 教材 |
 |---|---|---|
-| Graph | 有限固定消息图，可有环；边时延为正整数；每个有限逻辑时间切面具有确定记录 | [[positive-delay-graph-finite-cut-learning-note|正时延 Graph 的有限切面语义]] |
-| TimedDAG | 固定消息图进一步要求无环；保留多端口、不等长路径与一般区域划分 | [[timed-dag-region-selector-learning-note|带区域选择的 TimedDAG]] |
-| SettleGraph | 区域依赖严格有序，每个输入位置单次结算，具有单输入与单输出；通过明确时间与边界编码嵌入 TimedDAG | [[settlegraph-learning-note|单次结算图 SettleGraph]] |
+| Graph | 有限固定消息图，可有环；边时延为正整数；每个有限逻辑时间切面具有确定记录 | [正时延 Graph 的有限切面语义](positive-delay-graph-finite-cut-learning-note.md) |
+| TimedDAG | 固定消息图进一步要求无环；保留多端口、不等长路径与一般区域划分 | [带区域选择的 TimedDAG](timed-dag-region-selector-learning-note.md) |
+| SettleGraph | 区域依赖严格有序，每个输入位置单次结算，具有单输入与单输出；通过明确时间与边界编码嵌入 TimedDAG | [单次结算图 SettleGraph](settlegraph-learning-note.md) |
 
 “Graph”在当前框架中指 PositiveDelayGraph，不表示任意带副作用程序。零时延边不在设计范围内。
 
