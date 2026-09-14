@@ -1,7 +1,7 @@
 ---
 type: training-research-memo
 status: hypotheses-and-diagnostics
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 学习风险与诊断：稀疏路径究竟增加了什么困难

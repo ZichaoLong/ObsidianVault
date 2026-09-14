@@ -1,12 +1,12 @@
 ---
 type: mechanism-research-memo
 status: optional-instances
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # Selector 与局部记忆：评分、衰减、恢复和清理
 
-本页保留旧稿中有意义的机制问题，按 `tide-core-2` 的状态依赖重新组织。核心函数顺序以 [TimedDAG 教材](../../timed-dag-region-selector-learning-note.md) 为准；这里的公式是具体实例，不另立一套节点规范。来源为 Git `133d638` 的架构旧文第三部分 §4—8、§14.7。
+本页保留旧稿中有意义的机制问题，按 `tide-core-3` 的状态依赖重新组织。核心函数顺序以 [TimedDAG 教材](../../timed-dag-region-selector-learning-note.md) 为准；这里的公式是具体实例，不另立一套节点规范。来源为 Git `133d638` 的架构旧文第三部分 §4—8、§14.7。
 
 ## 1. 四种量不要混成一个“状态”
 
@@ -64,7 +64,7 @@ $$
 
 第 2 种不能把本次读出快照与下一次持久状态混为一物。一个典型意图是：先形成包含当前输入的记忆 $\widetilde q$，本次 Full 读取该快照，然后已选节点的下一持久状态变成 $0$，未选节点继续保存 $\widetilde q$。清理值在选择确定后已经可知，不需要等待 Full 的计算结果。
 
-`tide-core-2` 的 Next 允许这类不读取 Full 结果就能确定的后续状态处理，包括清理和局部历史更新；精确调用顺序与参数见教材。Next 的定义与求值也不能通过调用或重算 Full 获得这些结果。本页不把 Full 回写纳入核心，也不把无输入时更新另一套时钟当作补丁。实现批量 Full 时须保存每个实际作用应读取的不可变快照，不能让后面的清理改掉前面的输入。
+`tide-core-3` 的 Next 允许这类不读取 Full 结果就能确定的后续状态处理，包括清理和局部历史更新；精确调用顺序与参数见教材。Next 的定义与求值也不能通过调用或重算 Full 获得这些结果。本页不把 Full 回写纳入核心，也不把无输入时更新另一套时钟当作补丁。实现批量 Full 时须保存每个实际作用应读取的不可变快照，不能让后面的清理改掉前面的输入。
 
 若未来真的需要以 Full 输出决定下一记忆、selector 或清理，须按 [状态反馈与节点批](../mathematics/state-feedback-and-node-chunks.md) 单独分析，不沿用这里的控制先行结论。
 

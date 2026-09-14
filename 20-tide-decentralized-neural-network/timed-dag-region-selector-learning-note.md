@@ -2953,8 +2953,8 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > - receiver 到 $v\in V$ 的映射；
 > - graph ingress/egress 到 $\mathsf I,\mathsf O$ 的映射；
 > - receiver state 到 $S_v$ 的映射；
-> - 每 Token 聚合输入到某个 $B_{v,\theta}$ 的映射；
-> - AGG-CUSTOM 到保留端口或入边坐标的 $\operatorname{Agg}_v$ 的映射；
+> - 每 Token 的带身份聚合序列到某个 $B_{v,\theta}$ 的映射：入口形式标签对应输入适配边，内部标签直接对应原边；
+> - SettleGraph 的身份感知 $\operatorname{Agg}_v$ 到本文原子集合函数的映射，以及输出适配边到终端节点标签的映射；
 > - selection region 到 $\mathcal R_j$ 的映射；
 > - active set、局部控制、SD/BO、本次计算快照、Next、NodeCompute 与 Emit 到式 (24)--(28) 的映射；
 > - selector-history 的 owner、初态、更新与切面状态到 $Y_j,y_j^{\mathrm{init}},\operatorname{SelStep}_{j,C},y_j^b$ 的映射；

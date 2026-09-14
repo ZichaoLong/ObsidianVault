@@ -1,7 +1,7 @@
 ---
 type: mathematical-research-memo
 status: retained-proof
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 cssclasses:
   - textbook-math
 tags:

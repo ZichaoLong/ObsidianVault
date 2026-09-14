@@ -48,6 +48,6 @@ git show 133d638:20-tide-decentralized-neural-network/tide-mathematical-foundati
 - “stateful 但无负载历史就是 token-local”、全项目强制生长阶梯、已完成语义仍称待定义等表述删除。
 - 旧单位时延窗口边界、显式 allocator 与固定 phase 只按原受限范围追溯，不覆盖一般正时延教材。
 
-旧 HB 代码与图只作为历史构型附件保留，没有升级为 tide-core-2 解释器，特别是空候选负载衰减曾采用不同状态规则。当前正时延 Graph 教学 reference 由教材直接维护。
+旧 HB 代码与图只作为历史构型附件保留，没有升级为 tide-core-3 解释器，特别是空候选负载衰减曾采用不同状态规则。当前正时延 Graph 教学 reference 由教材直接维护。
 
 书籍目录保持为本地阅读资源，不纳入本次数学语义提交；不根据文件名判断或删除 PDF。

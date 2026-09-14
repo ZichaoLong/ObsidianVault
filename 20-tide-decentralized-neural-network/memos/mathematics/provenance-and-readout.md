@@ -1,7 +1,7 @@
 ---
 type: mathematical-research-memo
 status: retained-derivation
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 来源、聚合与读出：压缩以后还必须知道什么
@@ -19,7 +19,7 @@ semantic-baseline: tide-core-2
 | 输入来源集合 | 哪些外部输入可能影响它？ |
 | 读出端口与时间 | 哪个可观察输出使用这个值？ |
 
-当前原子本身保留外部端口或内部边身份。一个自定义聚合函数可以只取值的和，也可以利用来源；这属于函数选择。不能先丢掉边身份，再假定未来还可以无成本恢复。
+TimedDAG 与 Graph 的原子本身保留外部端口或内部边身份，SettleGraph 的带标签序列保留入口、父边或终端节点身份。一个具体聚合函数可以只取值的和，也可以利用来源；这属于函数选择。不能先丢掉身份，再假定未来还可以无成本恢复。
 
 “属于 token $t$”通常只是应用层标签，不是一般消息的唯一数学归属。跨 token 融合后，强行指定唯一 owner 会丢失其他来源；也不能用这个标签代替逻辑时间排序。
 

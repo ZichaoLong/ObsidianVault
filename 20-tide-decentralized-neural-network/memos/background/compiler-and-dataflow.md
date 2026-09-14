@@ -1,7 +1,7 @@
 ---
 type: background-reference
 status: reference
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 编译器与 dataflow：对 Tide 有用的研究谱系

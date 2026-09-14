@@ -1,7 +1,7 @@
 ---
 type: research-question-index
 status: open-questions
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 教材之外仍值得研究的问题

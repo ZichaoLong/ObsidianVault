@@ -1,7 +1,7 @@
 ---
 type: mathematical-research-memo
 status: retained-derivation
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 函数保持生长：哪些条件足以保持原模型

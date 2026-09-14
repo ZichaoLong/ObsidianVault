@@ -895,7 +895,7 @@ $$
 
 若 $\mathfrak F$ 只有一个元素，“同一策略对所有解释成立”本身不能排除把这个解释硬编码进策略。下面的动作语法仍要求每个 Full 作用显式进入 batch；但凡依赖 black-box 不可区分性的反例或下界，还必须另外选取足够丰富且明确量化的 $\mathfrak F$。第 10.6 节将取全部类型正确的解释。
 
-本文的成本 profile 是固定的二元组 $(\mathfrak G^\circ,\mathfrak F)$：$\operatorname{Full}^\Phi$ 属于昂贵作用，其余上述函数以及 seal、提交和公开 bookkeeping 属于控制作用。若主要计算位于 $\operatorname{Upd}_v$ 或 $\operatorname{Next}_v$，就必须改换 profile。每个 $\Phi$ 都给出一份普通 TimedDAG 规格，但后文的调度策略与批次数上界必须对整个 $\mathfrak F$ 一致。
+本文的成本 profile 是固定的二元组 $(\mathfrak G^\circ,\mathfrak F)$：$\operatorname{Full}^\Phi$ 属于昂贵作用，其余上述函数以及 seal、提交和公开 bookkeeping 属于控制作用。身份感知 $\operatorname{Agg}_v$ 仍在这个默认分类中；标签本身不会把它变成昂贵作用。若主要计算位于 $\operatorname{Agg}_v$、$\operatorname{Upd}_v$、读取函数、$\operatorname{SelStep}$ 或 $\operatorname{Next}_v$，就必须改换 profile，并为新增的昂贵作用另给批量接口与批次数证明。每个 $\Phi$ 都给出一份普通 TimedDAG 规格，但后文的调度策略与批次数上界必须对整个 $\mathfrak F$ 一致。
 
 #### 6.4.2 可见输入与唯一参考记录
 

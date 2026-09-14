@@ -1,7 +1,7 @@
 ---
 type: systems-research-memo
 status: design-space-and-evidence
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 执行与成本：正确、可批和实际更快如何分别判断
@@ -42,6 +42,8 @@ $$
 在理想的独立任务、无通信代价的列表调度模型中，有 $O(W/P+S)$ 上界；实际机器还受内存带宽、通信和 kernel 形状约束。
 
 稀疏工作不能只计算 ActiveCompute。账本至少包含：输入分发、所有实际接收者的 Agg/Upd/评分、selector-history、Next、Full、消息构造、读出、边界状态和反向所需快照。BO 中未选节点的状态更新仍有成本。
+
+身份感知 Agg 还要计算标签查找、packing 和按边参数访问。若它只选择标量权重，这些工作可能仍适合作为控制开销测量；若它对每条消息应用大矩阵，则该矩阵本身是模型主要计算，必须进入相应昂贵作用和 batch 证据，不能被 Agg 的名称隐藏。
 
 还应分别记录峰值状态、跨界在途消息、KV 增长、临时 packing、activation 保存与通信字节。图上度数有界只限制单次邻接数量，不保证物理距离短或总传播 hop 数少。
 
