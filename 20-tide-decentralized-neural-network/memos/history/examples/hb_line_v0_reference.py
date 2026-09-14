@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Executable structural reference for HB-Line-v0.
 
+HISTORICAL TOY MODEL: preserved from Git 133d638. This is not a canonical
+tide-core-2 interpreter or evidence of Graph/TimedDAG/SettleGraph conformance.
+Its checks apply only to the historical equations below.
+
 This standard-library-only model separates three things that the historical
 HB-Lattice drawing combined:
 

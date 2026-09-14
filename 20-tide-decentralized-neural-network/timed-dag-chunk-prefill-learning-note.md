@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-11
+as-of: 2026-09-14
 tags:
   - tide
   - timed-dag
@@ -86,8 +86,10 @@ $$
 区域 $j$ 在时间 $\theta$ 以前的 selector-history 记为 $y_j^\theta$。前置文档的 selector step 同时确定：
 
 $$
-(\mathcal A_{j,\theta},y_j^{\theta+1}).
+(\mathcal A_{j,\theta},(c_{v,\theta})_{v\in\mathcal C_{j,\theta}},y_j^{\theta+1}).
 $$
+
+其中每个 $c_{v,\theta}$ 属于前置文档给定的非空局部控制集合 $\mathsf C_v$。节点的本次计算快照记为 $q^{\mathrm{cmp}}_{v,\theta}$，下一持久状态记为 $q_v^{\theta+1}$；后者由不读取完整输出的 $\operatorname{Next}_v$ 决定。完整输出的输入是 $(q^{\mathrm{cmp}}_{v,\theta},\theta,h_{v,\theta},c_{v,\theta})$。
 
 节点在时间 $\theta$ 的准备、状态采用与完整输出作用仍记为：
 
@@ -101,7 +103,7 @@ $$
 
 区域选择作用记为 $S_{j,\theta}$；它就是上述 selector step 的函数作用。
 
-本文不会改变这些对象的定义。一个实现只要声称“等于 TimedDAG 语义”，比较对象仍然是前置文档第 6 节定义的完整计算记录 $\mathcal T_x$，其中包括完整 selector-history 序列。
+本文不会改变这些对象的定义。一个实现只要声称“等于 TimedDAG 语义”，比较对象仍然是前置文档第 6 节定义的完整计算记录 $\mathcal T_x$，其中包括完整 selector-history 序列、局部控制量与本次计算快照。
 
 ### 1.2 正则单输入流
 
@@ -469,7 +471,7 @@ $$
 
 在时间 $\theta$，两个输入包含相同的外部记录，因为所有新增 token 的输入时间都不小于 $Dq$。到达时间 $\theta$ 的任意内部消息都由更小逻辑时间的完整输出作用产生，这是 $\delta(a)>0$ 的结果。归纳假设保证这些作用及其消息相同，所以全部 $B_{v,\theta}$ 相同。
 
-随后，前置文档式 (22)--(28) 中的聚合、候选状态、描述量、选择、状态采用和完整输出都是固定函数。相同的旧节点状态、旧 selector-history 与时间纤维产生相同的 active set、新历史及其余结果。归纳完成。时间 $Dq$ 的状态与历史由所有更小时间的作用确定；$W_{Dq}$ 也只收集发送时间小于 $Dq$ 的消息，所以三项边界数据同样相同。$\square$
+随后，前置文档式 (22)--(28) 中的聚合、候选状态、描述量、选择、状态采用、下一持久状态与完整输出都是固定函数。相同的旧节点状态、旧 selector-history 与时间纤维产生相同的 active set、局部控制族、计算快照、新历史及其余结果。归纳完成。时间 $Dq$ 的状态与历史由所有更小时间的作用确定；$W_{Dq}$ 也只收集发送时间小于 $Dq$ 的消息，所以三项边界数据同样相同。$\square$
 
 定理 4 不要求路径不交错，也不要求区域商图无环。它只使用规则输入时间与正边时延。
 
@@ -728,7 +730,7 @@ $$
 \operatorname{Ref}_K:X_K\to Y_K.
 $$
 
-定义 $X_K$ 为 tile $K$ 的全部合法边界节点状态、边界 selector-history 与边界记录所成的集合，定义 $Y_K$ 为相应的应提交节点状态、selector-history、选择、逐坐标完整输出函数值、内部消息和外部输出所成的集合。$\operatorname{Ref}_K$ 内部仍严格遵守函数作用事件图的依赖顺序。
+定义 $X_K$ 为 tile $K$ 的全部合法边界节点状态、边界 selector-history 与边界记录所成的集合，定义 $Y_K$ 为相应的应提交节点状态、selector-history、选择、局部控制量、计算快照、逐坐标完整输出函数值、内部消息和外部输出所成的集合。$\operatorname{Ref}_K$ 内部仍严格遵守函数作用事件图的依赖顺序。这里“边界记录”包括所有已完成外部前驱的相应函数值：若选择或状态采用在 tile 外，而完整输出在 tile 内，输入边界必须包含它所需的 $c_{v,\theta}$ 与 $q^{\mathrm{cmp}}_{v,\theta}$。这不意味着完整逻辑时间切面的 continuation 也须保存已经使用完毕的临时量。
 
 一个 backend tile witness 由两个集合 $W_{\mathrm{in}},W_{\mathrm{out}}$ 与三个函数：
 
@@ -799,7 +801,7 @@ $$
 
 若只固定一个具体的 $\operatorname{Full}$，再口头禁止控制逻辑重算它，这个禁止不可检验。下面把 $\operatorname{Full}$ 留成解释槽，并要求同一策略对一整个解释类成立；同时先统一不同输入长度的记录定义域。
 
-为了同时讨论不同输入长度，先定义一个不含完整输出函数的公共骨架 $\mathfrak G^\circ$。它固定空间图、端口、region、状态与描述量集合、初值、$\operatorname{Upd}$、三类 $\operatorname{Read}$、$\operatorname{SelStep}$ 和注入间距 $D$。外部记录使用共同的环境集合：
+为了同时讨论不同输入长度，先定义一个不含完整输出函数的公共骨架 $\mathfrak G^\circ$。它固定空间图、端口、region、状态、描述量与局部控制集合、初值、$\operatorname{Upd}$、三类 $\operatorname{Read}$、$\operatorname{SelStep}$、$\operatorname{Next}$ 和注入间距 $D$。$\operatorname{Next}$ 属于固定骨架，不能读取或重算尚未调用的完整输出；本节的解释类与动作契约把这条要求具体化。外部记录使用共同的环境集合：
 
 $$
 \mathsf{Ext}_\infty
@@ -871,14 +873,14 @@ $$
 \varnothing\ne\mathfrak F
 \subseteq
 \prod_{v\in V}
-\{f\mid f:S_v\times\mathbb N\times X_v\to\mathcal O_v\}.
+\{f\mid f:S_v\times\mathbb N\times X_v\times\mathsf C_v\to\mathcal O_v\}.
 $$
 
 对 $\Phi=(\Phi_v)_{v\in V}\in\mathfrak F$，写 $\operatorname{Full}_v^\Phi=\Phi_v$。$\mathfrak F$ 可以是全部类型正确的函数，也可以由事先写明的函数类约束限制，例如要求某些节点共享参数；它不能随当前输入或尚未公开的函数值改变。
 
 若 $\mathfrak F$ 只有一个元素，“同一策略对所有解释成立”本身不能排除把这个解释硬编码进策略。下面的动作语法仍要求每个 Full 作用显式进入 batch；但凡依赖 black-box 不可区分性的反例或下界，还必须另外选取足够丰富且明确量化的 $\mathfrak F$。第 10.6 节将取全部类型正确的解释。
 
-本文的成本 profile 是固定的二元组 $(\mathfrak G^\circ,\mathfrak F)$：$\operatorname{Full}^\Phi$ 属于昂贵作用，其余上述函数以及 seal、提交和公开 bookkeeping 属于控制作用。若主要计算位于 $\operatorname{Upd}_v$，就必须改换 profile。每个 $\Phi$ 都给出一份普通 TimedDAG 规格，但后文的调度策略与批次数上界必须对整个 $\mathfrak F$ 一致。
+本文的成本 profile 是固定的二元组 $(\mathfrak G^\circ,\mathfrak F)$：$\operatorname{Full}^\Phi$ 属于昂贵作用，其余上述函数以及 seal、提交和公开 bookkeeping 属于控制作用。若主要计算位于 $\operatorname{Upd}_v$ 或 $\operatorname{Next}_v$，就必须改换 profile。每个 $\Phi$ 都给出一份普通 TimedDAG 规格，但后文的调度策略与批次数上界必须对整个 $\mathfrak F$ 一致。
 
 每个有限实例选择 $L\in\mathbb N_{>0}$ 与 $x:[L]\to P$，并由式 (1) 取 $\iota_L(t)=Dt$。对从位置 $q$ 开始的 chunk，记主时间块为：
 
@@ -950,10 +952,10 @@ v\in\mathcal A_{\rho(v),\theta}\}.
 \tag{37}
 $$
 
-先定义阶段可以调用的节点接口。对 $\Phi\in\mathfrak F$ 与任意有限非空 $\Theta\subseteq\mathbb N$，令 $\mathsf{Adm}_{v,\Theta}^\Phi$ 为所有在 $\Phi$ 的某条合法完整轨迹中同时作为这些 active 坐标的 $\operatorname{Full}_v^\Phi$ 输入而出现的递增序列，其中 $\bar q_\theta\in S_v$、$h_\theta\in X_v$：
+先定义阶段可以调用的节点接口。对 $\Phi\in\mathfrak F$ 与任意有限非空 $\Theta\subseteq\mathbb N$，令 $\mathsf{Adm}_{v,\Theta}^\Phi$ 为所有在 $\Phi$ 的某条合法完整轨迹中同时作为这些 active 坐标的 $\operatorname{Full}_v^\Phi$ 输入而出现的递增序列，其中 $\bar q_\theta\in S_v$ 是本次计算快照、$h_\theta\in X_v$、$c_\theta\in\mathsf C_v$：
 
 $$
-\left((\bar q_\theta,\theta,h_\theta)\right)_{\theta\in\Theta}^{\uparrow}.
+\left((\bar q_\theta,\theta,h_\theta,c_\theta)\right)_{\theta\in\Theta}^{\uparrow}.
 $$
 
 一个**类级节点 batch 接口**是一族全函数：
@@ -1038,14 +1040,14 @@ $$
 &\forall\Phi\in\mathfrak F,\quad
 \forall\mathbf u
 =
-\left((\bar q_\theta,\theta,h_\theta)\right)_{\theta\in\Theta}^{\uparrow}
+\left((\bar q_\theta,\theta,h_\theta,c_\theta)\right)_{\theta\in\Theta}^{\uparrow}
 \in\mathsf{Adm}_{v,\Theta}^{\Phi},\\
 &\qquad
 \operatorname{BatchFull}_{v,\Theta}^{\Phi}(\mathbf u)
 =
 \left(
 \Phi_v
-\left(\bar q_\theta,\theta,h_\theta\right)
+\left(\bar q_\theta,\theta,h_\theta,c_\theta\right)
 \right)_{\theta\in\Theta}^{\uparrow}.
 \end{aligned}
 \tag{39}
@@ -1075,7 +1077,7 @@ B_{v,\theta}\ne\varnothing\}.
 \tag{40}
 $$
 
-同一选择作用还读取 $y_j^\theta$，并通过前置文档的 selector step 同时产生 $\mathcal A_{j,\theta}$ 与 $y_j^{\theta+1}$。
+同一选择作用还读取 $y_j^\theta$，并通过前置文档的 selector step 同时产生 $\mathcal A_{j,\theta}$、$(c_{v,\theta})_{v\in\mathcal C_{j,\theta}}$ 与 $y_j^{\theta+1}$。
 
 所有 $v\in\mathcal C_{j,\theta}$ 的准备作用都是 $S_{j,\theta}$ 的前驱。因而，一个包含 $S_{j,\theta}$ 的 tile 必须同时满足：
 
@@ -1257,14 +1259,14 @@ $$
 3. 全部 $B_{v,\theta}$，其中 $v\in\mathcal R_j$ 且 $\theta\in I$；
 4. 所有从切面左侧跨入 $I$ 的内部消息。
 
-定义 $\mathsf{TileIn}_{j,I}$ 为所有满足上述四项条件的合法边界数据所成的集合。定义 $\mathsf{TileOut}_{j,I}$ 为相应 active sets、区间内的完整节点状态与 selector-history 序列、逐坐标完整输出函数值、内部消息和外部输出所成的集合；其中状态序列包括左边界以后直至时间 $c$ 的全部坐标。定义全函数：
+定义 $\mathsf{TileIn}_{j,I}$ 为所有满足上述四项条件的合法边界数据所成的集合。定义 $\mathsf{TileOut}_{j,I}$ 为相应 active sets、局部控制量、计算快照、区间内的完整持久节点状态与 selector-history 序列、逐坐标完整输出函数值、内部消息和外部输出所成的集合；其中状态序列包括左边界以后直至时间 $c$ 的全部坐标。定义全函数：
 
 $$
 \operatorname{RefRegionTile}_{j,I}:
 \mathsf{TileIn}_{j,I}\to\mathsf{TileOut}_{j,I},
 $$
 
-其函数值由下列递归给出：按 $\theta=b,b+1,\ldots,c-1$，对该 region 应用前置文档的聚合、候选状态、描述量、selector step、状态采用和完整输出规则。空纤维保持节点状态与 selector-history 不变。
+其函数值由下列递归给出：按 $\theta=b,b+1,\ldots,c-1$，对该 region 应用前置文档的聚合、候选状态、描述量、selector step、本次计算状态采用、下一持久状态与完整输出规则。空纤维保持节点状态与 selector-history 不变。
 
 一个实现函数：
 
@@ -1276,7 +1278,7 @@ $$
 是精确的，当且仅当它与 $\operatorname{RefRegionTile}_{j,I}$ 是同一个函数。换言之，它对所有合法输入都产生相同的：
 
 - active sets；
-- $(q_v^\theta)_{v\in\mathcal R_j,\ \theta\in[b,c+1)}$；
+- $(q_v^\theta)_{v\in\mathcal R_j,\ \theta\in[b,c+1)}$，以及每个候选位置的 $c_{v,\theta}$ 与 $q^{\mathrm{cmp}}_{v,\theta}$；
 - $(y_j^\theta)_{\theta\in[b,c+1)}$；
 - 每个 active 坐标的完整输出函数值；
 - 内部消息；
@@ -1384,7 +1386,7 @@ R_{\mathrm{blk}}(\mathsf C_j(I))=(\ell(j),0),
 R_{\mathrm{blk}}(\mathsf F_v(I))=(\ell(\rho(v)),1).
 $$
 
-$P\to S\to U$、$P\to U$、节点状态边与 selector-history 边都留在同一个 $\mathsf C_j(I)$；$U_{v,\theta}\to F_{v,\theta}$ 与 $P_{v,\theta}\to F_{v,\theta}$ 从 $\mathsf C_j(I)$ 指向 $\mathsf F_v(I)$，严格增加秩的第二坐标；消息边 $F_{v,\theta}\to P_{w,\theta+\delta(a)}$ 由式 (46) 满足 $\ell(\rho(v))<\ell(\rho(w))$，严格增加第一坐标。因此，每条跨块依赖都严格增加块秩。把每个非空块收缩为一个顶点，所得块图至多有 $|J|+|V|$ 个顶点，不随 $|I|$（因而也不随主时间块的 $T$）增长。按这个秩排列以后，它呈现为块上三角形：
+$P\to S\to U$、$P\to U$、节点状态边与 selector-history 边都留在同一个 $\mathsf C_j(I)$；$U_{v,\theta}\to F_{v,\theta}$、$P_{v,\theta}\to F_{v,\theta}$ 与 $S_{j,\theta}\to F_{v,\theta}$ 从 $\mathsf C_j(I)$ 指向 $\mathsf F_v(I)$，严格增加秩的第二坐标；消息边 $F_{v,\theta}\to P_{w,\theta+\delta(a)}$ 由式 (46) 满足 $\ell(\rho(v))<\ell(\rho(w))$，严格增加第一坐标。因此，每条跨块依赖都严格增加块秩。把每个非空块收缩为一个顶点，所得块图至多有 $|J|+|V|$ 个顶点，不随 $|I|$（因而也不随主时间块的 $T$）增长。按这个秩排列以后，它呈现为块上三角形：
 
 ```text
 Q_b 中到达时间落在 I 内的消息、外部输入、较低层 Full
@@ -1420,7 +1422,7 @@ y_j^\theta
 \right)
 \longmapsto
 \left(
-(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta})_
+(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta},c_{v,\theta},q^{\mathrm{cmp}}_{v,\theta})_
 {v\in\mathcal C_{j,\theta}},
 \mathcal A_{j,\theta},
 (q_v^{\theta+1})_{v\in\mathcal R_j},
@@ -1428,7 +1430,9 @@ y_j^{\theta+1}
 \right).
 $$
 
-这一步不必先应用任何 $\operatorname{Full}_v$：前置文档式 (14) 的 selector step 不读取完整输出，而式 (46) 既排除了 region 内消息边，也使当前 region 的输出只流向严格更后层。扫描结束后，每个 active 完整输出作用的 $(q_v^{\theta+1},\theta,h_{v,\theta})$ 都已经确定，可以按节点收集后交给式 (39) 的 batch backend。
+这一步不必先应用任何 $\operatorname{Full}_v$：前置文档式 (14) 的 selector step 与式 (17a) 的 $\operatorname{Next}$ 都不读取或重算完整输出，而式 (46) 既排除了 region 内消息边，也使当前 region 的输出只流向严格更后层。扫描结束后，每个 active 完整输出作用的四元组 $(q^{\mathrm{cmp}}_{v,\theta},\theta,h_{v,\theta},c_{v,\theta})$ 都已经确定，可以按节点收集后交给式 (39) 的 batch backend。
+
+这也容纳选择驱动的状态清空或本地历史写回：扫描依据 $q_v^{\theta+1}$ 继续未来控制，同时保留较早作用所需的 $q^{\mathrm{cmp}}_{v,\theta}$。它不能把清空后的下一状态代替本次快照。暂存整个块的快照与控制量可能需要随区间增长的内存；节点级时间批暴露没有给出这项内存成本的上界。
 
 > [!corollary] 推论 8：严格分层类的节点级时间批暴露
 > 固定第 6.4 节的骨架与非空解释类。在定理 7 的结构条件下，再假设每个节点对任意合法有限坐标集都有满足式 (39) 的类级 batch witness。则同一个区域顺序策略对所有 $\Phi\in\mathfrak F$ 都是 exact 的，并在主时间块 $I_T$ 上具有节点级时间批暴露；对所有 $q,T,L$ 满足 $q\in\mathbb N$、$T\in\mathbb N_{>0}$、$L\ge q+T$，以及所有 $\Phi\in\mathfrak F$、$\omega\in\Omega_{q,T}^{(L)}(\Phi)$，均可取：
@@ -1448,7 +1452,11 @@ $$
 
 若有限输入的 drain 被单列为第二个时间块，同一论证允许每个节点再增加至多一个批次；对主时间块与 drain 的联合计划重新计数时，每个节点至多两批。selector-history 的控制扫描仍可具有 $\Theta(T)$ span，而不违反推论 8；低 span 与 batch kernel 的实际性能仍需另证。
 
+本文保留的是“控制确定后，完整输出不直接写回本节点持久状态”的接口。如果另加完整输出驱动的私有状态递归，或让它的结果返回并影响同块后续区域选择，应另给参考递归与联合求值证明；两者不能直接援用本节推论。边界讨论见 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈与节点时间块备忘]]。
+
 ## 10. 典型拓扑
+
+以下拓扑例子若未另给局部控制或状态延续规则，均取 $\mathsf C_v=\{*\}$、候选控制量为 $*$，且 $\operatorname{Next}$ 返回计算快照。完整输出因此可忽略第四个输入；本节不会默默引入另一套节点状态语义。
 
 ### 10.1 串行 Transformer block
 
@@ -1539,14 +1547,14 @@ v_0\longrightarrow v_1\longrightarrow\cdots
 \qquad D=N,
 $$
 
-令唯一输入端口指向 $v_0$，取 $P=X_{v_r}=D_{v_r}=\{0,1\}$、$S_{v_r}=\{*\}$，并把全部节点放入同一个 region $j$。取 $K_j=1$、$Y_j=\{0,1\}$、$y_j^{\mathrm{init}}=0$、$\tau_j=0$ 与 $\kappa_j=0$。聚合函数返回唯一到达比特，$\operatorname{Read}_{v_r}^0$ 返回这个比特；对单点候选集合规定：
+令唯一输入端口指向 $v_0$，取 $P=X_{v_r}=D_{v_r}=\{0,1\}$、$S_{v_r}=\mathsf C_{v_r}=\{*\}$，每个候选控制量为 $*$，$\operatorname{Next}$ 返回本次计算快照，并把全部节点放入同一个 region $j$。取 $K_j=1$、$Y_j=\{0,1\}$、$y_j^{\mathrm{init}}=0$、$\tau_j=0$ 与 $\kappa_j=0$。聚合函数返回唯一到达比特，$\operatorname{Read}_{v_r}^0$ 返回这个比特；对单点候选集合规定：
 
 $$
 \operatorname{SelStep}_{j,\{v\}}(y,\theta,(d))
 =
 \begin{cases}
-(\{v\},d),&d=y,\\
-(\varnothing,d),&d\ne y.
+(\{v\},(*),d),&d=y,\\
+(\varnothing,(*),d),&d\ne y.
 \end{cases}
 $$
 

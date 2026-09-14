@@ -1,6 +1,7 @@
 ---
-type: note
-status: draft
+type: mathematical-research-memo
+status: retained-proof
+semantic-baseline: tide-core-2
 cssclasses:
   - textbook-math
 tags:
@@ -16,20 +17,14 @@ tags:
 > [!summary] 本页定位
 > 本页研究一个证否问题：当较早输入位置产生的晚期控制结果以不可预知的方式决定后续输入位置的 routing 时，是否存在对整个模型类别都有效的、精确且 work-efficient 的高性能 chunk prefill。正文先给出自足的黑盒查询模型，再证明自适应路由链的并行轮数下界，最后说明该结论如何嵌入局部通信、超稀疏的 TIDE Network。
 
-> [!note] 与构造性主线的关系
-> [[tide-mathematical-foundations]] 主要给出 chunk correctness 的构造性充分条件；本页给出一般动态 routing 的反向边界。它不证明每一个跨 token routing 模型都无法并行，而是证明：只要模型类别允许任意、不可组合的 pointer-chasing 式 routing，就不存在对该类别所有实例都有效的通用高性能 exact prefill。
-
-> [!note] 与两条战略路线的关系
-> 本页首先约束 Graph 收缩线：一般 Graph 若保留任意自适应控制链，就不能承诺通用低-depth prefill。它也可以检查 checkpoint 生长线中新加入的 selector，但不能因为某个模型“由 Transformer 生长”就自动套用下界；必须先证明该具体 selector 能嵌入本文 oracle family。反过来，checkpoint 生长线采用 token-local selector 并把分支限制在固定 merge 内，或者采用已证明可组合的控制状态时，正是在构造本文第 11 节列出的结构化逃离条件。两条路线是否最终汇合不属于本页结论。
+> [!note] 与教材的关系
+> 本页保留自足的查询模型与证明，历史版本见 Git `133d638` 的同名旧文。当前 [chunk 教材](../../timed-dag-chunk-prefill-learning-note.md) 研究固定图和声明 batch 接口下的节点级时间批；这里研究黑盒链的总查询深度。二者量化对象和复杂度指标不同，不可直接互相替代。具体 selector 必须给出 oracle embedding 才能应用下界。
 
 > [!warning] 结论强度
 > “早期 token 可以影响后续 routing”本身不足以推出不可能性。若影响可表示为 prefix sum、affine scan、有限且紧凑的函数复合，仍可能并行。本页下界依赖四个明确条件：exactness、自适应地址依赖、黑盒 transition、以及不枚举整个 routing state space 的 work budget。
 
 > [!important] 本页的对象边界
 > 本页中的 $t$ 是自适应路由链的位置索引，不是计算轨迹；$q_t$ 是路由状态或地址；$(t,q)$ 是下界证明构造出的分层图事件位置，不是 Tide 静态空间图中永久复制的一套节点。“信号”只作为非正式动机词，正式证明对象是 routing oracle 的查询、回答和控制事件。第 11.4 节历史上使用的 `routing frontier` 只表示一批可联合处理的路由阶段，不表示消息的输入前缀依赖上界。
-
-> [!note] 数学文档开发守则
-> 本页中的正式概念必须在使用前声明为集合、集合元素、函数、部分函数、关系、有限序列、多重集或有限元组；函数给出定义域和值域，关系给出所在笛卡尔积。定义正文与证明正文遵守同一规则。直观文字可以不形式化，但不能用未定义的技术名词承担证明前提；本页也不从其他文档隐式导入正式定义或定理。
 
 ## 0. 结论概览
 
@@ -1087,9 +1082,7 @@ MoE 的 active expert graph 在执行 router 前同样未知，但一层中所�
 
 ## 11. 逃离下界的结构化特例
 
-基于一般空间 DAG、显式 allocator、可选 `owner label / dependency support / causal input frontier` 证书和三种同刻融合语义的正向候选设计，见 [[tide-mathematical-foundations#第二部分：显式 allocator 的一般空间 DAG|显式 allocator 的一般空间 DAG]] 与 [[tide-mathematical-foundations#第三部分：可选的归属与因果证书|归属与因果证书]]。
-
-这些正向特例在架构和 runtime 中怎样登记为 lowering、怎样区分语义/进展能力与 sequence-bulk 性能，见 [[tide-model-architecture-and-training#第四部分：执行能力与成本模型|执行能力与成本模型]]。本节只列出逃离本文 oracle family 的结构条件，不在这里重复其 correctness、progress 或硬件证书。
+结构化正例的局部证明见 [kernel chunk 组合](kernel-chunk-composition.md)，图级条件见 [chunk 教材](../../timed-dag-chunk-prefill-learning-note.md)，实际成本问题见 [执行与成本](../learning-systems/execution-and-cost.md)。本节只说明哪些额外结构使实例不再属于任意黑盒 oracle family。
 
 ### 11.1 Token-local routing
 
@@ -1130,29 +1123,17 @@ $$
 
 若 $N$ 足够小，可以先查询整个 transition table，再对函数表做 composition。它从数学上有效，但 work 与 memory 至少依赖 $N$，不能作为巨大超稀疏 Graph 的默认解法。
 
-### 11.6 Certified SCC 是封装边界，不是第六种逃离算法
+### 11.6 SCC 封装本身不能消除查询
 
-> [!important] 下界应用边界
-> 本小节不增加新定理。它说明定理 6.1 对 SCC 宏封装的直接适用边界，以及正向架构设计仍需另行提供的证据。
+把自适应链封装成一个宏节点，不改变其内部 oracle 查询、transcript 或适应性轮数。若宏节点仍允许定理 6.1 的全部实例，且使用同一预算，下界继续成立。只有额外限制其内部转移族，例如给出紧凑组合、有限阶段或精确 bulk 算法，才构成结构化正例。
 
-把一段自适应路由链收缩并命名为一个 `certified SCC`，不会改变它内部必须查询的 oracle、query transcript 或 adaptive rounds。若该 SCC family 仍允许定理 6.1 的任意黑盒 pointer-chasing instances，并且算法仍受相同 work budget 约束，那么下界继续作用于宏节点内部；condensation DAG 只有一个节点也不会把这条 control chain 变短。
-
-SCC certification 的正向作用是限定并封装一个较小的 operator family。例如：
-
-- fixed-$K$ 或 bounded-unroll certificate 把开放循环限制为有限 routing stages；
-- compact associative summary 把内部 transition 限制为第 11.2 节的 scan-composable family；
-- exact window kernel 把内部依赖封装为第 11.3 节的 causal-bulk operator；
-- finite-lattice 或 solver certificate 可以证明某个受限 SCC 的 progress，但只有再给出 work/span 与 lowering witness，才构成高性能逃离条件。
-
-这些候选都需要单独给出**正向充分条件与实现证据**，不是从定理 6.1 自动推出的结论。特别地，termination certificate 只解决“能否完成”，不自动解决“能否以 sublinear depth 完成”。
-
-因此，`certified SCC` 是 semantic/progress/cost 证书的作用域，不是 [[tide-model-architecture-and-training#2. 五类 Execution Capability|五类 Execution Capability]] 之外的第六种 capability。SCC 内部仍须使用 `token-local`、`scan-composable`、`causal-bulk`、`ready-set-local` 或 `sequential-fallback`。已有 exact semantics 但没有并行证书的区域可以走 `sequential-fallback`；连所需 semantic/progress certificate 都没有的开放区域只能明确标为 experimental/best effort。
+正时延 Graph 的有限切面结论解决作用是否有限及怎样继续，不单独保证低查询深度。SCC 是封装边界，不是另一种并行算法。
 
 ## 12. 与显式程序复杂度下界的关系
 
 定理 6.1 是黑盒查询模型中的无条件结论。它不需要假设任何尚未解决的复杂度理论命题。
 
-编译器、数据流与并行执行的相关背景见 [[tide-background-history-and-references#第一部分：ISA、编译器与 dataflow 理论谱系|ISA、编译器与 dataflow 理论谱系]]；本节只说明本页定理的边界，不把外部理论当作证明步骤。
+编译器、数据流与并行执行的相关背景见 [编译器与 dataflow 谱系](../background/compiler-and-dataflow.md)；本节只说明本页定理的边界，不把外部理论当作证明步骤。
 
 如果不把 node/kernel transition 看作 oracle，而要求对任意显式给出的程序证明“绝不存在 polynomial-work、polylog-depth 的等价实现”，问题会更困难。
 
@@ -1169,49 +1150,10 @@ SCC certification 的正向作用是限定并封装一个较小的 operator fami
 2. 再分析具体 Tide/LH selector 是否能够嵌入该 oracle hard family。
 3. 对无法嵌入的受限子类，寻找 token-local、scan、causal-bulk 或有限 chunk-wide routing stages。
 
-## 13. 对 Tide 数学与架构主线的约束
+## 13. 应用时需要保留的边界
 
-### 13.1 Correctness 与高性能必须分开
+第 8 节的图具有出度一及一条实际路径；它没有同时证明所有节点入度有统一常数上界，也没有给出设备上的物理距离界。因此这里的“局部通信”仅指沿声明出边传递，不能把它升级成完整硬件局部性。
 
-绝对 logical time、phase、state version 与 event DAG 可以给任意有限执行定义清楚的 correctness，但不会自动降低 adaptive depth。
+该展开图的大小和深度随链长增长，不是一个固定 TimedDAG 的参数全部保持不变、只增加输入窗口。要用本页否定某个固定图的节点级批能力，还需给出保持目标复杂度指标的具体归约。控制扫描有线性 span，与节点的 Full 只调用一批可以同时成立。
 
-还必须把 progress 单独列出：`stream-step-exact` 只说明已执行步骤正确，`finite-cut-total` 才说明声明的有限 cut 会在有限工作后返回；二者都不自动推出 `prefill-native`。相反，一个 `finite-cut-total × decode-only` 实现可以精确完成 chunk，却仍受线性 token-axis critical path 限制。术语与 profile 组合见 [[tide-model-architecture-and-training#5. Work、Span 与通信的联合目标|架构成本模型]]。
-
-### 13.2 局部通信与超稀疏只控制 work
-
-Layered routing graph 已经同时具有有界出度和单条实际访问路径（active path），却仍有 $\Omega(L)$ adaptive depth。因此局部通信、超稀疏与低 span 是三个不同性质。
-
-### 13.3 原始交错传播更自然地属于 Streaming/Decode
-
-若较早输入位置的晚期控制结果持续决定后续输入位置的 routing，并且这种机制不可删除，那么它可以继续利用：
-
-- 空间节点计算与空间边消息传输的并行性。
-- 多 batch parallelism。
-- 同一绝对时间的 ready-event packing。
-- Pipeline streaming throughput。
-
-但在本页前提下，不应再把 Transformer/Mamba 式 chunk prefill 作为该完整语义的通用能力承诺。
-
-### 13.4 Prefill 研究应转向结构化逃离条件
-
-证明一般下界后，后续正向问题应改为：
-
-> 在保持“局部通信 + 超稀疏”的前提下，哪些受限 routing/state families 能逃离 adaptive routing lower bound？
-
-优先研究对象包括：
-
-1. Token-local sparse routing。
-2. Node-local affine/SSM state。
-3. Causal-bulk message kernels。
-4. 有限个 chunk-wide routing stages。
-5. 可证明 compact composition 的小型 controller state。
-
-## 14. 后续待证明问题
-
-1. **LH selector embedding**：当前 `affectcount / selectcount / signal norm` selector 是否能编码足够一般的 pointer-chasing family？
-2. **Restricted selector algebra**：去掉 conditional clear 或 persistent fairness 后，是否出现 compact transition composition？
-3. **Adaptive-depth upper bound theorem**：对固定 $R$ 的 chunk-wide sparse Graph，如何从 local capability contracts 推出必须顺序等待的 routing stages 数量与 $L$ 无关？
-4. **Work-span witness**：如何同时报告 active work、adaptive depth、kernel span、communication 与 memory，而不把 fused sequential loop 误报成 prefill parallelism？
-5. **Profile placement**：对具体 selector，怎样分别确定 `stream-step-exact / finite-cut-total / quiescence-total` 与 `prefill-native / prefill-compatible / decode-only`，而不把 Tide-Streaming 和 Tide-Prefill 误写成互斥模型路线？
-
-这些问题中，第 1 项决定本页下界能否直接作用于当前 LH-like mechanism；第 2-3 项决定是否存在保留主要研究动机、同时逃离下界的结构化 Tide 子类。
+仍值得继续研究的是：具体 selector 是否有足够一般的 oracle embedding；其状态与 Next 是否出现可组合代数；Full 输出何时返回以后控制；以及查询 work、控制 span、Full 批数和硬件成本怎样分别计量。问题索引见 [教材之外的研究问题](../research-questions.md)。

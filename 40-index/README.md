@@ -29,16 +29,15 @@ tags:
 
 ## TIDE
 
-- [[20-tide-decentralized-neural-network/current-mainline|TIDE 当前主线]]
+- [[20-tide-decentralized-neural-network/README|TIDE 数学教材与语义总览]]
+- [[20-tide-decentralized-neural-network/semantics-anchor|语义锚点与仓库分工]]
+- [[20-tide-decentralized-neural-network/settlegraph-learning-note|SettleGraph 入门教材]]
 - [[20-tide-decentralized-neural-network/timed-dag-region-selector-learning-note|TimedDAG 数学教材]]
 - [[20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]]
-- [[20-tide-decentralized-neural-network/README|TIDE 总览]]
-- [[20-tide-decentralized-neural-network/tide-model-architecture-and-training|模型架构与训练]]
-- [[20-tide-decentralized-neural-network/tide-mathematical-foundations|数学基础]]
-- [[20-tide-decentralized-neural-network/adaptive-routing-prefill-lower-bound|Adaptive Routing Prefill Lower Bound]]
-- [[20-tide-decentralized-neural-network/tide-runtime-validation-and-status|Runtime、验证与状态]]
-- [[20-tide-decentralized-neural-network/tide-background-history-and-references|背景、历史谱系与参考资料]]
-- [[20-tide-decentralized-neural-network/tide-statistical-mechanics-and-information-dynamics|统计力学与信息动力学]]
+- [[20-tide-decentralized-neural-network/positive-delay-graph-finite-cut-learning-note|正时延 Graph 有限切面教材]]
+- [[20-tide-decentralized-neural-network/memos/README|分类研究备忘]]
+- [[20-tide-decentralized-neural-network/resources/learning-resources|按需学习资源]]
+- [[20-tide-decentralized-neural-network/memos/history/migration-map|旧内容迁移与追溯]]
 
 ## 其他
 

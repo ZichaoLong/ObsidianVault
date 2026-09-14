@@ -1,333 +1,65 @@
 ---
 type: index
 status: active
+as-of: 2026-09-14
 tags:
   - tide
-  - topology-invariant
-  - degree-bounded
-  - autoregressive-inference
+  - mathematics
+  - semantic-anchor
 ---
 
-# TIDE / 面向自回归 Token 推理的拓扑固定、度有界容量扩展架构
+# TIDE：数学教材与语义总览
 
-> [!summary] 本页定位
-> 本页是 TIDE 线的总览与研究资料库入口，只负责项目命名、对象边界、战略路线、当前命题、文档地图、写作规则、主张边界与历史动机。当前学习与开发从 [[current-mainline]] 开始；当前 TimedDAG 与正时延 Graph 数学以三份学习教材为准。既有综合数学材料见 [[tide-mathematical-foundations]]，反向边界见 [[adaptive-routing-prefill-lower-bound]]；TIDE Architecture / Network 候选、checkpoint 生长的设计动机与诊断坐标见 [[tide-model-architecture-and-training]]；TIDE Engine 的工程完成度见 [[tide-runtime-validation-and-status]]；统计力学类比及其严格边界见 [[tide-statistical-mechanics-and-information-dynamics]]。当前 checkpoint 生长实验的配置、工作流、gate 与交付物由 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 维护。
+20-tide 是 TIDE 各层级的数学与语义上游。这里回答“对象是什么、怎样计算、哪些结论在什么条件下成立”；实验平台选择具体构型与节点算法，实现这些语义，并验证训练、推理、等价性与性能。
 
-> [!important] 当前学习与开发入口
-> 如果目标是沿一条可以手算、实现和逐级证明的路线继续推进，请先读 [[current-mainline|TIDE 当前主线]]，再读 [[timed-dag-region-selector-learning-note|TimedDAG 数学教材]]；研究正时延有环 Graph 时继续读 [[positive-delay-graph-finite-cut-learning-note|finite-cut 数学教材]]，研究空间 DAG 的分块预填充时读 [[timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]]。本页以下七份职责文档是总研究资料库，不要求在开始下一步研究前从头读完。
+初次阅读可从 [[settlegraph-learning-note|SettleGraph：单次结算图]] 开始，也可以直接读 [[timed-dag-region-selector-learning-note|TimedDAG 数学教材]]。教材面向第一次接触对象的数学读者，按定义、例子、命题与证明展开；计算机系统用语只在附录对照。
 
-## 命名与对象边界
+## 当前语义与层级
 
-TIDE 的完整项目表述是：`TIDE: A Topology-Invariant Degree-bounded Expansion Architecture for Autoregressive Token Inference`。
+[[semantics-anchor|语义锚点与仓库分工]] 固定共同边界、版本、教材关系及下游引用规则。详细定义与证明由教材承担，备忘不反向改变教材。
 
-中文表述是：**TIDE：面向自回归 Token 推理的拓扑固定、度有界容量扩展架构。**
+| 层级 | 当前定义 | 教材 |
+|---|---|---|
+| Graph | 有限固定消息图，可有环；边时延为正整数；每个有限逻辑时间切面具有确定记录 | [[positive-delay-graph-finite-cut-learning-note|正时延 Graph 的有限切面语义]] |
+| TimedDAG | 固定消息图进一步要求无环；保留多端口、不等长路径与一般区域划分 | [[timed-dag-region-selector-learning-note|带区域选择的 TimedDAG]] |
+| SettleGraph | 区域依赖严格有序，每个输入位置单次结算，具有单输入与单输出；通过明确时间与边界编码嵌入 TimedDAG | [[settlegraph-learning-note|单次结算图 SettleGraph]] |
 
-- `Topology-Invariant Degree-bounded Expansion`：TIDE 的核心结构创新。其中，`Degree-bounded` 不是额外增加的底层要求，而是“固定空间拓扑 + 单节点成本有界”在本文成本口径下的直接推论：每条直接连接都会占用节点的接口、状态、候选处理或通信资源，因此节点度不能随着模型总容量一直增长；`Expansion` 表示通过多跳或空间扩展，让可达容量继续增长。
-- `for Autoregressive Token Inference`：项目的应用范围。
-- `Architecture`：当前研究的主要对象。
-- `TIDE Engine`：执行 TIDE Model 的训练或推理 runtime，不是 Architecture / Network 的同义词。
+“Graph”在当前框架中指 PositiveDelayGraph，不表示任意带副作用程序。零时延边不在设计范围内。
 
-本文统一使用以下对象名称：
+[[timed-dag-chunk-prefill-learning-note|TimedDAG 分块预填充教材]] 是执行专题，不是第四种架构。它区分正确继续、节点级时间批、节点内部并行性与硬件效果。
 
-| 名称 | 含义 |
-| --- | --- |
-| `TIDE Architecture` / `TIDE Network` | 模型结构与 reference semantics |
-| `TIDE Model` | 训练得到的具体模型 |
-| `TIDE Engine` | 执行 TIDE Model 的训练或推理 runtime |
+## 阅读路线
 
-“去中心化”仍是 TIDE 的历史动机和可单独研究的系统性质，但不再作为项目全称，也不能单独推出固定空间拓扑、局部通信或度有界。目录名 `20-tide-decentralized-neural-network` 为保持已有链接稳定而保留，不代表继续使用旧全称。
+~~~text
+SettleGraph：一次输入、共同选择、记忆与单次结算
+    ↓ 明确的嵌入
+TimedDAG：统一逻辑时间、消息纤维、关闭与继续
+    ├─→ 分块预填充：哪些结构允许节点级时间批
+    └─→ 正时延 Graph：空间环与有限切面
+~~~
 
-## 一页版结论
+SettleGraph 是可选入门层级，不是 TimedDAG 的强制前置。后两篇均以前置 TimedDAG 教材为基础；学习者不必先读旧研究材料或完成系统课程。
 
-TIDE 总体目标是研究同时具有下列性质的自回归神经系统：
+当前共同接口区分候选新状态、本次计算快照与下一持久状态；也区分区域激活集合、各节点局部控制量与区域选择历史。状态可按统一逻辑时间衰减，或依激活结果清理。下一状态不读取完整计算结果；没有输入的时刻不自主激活或发送。时间衰减可由“保存值＋时间戳”在下一次读取时解码。
 
-1. 对一个已经确定的 TIDE Architecture，空间图拓扑不随 Token、状态或 selector 改写。
-2. 所有节点，包括入口、selector、router 和 merge，单节点成本都具有不随模型总容量增长的上界；与此同时，可达且能实际贡献的总容量可以继续增长。
-3. 每个输入位置只激活全部潜在计算中的稀疏子集。
-4. `prefill` 与逐位置 `decode` 保持同一 reference semantics。
-5. 有限 chunk 的执行能暴露完整的数据、状态、控制、可见性和提交依赖。
-6. 对 node、kernel 或 subgraph，先证明外层调度能暴露不随 chunk 长度增长的有限个昂贵计算批次，再单独研究低 span 与硬件实现；无法批量化的部分显式承担顺序成本。
+## 上游与实验平台
 
-固定拓扑本身不表示度有界；在每条直接连接都占用单节点资源的成本口径下，单节点成本上界才推出统一的度上界。有界度再与可达容量增长共同要求多跳、逐级、层次化或空间化扩展，而不是一步平铺访问全部容量。
+Graph 理论研究与 checkpoint 生长已在 SettleGraph 核心前向语义处发生弱汇合：从已有模型接入、单次结算的构型，可以作为总框架中的受限实例。这不表示所有实验扩展、特殊梯度或实现结果已经被统一证明。
 
-当前结论分为五层：
+fractal-latcarf 是 SettleGraph 的实验平台。它维护实际模块公式与选择空间、模型接入位置、初始化、训练设置、实现、测试和实测结果；上游维护抽象契约、教材与一般证明。当前对应与待下游单独对齐的接口见 [[semantics-anchor#下游如何引用|下游如何引用]]。
 
-- **Kernel 正向结果**：token-local、causal attention、affine scan、linear attention accumulator，以及由这些 kernel 组成的有限 Transformer/Mamba chain，已有 chunk correctness 证明路线。
-- **函数保持生长结果**：单步 transition 的精确状态嵌入可推广到任意长度 fold；中性 residual 分支保持原函数；token-local selector、无操作未选分支和固定加法 merge 在分支 chunk correctness 已成立时保持 chunk correctness。
-- **一般空间 DAG 正向结果**：显式 allocator、节点状态、带到达轮次的消息、边界在途消息和不等长路径可以按空间拓扑序构造；每个节点可一次处理窗口内属于它的时间桶，空间节点遍历次数不随 chunk 长度增长。
-- **旧显式 allocator profile 尚缺的正向结果**：其中的空间拓扑序构造不自动推出该 profile 的时间分块组合律。完整 model-level `prefill = decode` 仍需从逐绝对轮次节点转移证明窗口折叠，并为各 node/subgraph 给出低-span execution witness；下段微节点正时延 Graph 的新 composition 定理不会自动补上这项旧规格的嵌入证明。
-- **反向结果**：若模型类别允许任意、不可组合的 pointer-chasing 式自适应 routing，则不存在对该类别所有实例都有效的 exact、work-efficient、次线性 adaptive-depth prefill。该下界不能未经 embedding 证明就直接套到每个具体 selector。
+一般等价性定理可以留在上游，具体实现是否满足其前提由下游验证。旧 LH 的实现快照不代表 fractal-latcarf 当前状态，本仓库也不持续镜像下游“最新通过状态”。
 
-对本文当前的具体微节点正时延 Graph，finite-cut 存在唯一性、定量局部有限性、seal、continuation 与 cut composition 已在 [[positive-delay-graph-finite-cut-learning-note]] 中证明，并有最小 reference。对一般 static schema Graph 求 structural SCC 并得到 condensation DAG 仍只是一项图论分解：跨 SCC 的 region selector 或共享可变状态可能使纯消息边界不完整；即使边界完整，SCC 也不自动具有节点级时间批暴露或低 span。旧长文中的一般 SCC macro contract 仍是更宽 profile 的候选接口，不因这个具体正面结果自动成为通用定理。
+## 进一步阅读
 
-因此，“能精确执行”“有限前缀必然返回”“是否整体静止”“外层是否保块”“是否低 span”必须分别登记。性能研究依次区分 semantic、progress、exact outer-bulk、parallel-complexity 与 hardware-lowering；这些层次是设计审查框架，不是只看 Graph 拓扑即可得到的完备分类。exact outer-bulk 的规范定义见 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|节点级时间批暴露]]：每个控制扫描可以串行，但外层 heavy/control 阶段数与固定节点的昂贵事件 batch 数都不得随 chunk 长度增长。
+[[memos/README|研究备忘索引]] 按问题组织数学专题、构型候选、学习风险、执行成本及外部背景。[[memos/research-questions|研究问题]] 保存剩余问题，不要求各层级服从同一条强制开发阶梯。[[resources/learning-resources|学习资源]] 提供按需书目。[[memos/history/migration-map|旧内容迁移索引]] 记录重写来源与 Git 追溯方法；旧长文不再构成第二套核心。
 
-LH 是“局部通信 + 超稀疏”的复杂机制样本和 CPU golden reference，不是理论必须完整复刻的终点。若 LH 的 selector、状态副作用或交错控制链破坏高性能 prefill，可以在不放弃总体目标的前提下简化、替代或移出 strict family。
+[正时延 Graph 教学 reference](examples/positive_delay_graph_reference.py) 验证有限切面、控制量、状态快照及继续等式。它属于教材附件，不承担完整神经模型或硬件平台职责。旧 HB 示例归入历史附件。
 
-当前不是只有一条模型设计路线。Graph 收缩线从 LH 和一般 Graph 出发，逐步加入高性能 `prefill`、可训练性与局部通信约束；checkpoint 生长线从可完整装载的预训练 Transformer/Mamba 出发，通过函数保持接口和可归因实验引入固定汇聚分支、selector、递归结构和空间化。两条路线都服务于“局部通信 + 超稀疏”的总体目标，但不预设它们必然得到同一个最终架构。
+## 架构目标与数学约束
 
-HB-Sliced 是 Graph 收缩线当前最具体的空间候选：有限空间基图 $H$ 定义每个深度切片中的局部邻接，实际消息边只从 $d$ 指向 $d+1$。最小实例 HB-Line-v0 已有结构 reference，验证 depth-major chunk、token-major decode 和分段 chunk continuation 的输出、route artifact 与状态相同；它尚未证明真实 kernel 低 span、模型可训练、可扩展或优于 Transformer/Mamba/MoE。checkpoint 生长线尚未形成同等级别的可运行 reference；这只是该线内部的首要实验缺口。
+TIDE 的历史全称为 Topology-Invariant Degree-bounded Expansion Architecture for Autoregressive Token Inference。固定拓扑、局部连接与可达容量增长仍是架构目标；各具体架构族必须另外检查成本。
 
-Checkpoint 生长线不再把单一串行架构阶梯视为唯一研究方法：可以先联合有共同设计理由的机制构造完整候选，寻找正面存在性信号，再用 matched control、knockout 与单轴修改建立归因。Dense checkpoint 与成熟 flat MoE 提供强基线；`broadcast-observe`、private state 与 later readout 是当前重点候选，但不是已经成立的必要条件。具体实验安排留在实验仓库，本仓库只记录这一路线为何值得研究、概念之间如何区分，以及它对数学和 runtime 提出什么义务。
+一个图有限，不等于扩容时所有节点成本具有统一上界。要主张有界成本扩容，必须同时约束状态、参数、区域宽度、入度出度、入口终端宽度与每次处理量。增加一个平铺区域的候选数不能单独完成这个目标；逻辑局部连接也不自动证明物理通信便宜。
 
-Tide 当前最大的科学不确定性仍是 learning value：局部通信、持久状态、feedback 与动态 routing 是否能被稳定学到，并在匹配训练资源后改善能力、泛化或 scaling。sequence-level bulk execution 则是主要规模化风险。二者逻辑上不同、实验上耦合；现有并行计算谱系可以约束执行设计，却不能替代 compute-matched 神经架构实验。
-
-## 两条战略路线
-
-### Graph 收缩线
-
-这条路线从表达力较强、机制混合且不保证高性能 `prefill` 的对象出发：
-
-```text
-一般 static schema Graph / LH mechanism pool
-├── 对一次有限执行展开并验证
-│   └── dependency-complete dynamic event DAG
-└── 对可接受架构族施加结构约束
-    └── 显式 allocator 的一般空间 DAG
-        └── HB-Lattice 的历史几何直觉
-            └── HB-Sliced / HB-Line / HB-Plane
-                └── 有界度的多跳扩展、固定 merge 的结构化分支族
-```
-
-dynamic event DAG 是一次执行的 correctness 对象，空间 DAG 是静态架构限制；前者不是通往后者的中间拓扑。一般 static schema Graph 的 SCC condensation 又是第三种对象，不能与二者混写。condensation DAG 只规定宏节点之间的无环连接，不替宏节点内部选择 fixed-round 展开、scan、solver、sequential fallback 或其他求值语义。
-
-它主要承担四项职责：寻找理论上限，给出 correctness 与 complexity 边界，识别会破坏 chunk composition、外层保块或低 span 的机制，并为局部通信、超稀疏和训练稳定性提供设计约束。LH 是这条路线的重要早期动机和机制样本，但不是必须逐项保留的终点。历史 HB-Lattice 是从一般空间 DAG 走向层级局部结构的中间直觉；当前 HB-Sliced 是消除“空间平面、模型阶段和 runtime lowering”混写后的正式继承者。
-
-### Checkpoint 生长线
-
-这条路线从已经可训练、可高性能 `prefill` 且存在预训练 checkpoint 的架构出发：
-
-```text
-原生预训练 Transformer / Mamba
--> Tide 中的完全等价装载与函数保持接口
-├── 强基线与配对反事实：dense / flat MoE / selected-dispatch
-└── 当前正面候选：broadcast-observe + private state + later readout
-      ├── 有界局部 selector、active/message/depth budget
-      ├── always-on backbone 与 fixed merge
-      └── 按观察引入递归、会聚、空间化与结构变异
-```
-
-它主要承担可重复实验、正面候选发现、配对归因、训练稳定性验证和实际推广。早期必须完整保留原参数与初始化语义；候选与对照共享数据、correctness oracle、成本口径和实验账本。随着证据积累，后期允许删除冗余节点、改变状态布局、重写 kernel 或形成不再与原 Transformer 结构兼容的后代模型。此时应保留 checkpoint 谱系和实验归因，不能继续声称结构或函数仍然完全兼容。
-
-### 期待汇合而不预设汇合
-
-递归固定 merge 分支是当前两条路线共同指向的候选交界面，但“共同指向”不是已证明的汇合定理。后续可能出现三种结果：
-
-1. 两条路线得到同一个可训练、可高性能实现的结构族。
-2. 两条路线只共享固定 merge、selector scope、局部 DAG 等部分契约，具体拓扑不同。
-3. 两条路线保持分离：Graph 线提供更高表达上限，checkpoint 线提供更可靠的工程模型。
-
-因此，Tide 不以强行统一为目标。理论约束应裁剪明显不可行的 checkpoint 扩展；checkpoint 实验也应反过来检验 Graph 线的约束是否过强、遗漏了哪些有效结构。
-
-## 文档地图
-
-当前学习层保留四份面向当前台阶的文档，不改变下面七份核心研究资料的职责：
-
-| 文档 | 用途 |
-| --- | --- |
-| [[current-mainline]] | 当前台阶、下一台阶、延期范围和退出条件 |
-| [[timed-dag-region-selector-learning-note]] | 可独立阅读：按严格依赖顺序从集合与函数定义多输入、多输出 TimedDAG、region selector 与 selector-history |
-| [[timed-dag-chunk-prefill-learning-note]] | 以前一份 TimedDAG 教材为唯一前置：定义路径支持、交错、时间 tile、selector closure 与严格分层 region，并证明该受限类的 exact chunk-prefill 外层扫描 |
-| [[positive-delay-graph-finite-cut-learning-note]] | 以 TimedDAG 语义教材为唯一前置：允许正时延空间环，证明 finite-cut 唯一性、有限性、seal、continuation、cut composition 与 SCC-local 外层调度 |
-
-当前核心研究线保留七个职责文件：
-
-| 文档 | 职责 | 结论类型 |
-| --- | --- | --- |
-| 本页 | 入口、术语、阅读顺序、主张边界 | 导航 |
-| [[tide-mathematical-foundations]] | StepTransition、fold、kernel theorem、logical event DAG、显式 allocator general DAG、归属/因果证书、structural SCC 与 condensation、多端口 finite-cut 候选契约、函数保持生长及 fixed-merge 闭包 | 正式定义、正向定理与明示的 proof obligations |
-| [[adaptive-routing-prefill-lower-bound]] | 黑盒自适应路由链的 parallel-query 下界及局部稀疏 Graph 嵌入 | 正式反向定理 |
-| [[tide-model-architecture-and-training]] | TIDE Architecture / Network 的两条战略路线、checkpoint 生长逻辑链、递归固定 merge 分支、HB-Sliced/HB-Line、selector 与训练风险、四道 execution gate | 架构候选与研究备忘 |
-| [[tide-runtime-validation-and-status]] | TIDE Engine/runtime contract、LH 映射、artifact equality、CPU 对齐、候选 SCC macro 接口、性能和 backend 状态 | 实现规范、候选接口与动态快照 |
-| [[tide-background-history-and-references]] | ISA/编译器/dataflow、SCC、finite-prefix progress 与相关脑科学谱系 | 外部背景，不承担证明 |
-| [[tide-statistical-mechanics-and-information-dynamics]] | 碰撞历史、粗粒化、路径相关性、kinetic limit 与耗散结构类比的 Tide 评述 | 研究备忘与候选假设，不承担证明 |
-
-建议阅读顺序：
-
-1. 当前学习主线：先读 [[current-mainline]]；再读可独立阅读的 [[timed-dag-region-selector-learning-note|TimedDAG 数学教材]]；Graph 线继续读 [[positive-delay-graph-finite-cut-learning-note]]，空间 DAG 的 chunk prefill 继续读 [[timed-dag-chunk-prefill-learning-note]]。`fractal-latcarf` 中的 SettleGraph 是独立的 checkpoint 生长线语义，二者的形式嵌入仍需另证。
-2. 战略与模型：本页 -> [[tide-model-architecture-and-training]]。
-3. Graph 收缩线当前数学：[[timed-dag-region-selector-learning-note]] -> [[positive-delay-graph-finite-cut-learning-note]]；研究自适应 span 反向边界时再读 [[adaptive-routing-prefill-lower-bound]]，旧的综合对象按需查 [[tide-mathematical-foundations]]。
-4. Checkpoint 生长研究：[[tide-model-architecture-and-training]] -> [[tide-runtime-validation-and-status]]；当前实验执行见 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md)。
-5. 外部概念：遇到 ISA、SSA、MemorySSA、dataflow、fixed point 或脑科学类比时查 [[tide-background-history-and-references]]。
-6. 统计力学假设：研究 coarse-graining、path correlation、route entropy 或宏观极限时查 [[tide-statistical-mechanics-and-information-dynamics]]；其中内容不进入正式证明链。
-
-### 附录与研究暂存
-
-下列文档不计入七份核心职责文件，也不进入正式证明、架构或 runtime 的依赖链：
-
-| 附录 | 定位 |
-| --- | --- |
-| [[appendices/tide-directed-learning-roadmap|Tide 定向学习路线]] | 个人课程、证明和实现训练脚手架；不是研究结论或项目里程碑 |
-| [[appendices/research-memos/scc-macro-node-logical-time-research-memo|SCC 宏节点剩余研究问题与迁移索引]] | 只保留尚未合入核心文档的开放问题及迁移状态；已合入内容不在此重复 |
-
-## 核心术语
-
-| 术语 | 本文含义 | 不表示 |
-| --- | --- | --- |
-| `token` | 输入序列中的离散输入单位；数学上通常由位置 $t$ 和输入值 $x_t$ 分开表示 | 消息、事件或计算轨迹 |
-| 输入位置 | 全局流中的自然数下标 $t$ | 内部 round 或物理完成时间 |
-| 空间基图 | 有限图 $H=(U,F)$；只定义一个切片中的局部邻接关系 | 同切片计算依赖图 |
-| 深度切片 | 固定深度 $d$ 上的一组空间位置 $(d,u)$ | token 时间、层级尺度或 runtime phase |
-| 空间节点 | 静态 Graph 中可复用的计算与状态持有位置 | 一次执行中的事件实例 |
-| receiver | 能接收声明的局部上游消息，并拥有自身参数或语义状态的下游模块 | 必然执行昂贵计算的 active node |
-| 消息 | 一次发送产生的有限记录，至少含消息标识符、源、目标、到达轮次和载荷 | 空间边或完整轨迹 |
-| 事件 | 某次有限执行中实际发生的一次计算、状态、控制、消息或提交动作 | 可复用空间节点 |
-| `owner label set` | 事件直接联合处理或对外标识的一组输入位置标签 | 数值依赖集合、消息身份或逻辑时间 |
-| `dependency support` | 某个值可能实质依赖的有限输入位置集合 | owner 标签或物理收件箱 |
-| `causal input frontier` | `dependency support` 的输入前缀上界；$-1$ 表示不依赖输入 | 调度 wavefront、消息到达时间或完成进度 |
-| `progress frontier / hard output watermark` | 对过去区域的硬完成证书：合法 continuation 不会再产生落入该区域的新工作或输出 | 因果依赖上界、墙钟空闲或估计型 event-time watermark |
-| structural SCC | static schema Graph 中极大的互相可达节点集合 | 同一 logical rank 的 zero-delay SCC 或一次运行的 event graph |
-| condensation DAG | 以 structural SCC 为顶点的商 DAG；跨宏节点边仍保留 edge identity 与 port 边界 | SCC 内部求值算法或终止证明 |
-| source seal | 输入源以后不会再提交某个 downward-closed cut 内新输入的硬承诺 | 暂时没有输入或队列为空 |
-| 边界延续状态 | 从位置 $B$ 开始执行所需的节点状态与在途消息 | 仅由 chunk 长度决定的缓存 |
-| 发送激活 | 节点在某逻辑轮次实际产生至少一条出站消息 | hidden activation tensor |
-| logical event DAG | 一次有限执行的事件集合及其直接语义依赖关系 | 静态空间 Graph 本身 |
-| `prefill = decode` | 任意合法 chunk 切分与逐位置 reference fold 产生相同可观察输出和边界状态 | 只比较最终 logits 或只允许从位置 0 开始 |
-| 函数保持生长 | 扩展模型在指定初始参数和状态嵌入下，与原模型产生相同输出及下一状态 | 扩展模型在继续训练后永远不改变 |
-| checkpoint 兼容 | 原 checkpoint 的每个参数都有声明的装载位置，并满足当前阶段规定的语义等价测试 | 后代模型永远保持原 state-dict 形状 |
-| 结构变异 | 以已有 checkpoint 为初始化或 teacher，经过节点删除、重参数化或拓扑变化得到后代模型 | 仍可声称与原模型结构完全兼容 |
-| 固定 merge | 候选分支的汇聚位置和汇聚算子由模型结构预先声明；激活集合可以动态变化 | 所有候选分支都必须执行或路径必须等长 |
-| `selected-dispatch` | 只有 local selector 选中的 receiver 才 Receive/Update/Compute/Emit 的传播 profile | 所有 Tide 的默认语义 |
-| `broadcast-observe` | active sender 沿全部声明局部出边发送；实际 receiver 都 Observe/Update，只有 active receiver 执行昂贵计算并继续发送 | 全局广播、已证明收益或所有 Tide 的必要条件 |
-
-`token`、`prefill`、`decode`、`logits`、模型名、固定缩写、接口名和代码字段保留英文；其余解释性正文优先使用中文。
-
-## 数学写作规则
-
-Tide 正式数学文档遵守以下规则：
-
-1. 一个对象进入定义、命题、定理或证明前，必须声明为集合、集合元素、函数、部分函数、关系、有限序列、多重集、有限元组，或由这些对象定义的性质。
-2. 函数给出定义域和值域，关系给出所在笛卡尔积，元组给出各坐标所属集合。
-3. 定义正文和证明正文都不能依赖未定义的工程名词。
-4. 直观说明可以不形式化，但必须真正直白，并且不得暗中承担后续证明前提。
-5. 每个显示公式都应能逐项回答“该符号属于哪个集合”。
-6. 定义、例、反例、引理、定理、证明、适用边界和工程含义按依赖顺序出现。
-7. 正式数学文件自足；外部文档只能提供历史、例子和参考，不能成为隐式定义来源。
-8. 明确区分定义性等价、充分条件、必要条件、充要条件、工程验证和历史类比。
-9. 同一个英文词有多种含义时，先给出 Tide 本文含义与排除含义。
-10. 新概念首次出现时，声明它是数学对象、语义 profile、实现字段、历史用语或待定义研究占位词。
-
-推荐章节模板：
-
-```text
-动机问题
--> 最小例子
--> 数学定义
--> 正例与反例
--> 引理 / 定理
--> 完整证明
--> 适用边界
--> 对实现与实验的约束
-```
-
-## 当前研究顺序
-
-### Graph 收缩线
-
-1. 以 [[positive-delay-graph-finite-cut-learning-note]] 已证明的微观 finite-cut 语义、continuation 与 composition 为 reference，不再把旧的一般 SCC macro 候选契约当作基础定义。
-2. 从跨 message-SCC selector 反例出发，定义包含 selector owner、selector-history 和全部可变状态依赖的 dependency-complete SCC；固定共享参数不形成前向事件边。
-3. 为每个 SCC 保留逐边 identity、时延、输入输出投影与 continuation，先实现和对拍 exact `sequential-fallback`。
-4. 固定 control/heavy 成本 profile，优先寻找 bounded heavy/control phases 的 SCC 子类，并证明每个节点的昂贵时间事件只需不随 chunk 长度 $T$ 增长的有限批次；这对应 [[timed-dag-chunk-prefill-learning-note#6.4 外层保块与节点级时间批暴露|exact outer-bulk]]。
-5. 在此之后研究 `associative/affine scan`、`fixed-round unfold` 与 `causal-bulk` 的低-span witness，再单独测量 hardware lowering；一次 packed macro API 或 condensation DAG 本身不证明外层保块或低 span。
-6. 对具体 stateful selector 判断它落入结构化可并行特例，还是能嵌入自适应路由下界。
-
-### Checkpoint 生长线
-
-1. 选择一个 pre-norm decoder-only checkpoint，完成原生参数、logits、cache/state、`prefill/decode`、梯度与 fresh save/reload equality。
-2. 建立函数保持 growth operator、reference semantics、成本口径与可追溯的实验账本。
-3. 使用 dense continued-pretraining、成熟 flat MoE 和 selected-dispatch 为正面候选提供强基线与配对反事实。
-4. 允许完整候选联合使用递归、private state、局部 selector、always-on backbone 与 fixed merge；组合结果只支持存在性判断，单项主张必须补直接反事实。
-5. 以“探索—诊断—确认”闭环推进；当前配置、工作流、gate 与交付物只在 [fractal-latcarf README](https://github.com/ZichaoLong/tide/blob/fractal-latcarf/README.md) 中维护。
-
-### Selector 与训练
-
-1. 固定/hash、content-only、pre/post-Update state-aware 和 load-aware 是诊断 profile，不再承担全局开发顺序。
-2. selector 可以按完整候选需要读取当前内容、receiver semantic state 和逐序列 history/load state，但每个输入必须显式登记。
-3. 任何改变 route/output 的跨 Token state 都必须进入 reference state，支持 continuation、save/reload 与 replay。
-4. BO 读取 post-Update proposal/state 时，必须另有“读取/忽略”和 matched/replay route 对照。
-5. 分别记录 route churn、receiver exposure、梯度覆盖、state use、write-to-read 延迟和 chunk/decode artifact equality。
-
-### TIDE Engine / Runtime
-
-1. 固定 model-level `prefill()` 的输入、读出和 boundary-state contract。
-2. 让 Event IR 显式表示事件标识符、逻辑时间、状态版本、依赖与提交。
-3. 先完成 CPU semantic gate 和逐阶段 artifact equality。
-4. 再进行 packed/crossbatch lowering、并行 executor 与 Ascend backend。
-
-若某个实验引入 SCC macro，应在通用 executor 之前先实现最小受限 profile：稳定 edge/port identity、`AdvanceUntil(cut)`、source seal、完整 continuation、hard output watermark，以及 zero-delay/Zeno/backdating 反例测试。当前仓库尚未实现这套接口。
-
-## 当前主张边界
-
-当前可以主张：
-
-- Tide 的 role-aware phase abstraction 能承载当前覆盖范围内的 LH C++ 计算。
-- 独立 Tide CPU kernels 在当前覆盖配置和 hidden/cache mode 上数值对齐 native LH。
-- Transformer/Mamba 主力 kernel family 已有构造性 chunk correctness 证明路线。
-- 单步精确状态嵌入、有限 DAG 节点细化和 token-local 固定 merge 分支已有明确前提下的闭包定理。
-- 严格分层 TimedDAG 已有 exact 节点级时间批暴露充分条件；控制扫描可具有 $\Theta(T)$ span，因此该结论本身不声称低 span。
-- 显式 allocator 的一般空间 DAG 已证明常数次空间拓扑遍历，但没有自动证明时间分块组合律。
-- 任意有限 static schema Graph 的 structural SCC 与 condensation DAG 分解成立；这只是图论结构结论，不包含 SCC 内部求值或性能结论。
-- 自适应路由下界已在明确的 deterministic exact black-box query model 中证明。
-- HB-Line-v0 reference 已验证 toy 语义下 depth-major chunk、token-major decode 和分段 continuation 的 artifact equality。
-- 两条路线是否最终汇合仍是研究假设，而不是当前结论。
-- semantic、progress、exact outer-bulk、parallel-complexity、hardware-lowering 的分层审查和候选 SCC macro contract 已形成设计框架，但具体 family 仍需逐项提交证明、实现或测量证据。
-
-当前不能主张：
-
-- 任意一般 Graph 都有节点级时间批暴露或低-span chunk prefill。
-- SCC 分解、宏节点封装或 termination certificate 本身解决了循环求值、有限前缀组合、外层保块或低 span。
-- 当前完整 LH 自动满足 strict model-level `prefill = decode`。
-- 任意具体 selector 已经落入自适应路由下界。
-- CPU 数值对齐证明了模型可训练性、scaling 或性能优势。
-- 当前 runtime 已实现通用 `AdvanceUntil(cut)`、source seal、hard output watermark 或 SCC continuation/replay。
-- Tide 的 feedback、持久状态、局部通信或动态 routing 已经带来优于强基线的 learning value。
-- `broadcast-observe` 已经具有 learning、scaling 或端到端系统收益。
-- receiver 收到消息或状态发生变化，等于该状态已在以后有效读出。
-- 路径相关 receiver exposure 变薄必然等于当前 hidden 丢失上下文，或多父会聚必然恢复无损记忆。
-- 一个联合使用递归、private state、selector 和 fixed merge 的候选成功，分别证明了这些部件必要。
-- Head/Group-wise、全维 mixer 或逻辑局部邻接本身已经证明去中心化系统收益。
-- HB-Sliced/HB-Line 已经稳定训练或优于现有 Transformer、Mamba、MoE。
-- 已经完成预训练 Transformer/Mamba checkpoint 到递归 Tide 分支模型的函数保持生长链。
-- 通用 packed/crossbatch lowering、异步执行或 Ascend backend 已经完成。
-- Zero-delay algebraic loop 可以由普通 Graph 调度器自动解释。
-- 统计力学、熵增或耗散结构类比已经构成 Tide correctness、prefill 或训练稳定性定理。
-
-## 整合记录
-
-Tide 在 2026-08-07 先被整合为六个职责文件，随后增加统计力学与信息动力学评述，因此当前共有七个职责文件。整合前的逐文件版本保存在 Git 提交 `d27819f`。2026-08-20，checkpoint 生长实验仓库补充了目标约束链、机制假设链和配对归因方法；本仓库只吸收其中可泛化的研究动机、概念边界、证明义务与测量建议，当前实验政策继续留在 `fractal-latcarf`。其中：
-
-- `step-transition-mathematical-specification`、`explicit-allocator-general-dag-model` 和 `token-owned-general-dag-routing` 进入数学基础。
-- `adaptive-routing-prefill-impossibility` 改名为更准确的 lower-bound 文档。
-- HB-Lattice 历史草案、HB-Sliced/HB-Line 当前候选、selector capability 和训练稳定性进入模型架构与训练。
-- checkpoint 生长的逻辑链、BO 候选边界、matched-control 方法与诊断坐标进入模型架构与训练；具体工作流、gate 与首个交付留在实验仓库。
-- 实现规范、当前状态和 LH/tide.old 历史进入 runtime 文档。
-- 编译器/dataflow 谱系和脑科学调查进入背景参考。
-
-已降级文档中的重复定义和过时状态没有继续复制；若需要考古其逐行推导，以提交 `d27819f` 为准。
-
-## 历史动机
-
-MoE 让参数计算稀疏化，但 expert dispatch、全局路由、负载均衡和跨设备同步仍可能形成集中式或 all-to-all 通信压力。Tide 的早期问题是：能否用长期稳定的有界度局部通信替代一部分全局 dispatch，同时保留自回归序列执行和可训练性。
-
-概念上，可以把 dense Transformer block 看作 attention/FFN 顺序链，把标准 MoE block 看作带全局 router 的星型阶段，再把 Tide 的候选看作局部连接、分层且稀疏激活的 Graph。下图只表达研究动机，不是对所有实现的精确通信模型。
-
-![[assets/images/linked-list-transformer-star-moe-decentralized-graph-nn-01.png|48%]] ![[assets/images/linked-list-transformer-star-moe-decentralized-graph-nn-02.png|48%]]
-
-最早的流式原型按输入位置和内部 round 双重循环：
-
-```python
-for token in input_tokens:
-    input_signal = embed(token)
-    for internal_round in range(route_length):
-        parallel_emit(graph)
-        parallel_receive(graph)
-    output_token = readout(output_node)
-```
-
-它适合 streaming/decode，却没有自动获得序列方向的高性能 prefill。后来引入：
-
-```text
-absolute_round = input_position * external_period + internal_round
-```
-
-作为时间锚点，并进一步区分输入位置、绝对轮次、阶段、消息到达时间和可选 `owner`。这条演化最终形成当前的有限事件 DAG、窗口边界状态、显式 allocator 和自适应控制下界两条数学主线。早期 LH 吞吐记录与实现演化见 [[tide-runtime-validation-and-status#第三部分：LH 与 tide.old 历史上下文|LH 与 tide.old 历史上下文]]。
+目录名保留用于已有仓库链接。“去中心化”是历史动机和可研究的系统性质，不替代当前数学定义。

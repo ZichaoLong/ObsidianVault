@@ -491,7 +491,7 @@ information-theoretic 指标只能作为解释层或预注册辅助指标，不�
 
 ### 9.1 与 Tide
 
-[[20-tide-decentralized-neural-network/tide-statistical-mechanics-and-information-dynamics|Tide、统计力学与信息动力学]] 关注模型/runtime 内部消息、持久状态、routing 和 chunk/decode contract。本页关注 agent/runtime 如何选择外部观察并修改显式 workspace。
+[[20-tide-decentralized-neural-network/memos/background/statistical-mechanics|Tide、统计力学与信息动力学]] 关注模型/runtime 内部消息、持久状态、routing 和 chunk/decode contract。本页关注 agent/runtime 如何选择外部观察并修改显式 workspace。
 
 两条线可以共享：
 
@@ -559,7 +559,7 @@ information-theoretic 指标只能作为解释层或预注册辅助指标，不�
 ## 参考入口
 
 - [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|从希尔伯特第六问题到普利高津：AI 熵增与耗散结构类比]]
-- [[20-tide-decentralized-neural-network/tide-statistical-mechanics-and-information-dynamics|Tide、统计力学与信息动力学]]
+- [[20-tide-decentralized-neural-network/memos/background/statistical-mechanics|Tide、统计力学与信息动力学]]
 - [[current-mainline|控制反馈：当前主线]]
 - [[experiment-protocol|控制反馈：实验协议]]
 - [[theory-and-challenges|控制反馈：理论与挑战]]

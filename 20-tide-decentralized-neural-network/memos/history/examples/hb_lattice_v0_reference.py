@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Executable structural reference for HB-Lattice-v0.
 
+HISTORICAL TOY MODEL: preserved from Git 133d638. This is not a canonical
+tide-core-2 interpreter or evidence of Graph/TimedDAG/SettleGraph conformance.
+Its checks apply only to the historical equations below.
+
 This file intentionally uses only the Python standard library.  The vector
 functions below are toy kernels: they make data flow and state changes visible,
 but they are not a numerical implementation of Transformer attention.

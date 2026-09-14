@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-11
+as-of: 2026-09-14
 tags:
   - tide
   - positive-delay-graph
@@ -183,7 +183,7 @@ $$
 =\{o\in\mathsf O\mid\varepsilon(o)=v\}.
 $$
 
-再给定非空集合 $S_v,X_v,D_v$、初态 $q_v^{\mathrm{init}}\in S_v$，以及全函数：
+再给定非空集合 $S_v,X_v,D_v,\mathsf C_v$、初态 $q_v^{\mathrm{init}}\in S_v$。其中 $\mathsf C_v$ 是节点 $v$ 的**选择控制量集合**；其元素可以是软门控系数，也可以是包含多个控制字段的元组。先给定以下全函数：
 
 $$
 \begin{aligned}
@@ -198,8 +198,11 @@ S_v\times\mathbb N\times X_v\to S_v,\\
 S_v\times\mathbb N\times X_v\to D_v,\\
 \operatorname{Read}_v^+&:
 S_v\times\mathbb N\times X_v\to D_v,\\
+\operatorname{Next}_v&:
+S_v\times S_v\times\mathbb N\times X_v\times\{0,1\}\times\mathsf C_v
+\to S_v,\\
 \operatorname{Full}_v&:
-S_v\times\mathbb N\times X_v
+S_v\times\mathbb N\times X_v\times\mathsf C_v
 \to(P_\bot)^{\operatorname{Out}(v)}
 \times(P_\bot)^{\operatorname{OutPort}(v)}.
 \end{aligned}
@@ -208,7 +211,9 @@ $$
 
 $\operatorname{Agg}_v$ 虽然在所有有限子集上有定义，正文只在非空、同一时间的纤维上调用它。
 
-### 1.5 selector-history 与状态采用
+$\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$ 的六个自变量依次是旧持久状态、本次完整计算读取的状态快照、统一逻辑时间、本地内容、是否 active 的指示值和本次选择控制量。它产生下一时刻的持久状态；$\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$ 只产生消息与外部输出，不回写状态。两个函数可以读取同一个 $c$，但 $\operatorname{Next}$ 不读取或在内部重新求值本次 $\operatorname{Full}$。当 $\operatorname{Next}$ 或其他控制函数本身很昂贵时，必须在第 10 节重新声明成本分类，不能仅靠函数名称把昂贵计算当成免费控制。
+
+### 1.5 selector-history、控制量与两种状态
 
 对每个 $j\in J$，给定：
 
@@ -224,13 +229,18 @@ $$
 Y_j\times\mathbb N\times\prod_{v\in C}D_v
 \to
 \{A'\subseteq C\mid|A'|\le K_j\}
+\times\prod_{v\in C}\mathsf C_v
 \times Y_j,
 \tag{6}
 $$
 
-并规定 $\operatorname{SelStep}_{j,\varnothing}(y,\theta,())=(\varnothing,y)$。
+它同时返回 active set、每个候选节点的控制量和下一选择历史。控制量不改变约束 $A'\subseteq C$，也不允许未选择节点执行 $\operatorname{Full}$。对空候选集合，空坐标族记为 $()$，并规定：
 
-若 $C$ 是候选集合、$A\subseteq C$ 是 active set，定义状态采用集合：
+$$
+\operatorname{SelStep}_{j,\varnothing}(y,\theta,())=(\varnothing,(),y).
+$$
+
+若 $C$ 是候选集合、$A\subseteq C$ 是 active set，定义本次快照采用候选新状态的节点集合：
 
 $$
 O_j(C,A)
@@ -246,13 +256,35 @@ $$
 
 $$
 (q,B)\longrightarrow(h,\widetilde q,d)
-\longrightarrow(A,y')
-\longrightarrow q'
-\longrightarrow\operatorname{Full}.
+\longrightarrow(A,c,y')
+\longrightarrow(q^{\mathrm{cmp}},q^{\mathrm{next}}),
+\qquad
+(q^{\mathrm{cmp}},h,c)\longrightarrow\operatorname{Full}.
 \tag{8}
 $$
 
-节点状态 $q_v$ 只属于节点 $v$，历史 $y_j$ 只属于 selector $j$。多个局部函数可以使用同一个固定参数对象；固定参数不是一次前向运行中被前序事件改写的状态，所以这种共享不会给式 (8) 增加运行时依赖边。若允许两个节点共同读写可变状态，则必须另外定义它的唯一 owner 与读写次序；本文没有暗中允许这种情形。
+式 (8) 省略了共同的时间自变量。$q^{\mathrm{cmp}}$ 是本次 Full 使用的只读快照，$q^{\mathrm{next}}$ 才是以后节点事件读取的持久状态。二者可以不同；例如本次读取累积记忆，而选择以后将下一状态清零。令每个 $\mathsf C_v=\{*\}$、所有函数忽略该控制量，并取 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,*)=q^{\mathrm{cmp}}$，就恢复原来的 SD/BO 状态采用规则。
+
+一般 Next 下，$\kappa$ 只决定本次快照，不单独决定最终状态。若 $\kappa=0$ 且还要求未选候选的持久状态保持，就应另要求 $\operatorname{Next}_v(q,q,\theta,h,0,c)=q$；默认 Next 满足这个条件。未选候选与没有任何输入的非候选节点也必须区分：后者始终保持状态，根本不调用 Next。
+
+节点持久状态 $q_v$ 只属于节点 $v$，历史 $y_j$ 只属于 selector $j$。控制量和本次快照都是当前事件的值，不是新的跨切面状态 owner。多个局部函数可以使用同一个固定参数对象；固定参数不是一次前向运行中被前序事件改写的状态，所以这种共享不会给式 (8) 增加运行时依赖边。若允许两个节点共同读写可变状态，则必须另外定义它的唯一 owner 与读写次序；本文没有暗中允许这种情形。
+
+本教材只纳入能在完整输出以前确定的后续状态。依赖 Full 结果的状态回写，以及仅供本节点以后 Full 使用的递归私有状态，另见 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈与节点时间块备忘]]；它们不是这里的隐含特例。
+
+### 1.6 统一逻辑时间与空闲期间的衰减
+
+所有函数使用同一个 $\theta\in\mathbb N$，而不是处理器的完成时间或节点自己的调用次数。若希望某个记忆量随时间衰减，可以取 $S_v=\mathbb R\times\mathbb N$，在状态 $(z,s)$ 中保存数值和上次更新时间。固定 $0<\alpha\le1$，定义全函数：
+
+$$
+\operatorname{Eff}:S_v\times\mathbb N\to\mathbb R,
+\qquad
+\operatorname{Eff}((z,s),\theta)
+=\alpha^{\theta-\min(\theta,s)}z.
+$$
+
+指数总是非负整数，因此这个函数对整个定义域都有值。在实际可达的 $\theta\ge s$ 情形，它就是 $\alpha^{\theta-s}z$。Upd 或 Read 可以读取该有效值；更新后的数值连同时间 $\theta$ 再由 Next 保存。初始更新时间可取 $0$，以后每次写入只记录本次的 $\theta$。
+
+在空纤维期间，保存的状态坐标仍保持不变；其在时间 $\theta$ 的有效读值可以改变。这种惰性表示不增加无输入激活或自主发送，也不把零载荷消息当作空纤维。selector-history 若需要时间衰减，可以同样保存数值和时间，在下次实际选择事件中计算有效值。
 
 ## 2. 有限切面以前的直接递归
 
@@ -328,7 +360,8 @@ $$
 每个 region 在时间 $\theta$ 应用一次式 (6)：
 
 $$
-(\mathcal A_{j,\theta},y_j^{\theta+1})
+\left(\mathcal A_{j,\theta},
+(c_{v,\theta})_{v\in\mathcal C_{j,\theta}},y_j^{\theta+1}\right)
 =
 \operatorname{SelStep}_{j,\mathcal C_{j,\theta}}
 \left(
@@ -339,10 +372,10 @@ y_j^\theta,
 \tag{13}
 $$
 
-然后对 $v\in\mathcal R_j$ 定义：
+对每个 $v\in\mathcal C_{j,\theta}$，令 $a_{v,\theta}=1$ 当 $v\in\mathcal A_{j,\theta}$，其余候选取 $a_{v,\theta}=0$。先定义本次计算快照：
 
 $$
-q_v^{\theta+1}
+q^{\mathrm{cmp}}_{v,\theta}
 =
 \begin{cases}
 \widetilde q_{v,\theta},
@@ -352,12 +385,30 @@ q_v^\theta,&\text{其余情形}.
 \tag{14}
 $$
 
+再对全部 $v\in\mathcal R_j$ 定义下一持久状态：
+
+$$
+q_v^{\theta+1}
+=
+\begin{cases}
+\operatorname{Next}_v
+\left(q_v^\theta,q^{\mathrm{cmp}}_{v,\theta},\theta,
+h_{v,\theta},a_{v,\theta},c_{v,\theta}\right),
+&v\in\mathcal C_{j,\theta},\\
+q_v^\theta,&v\notin\mathcal C_{j,\theta}.
+\end{cases}
+\tag{14a}
+$$
+
+式 (14) 与式 (14a) 都不需要本次完整输出。即使二者给出不同状态，Full 仍只读取式 (14) 的快照。非候选节点不调用 $\operatorname{Next}$，也不定义本次 $c$ 或 $q^{\mathrm{cmp}}$。
+
 只有 $v\in\mathcal A_{j,\theta}$ 时，才定义：
 
 $$
 (f^A_{v,\theta},f^O_{v,\theta})
 =
-\operatorname{Full}_v(q_v^{\theta+1},\theta,h_{v,\theta}).
+\operatorname{Full}_v
+\left(q^{\mathrm{cmp}}_{v,\theta},\theta,h_{v,\theta},c_{v,\theta}\right).
 \tag{15}
 $$
 
@@ -414,7 +465,8 @@ $$
 =\bigl(&
 (B_{v,\theta})_{v\in V,\,\theta<b},
 (\mathcal C_{j,\theta},\mathcal A_{j,\theta})_{j\in J,\,\theta<b},\\
-&(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta})_
+&(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta},
+c_{v,\theta},q^{\mathrm{cmp}}_{v,\theta})_
 {\theta<b,\,v\in\mathcal C_{\rho(v),\theta}},\\
 &(q_v^\theta)_{v\in V,\,0\le\theta\le b},
 (y_j^\theta)_{j\in J,\,0\le\theta\le b},\\
@@ -426,7 +478,7 @@ M_{<b}^{\mathrm{send}},Z_{<b}
 \tag{19}
 $$
 
-这一定义没有要求 $\mathcal T_{x,<b}$ 以后最终出现一个“最后事件”。
+这一定义没有要求 $\mathcal T_{x,<b}$ 以后最终出现一个“最后事件”。其中 $c$ 和 $q^{\mathrm{cmp}}$ 按实际候选事件记录，$q$ 则保存最终持久状态，包括没有事件的空闲时刻；两者不能互相替代。
 
 定义 cut 内的节点事件集合与选择事件集合：
 
@@ -499,7 +551,9 @@ $$
 
 这个定理只比较两个完整数学输入历史：若它们在切面左侧相同，未来输入就不能改变左侧记录。在线求值者怎样知道自己已经取得完整前缀，要到第 5 节用 source seal 回答；该知识不是定理 3 的前提中暗含的能力。
 
-## 3. 三个最小例子
+## 3. 最小例子与状态快照
+
+第 3.1--3.3 节都取单点控制集合，Full 忽略控制量，$\operatorname{Next}$ 返回 $q^{\mathrm{cmp}}$。这些设定让读者先只看正时延和 cut；第 3.4 节再让控制量与下一状态实际改变结果。
 
 ### 3.1 延迟为 1 的单节点自环
 
@@ -558,6 +612,34 @@ $$
 
 若在 cut $1$ 停止时只保存节点状态，而丢掉 $m_0$，恢复后的时间 $2$ 纤维为空；一次算完时该纤维非空。第 6.2 节会把这类消息定义为 $W_b$。
 
+### 3.4 软门控、本次读出与选后清空
+
+取节点 $u,v$，共同组成一个容量为 $1$ 的 region。唯一消息边 $a:u\to v$ 的时延为 $2$；两个节点各有一个输入端口和一个输出端口。取 $P=S_u=S_v=X_u=X_v=D_u=D_v=\mathbb R$、$\mathsf C_u=\mathsf C_v=\mathbb R$，初始节点状态均为 $0$。聚合取载荷之和，$\operatorname{Upd}(q,\theta,h)=q+h$，使用 $\tau=+$，描述量是候选新状态本身。
+
+选择器选择描述量最大的一个候选；平局时先比较历史选择次数，次数仍相等时令 $u$ 优先。历史只累计被选节点的次数。被选节点的控制量为 $1/2$，其余候选的控制量为 $0$。采用 $\kappa=1$，所以每个候选的 $q^{\mathrm{cmp}}=\widetilde q$；再令：
+
+$$
+\operatorname{Next}(q,q^{\mathrm{cmp}},\theta,h,a,c)
+=\begin{cases}
+0,&a=1\text{ 且 }c>0,\\
+q^{\mathrm{cmp}},&\text{其余情形}.
+\end{cases}
+$$
+
+Full 向本节点输出端口给出 $c\,q^{\mathrm{cmp}}$。此外，只有 $u$ 在 $\theta=0$ 时沿边 $a$ 发送同样的值，其他时间的该边坐标取 $\bot$。两个输入端口分别在时间 $0,2,4$ 注入序列 $(8,2,5)$ 与 $(3,1,1)$。实际计算为：
+
+| 时间 $\theta$ | 本地内容 $(h_u,h_v)$ | 本次快照 $(q_u^{\mathrm{cmp}},q_v^{\mathrm{cmp}})$ | active set | 外部输出 | 下一持久状态 $(q_u^{\theta+1},q_v^{\theta+1})$ |
+| ---: | --- | --- | --- | --- | --- |
+| $0$ | $(8,3)$ | $(8,3)$ | $\{u\}$ | $u:4$ | $(0,3)$ |
+| $1$ | 无候选 | 未定义 | $\varnothing$ | 无 | $(0,3)$ |
+| $2$ | $(2,5)$ | $(2,8)$ | $\{v\}$ | $v:4$ | $(2,0)$ |
+| $3$ | 无候选 | 未定义 | $\varnothing$ | 无 | $(2,0)$ |
+| $4$ | $(5,1)$ | $(7,1)$ | $\{u\}$ | $u:7/2$ | $(0,1)$ |
+
+时间 $2$ 的 $h_v=5$ 由外部输入 $1$ 与时间 $0$ 发送、此刻到达的消息 $4$ 相加得到。时间 $0$ 的 Full 读取快照 $8$，即使下一持久状态已确定为 $0$，它仍输出 $4$。未选中的 $v$ 则保留累积状态 $3$，到时间 $2$ 再与新内容合成 $8$。空闲时间不产生控制量、快照、Next 调用或输出。
+
+若在 cut $1$ 暂停，保存的节点状态是 $(0,3)$，在途消息的载荷是 $4$；不应把本次快照 $(8,3)$ 冒充为下一持久状态。附带解释器的 `gated_reset_spec` 实现这个例子，并另外检查 $\kappa=0$ 时未选候选的快照与延续规则。
+
 ## 4. finite-cut 函数作用事件图
 
 ### 4.1 四类事件
@@ -572,11 +654,15 @@ P_{v,\theta}=(\mathrm{prep},v,\theta),
 U_{v,\theta}=(\mathrm{adopt},v,\theta).
 $$
 
+这里 $U_{v,\theta}$ 同时确定式 (14) 的本次计算快照与式 (14a) 的下一持久状态；它不是等待 Full 结果的后置回调。
+
 若 $\mathcal C_{j,\theta}\ne\varnothing$，定义选择事件：
 
 $$
 S_{j,\theta}=(\mathrm{select},j,\theta).
 $$
+
+它一次给出式 (13) 的 active set、完整候选控制量族和下一历史。
 
 若 $v\in\mathcal A_{j,\theta}$，定义完整输出事件：
 
@@ -633,10 +719,13 @@ $$
    $$
    U_{v,\theta}\longrightarrow F_{v,\theta},
    \qquad
-   P_{v,\theta}\longrightarrow F_{v,\theta}.
+   P_{v,\theta}\longrightarrow F_{v,\theta},
+   \qquad
+   S_{j,\theta}\longrightarrow F_{v,\theta}.
    $$
-   其中 $P_{v,\theta}\to U_{v,\theta}$ 记录状态采用直接读取准备所得的候选新状态，
-   $P_{v,\theta}\to F_{v,\theta}$ 记录完整输出直接读取准备所得的本地内容；
+   其中 $P_{v,\theta}\to U_{v,\theta}$ 记录快照与 Next 对旧状态、本地内容和候选新状态的读取，
+   $P_{v,\theta}\to F_{v,\theta}$ 记录完整输出读取本地内容，
+   $S_{j,\theta}\to F_{v,\theta}$ 记录完整输出直接读取控制量；
 2. 同一节点相邻两个实际节点事件之间的状态边：
    $$
    U_{v,\theta}\longrightarrow P_{v,\theta'}
@@ -654,8 +743,10 @@ $$
    $$
 
 第 2、3 项中的“相邻”表示两者之间没有同一节点或同一 region 的另一个实际事件。
-即使 $P\to U$ 与 $P\to F$ 已分别被同刻路径蕴含，仍因它们表示直接函数自变量而保留；
+即使 $P\to U$、$P\to F$ 与 $S\to F$ 已被同刻路径蕴含，仍因它们表示直接函数自变量而保留；
 其余间接依赖只由有向路径表示，不重复加入全部远距离边。
+
+跨时间状态边仍从 $U$ 出发，因为下一持久状态由 Next 确定。Full 不回写状态或本次 selector-history；其结果若影响后续选择，只能先经已声明的正时延消息进入后续纤维。
 
 令：
 
@@ -998,9 +1089,11 @@ $$
 四个坐标分别保存：
 
 1. 绝对逻辑时间；
-2. 每个节点完成所有逻辑时间 $\theta<b$ 的作用后所得状态；
+2. 每个节点完成所有逻辑时间 $\theta<b$ 的 Next 后所得持久状态；
 3. 每个 region 完成所有逻辑时间 $\theta<b$ 的 selector step 后所得历史；
 4. 已由左侧产生、但将在右侧到达的消息。
+
+因为这里停在完整 cut，左侧的所有 Full 已经使用完各自的 $q^{\mathrm{cmp}}$ 与 $c$。这两个当前事件坐标不再是未来递归的独立输入，所以不加入 $Q_b$；它们仍属于完整历史记录。保存 $q^{\mathrm{cmp}}$ 而漏掉 Next 的最终状态，会破坏第 3.4 节的恢复结果。
 
 把第 3.3 节的单节点自环继续手算三步，可以同时看见这些对象。设唯一外部输入在时间 $0$ 到达，输入端口 seal 为 $\infty$，$\delta(a)=2$，并记时间 $0,2$ 发出的消息为 $m_0,m_2$。完成 $[0,b)$ 后可取 $H_b=\bigcup_{\eta<b}M_\eta$、$\sigma_b^A(a)=b+2$；于是 $\lambda_b(v)=b+2$。因为只有一个节点和一个 region，表中省略状态族的下标。前四个切面为：
 
@@ -1165,7 +1258,7 @@ $$
 - 丢掉某个 $y_j^b$：后续式 (13) 的 active set 可以改变。
 - 丢掉 $b$：若 selector 按时间奇偶选择，两个数值状态相同的切面仍可能有不同未来。
 
-若允许在非完整切面暂停，还必须保存未提交候选状态、部分 selector 输入或已求出但未纳入 $W_b$ 的消息。式 (33) 只为第 6.1 节定义的完整切面充分。
+若允许在非完整切面暂停，还必须保存仍将被使用的控制量、计算快照、未提交候选状态、部分 selector 输入或已求出但未纳入 $W_b$ 的消息。式 (33) 只为第 6.1 节定义的完整切面充分。
 
 ## 8. 合法调度与 reference interpreter
 
@@ -1196,20 +1289,20 @@ $$
 然后：
 
 1. 对 $\theta=a,a+1,\ldots,b-1$ 构造式 (34) 的全部纤维；
-2. 按式 (11)--(16) 完成该时间的准备、选择、状态采用与完整输出；
+2. 按式 (11)--(16) 完成该时间的准备、选择及控制量、计算快照、Next 与完整输出；
 3. 以 $(\operatorname{send}(m),\operatorname{edge}(m))$ 为稳定消息来源坐标；
 4. 返回完整区间记录与式 (33) 的 $Q_b$。
 
 正确性测试至少比较：
 
 $$
-B,\mathcal C,h,\widetilde q,d,\mathcal A,q,y,
+B,\mathcal C,h,\widetilde q,d,\mathcal A,c,q^{\mathrm{cmp}},q,y,
 f^A,f^O,M,Z,W
 $$
 
-以及逐边消息身份。这里 $h,\widetilde q,d,f^A,f^O$ 也可以由已比较的自变量和固定函数逐项重建，但测试若直接保存它们，更容易定位首个分歧；只比较最终输出 payload 不足以检验定理 10。
+以及逐边消息身份。这里 $h,\widetilde q,d,c,q^{\mathrm{cmp}},f^A,f^O$ 也可以由已比较的自变量和固定函数逐项重建，但测试若直接保存它们，更容易定位首个分歧；只比较最终输出 payload 不足以检验定理 10。
 
-本文附带的最小可执行见证是 [positive_delay_graph_reference.py](examples/positive_delay_graph_reference.py)。它用延迟自环和两节点环检查一次执行与多种 cut 切分，并故意展示丢失 $W_b$ 会怎样破坏恢复。它还从 reference trace 构造一张与第 4 节事件图具有相同传递闭包的稀疏调度图：只省略已经分别由 $P\to S\to U$ 与 $P\to S\to U\to F$ 蕴含的 $P\to U$、$P\to F$，再以随机 ready-event 拓扑序重新求值完整 cut。该程序是定理的可执行样例，不代替上述证明。
+本文附带的最小可执行见证是 [positive_delay_graph_reference.py](examples/positive_delay_graph_reference.py)。它用延迟自环和两节点环检查一次执行与多种 cut 切分，并故意展示丢失 $W_b$ 会怎样破坏恢复。第 3.4 节的软门控与选后清空例子还检查 $c$、$q^{\mathrm{cmp}}$ 与最终 $q$，并分别覆盖 SD、BO、未选候选和空纤维。它从 reference trace 构造一张与第 4 节事件图具有相同传递闭包的稀疏调度图：只省略已经分别由 $P\to S\to U$ 与 $P\to S\to U\to F$ 蕴含的 $P\to U$、$P\to F$，保留直接控制边 $S\to F$，再以随机 ready-event 拓扑序重新求值完整 cut。该程序是定理的可执行样例，不代替上述证明。
 
 ### 8.3 随机调度对拍的边界
 
@@ -1414,14 +1507,15 @@ E^\dagger
 $$
 
 记 $G^\dagger=(V^\dagger,E^\dagger)$。
-$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示选择结果可能改变节点的状态采用或完整输出。$\mathcal S_{G^\dagger}$ 会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
+$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示 active set 与控制量可能改变节点的快照、Next 或完整输出。$\mathcal S_{G^\dagger}$ 会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
 
 > [!proposition] 命题 13：$G^\dagger$ 是 dependency-complete 静态图
 > 式 (39) 的 $G^\dagger$ 满足上述定义。
 
 **证明。** 逐类检查第 4.2 节的直接事件边。同刻边
 $P_{v,\theta}\to S_{j,\theta}$ 投影成 $v\to s_j$，而
-$S_{j,\theta}\to U_{v,\theta}$ 投影成 $s_j\to v$；两者都在式 (39)
+$S_{j,\theta}\to U_{v,\theta}$ 与新增的直接控制边
+$S_{j,\theta}\to F_{v,\theta}$ 都投影成 $s_j\to v$；这些边都在式 (39)
 中。$P_{v,\theta}\to U_{v,\theta}$、$U_{v,\theta}\to F_{v,\theta}$ 与
 $P_{v,\theta}\to F_{v,\theta}$ 的 owner 都相同。节点状态边两端都由 $v$
 持有，selector-history 边两端都由 $s_j$ 持有。最后，消息边
@@ -1527,8 +1621,8 @@ $$
 =\{z\in\mathsf{Atom}_\infty\mid\operatorname{target}(z)=v\}.
 $$
 
-骨架还包含第 1 节的图、端口、region、容量与模式、状态空间、初态，全部
-$\operatorname{Upd},\operatorname{Read},\operatorname{SelStep}$，以及共同全函数：
+骨架还包含第 1 节的图、端口、region、容量与模式、状态及控制量空间、初态，全部
+$\operatorname{Upd},\operatorname{Read},\operatorname{SelStep},\operatorname{Next}$，以及共同全函数：
 
 $$
 \operatorname{Agg}_v^\infty:
@@ -1574,7 +1668,8 @@ $\mathfrak F$。它的元素是函数族
 $\mathbf F=(F_v)_{v\in V}$，其中：
 
 $$
-F_v:S_v\times\mathbb N\times X_v\longrightarrow\mathcal O_v.
+F_v:S_v\times\mathbb N\times X_v\times\mathsf C_v
+\longrightarrow\mathcal O_v.
 $$
 
 若不利用 $\operatorname{Full}$ 的额外结构，$\mathfrak F$ 可取全部这种全函数族；
@@ -1637,7 +1732,8 @@ aggregation 都是同一个 $\operatorname{Agg}_v^\infty$ 在当前纤维上的�
 所以对固定 $\mathbf F$，$\omega$ 唯一确定参考区间记录
 $\mathcal U_{x,[a,b)}^{\mathbf F}$ 与 $Q_b^{\mathbf F}$。
 下文用 $q_v^\theta(\mathbf F,\omega)$、
-$h_{v,\theta}(\mathbf F,\omega)$ 和
+$q^{\mathrm{cmp}}_{v,\theta}(\mathbf F,\omega)$、
+$c_{v,\theta}(\mathbf F,\omega)$、$h_{v,\theta}(\mathbf F,\omega)$ 和
 $\mathcal A_{j,\theta}^{\mathbf F}(\omega)$ 表示这份唯一参考记录中的相应坐标。
 
 定义 active 时间集合：
@@ -1655,9 +1751,10 @@ $$
 \mathsf{Adm}_{v,\Theta}^{\mathbf F}
 =\left\{
 \left(
-q_v^{\theta+1}(\mathbf F,\omega),
+q^{\mathrm{cmp}}_{v,\theta}(\mathbf F,\omega),
 \theta,
-h_{v,\theta}(\mathbf F,\omega)
+h_{v,\theta}(\mathbf F,\omega),
+c_{v,\theta}(\mathbf F,\omega)
 \right)_{\theta\in\Theta}
 \ \middle|\
 \begin{array}{l}
@@ -1679,7 +1776,7 @@ $$
 
 一次显式 batch query 写成
 $\mathsf{Query}(v,\Theta,\xi)$，其中
-$\xi=((s_\theta,\theta,h_\theta))_{\theta\in\Theta}$ 且
+$\xi=((s_\theta,\theta,h_\theta,c_\theta))_{\theta\in\Theta}$ 且
 $\xi\in\mathsf{Adm}_{v,\Theta}^{\mathbf F}$。query 的语法不携带
 $\mathbf F$；在解释
 $\mathbf F$ 下，它的唯一精确回答由下列全函数给出：
@@ -1690,12 +1787,14 @@ $$
 &:\mathsf{Adm}_{v,\Theta}^{\mathbf F}
 \longrightarrow\mathsf{BOut}_{v,\Theta},\\
 \operatorname{BatchFull}_{v,\Theta}^{\mathbf F}(\xi)
-&=\left(F_v(s_\theta,\theta,h_\theta)\right)_{\theta\in\Theta}.
+&=\left(F_v(s_\theta,\theta,h_\theta,c_\theta)\right)_{\theta\in\Theta}.
 \end{aligned}
 $$
 
 这族等式是解释类上的逐坐标精确 batch 契约；具体 backend witness 还须实现
 相应函数，本文不由此声称 batch 内部高效。
+
+这里每个 $s_\theta$ 是本次计算快照，不是任意选取的初态。调用前必须已经确定整批的所有四元组；接口不接收一个初态后再从未知 Full 结果递推出其他调用自变量。那种更宽的有状态节点块接口见 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈与节点时间块备忘]]。
 
 一个**外层阶段**
 $\pi_r=(\mathsf{Ctrl}_r,\mathsf{Batch}_r)$ 有两个依次发生的部分。
@@ -1795,15 +1894,15 @@ packed API；它只保护昂贵作用的外层分块，不给出 work、span 或
 
 ### 10.3 真正的外层保块障碍
 
-考虑延迟为 $1$ 的自环，其中状态满足：
+考虑延迟为 $1$ 的单节点自环。令 $P=X_v=\mathbb N$，时间 $0$ 注入唯一外部值 $0$，以后没有外部输入。节点始终选择唯一候选，状态、描述量、历史与控制量取单点集，聚合读取唯一到达原子的载荷。对其他纤维可把聚合补全为载荷之和。令每个 $f_\theta:\mathbb N\to\mathbb N$ 是全函数，Full 在时间 $\theta$ 沿自环发送载荷 $f_\theta(h_\theta)$。于是下一时间的本地内容满足：
 
 $$
-q^{\theta+1}=f_\theta(q^\theta),
+h_{\theta+1}=f_\theta(h_\theta).
 $$
 
-并且每个 $f_\theta$ 只能作为黑盒查询。若 $f_{\theta+1}$ 的有效输入必须等待 $q^{\theta+1}$，那么宽度为 $T$ 的逻辑时间区间含有长度为 $T$ 的状态依赖链。固定 $\Gamma=G^\dagger$ 时，$\mathcal S_\Gamma$ 只有一个分量；把它命名为宏节点不会缩短这条链。
+取 Full 解释类为全部这种函数族 $(f_\theta)_{\theta\in\mathbb N}$，并让每个 $f_\theta$ 的值只能通过显式 batch query 得到。即使全部 active 坐标已经知道，下一次 query 的输入 $h_{\theta+1}$ 仍须等待前一次 Full 返回。按第 10.2 节的接口，区间 $[0,T)$ 因此需要 $T$ 个阶段。固定 $\Gamma=G^\dagger$ 时，$\mathcal S_\Gamma$ 只有一个分量；把它命名为宏节点不会缩短这条链。这一反馈经正时延消息发生，不需要让 Full 直接回写节点状态。
 
-这条线性链本身还不必破坏第 10.2 节的第一性能台阶：若 $f_\theta$ 只是廉价控制，扫描结束后才调用不再反馈到本块控制的昂贵作用，后者仍可按 node 打包。真正的障碍是随 $T$ 增长的 heavy/control 交替，例如：
+另一方面，若某条节点状态或历史递归只使用廉价控制函数，扫描结束后才调用不再反馈到本块控制的昂贵作用，后者仍可按 node 打包。线性控制链本身不是反例。真正的障碍是随 $T$ 增长的 heavy/control 交替，例如：
 
 $$
 \text{heavy}_{\theta}
@@ -1833,6 +1932,8 @@ $$
 $$
 
 后一条阶梯并不与定理 4 冲突：静态图可以有环，而任一 finite cut 中展开后的事件图仍是有限 DAG；返回边只是从较早时间指向较晚时间。要量化静态环可能多快返回，必须先给静态边补上来源与权重。
+
+前一种分块中的 $\mathsf C_j$ 包含本次控制量、计算快照和 Next。它们都不读取尚未调用的本块 Full，所以选后清空以及按统一逻辑时间计算的衰减不破坏这个分块论证。软门控把 $c_{v,\theta}$ 加入 Full 的已知输入，也不改变此理由。
 
 为了使“反馈时延”无歧义，给默认静态图 $G^\dagger$ 定义保留平行消息边的带标签多重图。令：
 
@@ -2009,7 +2110,9 @@ $$
 > **queue empty** 只描述某个当前编码中没有元素，不能证明式 (25) 中关于全部未来的全称命题。
 
 > [!info]- S.3　state adoption、completed、hard watermark 与 no-backdating
-> **state adoption / state commit** 对应事件 $U_{v,\theta}$ 以及式 (14)：在 selector 已经给出 active set 以后，节点状态坐标由 $q_v^\theta$ 变成唯一的 $q_v^{\theta+1}$。它不是把任意临时张量写入共享存储。
+> **selection control** 对应式 (13) 的 $c_{v,\theta}\in\mathsf C_v$，例如一个软门控系数。它只对候选节点定义；有控制量不等于节点被选中。
+>
+> **state adoption / state commit** 对应事件 $U_{v,\theta}$：先按式 (14) 给出本次计算快照 $q^{\mathrm{cmp}}_{v,\theta}$，再按式 (14a) 的 Next 得到唯一的下一持久状态 $q_v^{\theta+1}$。Full 使用前者，未来准备使用后者。默认 Next 返回快照，二者相等。这个事件不是把任意临时张量写入共享存储，也不读取本次 Full 结果。
 >
 > 节点 **completed to $r$** 对应式 (28) 的复合谓词：输入纤维已经关闭，并且所有实际较早节点事件已经完成。本文的 $(v,\theta)\in\mathsf{Done}$ 还要求 active $\operatorname{Full}$ 所产生的每条内部消息已经属于 $H$；这比前置 TimedDAG 教材中允许消息稍后公开的 $\operatorname{Completed}_n$ 更强。
 >
@@ -2048,7 +2151,7 @@ $$
 
 - [[timed-dag-region-selector-learning-note|前置：TimedDAG 的完整数学语义]]；
 - [[timed-dag-chunk-prefill-learning-note|节点级时间批暴露在空间 DAG 上的正例]]；
-- [[adaptive-routing-prefill-lower-bound|黑盒自适应路由为什么一般不能自动低 span]]；
-- [[current-mainline|TIDE 当前 Graph 线入口]]。
+- [[memos/mathematics/adaptive-routing-prefill-lower-bound|黑盒自适应路由为什么一般不能自动低 span]]；
+- [[semantics-anchor|TIDE 语义锚点]]；剩余问题见 [[memos/research-questions|研究问题]]。
 
 这些文档中的系统接口或更一般宏契约不会反向改写本文定义。若以后推广本文，必须明确指出改变了哪个函数类型、状态 owner、时延条件或 cut 坐标。

@@ -7,6 +7,8 @@ node kernels tiny.  The checks concern the outer mathematical contract:
 
 * directed cycles are allowed, but every message edge has positive delay;
 * a cut stores node state, selector-history, and crossing messages;
+* selector controls reach Full, while Next updates persistent state without
+  reading Full; the comparison snapshot survives an activation-time reset;
 * one-shot and arbitrarily partitioned execution have identical recorded
   trace projections and continuations;
 * dropping a crossing message changes later fibers.
@@ -21,14 +23,16 @@ import argparse
 import copy
 import random
 from dataclasses import dataclass, field, replace
+from fractions import Fraction
 from typing import Callable, Dict, List, Mapping, Sequence, Set, Tuple, Union
 
 
-Value = int
-NodeState = int
+Value = Union[int, Fraction]
+NodeState = Value
 HistoryState = Tuple[Tuple[str, int], ...]
-Content = int
-Descriptor = int
+Content = Value
+Descriptor = Value
+Control = Fraction
 
 
 @dataclass(frozen=True, order=True)
@@ -69,12 +73,28 @@ UpdateFn = Callable[[str, NodeState, int, Content], NodeState]
 ReadFn = Callable[[str, NodeState, NodeState, int, Content], Descriptor]
 SelectFn = Callable[
     [str, HistoryState, int, Mapping[str, Descriptor]],
-    Tuple[Tuple[str, ...], HistoryState],
+    Tuple[Tuple[str, ...], Mapping[str, Control], HistoryState],
+]
+NextFn = Callable[
+    [str, NodeState, NodeState, int, Content, bool, Control], NodeState
 ]
 FullFn = Callable[
-    [str, NodeState, int, Content],
+    [str, NodeState, int, Content, Control],
     Tuple[Mapping[str, Value], Mapping[str, Value]],
 ]
+
+
+def keep_comparison_state(
+    _node: str,
+    _old: NodeState,
+    comparison: NodeState,
+    _theta: int,
+    _content: Content,
+    _active: bool,
+    _control: Control,
+) -> NodeState:
+    """Default Next: preserve the former SD/BO state-adoption behavior."""
+    return comparison
 
 
 @dataclass(frozen=True)
@@ -93,6 +113,7 @@ class Spec:
     read: ReadFn
     select: SelectFn
     full: FullFn
+    next_state: NextFn = keep_comparison_state
 
     def edge_map(self) -> Dict[str, Edge]:
         return {edge.name: edge for edge in self.edges}
@@ -151,7 +172,7 @@ class Continuation:
 
 @dataclass
 class SegmentTrace:
-    """Recorded projection B, C, A, q, y, M, Z of one interval trace."""
+    """Complete finite-cut coordinates, including control and read snapshots."""
 
     start: int
     stop: int
@@ -164,6 +185,16 @@ class SegmentTrace:
     active: Dict[Tuple[str, int], Tuple[str, ...]] = field(
         default_factory=dict
     )
+    contents: Dict[Tuple[str, int], Content] = field(default_factory=dict)
+    proposals: Dict[Tuple[str, int], NodeState] = field(default_factory=dict)
+    descriptors: Dict[Tuple[str, int], Descriptor] = field(default_factory=dict)
+    controls: Dict[Tuple[str, int], Control] = field(default_factory=dict)
+    comparison_states: Dict[Tuple[str, int], NodeState] = field(
+        default_factory=dict
+    )
+    full_values: Dict[
+        Tuple[str, int], Tuple[Dict[str, Value], Dict[str, Value]]
+    ] = field(default_factory=dict)
     states: Dict[Tuple[str, int], NodeState] = field(default_factory=dict)
     histories: Dict[Tuple[str, int], HistoryState] = field(
         default_factory=dict
@@ -329,6 +360,9 @@ def run_window(
                     theta,
                     content[node],
                 )
+                trace.contents[(node, theta)] = copy.deepcopy(content[node])
+                trace.proposals[(node, theta)] = copy.deepcopy(proposal[node])
+                trace.descriptors[(node, theta)] = copy.deepcopy(descriptor[node])
 
         active_by_region: Dict[str, Tuple[str, ...]] = {}
         for region, region_nodes in spec.region_nodes.items():
@@ -336,14 +370,14 @@ def run_window(
             trace.candidates[(region, theta)] = candidates
             old_history = selector_history[region]
             if candidates:
-                active, new_history = spec.select(
+                active, controls, new_history = spec.select(
                     region,
                     old_history,
                     theta,
                     {node: descriptor[node] for node in candidates},
                 )
             else:
-                active, new_history = (), old_history
+                active, controls, new_history = (), {}, old_history
 
             if len(set(active)) != len(active):
                 raise ValueError("selector returned a duplicate active node")
@@ -351,6 +385,10 @@ def run_window(
                 raise ValueError("selector returned a non-candidate")
             if len(active) > spec.budget[region]:
                 raise ValueError("selector exceeded the region budget")
+            if set(controls) != set(candidates):
+                raise ValueError("selector controls must match all candidates")
+            for node in candidates:
+                trace.controls[(node, theta)] = copy.deepcopy(controls[node])
             active_by_region[region] = tuple(active)
             trace.active[(region, theta)] = tuple(active)
             selector_history[region] = copy.deepcopy(new_history)
@@ -363,15 +401,31 @@ def run_window(
                 spec.observe_all[region]
                 or node in active_by_region[region]
             )
-            if adopted:
-                node_state[node] = copy.deepcopy(proposal[node])
+            comparison = proposal[node] if adopted else node_state[node]
+            trace.comparison_states[(node, theta)] = copy.deepcopy(comparison)
+            node_state[node] = copy.deepcopy(spec.next_state(
+                node,
+                node_state[node],
+                comparison,
+                theta,
+                content[node],
+                node in active_by_region[region],
+                trace.controls[(node, theta)],
+            ))
 
         for node in spec.nodes:
             region = region_of[node]
             if node not in active_by_region[region]:
                 continue
             edge_values, output_values = spec.full(
-                node, node_state[node], theta, content[node]
+                node,
+                trace.comparison_states[(node, theta)],
+                theta,
+                content[node],
+                trace.controls[(node, theta)],
+            )
+            trace.full_values[(node, theta)] = (
+                dict(edge_values), dict(output_values)
             )
             for edge_name, value in edge_values.items():
                 edge = edge_by_name.get(edge_name)
@@ -445,6 +499,12 @@ def merge_traces(traces: Sequence[SegmentTrace]) -> SegmentTrace:
             (merged.buckets, trace.buckets),
             (merged.candidates, trace.candidates),
             (merged.active, trace.active),
+            (merged.contents, trace.contents),
+            (merged.proposals, trace.proposals),
+            (merged.descriptors, trace.descriptors),
+            (merged.controls, trace.controls),
+            (merged.comparison_states, trace.comparison_states),
+            (merged.full_values, trace.full_values),
             (merged.states, trace.states),
             (merged.histories, trace.histories),
         ):
@@ -485,13 +545,13 @@ def run_partitioned(
     return merge_traces(traces), continuation
 
 
-def sum_payloads(_node: str, _theta: int, atoms: Tuple[Atom, ...]) -> int:
+def sum_payloads(_node: str, _theta: int, atoms: Tuple[Atom, ...]) -> Content:
     return sum(atom.value for atom in atoms)
 
 
 def ordered_update(
-    _node: str, old: int, theta: int, content: int
-) -> int:
+    _node: str, old: NodeState, theta: int, content: Content
+) -> NodeState:
     # Deliberately noncommutative across logical times, so a missing state
     # dependency is unlikely to be hidden by the conformance examples.
     return 3 * old + content + theta
@@ -499,11 +559,11 @@ def ordered_update(
 
 def proposal_read(
     _node: str,
-    _old: int,
-    proposal: int,
+    _old: NodeState,
+    proposal: NodeState,
     _theta: int,
-    _content: int,
-) -> int:
+    _content: Content,
+) -> Descriptor:
     return proposal
 
 
@@ -511,21 +571,29 @@ def counted_top_one(
     _region: str,
     history: HistoryState,
     _theta: int,
-    descriptors: Mapping[str, int],
-) -> Tuple[Tuple[str, ...], HistoryState]:
+    descriptors: Mapping[str, Descriptor],
+) -> Tuple[Tuple[str, ...], Mapping[str, Control], HistoryState]:
     counts = history_map(history)
     selected = min(
         descriptors,
         key=lambda node: (-descriptors[node], counts.get(node, 0), node),
     )
     counts[selected] = counts.get(selected, 0) + 1
-    return (selected,), freeze_history(counts)
+    return (
+        (selected,),
+        {node: Fraction(1) for node in descriptors},
+        freeze_history(counts),
+    )
 
 
 def self_loop_spec(delay: int) -> Spec:
     def full(
-        node: str, state: int, _theta: int, content: int
-    ) -> Tuple[Mapping[str, int], Mapping[str, int]]:
+        node: str,
+        state: NodeState,
+        _theta: int,
+        content: Content,
+        _control: Control,
+    ) -> Tuple[Mapping[str, Value], Mapping[str, Value]]:
         assert node == "v"
         return {"a": content}, {"out": state}
 
@@ -549,8 +617,12 @@ def self_loop_spec(delay: int) -> Spec:
 
 def two_node_ring_spec() -> Spec:
     def full(
-        node: str, state: int, theta: int, content: int
-    ) -> Tuple[Mapping[str, int], Mapping[str, int]]:
+        node: str,
+        state: NodeState,
+        theta: int,
+        content: Content,
+        _control: Control,
+    ) -> Tuple[Mapping[str, Value], Mapping[str, Value]]:
         if node == "u":
             return {"uv": content + 1}, {"out_u": state + theta}
         return {"vu": content - 1}, {"out_v": state - theta}
@@ -573,6 +645,71 @@ def two_node_ring_spec() -> Spec:
         read=proposal_read,
         select=counted_top_one,
         full=full,
+    )
+
+
+def gated_reset_spec(observe_all: bool = True) -> Spec:
+    """A soft gate and an activation reset with distinct cmp/next states."""
+
+    def update(
+        _node: str, old: NodeState, _theta: int, content: Content
+    ) -> NodeState:
+        return old + content
+
+    def select(
+        region: str,
+        history: HistoryState,
+        theta: int,
+        descriptors: Mapping[str, Descriptor],
+    ) -> Tuple[Tuple[str, ...], Mapping[str, Control], HistoryState]:
+        active, _unit_controls, new_history = counted_top_one(
+            region, history, theta, descriptors
+        )
+        controls = {
+            node: Fraction(1, 2) if node in active else Fraction(0)
+            for node in descriptors
+        }
+        return active, controls, new_history
+
+    def next_state(
+        _node: str,
+        _old: NodeState,
+        comparison: NodeState,
+        _theta: int,
+        _content: Content,
+        active: bool,
+        control: Control,
+    ) -> NodeState:
+        # The reset reads a known selection control, never a Full result.
+        return 0 if active and control > 0 else comparison
+
+    def full(
+        node: str,
+        comparison: NodeState,
+        theta: int,
+        _content: Content,
+        control: Control,
+    ) -> Tuple[Mapping[str, Value], Mapping[str, Value]]:
+        output = control * comparison
+        outgoing = {"uv": output} if node == "u" and theta == 0 else {}
+        return outgoing, {"out_" + node: output}
+
+    return Spec(
+        nodes=("u", "v"),
+        edges=(Edge("uv", "u", "v", 2),),
+        input_target={"in_u": "u", "in_v": "v"},
+        output_source={"out_u": "u", "out_v": "v"},
+        region_nodes={"r": ("u", "v")},
+        budget={"r": 1},
+        observe_all={"r": observe_all},
+        initial_state={"u": 0, "v": 0},
+        initial_history={"r": (("u", 0), ("v", 0))},
+        agg=sum_payloads,
+        update=update,
+        read=proposal_read,
+        select=select,
+        full=full,
+        next_state=next_state,
     )
 
 
@@ -625,6 +762,7 @@ def event_dependencies(
         if node in trace.active[(region, theta)]:
             full = ("F", node, theta)
             dependencies.setdefault(full, set()).add(adopt)
+            dependencies[full].add(select)
 
     for node in spec.nodes:
         times = sorted(
@@ -675,7 +813,8 @@ def run_random_ready_schedule(
     content: Dict[Tuple[str, int], Content] = {}
     proposal: Dict[Tuple[str, int], NodeState] = {}
     descriptor: Dict[Tuple[str, int], Descriptor] = {}
-    adopted_state: Dict[Tuple[str, int], NodeState] = {}
+    old_state: Dict[Tuple[str, int], NodeState] = {}
+    committed_state: Dict[Tuple[str, int], NodeState] = {}
     updated_history: Dict[Tuple[str, int], HistoryState] = {}
     produced_messages = []
     produced_outputs = []
@@ -716,6 +855,7 @@ def run_random_ready_schedule(
             if bucket != oracle.buckets[(node, theta)]:
                 raise AssertionError("random schedule constructed a wrong fiber")
             result.buckets[(node, theta)] = bucket
+            old_state[(node, theta)] = copy.deepcopy(node_state[node])
             content[(node, theta)] = spec.agg(node, theta, bucket)
             proposal[(node, theta)] = spec.update(
                 node, node_state[node], theta, content[(node, theta)]
@@ -726,6 +866,11 @@ def run_random_ready_schedule(
                 proposal[(node, theta)],
                 theta,
                 content[(node, theta)],
+            )
+            result.contents[(node, theta)] = copy.deepcopy(content[(node, theta)])
+            result.proposals[(node, theta)] = copy.deepcopy(proposal[(node, theta)])
+            result.descriptors[(node, theta)] = copy.deepcopy(
+                descriptor[(node, theta)]
             )
 
         elif kind == "S":
@@ -738,7 +883,7 @@ def run_random_ready_schedule(
             if candidates != oracle.candidates[(region, theta)]:
                 raise AssertionError("random schedule constructed wrong candidates")
             result.candidates[(region, theta)] = candidates
-            active, new_history = spec.select(
+            active, controls, new_history = spec.select(
                 region,
                 selector_history[region],
                 theta,
@@ -754,6 +899,10 @@ def run_random_ready_schedule(
                 raise ValueError("selector returned a non-candidate")
             if len(active) > spec.budget[region]:
                 raise ValueError("selector exceeded the region budget")
+            if set(controls) != set(candidates):
+                raise ValueError("selector controls must match all candidates")
+            for node in candidates:
+                result.controls[(node, theta)] = copy.deepcopy(controls[node])
             if active != oracle.active[(region, theta)]:
                 raise AssertionError("random schedule changed an active set")
             result.active[(region, theta)] = active
@@ -764,17 +913,34 @@ def run_random_ready_schedule(
             node = owner
             region = spec.region_of()[node]
             active = result.active[(region, theta)]
-            if spec.observe_all[region] or node in active:
-                node_state[node] = copy.deepcopy(proposal[(node, theta)])
-            adopted_state[(node, theta)] = copy.deepcopy(node_state[node])
+            comparison = (
+                proposal[(node, theta)]
+                if spec.observe_all[region] or node in active
+                else old_state[(node, theta)]
+            )
+            result.comparison_states[(node, theta)] = copy.deepcopy(comparison)
+            node_state[node] = copy.deepcopy(spec.next_state(
+                node,
+                old_state[(node, theta)],
+                comparison,
+                theta,
+                content[(node, theta)],
+                node in active,
+                result.controls[(node, theta)],
+            ))
+            committed_state[(node, theta)] = copy.deepcopy(node_state[node])
 
         elif kind == "F":
             node = owner
             edge_values, output_values = spec.full(
                 node,
-                adopted_state[(node, theta)],
+                result.comparison_states[(node, theta)],
                 theta,
                 content[(node, theta)],
+                result.controls[(node, theta)],
+            )
+            result.full_values[(node, theta)] = (
+                dict(edge_values), dict(output_values)
             )
             produced_messages.extend(
                 Message(send=theta, edge=edge, value=value)
@@ -837,7 +1003,7 @@ def run_random_ready_schedule(
         state = copy.deepcopy(spec.initial_state[node])
         result.states[(node, 0)] = copy.deepcopy(state)
         for theta in range(oracle.stop):
-            state = copy.deepcopy(adopted_state.get((node, theta), state))
+            state = copy.deepcopy(committed_state.get((node, theta), state))
             result.states[(node, theta + 1)] = copy.deepcopy(state)
 
     for region in spec.region_nodes:
@@ -991,6 +1157,12 @@ def check_empty_window_is_identity() -> None:
         empty.buckets
         or empty.candidates
         or empty.active
+        or empty.contents
+        or empty.proposals
+        or empty.descriptors
+        or empty.controls
+        or empty.comparison_states
+        or empty.full_values
         or empty.messages
         or empty.outputs
     ):
@@ -1002,6 +1174,76 @@ def check_empty_window_is_identity() -> None:
     )
     if split != direct or split_continuation != direct_continuation:
         raise AssertionError("an empty cut changed trace composition")
+
+
+def check_controls_and_state_snapshots(trials: int) -> None:
+    external = (
+        External("in_u", 0, 0, 8),
+        External("in_v", 0, 0, 3),
+        External("in_u", 1, 2, 2),
+        External("in_v", 1, 2, 1),
+        External("in_u", 2, 4, 5),
+        External("in_v", 2, 4, 1),
+    )
+    spec = gated_reset_spec()
+    trace, _ = run_partitioned(spec, external, (0, 6))
+    expected_outputs = (
+        Output(0, "out_u", Fraction(4)),
+        Output(2, "out_v", Fraction(4)),
+        Output(4, "out_u", Fraction(7, 2)),
+    )
+    if trace.outputs != expected_outputs:
+        raise AssertionError("Full did not read its gated pre-reset snapshot")
+    if trace.comparison_states[("u", 0)] != 8 or trace.states[("u", 1)] != 0:
+        raise AssertionError("comparison snapshot and persistent reset were mixed")
+    if trace.states[("v", 1)] != 3 or trace.comparison_states[("u", 4)] != 7:
+        raise AssertionError("an inactive BO candidate lost its adopted state")
+    if trace.controls[("u", 0)] != Fraction(1, 2):
+        raise AssertionError("the soft gate was not recorded")
+    if trace.controls[("v", 0)] != 0 or ("v", 0) in trace.full_values:
+        raise AssertionError("an inactive candidate lost its control or ran Full")
+
+    # Empty fibers have no preparation, selection controls, Next, or Full.
+    for theta in (1, 3, 5):
+        if trace.candidates[("r", theta)] or trace.active[("r", theta)]:
+            raise AssertionError("an empty region produced candidates or activity")
+        if trace.histories[("r", theta)] != trace.histories[("r", theta + 1)]:
+            raise AssertionError("an empty region changed selector-history")
+        for node in spec.nodes:
+            if trace.states[(node, theta)] != trace.states[(node, theta + 1)]:
+                raise AssertionError("an empty fiber changed persistent state")
+            if (
+                (node, theta) in trace.controls
+                or (node, theta) in trace.comparison_states
+            ):
+                raise AssertionError("an empty fiber acquired a control or snapshot")
+
+    _, cut_one = run_partitioned(spec, external[:2], (0, 1))
+    if cut_one.pending != (Message(0, "uv", Fraction(4)),):
+        raise AssertionError("the soft-gated message did not survive cut 1")
+    if cut_one.node_state != {"u": 0, "v": 3}:
+        raise AssertionError("continuation saved comparison rather than next state")
+
+    default_next = replace(spec, next_state=keep_comparison_state)
+    old_behavior, _ = run_partitioned(default_next, external[:2], (0, 1))
+    if (
+        old_behavior.states[("u", 1)] != 8
+        or old_behavior.states[("v", 1)] != 3
+    ):
+        raise AssertionError("default Next changed the former BO adoption rule")
+
+    for observe_all in (True, False):
+        variant = gated_reset_spec(observe_all)
+        assert_composition(variant, external, 6, trials, seed=901 + observe_all)
+        assert_random_ready_schedules(
+            variant, external, 6, trials, seed=1301 + observe_all
+        )
+    sd_trace, _ = run_partitioned(gated_reset_spec(False), external, (0, 6))
+    if (
+        sd_trace.comparison_states[("v", 0)] != 0
+        or sd_trace.states[("v", 1)] != 0
+    ):
+        raise AssertionError("an inactive SD candidate adopted its proposal")
 
 
 def run_checks(trials: int) -> None:
@@ -1048,6 +1290,7 @@ def run_checks(trials: int) -> None:
     check_invalid_input_history_is_rejected()
     check_ready_schedule_reconstructs_idle_coordinates()
     check_empty_window_is_identity()
+    check_controls_and_state_snapshots(trials)
 
 
 def main() -> None:
@@ -1056,7 +1299,7 @@ def main() -> None:
         "--trials",
         type=int,
         default=200,
-        help="random cut partitions checked per cyclic example",
+        help="random cut partitions and ready schedules per semantic example",
     )
     args = parser.parse_args()
     if args.trials <= 0:
@@ -1065,8 +1308,9 @@ def main() -> None:
     print(
         "PASS: positive-delay cycles preserve recorded trace projections "
         "and continuations "
-        f"across {2 * args.trials} random cut partitions and "
-        f"{2 * args.trials} random ready-event schedules"
+        f"across {4 * args.trials} random cut partitions and "
+        f"{4 * args.trials} random ready-event schedules; "
+        "soft controls, pre-reset snapshots, SD/BO Next, and empty fibers agree"
     )
 
 
