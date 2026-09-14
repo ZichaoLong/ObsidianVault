@@ -56,7 +56,7 @@ python 20-tide-decentralized-neural-network/memos/history/examples/hb_line_v0_re
 python 20-tide-decentralized-neural-network/memos/history/examples/hb_lattice_v0_reference.py
 ```
 
-这些检查通过只说明旧 toy 的相应 schedules 一致，不证明 `tide-core-3`、真实 Attention/SSM、低 span 或训练收益。
+这些检查通过只说明旧 toy 的相应 schedules 一致，不证明 `tide-core-2`、真实 Attention/SSM、低 span 或训练收益。
 
 ## 6. 历史图的索引
 

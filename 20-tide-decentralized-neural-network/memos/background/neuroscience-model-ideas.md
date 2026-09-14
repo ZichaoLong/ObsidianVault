@@ -1,7 +1,7 @@
 ---
 type: cross-domain-research-memo
 status: analogies-and-hypotheses
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-2
 ---
 
 # 脑科学给数字模型的启发，以及它不能证明的事

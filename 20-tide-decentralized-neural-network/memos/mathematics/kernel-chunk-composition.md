@@ -1,7 +1,7 @@
 ---
 type: mathematical-research-memo
 status: retained-derivation
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-2
 ---
 
 # 常用 kernel 为什么可以按 chunk 计算

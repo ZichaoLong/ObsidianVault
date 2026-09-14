@@ -1,7 +1,7 @@
 ---
 type: research-memo
 status: semantic-boundary-memo
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-2
 as-of: 2026-09-14
 tags:
   - tide

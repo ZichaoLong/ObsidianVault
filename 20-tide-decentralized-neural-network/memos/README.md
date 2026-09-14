@@ -1,7 +1,7 @@
 ---
 type: research-memo-index
 status: active-index
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-2
 ---
 
 # Tide 研究备忘

@@ -1,7 +1,7 @@
 ---
 type: research-memo
 status: analogies-and-testable-hypotheses
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-2
 ---
 
 # 统计力学与信息动力学：保留问题，不预设物理结论

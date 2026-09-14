@@ -1,7 +1,7 @@
 ---
 type: architecture-research-memo
 status: optional-candidates
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-2
 ---
 
 # 拓扑与生长候选：局部连接、HB 与固定汇合
