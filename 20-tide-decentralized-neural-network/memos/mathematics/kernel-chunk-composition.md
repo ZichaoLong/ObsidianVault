@@ -16,7 +16,7 @@ $$
 (y_t,s_{t+1})=T(x_t,s_t),\qquad b\le t<c.
 $$
 
-chunk 实现必须返回相同的全部 $y_t$ 及 $s_c$。如果两个 chunk 实现都满足这个定义，把 $[a,c)$ 在 $b$ 处分开，第一次的终态作为第二次初态，归纳即得与一次运行相同；不是只比较最终一项输出。
+这里 $t$ 只枚举该算子的有序输入位置；若每项还有 Tide 的逻辑时间 $\theta_t$，它须作为输入或位置元数据原样保留。逐项应用上式称为顺序折叠（fold）。chunk 实现必须返回相同的全部 $y_t$ 及 $s_c$。把 $[a,c)$ 在 $b$ 处分开，第一次的终态作为第二次初态，两段各满足这个契约就得到与一次运行相同的结果；不是只比较最终一项输出。
 
 以下等式先使用精确实数算术。实际浮点归约次序、随机 dropout、位置编码和掩码都是额外的实现条件。
 
@@ -28,7 +28,7 @@ $$
 (f(x_b),\ldots,f(x_{c-1})).
 $$
 
-矩阵批量实现只改变这些独立函数作用的执行顺序，逐坐标相等。Norm、固定参数投影、FFN 及不读取时间递推状态的 router 常属于这一类。读取某个“神经状态”的函数是否仍是 map，取决于该状态是否已独立确定，而非它是否叫 router。
+矩阵批量实现只改变这些独立函数作用的执行顺序，逐坐标相等。逐位置 LayerNorm/RMSNorm、固定参数投影、FFN 及不读取时间递推状态的 router 常属于这一类；跨样本或跨位置统计的归一化则须另行分析。读取某个“神经状态”的函数是否仍是 map，取决于该状态是否已独立确定，而非它是否叫 router。
 
 ## 3. Causal attention：一次算出带掩码的全部行
 
@@ -38,7 +38,7 @@ $$
 q_t=W_Qz_t,\quad k_t=W_Kz_t,\quad v_t=W_Vz_t.
 $$
 
-左边界 cache 保存所有允许读取的历史 $(k_i,v_i)$ 及其位置 $i<b$。本例采用包含当前位置的因果规则，定义
+其中 $q_t,k_t\in\mathbb R^d$，$v_t\in\mathbb R^p$。左边界 cache 保存有限个允许读取的历史 $(k_i,v_i)$ 及其位置 $i<b$。本例采用包含当前位置的因果规则，定义
 
 $$
 y_t=\frac{\sum_{i\le t}\exp(q_t^\top k_i/\sqrt d)\,v_i}
@@ -88,7 +88,7 @@ $$
 
 ## 5. Linear attention accumulator
 
-令特征映射 $\phi$ 已固定，定义累计矩阵与累计向量
+设全部 $q_t,k_t,v_t$ 已由给定输入确定，$q_t,k_t\in\mathbb R^d$、$v_t\in\mathbb R^p$，固定特征映射 $\phi:\mathbb R^d\to\mathbb R^m$。定义累计矩阵 $C_t\in\mathbb R^{m\times p}$ 与累计向量 $r_t\in\mathbb R^m$：
 
 $$
 C_{t+1}=C_t+\phi(k_t)v_t^\top,\qquad
@@ -98,7 +98,7 @@ $$
 一种读出是
 
 $$
-y_t=\frac{\phi(q_t)^\top C_{t+1}}
+y_t=\frac{C_{t+1}^\top\phi(q_t)}
 {\phi(q_t)^\top r_{t+1}+\varepsilon}.
 $$
 
