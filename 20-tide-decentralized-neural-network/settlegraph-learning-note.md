@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-14
+as-of: 2026-09-17
 tags:
   - tide
   - settlegraph
@@ -89,6 +89,14 @@ $$
 \operatorname{src},\operatorname{dst}:A\to V.
 $$
 
+把
+
+$$
+G=(V,A,\operatorname{src},\operatorname{dst})
+$$
+
+称为固定节点图。
+
 一列首尾相接的有向边称为有向游走；若它回到出发节点且至少含一条边，其中就含有有向环。本文要求不存在这样的游走，即图是有向无环图，简称 DAG；还要求不同边不具有同一对起终点。没有重复节点的游走称为路径，并允许只含一个节点的零长度路径。对 $v\in V$，定义
 
 $$
@@ -126,6 +134,17 @@ a\in A\Longrightarrow
 \tag{1}
 $$
 
+把式 (1) 命名为关系：
+
+$$
+\operatorname{LegalRegionRank}_{G,\rho}(\ell)
+\Longleftrightarrow
+\forall a\in A:\quad
+\ell(\rho(\operatorname{src}(a)))
+<
+\ell(\rho(\operatorname{dst}(a))).
+$$
+
 因此同一区域内没有边，区域之间也没有有向环。节点图无环本身还不足以推出式 (1)：例如 $u\to v\to w$，把 $u,w$ 放在一个区域、$v$ 放在另一个区域，就不满足式 (1)。本教材显式采用这一较强限制。
 
 区域拓扑次序是把所有区域排成一列，并让每条跨区域边的起点区域排在终点以前。按 $\ell$ 从小到大排列、相同层级任意排序，就得到这样的次序。这个构造也直接证明所需次序存在。
@@ -148,11 +167,23 @@ $$
 \tag{2}
 $$
 
+称 $(\ell,D)$ 是图与区域划分的一组**合法时间编码**，记作：
+
+$$
+\operatorname{LegalTimeCode}_{G,\rho}(\ell,D)
+\Longleftrightarrow
+\operatorname{LegalRegionRank}_{G,\rho}(\ell)
+\ \land\
+D>1+\max_{v\in V}\ell(\rho(v)).
+$$
+
 同一区域的节点具有相同的 $\theta_{v,t}$，记为 $\theta_{j,t}$。式 (2) 为每个输入位置留出一个区间 $[Dt,D(t+1))$：输入在左端进入，各区域位于中间，输出坐标也在右端以前。它给可能发生的计算指定时间；没有输入的节点在这个坐标上仍不计算。
 
 $D$ 与 $\ell$ 是这个具体数学规格的一部分。它们不是墙钟耗时，也不要求实际程序按这些整数逐步等待。例如，把第 1 节的 $a,b$ 放在层级 $1$ 的区域，把 $c$ 单独放在层级 $2$ 的区域，再取 $D=4$；第一个输入对应时间 $0,1,2,3$，第二个对应 $4,5,6,7$。
 
-若局部函数忽略时间，不同合法时间编码可以给出相同数值；若状态按时间衰减，改变这些坐标就可能改变数值，不能再把这种变化视为纯调度重排。本文所有时间衰减均按式 (2) 的统一逻辑时间，不按“访问了几次节点”计时。
+若局部函数忽略时间，不同满足
+$\operatorname{LegalTimeCode}_{G,\rho}(\ell,D)$
+的编码可以给出相同数值；若状态按时间衰减，改变这些坐标就可能改变数值，不能再把这种变化视为纯调度重排。本文所有时间衰减均按式 (2) 的统一逻辑时间，不按“访问了几次节点”计时。
 
 ## 3. 每条边的一次结果
 
@@ -719,20 +750,136 @@ $$
 
 ## 12. 接入已有模型时的函数保持
 
-若已有模型某处输出 $h\in P$，新图输出 $b\in P$，则图残差为 $b-h$。一种接入方式是在指定位置加上这个残差。若在某个初始化及其可达状态范围内始终有 $b=h$，这个分支当时不改变原模型输出。
+若已有模型某处在位置 $t$ 输出 $h_t\in P$，新图输出 $b_t\in P$，则图残差为
+$b_t-h_t$。一种接入方式是在指定位置加上这个残差。函数保持不是图脱离接入范围的
+一元性质；先固定一个非空的**接入实例类**
+$\varnothing\ne\mathfrak X$。每个
+$\chi\in\mathfrak X$ 明确给出：
 
-函数保持需要检查下列带标签幂等条件。对每个节点 $v$、每个相关逻辑时间 $\theta$、每个可能出现的非空递增标签列 $i_1<\cdots<i_n$ 和每个相关 $h\in P$，要求
+1. 已有模型输入、所比较的初始化及插入位置；
+2. 某个 $L_\chi\in\mathbb N_{>0}$ 以及一段有限参考值
+   $(h_{\chi,t})_{t\in[L_\chi]}$；
+3. SettleGraph 的初始节点状态与 selector-history；
+4. 以 $h_{\chi,t}$ 为图输入得到的第 6 节完整记录。
+
+下文把该记录中的坐标加上标 $\chi$。这四项使“可达”只表示由某个
+$\chi\in\mathfrak X$ 的完整记录实际出现。若
+$\mathbf m=((i_1,m_1),\ldots,(i_n,m_n))$，记
+$\operatorname{lab}(\mathbf m)=(i_1,\ldots,i_n)$。定义节点聚合的可达支持域：
 
 $$
+\begin{aligned}
+\operatorname{AdmAgg}_{\mathfrak X}(v)
+=
+\{(&\theta_{v,t},
+\operatorname{lab}(\mathcal M^\chi_{v,t}),
+h_{\chi,t})
+\mid
+\chi\in\mathfrak X,\ t\in[L_\chi],\
+\mathcal M^\chi_{v,t}\ne()\}.
+\end{aligned}
+\tag{19}
+$$
+
+类似地定义实际 Full 调用域：
+
+$$
+\begin{aligned}
+\operatorname{AdmFull}_{\mathfrak X}(v)
+=
+\{(&q^{\mathrm{cmp},\chi}_{v,t},\theta_{v,t},
+h^\chi_{v,t},c^\chi_{v,t})
+\mid
+\chi\in\mathfrak X,\ t\in[L_\chi],\
+v\in\mathcal A^\chi_{\rho(v),t}\},
+\end{aligned}
+\tag{20}
+$$
+
+以及输出聚合的可达支持域：
+
+$$
+\begin{aligned}
+\operatorname{AdmOut}_{\mathfrak X}
+=
+\{(&Dt+r_{\mathrm{out}},
+\operatorname{lab}(\mathcal M^\chi_{\mathrm{out},t}),
+h_{\chi,t})
+\mid
+\chi\in\mathfrak X,\ t\in[L_\chi]\}.
+\end{aligned}
+\tag{21}
+$$
+
+这里式 (19) 与式 (21) 只从实际记录读取标签支持，再把第三坐标
+$h_{\chi,t}$ 用作待检查的共同 payload；它们没有预先假定实际消息值已经等于
+$h_{\chi,t}$。
+
+定义 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，当且仅当下列三个
+全称条件同时成立：
+
+$$
+\begin{aligned}
+&\forall v\in V,\
+\forall(\theta,(i_1,\ldots,i_n),h)
+\in\operatorname{AdmAgg}_{\mathfrak X}(v):\\
+&\qquad
 \operatorname{Agg}_v
-(\theta,((i_1,h),\ldots,(i_n,h)))=h.
+(\theta,((i_1,h),\ldots,(i_n,h)))=h,\\[2mm]
+&\forall v\in V,\
+\forall(q,\theta,h,c)
+\in\operatorname{AdmFull}_{\mathfrak X}(v):\\
+&\qquad
+\operatorname{Full}_v(q,\theta,h,c)=h,\\[2mm]
+&\forall(\theta,(v_1,\ldots,v_n),h)
+\in\operatorname{AdmOut}_{\mathfrak X}:\\
+&\qquad
+\operatorname{Agg}_{\mathrm{out}}
+(\theta,((v_1,h),\ldots,(v_n,h)))=h.
+\end{aligned}
+\tag{22}
 $$
 
-对输出聚合同样要求任意可能出现的非空终端标签列满足此式。若所有节点聚合和输出聚合都具有这个性质，并且所有激活节点原样返回各自输入，则对区域顺序归纳，所有有值消息均等于图输入，故最终 $b=h$。忽略标签的均值、按标签产生但归一化后权重和为 $1$ 的加权平均，都是满足条件的实例；任意身份感知聚合则未必满足。
+若 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，则对每个
+$\chi\in\mathfrak X$ 与 $t\in[L_\chi]$，按区域顺序归纳，所有有值消息均等于
+$h_{\chi,t}$，最终：
 
-新增私有状态可以在后台演化，只要它在所声明范围内不破坏上述恒等式。一般函数保持生长应比较原模型状态的投影，而不是要求所有新增坐标永远等于初始值。进一步推导见 [[memos/mathematics/function-preserving-growth|函数保持生长备忘]]。
+$$
+b_{\chi,t}=h_{\chi,t}.
+$$
 
-这里证明的是特定函数选择下的输出保持。具体节点算法、插入位置、训练目标和实验结果由实验平台维护；本节的恒等式并不保证训练以后仍保持原模型。
+具体地，入口序列的载荷本来就是 $h_{\chi,t}$。若某个区域以前的全部有值边结果
+都等于它，则当前节点的实际标签支持属于式 (19)，式 (22) 的第一行使聚合结果仍为
+$h_{\chi,t}$；实际激活调用属于式 (20)，第二行又使每条新有值边结果仍为
+$h_{\chi,t}$。区域归纳完成后，实际终端支持属于式 (21)，第三行给出上述输出等式。
+状态、描述量、选择与控制量可以影响哪些标签实际出现，但不会越出这些可达域。
+
+因而图残差在声明的实例类上为零。忽略标签的均值、按标签产生但归一化后权重和为
+$1$ 的加权平均，都是满足相应条件的实例；任意身份感知聚合则未必满足。若希望使用
+比可达域更强、与 $\mathfrak X$ 无关的充分条件，可以把式 (22) 的定义域扩大到
+全部类型正确的时间、非空标签列、状态、控制量与 $h\in P$，但必须明确写出这个
+更强量词。
+
+新增私有状态可以在后台演化，只要它在 $\mathfrak X$ 的可达域内不破坏式 (22)。
+若函数保持声明还比较已有模型状态，则必须另外给出初始化嵌入 $\eta$ 与状态投影
+$\pi$。把两边在位置边界的状态轨迹分别记为
+$s^{\mathrm{base}}_{\chi,t}$ 与 $s^{\mathrm{grown}}_{\chi,t}$；还必须明确要求：
+
+$$
+\begin{aligned}
+s^{\mathrm{grown}}_{\chi,0}
+&=\eta(s^{\mathrm{base}}_{\chi,0}),\\
+\pi(s^{\mathrm{grown}}_{\chi,t})
+&=s^{\mathrm{base}}_{\chi,t}
+&&\left(\chi\in\mathfrak X,\ 0\le t\le L_\chi\right).
+\end{aligned}
+$$
+
+而不是要求所有新增坐标永远等于初始值。进一步推导见
+[[memos/mathematics/function-preserving-growth|函数保持生长备忘]]。
+
+这里证明的是相对于明示实例类与特定函数选择的输出保持。具体节点算法、插入位置、
+训练目标和实验结果由实验平台维护；式 (22) 并不保证训练以后仍保持原模型。
 
 ## 附录 A：系统用语对照
 

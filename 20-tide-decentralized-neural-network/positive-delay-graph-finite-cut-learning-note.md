@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-14
+as-of: 2026-09-17
 tags:
   - tide
   - positive-delay-graph
@@ -836,6 +836,19 @@ $$
 M^\infty=\bigcup_{b\in\mathbb N}M_{<b}^{\mathrm{send}}.
 $$
 
+为了给本节的关系谓词提供一个显式而固定的语义参数，约定：
+
+$$
+\mathcal T_x
+:=
+\left(E_x,M^\infty,
+(\mathcal T_{x,<b})_{b\in\mathbb N}\right).
+\tag{23a}
+$$
+
+这里的 $\mathcal T_x$ 是全部相容 finite-cut 记录组成的语义族，不表示存在某个
+有限“最终完成时刻”。每个下文谓词仍只读取它公式中实际出现的有限 cut 坐标。
+
 取当前已纳入求值记录的集合：
 
 $$
@@ -868,19 +881,34 @@ $$
 \sigma^A:A\to\overline{\mathbb N}.
 $$
 
-称它们相对于 $(E^\circ,H)$ **有效**，当且仅当：
+把
 
 $$
+\xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)
+$$
+
+称为当前 **seal 截面**。称其中的下界相对于固定语义族
+$\mathcal T_x$ 与当前已纳入集合 $(E^\circ,H)$ **有效**，记作：
+
+$$
+\begin{aligned}
+&\operatorname{ValidSeal}_{\mathcal T_x}
+(E^\circ,H;\sigma^{\mathrm{in}},\sigma^A)
+\\
+&\quad\Longleftrightarrow
+\left\{
 \begin{aligned}
 E_x(i,<\sigma^{\mathrm{in}}(i))&\subseteq E^\circ
 && (i\in\mathsf I),\\
 M^\infty(a,<\sigma^A(a))&\subseteq H
 && (a\in A).
 \end{aligned}
+\right.
+\end{aligned}
 \tag{25}
 $$
 
-式 (25) 是本文中 seal 的全部数学含义。它是关于“所有较早记录”的全称命题；$E^\circ$ 或 $H$ 当前没有新增元素并不能推出这个命题。
+式 (25) 是本文中 seal 的全部数学含义。它是关于“所有较早记录”的全称命题；$E^\circ$ 或 $H$ 当前没有新增元素并不能推出这个命题。“有效”是上述四项数据与固定语义族之间的关系，不是 $\sigma$ 的一元属性。
 
 式 (25) 根据完整实际消息集 $M^\infty$ 判定一个下界是否有效；它本身没有给出从当前信息构造下界的方法。第 5.3 节将从较早事件已经完成的事实推出新的下界，第 5.4 节再用这些下界构造一条不读取未来消息的求值轨迹。
 
@@ -888,18 +916,19 @@ $$
 
 ### 5.2 节点前沿与纤维关闭
 
-定义：
+对 seal 截面
+$\xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)$ 定义：
 
 $$
 \begin{aligned}
-\lambda(v)
+\lambda_\xi(v)
 &=\min\left(
 \{\sigma^A(a)\mid a\in\operatorname{In}(v)\}
 \cup
 \{\sigma^{\mathrm{in}}(i)\mid\gamma(i)=v\}
 \right),\\
-\lambda(\mathcal R_j)
-&=\min_{v\in\mathcal R_j}\lambda(v),
+\lambda_\xi(\mathcal R_j)
+&=\min_{v\in\mathcal R_j}\lambda_\xi(v),
 \end{aligned}
 \tag{26}
 $$
@@ -907,30 +936,36 @@ $$
 并规定空集的最小值为 $\infty$。定义当前部分纤维：
 
 $$
-B^\circ_{v,\theta}
+B^\circ_{\xi;v,\theta}
 =\{z\in E^\circ\cup H\mid
 \operatorname{target}(z)=v,\ \operatorname{time}(z)=\theta\}.
 $$
 
 > [!lemma] 引理 5：节点纤维关闭
-> 若 $\lambda(v)>\theta$，则：
+> 若
+> $\operatorname{ValidSeal}_{\mathcal T_x}
+> (E^\circ,H;\sigma^{\mathrm{in}},\sigma^A)$
+> 且 $\lambda_\xi(v)>\theta$，则：
 > $$
-> B^\circ_{v,\theta}=B_{v,\theta}.
+> B^\circ_{\xi;v,\theta}=B_{v,\theta}.
 > \tag{27}
 > $$
 
-**证明。** 左边显然包含于完整纤维。若完整纤维还有一个未出现的外部记录，它会违反式 (25) 的第一项；若还有一个未出现的内部消息，它会违反第二项。两种矛盾都使用 $\operatorname{time}(z)=\theta<\lambda(v)$。$\square$
+**证明。** 左边显然包含于完整纤维。若完整纤维还有一个未出现的外部记录，它会违反式 (25) 的第一项；若还有一个未出现的内部消息，它会违反第二项。两种矛盾都使用 $\operatorname{time}(z)=\theta<\lambda_\xi(v)$。$\square$
 
-严格不等式不能改成 $\lambda(v)\ge\theta$：seal 等于 $\theta$ 仍允许一条到达时间恰为 $\theta$ 的记录尚未进入当前集合。
+严格不等式不能改成 $\lambda_\xi(v)\ge\theta$：seal 等于 $\theta$ 仍允许一条到达时间恰为 $\theta$ 的记录尚未进入当前集合。
 
 > [!theorem] 定理 6：region 候选集合关闭
-> 若 $\lambda(\mathcal R_j)>\theta$，则：
+> 若
+> $\operatorname{ValidSeal}_{\mathcal T_x}
+> (E^\circ,H;\sigma^{\mathrm{in}},\sigma^A)$
+> 且 $\lambda_\xi(\mathcal R_j)>\theta$，则：
 > $$
-> \{v\in\mathcal R_j\mid B^\circ_{v,\theta}\ne\varnothing\}
+> \{v\in\mathcal R_j\mid B^\circ_{\xi;v,\theta}\ne\varnothing\}
 > =\mathcal C_{j,\theta}.
 > $$
 
-**证明。** 式 (26) 给出每个 $v\in\mathcal R_j$ 都满足 $\lambda(v)>\theta$；逐节点应用引理 5，再比较纤维是否为空。$\square$
+**证明。** 式 (26) 给出每个 $v\in\mathcal R_j$ 都满足 $\lambda_\xi(v)>\theta$；逐节点应用引理 5，再比较纤维是否为空。$\square$
 
 定理 6 只关闭候选集合。应用式 (13) 以前，还必须知道每个候选节点的旧状态 $q_v^\theta$，并完成同一 region 在所有更小逻辑时间的实际 selector step，从而得到唯一的 $y_j^\theta$。输入关闭、节点状态就绪和 selector-history 就绪是三个不同命题。
 
@@ -939,20 +974,57 @@ $$
 取当前阶段已经完成的复合节点事件集合：
 
 $$
+\mathcal E_x^{\mathrm{node}}
+:=
+\bigcup_{b\in\mathbb N}\mathcal E^{\mathrm{node}}_{x,<b},
+\qquad
 \mathsf{Done}
 \subseteq
-\bigcup_{b\in\mathbb N}\mathcal E^{\mathrm{node}}_{x,<b}.
+\mathcal E_x^{\mathrm{node}}.
 $$
 
 这里 $(v,\theta)\in\mathsf{Done}$ 表示：$P_{v,\theta}$、相应的
 $S_{\rho(v),\theta}$ 与 $U_{v,\theta}$ 已经完成；若 $v$ active，则
-$F_{v,\theta}$ 也已经完成，它产生的输出已经确定，并且它产生的每条内部消息都已经纳入当前 $H$。这一定义把“函数已经返回”与“结果已经进入当前数学记录”一并包括在 $\mathsf{Done}$ 的成员关系中。对 $r\in\mathbb N$，定义：
+$F_{v,\theta}$ 也已经完成，它产生的输出已经确定，并且它产生的每条内部消息都已经纳入当前 $H$。这一定义把“函数已经返回”与“结果已经进入当前数学记录”一并包括在 $\mathsf{Done}$ 的成员关系中。
+
+把当前部分求值状态记为：
 
 $$
-\operatorname{DoneTo}(v,r)
+\Xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A,\mathsf{Done}),
+$$
+
+其前四个坐标的投影仍记为
+$\xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)$。定义 $\Xi$ 相对于
+$\mathcal T_x$ **可接受用于 seal/completion 推理**，记作
+$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi)$，当且仅当：
+
+$$
+\begin{aligned}
+&E^\circ\subseteq E_x,\qquad
+H\subseteq M^\infty,\qquad
+\mathsf{Done}\subseteq\mathcal E_x^{\mathrm{node}},\\
+&\operatorname{ValidSeal}_{\mathcal T_x}
+(E^\circ,H;\sigma^{\mathrm{in}},\sigma^A),\\
+&H=\{m\in M^\infty\mid
+(\operatorname{src}(\operatorname{edge}(m)),
+\operatorname{send}(m))\in\mathsf{Done}\}.
+\end{aligned}
+\tag{28a}
+$$
+
+最后一行同时形式化两项要求：消息不能先于源复合节点事件进入 $H$；一个事件一旦属于本文所用的强 $\mathsf{Done}$，它已经产生的全部实际消息也都已经进入 $H$。若实现需要允许“函数已返回但消息尚未公开”的中间状态，就必须像前置 TimedDAG 教材那样另设较弱的 completed 集合，不能把它仍记作这里的 $\mathsf{Done}$。
+
+式 (28a) 只命名第 5--6 节证明使用的 seal、完成与 publication 一致性；它不单独
+声称某个逐作用调度已经合法。完整的拓扑与在线动作条件在第 8.1 节分别由
+$\operatorname{TopoSchedule}$ 和 $\operatorname{LegalOnlineSchedule}$ 定义。
+
+对满足式 (28a) 的 $\Xi$ 与 $r\in\mathbb N$，定义：
+
+$$
+\operatorname{DoneTo}_{\mathcal T_x}(\Xi;v,r)
 \Longleftrightarrow
 \left(
-\lambda(v)\ge r
+\lambda_\xi(v)\ge r
 \ \land\
 \{(v,\theta)\mid\theta<r,\ B_{v,\theta}\ne\varnothing\}
 \subseteq\mathsf{Done}
@@ -962,12 +1034,19 @@ $$
 
 第一项证明时间小于 $r$ 的输入纤维已经关闭；第二项证明其中实际存在的节点事件已经完成。两项不能互相替代。
 
-这里的 $\mathsf{Done}$ 特意比前置 TimedDAG 教材中的 $\operatorname{Completed}_n$ 更强：后者允许完整输出先完成、消息随后才进入公开集合；本文的成员关系已经要求相应内部消息属于 $H$。这个加强正是下一个引理可以直接使用 $m\in H$ 的原因。
+这里的 $\mathsf{Done}$ 特意比前置 TimedDAG 教材中的 $\operatorname{Completed}_n$ 更强：后者允许完整输出先完成、消息随后才进入公开集合；本文的成员关系已经要求相应内部消息属于 $H$。这个加强正是下一个引理可以直接使用 $m\in H$ 的原因。式 (28) 的谓词是当前部分状态、节点和时间界之间的关系，不是 $(v,r)$ 脱离 $\Xi$ 后的一元完成事实。
+
+若 $f:A\to\overline{\mathbb N}$，记
+$f[a\mapsto s]$ 为只把 $a$ 坐标改成 $s$、其余坐标保持不变的函数。
 
 > [!lemma] 引理 7：正时延出边的 seal 推进
-> 设 $a\in\operatorname{Out}(v)$。若 $\operatorname{DoneTo}(v,r)$ 成立，则以下取值有效：
+> 设 $a\in\operatorname{Out}(v)$。若
+> $\operatorname{DoneTo}_{\mathcal T_x}(\Xi;v,r)$ 成立，则：
 > $$
-> \sigma^A(a)=r+\delta(a).
+> \operatorname{ValidSeal}_{\mathcal T_x}
+> \left(E^\circ,H;\sigma^{\mathrm{in}},
+> \sigma^A\!\left[a\mapsto
+> \max\{\sigma^A(a),r+\delta(a)\}\right]\right).
 > \tag{29}
 > $$
 
@@ -977,7 +1056,7 @@ $$
 \operatorname{send}(m)+\delta(a)<r+\delta(a),
 $$
 
-所以 $\operatorname{send}(m)<r$。令 $\theta=\operatorname{send}(m)$；消息的存在蕴含源节点 $v$ 在时间 $\theta$ active，因而 $B_{v,\theta}\ne\varnothing$。式 (28) 给出 $(v,\theta)\in\mathsf{Done}$，而 $\mathsf{Done}$ 的成员定义又给出 $m\in H$。故式 (25) 的第二项成立。$\square$
+所以 $\operatorname{send}(m)<r$。令 $\theta=\operatorname{send}(m)$；消息的存在蕴含源节点 $v$ 在时间 $\theta$ active，因而 $B_{v,\theta}\ne\varnothing$。式 (28) 给出 $(v,\theta)\in\mathsf{Done}$，而式 (28a) 又给出 $m\in H$。故 $r+\delta(a)$ 是 $a$ 坐标的有效下界；原来的 $\sigma^A(a)$ 也由 $\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi)$ 有效。两者的最大值等于其中之一，因而更新后的 $a$ 坐标仍满足式 (25)；其余输入端口和边坐标保持不变，得到式 (29)。$\square$
 
 正时延还提供一个不需要任何消息已经产生的初始事实：
 
@@ -997,26 +1076,61 @@ $$
 
 **证明。** 当 $b=0$ 时结论为空。以下轨迹只从 $E^\circ$ 读取外部记录；对任意 $\theta<b$，输入 seal 假设与 $E^\circ\subseteq E_x$ 保证其中时间为 $\theta$ 的记录恰好等于 $E_x$ 的相应记录。
 
-设 $b>0$。在开始处理时间 $\theta$ 时，记当前消息集合与边 seal 为 $H_\theta,\sigma^A_\theta$。初始取：
+设 $b>0$。令
+$\mathsf{Done}_\theta=\mathcal E^{\mathrm{node}}_{x,<\theta}$。
+在开始处理时间 $\theta$ 时，记当前消息集合与边 seal 为
+$H_\theta,\sigma^A_\theta$，并记：
+
+$$
+\begin{aligned}
+\xi_\theta
+&=(E^\circ,H_\theta,\sigma^{\mathrm{in}},\sigma^A_\theta),\\
+\Xi_\theta
+&=(E^\circ,H_\theta,\sigma^{\mathrm{in}},
+\sigma^A_\theta,\mathsf{Done}_\theta).
+\end{aligned}
+$$
+
+初始取：
 
 $$
 H_0=\varnothing,
 \qquad
-\sigma^A_0(a)=\delta(a).
+\sigma^A_0(a)=\delta(a),
+\qquad
+\mathsf{Done}_0=\varnothing.
 $$
 
-式 (30) 证明这些初始 seal 有效；输入端口 seal 也严格大于时间 $0$。所以所有时间 $0$ 的节点纤维和 region 候选集合都由引理 5、定理 6 关闭。先准备全部候选，再为每个 region 应用式 (13)，最后应用式 (14)--(16) 并立即把实际消息纳入 $H_1$。
+式 (30) 证明这些初始 seal 有效；输入端口 seal 也严格大于时间 $0$，且式 (28a) 的源消息等式在两个空集之间成立。因此
+$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_0)$。所以所有时间 $0$ 的节点纤维和 region 候选集合都由引理 5、定理 6 关闭。先准备全部候选，再为每个 region 应用式 (13)，最后应用式 (14)--(16) 并立即把实际消息纳入 $H_1$。
 
-更一般地，在开始处理时间 $\theta<b$ 时使用以下归纳不变量：$H_\theta=\bigcup_{\eta<\theta}M_\eta$，所有时间小于 $\theta$ 的事件都已完成，而且每条边 $a$ 已有有效 seal：
+更一般地，在开始处理时间 $\theta<b$ 时使用以下归纳不变量：
+$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_\theta)$、
+$H_\theta=\bigcup_{\eta<\theta}M_\eta$，而且每条边 $a$ 已有有效 seal：
 
 $$
 \sigma^A_\theta(a)=\theta+\delta(a).
 $$
 
-记 $\lambda_\theta$ 为式 (26) 对 $(\sigma^{\mathrm{in}},\sigma^A_\theta)$ 的实例。上述不变量在 $\theta=0$ 时由式 (30) 成立。由于 $\delta(a)>0$ 且外部输入 seal 至少为 $b$，每个节点都满足 $\lambda_\theta(v)>\theta$；较早状态采用和 selector-history 更新也已经完成。因此可以唯一完成时间 $\theta$ 的全部作用，并令 $H_{\theta+1}=H_\theta\cup M_\theta$。
+记 $\lambda_\theta=\lambda_{\xi_\theta}$。上述不变量在 $\theta=0$ 时由式 (30) 成立。由于 $\delta(a)>0$ 且外部输入 seal 至少为 $b$，每个节点都满足 $\lambda_\theta(v)>\theta$；较早状态采用和 selector-history 更新也已经完成。因此可以唯一完成时间 $\theta$ 的全部作用，并令
+$H_{\theta+1}=H_\theta\cup M_\theta$、
+$\mathsf{Done}_{\theta+1}
+=\mathsf{Done}_\theta\cup
+\{(v,\theta)\mid
+(v,\theta)\in\mathcal E_x^{\mathrm{node}}\}$。
 
 完成以后，对每条 $c\in\operatorname{In}(v)$ 都有
-$\sigma^A_\theta(c)=\theta+\delta(c)\ge\theta+1$；输入端口 seal 也至少为 $b\ge\theta+1$。所以 $\lambda_\theta(v)\ge\theta+1$。把刚完成的复合节点事件纳入 $\mathsf{Done}$、把它们产生的消息纳入 $H_{\theta+1}$ 后，以当前这些对象解释式 (28)，$\operatorname{DoneTo}(v,\theta+1)$ 对每个 $v$ 成立。引理 7 把每条出边 $a$ 的 seal 推进为 $\sigma^A_{\theta+1}(a)=\theta+1+\delta(a)$，正好建立下一时间的不变量。
+$\sigma^A_\theta(c)=\theta+\delta(c)\ge\theta+1$；输入端口 seal 也至少为 $b\ge\theta+1$。所以 $\lambda_\theta(v)\ge\theta+1$。令
+$\Xi_\theta^+
+=(E^\circ,H_{\theta+1},\sigma^{\mathrm{in}},
+\sigma^A_\theta,\mathsf{Done}_{\theta+1})$。
+扩大 $H$ 不会破坏旧 seal，且新消息与新完成事件恰满足式 (28a)，所以
+$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_\theta^+)$，并且
+$\operatorname{DoneTo}_{\mathcal T_x}
+(\Xi_\theta^+;v,\theta+1)$ 对每个 $v$ 成立。逐边应用引理 7，并令
+$\sigma^A_{\theta+1}(a)=\theta+1+\delta(a)$，正好建立
+$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_{\theta+1})$
+及下一时间的不变量。
 
 直到 $b-1$ 的归纳产生定理 1 的唯一记录。以后任何节点事件的输出时间都不小于 $b$，所以不能新增输出时间小于 $b$ 的记录。有限函数作用数由式 (20) 得到。$\square$
 
@@ -1031,21 +1145,24 @@ $\sigma^A_\theta(c)=\theta+\delta(c)\ge\theta+1$；输入端口 seal 也至少�
 
 ### 6.1 完整切面
 
-对一份满足第 5.3 节成员含义的合法部分记录，定义：
+对一份满足
+$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi)$
+的部分记录，定义：
 
 $$
-\operatorname{CutDone}(b)
+\operatorname{CutDone}_{\mathcal T_x}(\Xi;b)
 \Longleftrightarrow
 \mathcal E^{\mathrm{node}}_{x,<b}\subseteq\mathsf{Done}.
 $$
 
-称求值**完成 cut $b$**，当且仅当 $\operatorname{CutDone}(b)$ 成立。每个实际选择事件至少有一个候选节点，所以这个集合包含关系同时蕴含：全部 $\theta<b$ 的准备、选择与状态采用已经完成；全部 active 节点的 $\operatorname{Full}$ 已经完成；并且：
+称部分状态 $\Xi$ **完成 cut $b$**，当且仅当
+$\operatorname{CutDone}_{\mathcal T_x}(\Xi;b)$ 成立。每个实际选择事件至少有一个候选节点，所以这个集合包含关系同时蕴含：全部 $\theta<b$ 的准备、选择与状态采用已经完成；全部 active 节点的 $\operatorname{Full}$ 已经完成；并且：
 
 $$
 M_{<b}^{\mathrm{send}}\subseteq H.
 $$
 
-外部输出则是这些已完成 $\operatorname{Full}$ 值中的 $Z_{<b}$ 坐标；若另设当前已交付输出集合 $Z^\circ$，外部交付完成还要单独要求 $Z_{<b}\subseteq Z^\circ$。它不参与本文的未来递归。因此，$\operatorname{CutDone}(b)$ 不允许停在一次式 (13) 的中间，也不允许把已经求出但尚未纳入 $H$ 的内部消息留在隐藏临时变量中。
+外部输出则是这些已完成 $\operatorname{Full}$ 值中的 $Z_{<b}$ 坐标；若另设当前已交付输出集合 $Z^\circ$，外部交付完成还要单独要求 $Z_{<b}\subseteq Z^\circ$。它不参与本文的未来递归。因此，$\operatorname{CutDone}_{\mathcal T_x}(\Xi;b)$ 不允许停在一次式 (13) 的中间，也不允许把已经求出但尚未纳入 $H$ 的内部消息留在隐藏临时变量中。
 
 ### 6.2 跨越切面的在途消息
 
@@ -1111,14 +1228,16 @@ $$
 
 因为这里停在完整 cut，左侧的所有 Full 已经使用完各自的 $q^{\mathrm{cmp}}$ 与 $c$。这两个当前事件坐标不再是未来递归的独立输入，所以不加入 $Q_b$；它们仍属于完整历史记录。保存 $q^{\mathrm{cmp}}$ 而漏掉 Next 的最终状态，会破坏第 3.4 节的恢复结果。
 
-把第 3.3 节的单节点自环继续手算三步，可以同时看见这些对象。设唯一外部输入在时间 $0$ 到达，输入端口 seal 为 $\infty$，$\delta(a)=2$，并记时间 $0,2$ 发出的消息为 $m_0,m_2$。完成 $[0,b)$ 后可取 $H_b=\bigcup_{\eta<b}M_\eta$、$\sigma_b^A(a)=b+2$；于是 $\lambda_b(v)=b+2$。因为只有一个节点和一个 region，表中省略状态族的下标。前四个切面为：
+把第 3.3 节的单节点自环继续手算三步，可以同时看见这些对象。设唯一外部输入在时间 $0$ 到达，输入端口 seal 为 $\infty$，$\delta(a)=2$，并记时间 $0,2$ 发出的消息为 $m_0,m_2$。完成 $[0,b)$ 后可取 $H_b=\bigcup_{\eta<b}M_\eta$、$\sigma_b^A(a)=b+2$。令 $\xi_b$ 为相应 seal 截面并简写
+$\lambda_b=\lambda_{\xi_b}$，于是 $\lambda_b(v)=b+2$。令 $\Xi_b$ 表示由这些集合、seal 和
+$\mathsf{Done}_b=\mathcal E^{\mathrm{node}}_{x,<b}$ 组成的式 (28a) 部分状态。因为只有一个节点和一个 region，表中省略状态族的下标。前四个切面为：
 
 | $b$ | $H_b$ | $\sigma_b^A(a)=\lambda_b(v)$ | 已成立的完成谓词 | $W_b$ | $Q_b$ |
 | ---: | --- | ---: | --- | --- | --- |
-| $0$ | $\varnothing$ | $2$ | $\operatorname{DoneTo}(v,0)$ | $\varnothing$ | $(0,q^0,y^0,\varnothing)$ |
-| $1$ | $\{m_0\}$ | $3$ | $\operatorname{DoneTo}(v,1)$ | $\{m_0\}$ | $(1,q^1,y^1,\{m_0\})$ |
-| $2$ | $\{m_0\}$ | $4$ | $\operatorname{DoneTo}(v,2)$ | $\{m_0\}$ | $(2,q^2,y^2,\{m_0\})$ |
-| $3$ | $\{m_0,m_2\}$ | $5$ | $\operatorname{DoneTo}(v,3)$ | $\{m_2\}$ | $(3,q^3,y^3,\{m_2\})$ |
+| $0$ | $\varnothing$ | $2$ | $\operatorname{DoneTo}_{\mathcal T_x}(\Xi_0;v,0)$ | $\varnothing$ | $(0,q^0,y^0,\varnothing)$ |
+| $1$ | $\{m_0\}$ | $3$ | $\operatorname{DoneTo}_{\mathcal T_x}(\Xi_1;v,1)$ | $\{m_0\}$ | $(1,q^1,y^1,\{m_0\})$ |
+| $2$ | $\{m_0\}$ | $4$ | $\operatorname{DoneTo}_{\mathcal T_x}(\Xi_2;v,2)$ | $\{m_0\}$ | $(2,q^2,y^2,\{m_0\})$ |
+| $3$ | $\{m_0,m_2\}$ | $5$ | $\operatorname{DoneTo}_{\mathcal T_x}(\Xi_3;v,3)$ | $\{m_2\}$ | $(3,q^3,y^3,\{m_2\})$ |
 
 $H_b$ 是累计记录，所以 $m_0$ 在时间 $2$ 被消费后仍留在其中；$W_b$ 只保留跨越当前切面的消息。$\sigma_b^A,\lambda_b$ 是从完成事实推出的进展证书，不是 $Q_b$ 的坐标。
 
@@ -1206,22 +1325,62 @@ $$
 
 ### 7.1 区间转导
 
-称某个 $Q_a$ **可达**，若它由式 (33) 从一段合法 cut trace 得到。对 $a\le b$，定义区间转导：
+固定第 1 节除输入载荷函数以外的全部规格数据，包括
+$(K_i,\iota_i)_{i\in\mathsf I}$。令 $\mathfrak X$ 为所有类型正确的输入历史
+$x'=(x'_i:K_i\to P)_{i\in\mathsf I}$。第 2--3 节的规范递归为每个
+$x'\in\mathfrak X$ 和有限 cut $a$ 唯一给出 continuation，以下写成
+$Q_a(x')$。定义：
+
+$$
+\operatorname{Reach}_a
+=\{Q_a(x')\mid x'\in\mathfrak X\},
+$$
+
+以及对 $a\le b$ 定义相容、完整的区间输入域：
+
+$$
+\operatorname{Adm}_{a,b}
+=
+\left\{
+\bigl(Q_a(x'),E_{x',[a,b)}\bigr)
+\ \middle|\
+x'\in\mathfrak X
+\right\}.
+\tag{35a}
+$$
+
+因此，“$Q_a$ 可达”现在精确表示
+$Q_a\in\operatorname{Reach}_a$；“输入片段与过去相容且完整”精确表示相应
+二元组属于 $\operatorname{Adm}_{a,b}$。这里的完整性不是当前已公开输入的
+任意子集，而是某个见证输入历史在整个区间中的全部记录。见证 $x'$ 本身不作为
+求值器可读的额外坐标。
+
+令 $\mathsf{Rec}_{a,b}$ 为所有具有下文所列标签、定义域和值域的区间记录元组所成的环境集合；这个环境集合只给函数一个共同余域，不另外加入“合法”谓词。定义区间转导：
 
 $$
 \Phi_{a,b}:
-(Q_a,E_{x,[a,b)})
-\longmapsto
-(\mathcal U_{x,[a,b)},Q_b),
+\operatorname{Adm}_{a,b}
+\longrightarrow
+\mathsf{Rec}_{a,b}\times\operatorname{Reach}_b,
+\qquad
+\Phi_{a,b}
+\bigl(Q_a(x'),E_{x',[a,b)}\bigr)
+=
+\bigl(\mathcal U_{x',[a,b)},Q_b(x')\bigr),
 \tag{35}
 $$
 
-其中 $\mathcal U_{x,[a,b)}$ 保存本区间的全部式 (10)--(16) 坐标、发送时间位于 $[a,b)$ 的新消息和输出时间位于 $[a,b)$ 的新输出。它不把 $W_a$ 重复登记成“本段新产生的消息”。定义域只取如下配对：$Q_a$ 来自某段合法过去，而 $E_{x,[a,b)}$ 是与这段过去相容的合法、完整输入片段。“完整”表示它不是当前已公开输入的任意子集，而是所选输入历史在该区间的全部记录。source seal 是在线执行者证明这份完整性的方式之一，不是 $\Phi_{a,b}$ 的自变量。
+其中 $\mathcal U_{x',[a,b)}$ 保存本区间的全部式 (10)--(16) 坐标、发送时间位于 $[a,b)$ 的新消息和输出时间位于 $[a,b)$ 的新输出。它不把 $W_a$ 重复登记成“本段新产生的消息”。若两个见证输入历史给出同一个
+$(Q_a,E_{[a,b)})$，定理 9 对相同 continuation 和相同区间输入的归纳给出相同的
+$\mathcal U_{[a,b)}$ 与 $Q_b$，所以式 (35) 确实定义函数而不是依赖见证的关系。
+source seal 是在线执行者证明二元组属于式 (35a) 的方式之一，不是
+$\Phi_{a,b}$ 的自变量。
 
 对空区间定义：
 
 $$
-\Phi_{a,a}(Q_a,\varnothing)=(\varnothing,Q_a),
+\Phi_{a,a}(Q_a,\varnothing)=(\varnothing,Q_a)
+\qquad(Q_a\in\operatorname{Reach}_a),
 $$
 
 其中第一项是空区间记录。
@@ -1238,7 +1397,10 @@ $$
 ### 7.2 composition 定理
 
 > [!theorem] 定理 10：cut composition
-> 任取 $a\le b\le c$。若：
+> 任取 $a\le b\le c$ 与 $x\in\mathfrak X$，并记
+> $Q_a=Q_a(x)$、$Q_b=Q_b(x)$、$Q_c=Q_c(x)$；因此下列三个输入对分别属于
+> $\operatorname{Adm}_{a,b}$、$\operatorname{Adm}_{b,c}$ 与
+> $\operatorname{Adm}_{a,c}$。若：
 > $$
 > \begin{aligned}
 > \Phi_{a,b}(Q_a,E_{x,[a,b)})
@@ -1286,19 +1448,73 @@ $$
 
 ### 8.1 直接递归是定义，不是唯一实现顺序
 
-式 (10)--(16) 按时间写出，是为了给每个数学坐标一个无歧义值。任何实现都可以改变彼此独立的函数作用次序，只要它尊重第 4.2 节的依赖，并且只在式 (25) 已证明相应纤维关闭后作出不可撤销选择。
+式 (10)--(16) 按时间写出，是为了给每个数学坐标一个无歧义值。先把“调度”
+拆成两个不同关系。令
+$N=|\mathscr V^{\mathrm{ev}}_{x,<b}|$。对事件排列
+$\pi=(e_1,\ldots,e_N)$，定义：
 
-特别地，一个合法调度不得：
+$$
+\operatorname{TopoSchedule}_{x,<b}(\pi)
+\Longleftrightarrow
+\left\{
+\begin{array}{l}
+\{e_1,\ldots,e_N\}
+=\mathscr V^{\mathrm{ev}}_{x,<b}
+\text{，且每个事件恰出现一次},\\
+\forall\,1\le r,s\le N:\quad
+(e_r,e_s)\in\mathscr E^{\mathrm{ev}}_{x,<b}
+\Longrightarrow r<s.
+\end{array}
+\right.
+\tag{36a}
+$$
 
-1. 在候选集合尚可能增加时只对当前真子集应用 selector；
-2. 让同一节点的晚状态更新先于早状态更新；
-3. 跳过同一 region 的较早 selector-history 更新；
-4. 在源完整输出事件以前公开相应消息；
-5. 用线程完成顺序替代 selector 的确定平局规则。
+这只是“完整事件集合已经给定以后”的值求解顺序。由定理 4，事件图是有限
+DAG；任意满足式 (36a) 的排列都给出相同函数值。
 
-由定理 4，略去式 (13) 中空候选集合的恒等位置后，第 4.1 节定义的全部实际函数作用事件形成有限 DAG。这里的拓扑序是事件顶点的一个
-全序，并要求每条边的起点都排在终点以前。任意拓扑序都给出相同函数值；seal
-另行证明这个有限事件集合已经完整，而不是只看见了其中一个真子集。
+在线执行还必须证明自己没有漏掉尚未公开的候选或消息。令
+$D_0=\varnothing$，并对 $1\le k\le N$ 令
+$D_k=\{e_1,\ldots,e_k\}$；再给每个决策点配一个 seal 截面：
+
+$$
+\xi_k=(E_k^\circ,H_k,
+\sigma_k^{\mathrm{in}},\sigma_k^A)
+\qquad(0\le k\le N).
+$$
+
+定义
+$\operatorname{LegalOnlineSchedule}_{\mathcal T_x,<b}
+(\pi,(\xi_k)_{k=0}^N)$
+成立，当且仅当：
+
+1. $\operatorname{TopoSchedule}_{x,<b}(\pi)$；
+2. $E_k^\circ,H_k$ 随 $k$ 递增，seal 逐坐标不减，
+   $E_k^\circ\subseteq E_x$、$H_k\subseteq M_{<b}^{\mathrm{send}}$，并且每个
+   $0\le k\le N$ 都满足
+   $\operatorname{ValidSeal}_{\mathcal T_x}
+   (E_k^\circ,H_k;\sigma_k^{\mathrm{in}},\sigma_k^A)$；
+3. 对每个 $0\le k<N$，若 $e_{k+1}=P_{v,\theta}$，则
+   $\lambda_{\xi_k}(v)>\theta$；若
+   $e_{k+1}=S_{j,\theta}$，则
+   $\lambda_{\xi_k}(\mathcal R_j)>\theta$，且
+   $P_{v,\theta}\in D_k$ 对每个
+   $v\in\mathcal C_{j,\theta}$ 成立；
+4. 对每个 $0\le k\le N$ 与 $m\in H_k$，其源完整输出事件
+   $F_{\operatorname{src}(\operatorname{edge}(m)),
+   \operatorname{send}(m)}$ 属于 $D_k$；
+5. 在最终决策点，$E_{x,<b}\subseteq E_N^\circ$ 且
+   $H_N=M_{<b}^{\mathrm{send}}$。
+
+式 (36a) 已经禁止晚状态更新越过早状态更新、跳过较早 selector-history，以及
+在同刻 selector 以前执行状态采用或 Full；第三项再证明候选集合确实完整，第四项
+禁止消息先于源 Full 公开，第五项则要求完整 cut 中的源记录与内部消息最终都已
+纳入记录。selector 的确定平局规则属于
+$\operatorname{SelStep}$ 本身，调度不得用线程完成顺序替代它。
+
+因此，后文若只讨论已知事件 DAG 的重排，使用
+$\operatorname{TopoSchedule}$；若讨论带 seal 与 publication 的在线求值，则使用
+$\operatorname{LegalOnlineSchedule}$。这避免把“拓扑序”和“已经证明当前事件集合
+完整”混成同一个未命名的“合法调度”。
 
 ### 8.2 最小 reference interpreter 契约
 
@@ -1456,7 +1672,15 @@ M^{D\to C}_{[a,b)}
 $$
 
 > [!theorem] 定理 12：SCC-local profile 的精确外层 cut 调度
-> 假设式 (38) 成立。固定可达 continuation $Q_a$ 和 $a\le b$。按定理 11 选择 message SCC 的任一拓扑序；对每个 $C$，把 $q^a\!\downarrow_C$、$y^a\!\downarrow_C$、$W_a\!\downarrow_C$ 作为左边界，把 $E_{x,[a,b)}\!\downarrow_C$ 与所有前驱 $D$ 已产生的 $M^{D\to C}_{[a,b)}$ 作为输入，在 $C$ 内按式 (34) 的逻辑时间顺序推进到 $b$。按上述 owner 规则并合所得全图区间记录与 $Q_b$，恰等于式 (35) 的 $\Phi_{a,b}$。
+> 假设式 (38) 成立。固定 $Q_a\in\operatorname{Reach}_a$、
+> $a\le b$，并取
+> $(Q_a,E_{x,[a,b)})\in\operatorname{Adm}_{a,b}$。按定理 11 选择 message SCC
+> 的任一拓扑序；对每个 $C$，把 $q^a\!\downarrow_C$、
+> $y^a\!\downarrow_C$、$W_a\!\downarrow_C$ 作为左边界，把
+> $E_{x,[a,b)}\!\downarrow_C$ 与所有前驱 $D$ 已产生的
+> $M^{D\to C}_{[a,b)}$ 作为输入，在 $C$ 内按式 (34) 的逻辑时间顺序推进到
+> $b$。按上述 owner 规则并合所得全图区间记录与 $Q_b$，恰等于式 (35) 的
+> $\Phi_{a,b}$。
 
 **证明。** 对 SCC 的拓扑序归纳。一个 SCC 的所有跨边界输入消息只可能来自 condensation graph 中的前驱；否则存在一条来自尚未处理后继的反向边，与拓扑序矛盾。归纳假设因此已经给出该 SCC 在区间内的全部跨边界消息，$W_a$ 又给出过去产生但尚未到达的消息。
 

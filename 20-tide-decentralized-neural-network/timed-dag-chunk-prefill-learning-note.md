@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-14
+as-of: 2026-09-17
 tags:
   - tide
   - timed-dag
@@ -23,7 +23,7 @@ tags:
 > 本文研究一个比“能否正确执行”更窄的问题：哪些 TimedDAG 结构允许一个统一外层执行器把连续输入按大时间块交给节点或区域，而不被空间依赖强迫退化为逐 token、逐事件调用。
 
 > [!summary] 本文研究的性能性质
-> 本文只把**外层没有拆碎昂贵节点事件**形式化。第 6.4 节将它定义为“节点级时间批暴露”：固定架构模板以后，每个节点的昂贵时间事件只被分成数量不随 chunk 长度增长的批次，昂贵计算与控制之间也只有数量不随 chunk 长度增长的外层阶段。本文不从这个性质推出硬件耗时、算术工作量、显存访问效率或 selector 的并行深度。
+> 本文只把**外层没有拆碎昂贵节点事件**形式化。第 6.4 节将它定义为“节点级时间批暴露”：固定成本 profile 与 batch contract 以后，每个节点的昂贵时间事件只被分成数量不随 chunk 长度增长的批次，昂贵计算与控制之间也只有数量不随 chunk 长度增长的外层阶段。本文不从这个性质推出硬件耗时、算术工作量、显存访问效率或 selector 的并行深度。
 >
 > 若允许把任意有限计算封装成一个 `RunWholeGraph` 调用，那么每个有限 TimedDAG 都可以被表面上写成“一次调用”。为避免这个说法失去内容，本文始终区分：
 >
@@ -42,7 +42,7 @@ tags:
 2. 路径时延不交错只给出按 token 对齐的节点坐标；合法 tile 还必须收齐同刻 selector 的全部输入，并保持跨时间 history 依赖。
 3. 路径时延交错时，仍可使用按逻辑时间对齐的 tile；必须保存跨切面的在途消息。
 4. 若 region 内没有空间边，且所有跨 region 边服从一个严格区域次序，则每个封闭时间块可以按区域次序扫描，每个 region 只访问一次。
-5. 在严格分层类中，selector-history 可以在一次 region tile 内顺序扫描；若节点另有对明示 Full 解释类一致的精确 batch witness，随后仍可按节点一次批量应用主时间块中的全部昂贵完整输出函数。这满足第 6.4 节的节点级时间批暴露，但不自动给出低 span。
+5. 在严格分层类中，selector-history 可以在一次 region tile 内顺序扫描；若节点另有对明示 Full 解释类一致的精确 batch witness，随后仍可按节点一次批量应用主时间块中的全部昂贵完整输出函数。相对于这份 witness contract，这满足第 6.4 节的节点级时间批暴露，但不自动给出低 span。
 6. 任一大 tile 的精确联合求值，仍是独立于 seal 与拓扑的 backend 义务。
 
 ## 1. 从前置文档导入的对象
@@ -702,33 +702,75 @@ $$
 K\subseteq\mathscr V_x^{\mathrm{ev}}.
 $$
 
-在准备运行 $K$ 时，设已经完成的事件集合为 $\mathsf{Done}_K$。称 $K$ 的外部依赖已经满足，当且仅当：
+在准备运行 $K$ 时，设已经完成且位于 $K$ 外的事件集合为
+$\mathsf{Done}$。它是当前执行状态的一部分，并不由 $K$ 唯一决定。定义外部依赖就绪关系：
 
 $$
-\mathsf{Done}_K
+\begin{aligned}
+&\operatorname{DepsReady}_{\mathscr G_x^{\mathrm{ev}}}
+(K;\mathsf{Done})
+\\
+&\quad\Longleftrightarrow
+\left\{
+\begin{aligned}
+&\mathsf{Done}
 \subseteq
-\mathscr V_x^{\mathrm{ev}}\setminus K
-$$
-
-并且：
-
-$$
-\{\xi\mid
+\mathscr V_x^{\mathrm{ev}}\setminus K,\\
+&\{\xi\mid
 \exists\zeta\in K:
 (\xi,\zeta)\in\mathscr A_x^{\mathrm{ev}}
 \}
 \subseteq
-\mathsf{Done}_K\cup K.
+\mathsf{Done}\cup K.
+\end{aligned}
+\right.
+\end{aligned}
 \tag{33}
 $$
 
-式 (33) 允许 tile 内部保留依赖；它只禁止 tile 读取一个既不在 tile 中、也尚未完成的事件。
+称 $K$ 的外部依赖关于 $\mathsf{Done}$ 已满足，当且仅当式 (33) 成立。这个关系允许 tile 内部保留依赖；它只禁止 tile 读取一个既不在 tile 中、也尚未完成的事件。
 
 seal 的作用是证明相关时间纤维已经固定。式 (33) 的作用是证明函数依赖已经就绪。这是两个不同条件。
 
 ### 6.2 精确联合求值
 
-固定一个满足式 (33) 的 tile $K$。它的**合法边界数据**是某次完整规范计算中该 tile 所接收的外部前驱值，包括所需输入原子、左侧节点状态、选择历史及已完成前驱的函数值；令 $X_K$ 为这些边界数据所成的集合。不同边界可以来自不同输入，但必须使 $K$ 中的相应实际事件都存在。
+为避免“合法边界数据”隐藏量化域，令：
+
+$$
+\mathsf{Comp}_L
+=\{\mathcal T_{x'}\mid x':[L]\to P\}
+$$
+
+表示第 1 节固定结构和局部函数在全部长度 $L$ 输入上产生的完整规范记录集合。若
+$\mathcal T_{x'}\in\mathsf{Comp}_L$ 且
+$K\subseteq\mathscr V_{x'}^{\mathrm{ev}}$，定义边界投影
+$\partial_K\mathcal T_{x'}$ 为带标签元组，它恰好保存：
+
+1. $K$ 所需的输入原子；
+2. $K$ 左边界上的节点状态与 selector-history；
+3. 所有从 $K$ 外直接进入 $K$ 的事件前驱值；
+4. 若选择或状态采用在 $K$ 外而 Full 在 $K$ 内，相应的
+   $c_{v,\theta}$ 与 $q^{\mathrm{cmp}}_{v,\theta}$。
+
+定义：
+
+$$
+X_K
+=
+\left\{
+\partial_K\mathcal T_{x'}
+\ \middle|\
+\mathcal T_{x'}\in\mathsf{Comp}_L,\
+K\subseteq\mathscr V_{x'}^{\mathrm{ev}}
+\right\}.
+\tag{33a}
+$$
+
+所以不同边界可以来自不同输入，但输入与完整记录是式 (33a) 中被量化的见证，
+不是 $\operatorname{Ref}_K$ 的隐藏自变量。准备实际运行 $K$ 时，仍须另外给出
+当前 $\mathsf{Done}$ 并检查
+$\operatorname{DepsReady}_{\mathscr G_x^{\mathrm{ev}}}
+(K;\mathsf{Done})$。
 
 令 $Y_K$ 保存 $K$ 中各函数作用的完整记录及其派生结果，具体包括：
 
@@ -742,6 +784,10 @@ seal 的作用是证明相关时间纤维已经固定。式 (33) 的作用是证
 $$
 \operatorname{Ref}_K:X_K\to Y_K.
 $$
+
+若两个完整记录具有同一个 $\partial_K$ 边界，按 $K$ 内事件 DAG 的任一拓扑序
+归纳，每个函数作用的全部自变量及结果都相同。因此
+$\operatorname{Ref}_K$ 不依赖式 (33a) 中见证记录的选择，确实是一个函数。
 
 若选择或状态采用在 tile 外，而完整输出在 tile 内，$X_K$ 就须包含后者所需的 $c_{v,\theta}$ 与 $q^{\mathrm{cmp}}_{v,\theta}$。这些是尚未使用的边界值；完整逻辑时间切面的 continuation 则不必保存已经使用完毕的临时量。两种边界的差别来自暂停位置不同。
 
@@ -784,7 +830,10 @@ $$
 一个 seal 驱动的外层循环可以写成：
 
 $$
-\text{找到满足 seal 与式 (33) 的 }K
+\text{找到满足 seal 且 }
+\operatorname{DepsReady}_{\mathscr G_x^{\mathrm{ev}}}
+(K;\mathsf{Done})
+\text{ 的 }K
 \longrightarrow
 \operatorname{RunTile}(K)
 \longrightarrow
@@ -804,7 +853,12 @@ $$
 4. 新 seal 只在前置文档式 (33) 的集合包含成立时推进。
 
 > [!proposition] 命题 5：精确 tile 替换不改变完整结果
-> 若一列两两不交的 tile 恰好覆盖全部函数作用事件，每个 tile 运行前满足式 (33)，每个 backend 满足式 (34)，并且所有节点状态与 selector-history 提交、消息公开都遵守前置文档的事件依赖，则用这些 tile 替换逐事件求值不会改变 $\mathcal T_x$。
+> 若一列两两不交的 tile 恰好覆盖全部函数作用事件，并且对每个 tile
+> $K_r$ 明确给出其运行前的完成集 $\mathsf{Done}_r$，使
+> $\operatorname{DepsReady}_{\mathscr G_x^{\mathrm{ev}}}
+> (K_r;\mathsf{Done}_r)$ 成立；再假设每个 backend 满足式 (34)，所有节点状态与
+> selector-history 提交、消息公开都遵守前置文档的事件依赖。则用这些 tile
+> 替换逐事件求值不会改变 $\mathcal T_x$。
 
 **证明。** 函数作用事件图是有限 DAG。按其任一拓扑序归纳。一个 tile 的外部前驱已经与参考计算相同；式 (34) 因而使 tile 的全部输出与参考计算相同。提交和公开又只把这些相同结果交给后继。覆盖全部事件后，完整计算记录相同。$\square$
 
@@ -959,7 +1013,11 @@ $$
 
 每个 $\omega=(Q,E,\sigma)\in\Omega_{q,T}(\Phi)$ 唯一确定 $[b,c)$ 内的参考记录和右切面。确实，按前置文档的切面继续规则从同一个 $Q$ 开始时，左侧跨界消息相同；由 $\sigma\ge c$ 与包含关系，区间内没有遗漏的外部记录。对 $\theta=b,\ldots,c-1$ 逐时归纳，正边时延保证当前消息只来自更小时间，而两个有限实例上的聚合函数都是同一个 $\operatorname{Agg}_v^\infty$ 的限制；其余函数和 $\Phi$ 也相同。因此两个见证 $L,x$ 给出相同的区间记录与右切面。这里不需要把定理 4 越过不同 $L$ 使用。
 
-把这段唯一记录记为 $\operatorname{Ref}_{q,T}^\Phi(\omega)$。对节点 $v$，定义其 active 时间坐标集合：
+把这段唯一记录记为 $\operatorname{Ref}_{q,T}^\Phi(\omega)$，并把其中坐标写成
+$q^{\mathrm{cmp}}_{v,\theta}(\Phi,\omega)$、
+$h_{v,\theta}(\Phi,\omega)$、
+$c_{v,\theta}(\Phi,\omega)$ 与
+$\mathcal A_{j,\theta}^{\Phi}(\omega)$。对节点 $v$，定义其 active 时间坐标集合：
 
 $$
 \Lambda_v(I_{q,T};\Phi,\omega)
@@ -971,11 +1029,36 @@ $$
 
 #### 6.4.3 节点的批量求值接口
 
-对 $\Phi\in\mathfrak F$ 与任意有限非空 $\Theta\subseteq\mathbb N$，令 $\mathsf{Adm}_{v,\Theta}^\Phi$ 为所有在 $\Phi$ 的某条合法完整轨迹中同时作为这些 active 坐标的 $\operatorname{Full}_v^\Phi$ 输入而出现的递增序列，其中 $\bar q_\theta\in S_v$ 是本次计算快照、$h_\theta\in X_v$、$c_\theta\in\mathsf C_v$：
+对 $\Phi\in\mathfrak F$ 与任意有限非空
+$\Theta\subseteq\mathbb N$，定义：
 
 $$
-\left((\bar q_\theta,\theta,h_\theta,c_\theta)\right)_{\theta\in\Theta}^{\uparrow}.
+\begin{aligned}
+\mathsf{Adm}_{v,\Theta}^\Phi
+=
+\left\{
+\left(
+q^{\mathrm{cmp}}_{v,\theta}(\Phi,\omega),
+\theta,
+h_{v,\theta}(\Phi,\omega),
+c_{v,\theta}(\Phi,\omega)
+\right)_{\theta\in\Theta}^{\uparrow}
+\ \middle|\
+\begin{array}{l}
+q\in\mathbb N,\ T\in\mathbb N_{>0},\
+L\ge q+T,\\
+\omega\in\Omega_{q,T}^{(L)}(\Phi),\\
+\Theta\subseteq
+\Lambda_v(I_{q,T};\Phi,\omega)
+\end{array}
+\right\}.
+\end{aligned}
+\tag{37a}
 $$
+
+所以“合法 batch 输入”不是未限定的形容词：它表示式 (37a) 中存在
+$(q,T,L,\omega)$ 见证。元组按 $\theta$ 递增排列；其中第一项属于 $S_v$，
+第三项属于 $X_v$，第四项属于 $\mathsf C_v$。
 
 一个**类级节点 batch 接口**是一族全函数：
 
@@ -987,11 +1070,28 @@ $$
 \qquad(\Phi\in\mathfrak F).
 $$
 
-上标 $\Phi$ 只索引语义解释；策略调用的共同接口名不携带这个上标，也不会获知 $\Phi$。这类接口需要满足的逐坐标精确性条件在下文式 (39) 给出。
+把对全部 $v,\Theta,\Phi$ 声明的这族接口记为
+
+$$
+\mathfrak B
+=
+\left(
+\operatorname{BatchFull}_{v,\Theta}^\Phi
+\right)_{
+\substack{
+v\in V,\ \varnothing\ne\Theta\in\mathcal P_{\mathrm{fin}}(\mathbb N),\\
+\Phi\in\mathfrak F
+}},
+$$
+
+称为相对于成本 profile $(\mathfrak G^\circ,\mathfrak F)$ 的一个
+**batch contract**。上标 $\Phi$ 只索引语义解释；策略调用的共同接口名不携带
+这个上标，也不会获知 $\Phi$。$\mathfrak B$ 需要满足的逐坐标精确性关系在
+下文式 (39) 给出。
 
 #### 6.4.4 外层阶段与因果策略
 
-一个**外层阶段**先执行有限条因果合法的骨架控制作用 $\mathsf{Ctrl}_r$，再一次确定有限组节点调用 $\mathsf{Batch}_r$。每个调用坐标都必须已经被控制记录确定为 active，调用自变量必须是该作用已经确定的自变量，而且全部事件前驱必须已经由 $\omega$、较早阶段或 $\mathsf{Ctrl}_r$ 完成；不能用反事实输入探测 $\Phi$。
+一个**外层阶段**先执行有限条满足下文 $\operatorname{Enabled}$ 关系的骨架控制作用 $\mathsf{Ctrl}_r$，再一次确定有限组节点调用 $\mathsf{Batch}_r$。每个调用坐标都必须已经被控制记录确定为 active，调用自变量必须是该作用已经确定的自变量，而且全部事件前驱必须已经由 $\omega$、较早阶段或 $\mathsf{Ctrl}_r$ 完成；不能用反事实输入探测 $\Phi$。
 
 调用开始后，本阶段不再求新的控制值；返回值连同调用标签记入 $\mathsf{Ans}_r$，只在阶段末一起公开。把完整阶段记录记为 $\pi_r=(\mathsf{Ctrl}_r,\mathsf{Batch}_r,\mathsf{Ans}_r)$。
 
@@ -1012,32 +1112,73 @@ $$
 
 其中 $q,T$ 是本轮公开的 chunk 坐标，$\mathsf{Ctrl}_{r,\le k}$ 是本阶段迄今已经求出的控制作用及其值。除初始给定的 $\omega$ 外，运行中新出现的 $\Phi$ 相关原始信息只能作为某个 $\mathsf{Ans}_s$ 中已经记录的 $\operatorname{BatchFull}^\Phi$ 返回值进入 transcript；消息、状态等派生值只能由骨架函数从这些已记录值算出。transcript 不含 $L$、见证输入、未来输入、$\Phi$ 本身或尚未调用的 $\operatorname{Full}^\Phi$ 值。
 
-一个**动作级因果策略** $\mathcal S$ 是从可见 transcript 到下一动作的确定函数；动作只能是应用一个输入已知的骨架控制函数、一次确定 $\mathsf{Batch}_r$ 并结束当前阶段，或在目标切面完成后停止。$\mathcal S$ 不以 $\Phi$ 为自变量。因此，即使两个 transcript 来自不同解释，只要它们相同，下一动作也必须相同。每个参考 $\operatorname{Full}^\Phi$ 作用必须恰好属于一次显式 batch 调用。
+令 $\mathsf{Act}$ 包含三类动作：求一个骨架控制作用、确定当前
+$\mathsf{Batch}_r$ 并结束本阶段、停止。对 batch contract $\mathfrak B$ 定义
+动作可用关系：
+
+$$
+\operatorname{Enabled}_{\mathfrak G^\circ,\mathfrak B}
+(\mathsf{Tr}_{r,k};\mathsf a),
+$$
+
+它成立，当且仅当 $\mathsf a$ 属于以下三种情形之一：
+
+1. $\mathsf a$ 是一个尚未求值的骨架控制作用；其全部函数自变量和事件前驱已经
+   出现在 $\omega$、较早阶段或 $\mathsf{Ctrl}_{r,\le k}$ 中；
+2. $\mathsf a$ 确定 $\mathsf{Batch}_r$；其中每个坐标已由控制记录确定为
+   active，完整四元组已经可见，全部事件前驱已经完成，而且该坐标尚未属于任何
+   较早 batch；
+3. $\mathsf a$ 是停止；当前位于阶段边界，目标右切面及其跨界消息已经完整形成。
+
+此外，可用性判断只能读取 $\mathsf{Tr}_{r,k}$；它不能读取 $L$、见证输入、
+$\Phi$ 的身份、反事实输入或尚未调用的 $\operatorname{Full}^\Phi$ 值。运行中
+新出现的 $\Phi$ 相关原始信息仍只能来自 $\mathfrak B$ 的显式返回。
+
+一个**动作级因果策略** $\mathcal S$ 是从可见 transcript 到下一动作的确定函数，
+并要求在它产生的每个决策点都有：
+
+$$
+\operatorname{Enabled}_{\mathfrak G^\circ,\mathfrak B}
+\bigl(\mathsf{Tr}_{r,k};\mathcal S(\mathsf{Tr}_{r,k})\bigr).
+$$
+
+$\mathcal S$ 不以 $\Phi$ 为自变量。因此，即使两个 transcript 来自不同解释，
+只要它们相同，下一动作也必须相同。每个参考
+$\operatorname{Full}^\Phi$ 作用必须恰好属于一次显式 batch 调用。
 
 #### 6.4.5 精确性与一致有界的批次数
 
-固定一组类级 batch 接口后，用 $\operatorname{Run}_{\mathcal S}^{\Phi}(q,T,\omega)$ 表示 $\mathcal S$ 在解释 $\Phi$ 下的运行；若它有限停止，用 $\operatorname{Rec}_{\mathcal S}^{\Phi}(q,T,\omega)$ 表示所得记录。称该 profile 具有 **exact 外层计划族**，当且仅当存在同一个 $\mathcal S$，满足以下量词顺序：
+固定 batch contract $\mathfrak B$ 后，用
+$\operatorname{Run}_{\mathcal S,\mathfrak B}^{\Phi}(q,T,\omega)$
+表示 $\mathcal S$ 在解释 $\Phi$ 下的运行；若它有限停止，用
+$\operatorname{Rec}_{\mathcal S,\mathfrak B}^{\Phi}(q,T,\omega)$
+表示所得记录。定义关系
+$\operatorname{ExactPlanFamily}
+(\mathfrak G^\circ,\mathfrak F;\mathfrak B,\mathcal S)$
+成立，当且仅当 $\mathcal S$ 是第 6.4.4 节相对于 $\mathfrak B$ 的动作级因果
+策略，并且：
 
 $$
 \begin{aligned}
-&\exists\mathcal S\quad
-\forall\Phi\in\mathfrak F\quad
+&\forall\Phi\in\mathfrak F\quad
 \forall q\in\mathbb N\quad
 \forall T\in\mathbb N_{>0}\quad
 \forall L\ge q+T\quad
 \forall\omega\in\Omega_{q,T}^{(L)}(\Phi):\\
-&\operatorname{Run}_{\mathcal S}^{\Phi}(q,T,\omega)
+&\operatorname{Run}_{\mathcal S,\mathfrak B}^{\Phi}(q,T,\omega)
 \text{ 有限停止，且 }
-\operatorname{Rec}_{\mathcal S}^{\Phi}(q,T,\omega)
+\operatorname{Rec}_{\mathcal S,\mathfrak B}^{\Phi}(q,T,\omega)
 =
 \operatorname{Ref}_{q,T}^{\Phi}(\omega).
 \end{aligned}
 $$
 
-这里的 $\operatorname{Rec}$ 包括 $I_{q,T}$ 内记录、右切面 $Q_{D(q+T)}$，以及区间内发送但越过右切面的在途消息。不能为每个 $\Phi$ 或输入事后另选一条已经知道参考答案的阶段序列。固定 $\mathcal S$ 后，把一次运行的阶段序列记为：
+称 $(\mathfrak G^\circ,\mathfrak F;\mathfrak B)$ 具有一个
+**exact 外层计划族**，若存在同一个 $\mathcal S$ 使上述关系成立。这里的
+$\operatorname{Rec}$ 包括 $I_{q,T}$ 内记录、右切面 $Q_{D(q+T)}$，以及区间内发送但越过右切面的在途消息。不能为每个 $\Phi$ 或输入事后另选一条已经知道参考答案的阶段序列。固定 $\mathcal S,\mathfrak B$ 后，把一次运行的阶段序列记为：
 
 $$
-\Pi_{q,T}^{\Phi}(\omega)
+\Pi_{q,T}^{\Phi,\mathfrak B}(\omega)
 =
 (\pi_1,\ldots,
 \pi_{N_{\mathrm{stage}}(q,T,\Phi,\omega)}).
@@ -1058,11 +1199,16 @@ $$
 
 当 $\Lambda_v(I_{q,T};\Phi,\omega)=\varnothing$ 时取 $m_v(q,T,\Phi,\omega)=0$，并把式 (38) 右侧理解为空并。上述常数可以依赖固定的 $(\mathfrak G^\circ,\mathfrak F)$ 与 batch 契约，但不依赖 $\Phi,L,q,T$ 或 $\omega$。
 
-称类级 batch 接口为**逐坐标精确 witness**，当且仅当它满足全称恒等式：
+定义
+$\operatorname{ExactBatch}
+(\mathfrak G^\circ,\mathfrak F;\mathfrak B)$
+成立，当且仅当 batch contract $\mathfrak B$ 满足以下全称恒等式：
 
 $$
 \begin{aligned}
-&\forall\Phi\in\mathfrak F,\quad
+&\forall v\in V,\quad
+\forall\varnothing\ne\Theta\in\mathcal P_{\mathrm{fin}}(\mathbb N),\quad
+\forall\Phi\in\mathfrak F,\quad
 \forall\mathbf u
 =
 \left((\bar q_\theta,\theta,h_\theta,c_\theta)\right)_{\theta\in\Theta}^{\uparrow}
@@ -1078,7 +1224,35 @@ $$
 \tag{39}
 $$
 
-若 exact 外层计划族使用满足式 (39) 的 witness，并存在满足式 (38) 的一致常数，就称这个 profile 具有**节点级时间批暴露**。本文也把这样的计划称为**控制顺序、计算整块的 exact prefill**。
+满足这个关系的 $\mathfrak B$ 称为**逐坐标精确 witness**。最后定义：
+
+$$
+\operatorname{NodeBatchExposure}
+(\mathfrak G^\circ,\mathfrak F;\mathfrak B)
+$$
+
+成立，当且仅当
+$\operatorname{ExactBatch}
+(\mathfrak G^\circ,\mathfrak F;\mathfrak B)$，并且存在同一个策略
+$\mathcal S$、常数 $C_G^{\mathrm{stage}}\in\mathbb N$ 与
+$(C_{G,v})_{v\in V}\in\mathbb N^V$，使：
+
+1. $\operatorname{ExactPlanFamily}
+   (\mathfrak G^\circ,\mathfrak F;\mathfrak B,\mathcal S)$；
+2. 对式 (38) 前列出的全部
+   $\Phi,q,T,L,\omega$，式 (38) 使用这些固定常数成立。
+
+这就是相对于已声明 batch contract 的**节点级时间批暴露**。本文也把这样的计划
+称为**控制顺序、计算整块的 exact prefill**。若要把它定义成 profile 单独的性质，
+必须另写：
+
+$$
+\exists\mathfrak B:\quad
+\operatorname{NodeBatchExposure}
+(\mathfrak G^\circ,\mathfrak F;\mathfrak B),
+$$
+
+而不能在“固定 $\mathfrak B$”以后省略这个存在量词。
 
 这里“显式”是数学要求，不是物理 launch 要求。同一阶段的多个节点批次仍可融合进一次 packed API 或编译循环；witness 只需保留式 (38) 的批次分解，并在解包后满足式 (39)。$\Theta_{v,r}$ 按逻辑时间坐标组成，不要求这些坐标属于唯一 token；因此该定义直接容纳第 5 节的信号交错。
 
@@ -1284,7 +1458,25 @@ $$
 3. 全部 $B_{v,\theta}$，其中 $v\in\mathcal R_j$ 且 $\theta\in I$；
 4. 所有从切面左侧跨入 $I$ 的内部消息。
 
-定义 $\mathsf{TileIn}_{j,I}$ 为上述合法边界数据所成的集合。第三项已经包含第四项消息在当前区间中的纤维坐标；同时列出第四项，是为了明确这些消息来自左切面，不由本区域重新产生。
+对每个包含上述坐标的完整规范记录
+$\mathcal T_{x'}\in\mathsf{Comp}_L$，记
+$\partial_{j,I}\mathcal T_{x'}$ 为按第 1--4 项取出的带标签边界元组，并定义：
+
+$$
+\mathsf{TileIn}_{j,I}
+=
+\left\{
+\partial_{j,I}\mathcal T_{x'}
+\ \middle|\
+\mathcal T_{x'}\in\mathsf{Comp}_L,\
+\partial_{j,I}\mathcal T_{x'}\text{ 有定义}
+\right\}.
+\tag{46a}
+$$
+
+所以这里的“合法边界”精确表示属于式 (46a)，而不是另一个未写出的性质。
+第三项已经包含第四项消息在当前区间中的纤维坐标；同时列出第四项，是为了明确
+这些消息来自左切面，不由本区域重新产生。
 
 定义 $\mathsf{TileOut}_{j,I}$ 为第 6.2 节完整事件记录在本区域、本区间的集合：它包含时间纤维、候选集合、本地准备量、选择结果与控制量、计算快照、持久节点状态与选择历史、逐坐标完整输出值、内部消息和外部输出。其中两类持久状态序列包含时间 $b$ 至 $c$ 的全部坐标。定义全函数：
 
@@ -1463,7 +1655,16 @@ $$
 这也容纳选择驱动的状态清空或本地历史写回：扫描依据 $q_v^{\theta+1}$ 继续未来控制，同时保留较早作用所需的 $q^{\mathrm{cmp}}_{v,\theta}$。它不能把清空后的下一状态代替本次快照。暂存整个块的快照与控制量可能需要随区间增长的内存；节点级时间批暴露没有给出这项内存成本的上界。
 
 > [!corollary] 推论 8：严格分层类的节点级时间批暴露
-> 固定第 6.4 节的骨架与非空解释类。在定理 7 的结构条件下，再假设每个节点对任意合法有限坐标集都有满足式 (39) 的类级 batch witness。则同一个区域顺序策略对所有 $\Phi\in\mathfrak F$ 都是 exact 的，并在主时间块 $I_T$ 上具有节点级时间批暴露；对所有 $q,T,L$ 满足 $q\in\mathbb N$、$T\in\mathbb N_{>0}$、$L\ge q+T$，以及所有 $\Phi\in\mathfrak F$、$\omega\in\Omega_{q,T}^{(L)}(\Phi)$，均可取：
+> 固定第 6.4 节的骨架、非空解释类与 batch contract $\mathfrak B$。在定理 7
+> 的结构条件下，再假设
+> $\operatorname{ExactBatch}
+> (\mathfrak G^\circ,\mathfrak F;\mathfrak B)$。则同一个区域顺序策略对所有
+> $\Phi\in\mathfrak F$ 都是 exact 的，并且
+> $\operatorname{NodeBatchExposure}
+> (\mathfrak G^\circ,\mathfrak F;\mathfrak B)$
+> 在主时间块 $I_T$ 上成立；对所有 $q,T,L$ 满足
+> $q\in\mathbb N$、$T\in\mathbb N_{>0}$、$L\ge q+T$，以及所有
+> $\Phi\in\mathfrak F$、$\omega\in\Omega_{q,T}^{(L)}(\Phi)$，均可取：
 >
 > $$
 > N_{\mathrm{stage}}(q,T,\Phi,\omega)
@@ -1762,7 +1963,7 @@ $$
 > region 不是设备、线程组、并行域或内存位置。实现可以让一个 region 跨设备，也可以把多个 region 放在同一设备；若要讨论局部性，必须另给 placement 与成本模型。
 
 > [!info]- S.6　ready 与 selector closure
-> 一个 tile 的输入纤维已被 seal，并且满足式 (33) 的外部依赖条件时，可以称它为 `ready`。若 tile 含区域选择作用，还必须满足式 (41) 的 selector closure。
+> 一个 tile 的输入纤维已被 seal，并且对当前完成集满足 $\operatorname{DepsReady}_{\mathscr G_x^{\mathrm{ev}}}(K;\mathsf{Done})$ 时，可以称它为 `ready`。若 tile 含区域选择作用，还必须满足式 (41) 的 selector closure。
 >
 > “某节点当前有输入”不足以证明 selector ready，因为同一区域、同一时间仍可能出现尚未公开的其他候选节点；当前 selector-history 也必须由左边界或前一选择作用确定。
 >
@@ -1782,12 +1983,12 @@ $$
 > 本文用式 (32) 检查 `causal leakage`：用于预测位置 $r+1$ 的输出，其增广事件图祖先中不应有位置大于 $r$ 的输入。违反这个结构条件表示图中仍有潜在泄漏路径；若要证明该路径对输出值实际无影响，须另给函数无关性证明。逻辑时间递增本身不能排除这种路径。
 
 > [!info]- S.10　高性能通用 prefill
-> 本文的 `高性能通用 prefill` 正式对应第 6.4 节相对于已声明成本 profile 的**节点级时间批暴露**；`通用` 表示同一个动作级策略对明示解释类 $\mathfrak F$ 中的全部 $\Phi$ 和全部合法 chunk 都成立。“控制顺序、计算整块”是同一性质的直白说法。
+> 本文的 `高性能通用 prefill` 正式对应第 6.4 节相对于已声明成本 profile 与 batch contract $\mathfrak B$ 的**节点级时间批暴露**；`通用` 表示同一个动作级策略对明示解释类 $\mathfrak F$ 中的全部 $\Phi$ 和全部合法 chunk 都成立。“控制顺序、计算整块”是同一性质的直白说法。
 >
 > 严格分层类由推论 8 给出 $C_G^{\mathrm{stage}}=|J|$ 与 $C_{G,v}=1$。该术语允许 selector-history 顺序扫描，也不等于 low-span、work-efficient、设备高利用率或端到端加速。
 
 > [!info]- S.11　cost profile、heavy/control、work 与 span
-> `cost profile` 对应非 Full 骨架 $\mathfrak G^\circ$ 与允许的 Full 解释类 $\mathfrak F$；节点级时间批暴露还另需式 (39) 的 batch 契约。它是对语义规格增加的成本分类，不是空间图自身的性质。`heavy/control stage` 对应 $\Pi_{q,T}^{\Phi}(\omega)$ 的一个阶段：先作控制求值，再提交该阶段显式列出的昂贵节点批次；它不是逻辑时间单位，也不是前置文档的暴露阶段 $n$。若未另给精化映射，不能把 $H_n$ 与某个外层阶段末直接对齐。
+> `cost profile` 对应非 Full 骨架 $\mathfrak G^\circ$ 与允许的 Full 解释类 $\mathfrak F$；节点级时间批暴露还另需式 (39) 的 batch contract $\mathfrak B$，正式谓词是 $\operatorname{NodeBatchExposure}(\mathfrak G^\circ,\mathfrak F;\mathfrak B)$。它是对语义规格增加的成本分类，不是空间图自身的性质。`heavy/control stage` 对应 $\Pi_{q,T}^{\Phi,\mathfrak B}(\omega)$ 的一个阶段：先作控制求值，再提交该阶段显式列出的昂贵节点批次；它不是逻辑时间单位，也不是前置文档的暴露阶段 $n$。若未另给精化映射，不能把 $H_n$ 与某个外层阶段末直接对齐。
 >
 > `visible transcript` 对应第 6.4 节的元组 $\mathsf{Tr}_{r,k}$；`causal` 与 `no-oracle` 表示同一个动作函数只读取这个元组。除初始切面状态外，新出现的 Full 信息只能来自其中已经记录的 $\mathsf{Ans}_s$，所以两个相同 transcript 不能因解释 $\Phi$ 或未调用的 Full 值而分岔；batch 也只能查询已经确定为 active 的实际作用，不能用反事实输入探测 $\Phi$。
 >

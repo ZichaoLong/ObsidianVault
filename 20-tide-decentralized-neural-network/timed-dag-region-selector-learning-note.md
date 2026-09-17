@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-14
+as-of: 2026-09-17
 tags:
   - tide
   - timed-dag
@@ -1662,9 +1662,17 @@ $$
 \sigma_n^{A}:A\to\overline{\mathbb N}.
 $$
 
-称它们**有效**，当且仅当同时满足：
+称它们相对于固定完整记录 $\mathcal T_x$ 的当前 filtration 截面
+$(E_n,H_n)$ **有效**。把这个关系记为：
 
 $$
+\begin{aligned}
+&\operatorname{ValidSeal}_{\mathcal T_x}
+\left(E_n,H_n;
+\sigma_n^{\mathrm{in}},\sigma_n^A\right)
+\\
+&\quad\Longleftrightarrow
+\left\{
 \begin{aligned}
 \forall e\in E_x\setminus E_n,\qquad
 &\operatorname{time}(e)
@@ -1676,10 +1684,24 @@ $$
 \ge
 \sigma_n^{A}(\operatorname{edge}(m)).
 \end{aligned}
+\right.
+\end{aligned}
 \tag{33}
 $$
 
-附录 S 把 $\sigma$ 称为 seal。式 (33) 才是这个词的数学含义。
+附录 S 把 $\sigma$ 称为 seal。式 (33) 才是这个词的数学含义；“有效”不是
+$\sigma_n$ 脱离上下文的一元性质。因为 $(E_n,H_n)$ 由
+$(\alpha_E,\alpha_M,n)$ 决定，也可以把左边等价地写成：
+
+$$
+\operatorname{ValidSeal}_{\mathcal T_x}
+(\alpha_E,\alpha_M,n;
+\sigma_n^{\mathrm{in}},\sigma_n^A).
+$$
+
+不过式 (33) 的真值只使用当前截面与固定完整记录；两个不同阶段秩若在阶段
+$n$ 诱导同一个 $(E_n,H_n)$，就给出相同的有效性判断。后文说“有效下界”时，
+均指上述关系在当前截面成立。
 
 为了把这个全称命题改写成集合覆盖关系，对 $i\in\mathsf I$、$a\in A$ 与 $b\in\overline{\mathbb N}$ 定义：
 
@@ -1978,7 +2000,27 @@ $$
 
 阶段 $n$ 的三类函数值分别是这些标签函数在 $\mathsf{Prepared}_n,\mathsf{Selected}_n,\mathsf{Completed}_n$ 上的限制。它们不是另行任取的坐标：第 9.2--9.3 节只约束何时可以扩大限制；事件首次进入时，新增值就是相应的规范标签，而关闭与前驱条件保证其全部自变量已经确定。完成标签中的 $f^A,f^O$ 再按式 (27)--(28) 唯一派生消息与输出记录。
 
-第 8 节的记录链、下界函数、式 (39) 的三条事件链及上述标签限制合在一起，称为一条**阶段化暴露轨迹**。下面先补上内部消息与其源事件之间的约束，再给出“合法”的完整条件。
+把一个阶段截面的全部数据打包为：
+
+$$
+\begin{aligned}
+\Xi_n=\bigl(&E_n,H_n,
+\sigma_n^{\mathrm{in}},\sigma_n^A,
+\mathsf{Prepared}_n,\mathsf{Selected}_n,\mathsf{Completed}_n,\\
+&\operatorname{Lab}_P|_{\mathsf{Prepared}_n},
+\operatorname{Lab}_S|_{\mathsf{Selected}_n},
+\operatorname{Lab}_C|_{\mathsf{Completed}_n}\bigr).
+\end{aligned}
+$$
+
+第 8 节的记录链、下界函数、式 (39) 的三条事件链及上述标签限制合在一起，称为一条**阶段化暴露轨迹**：
+
+$$
+\boldsymbol\Xi=(\Xi_n)_{n\in\mathbb N}.
+$$
+
+所以 $\Xi_n$ 是单个 filtration 截面，$\boldsymbol\Xi$ 是整条带阶段索引的轨迹。
+下面先补上内部消息与其源事件之间的约束，再给出“合法”的完整条件。
 
 每条实际消息都有唯一的源节点事件。定义：
 
@@ -2019,7 +2061,26 @@ $$
 
 因此 $H_n\subseteq M_n^{\mathrm{src}}\subseteq M^*\subseteq\mathsf{Msg}$。等价地，对每个 $m\in M^*$ 都有 $\alpha_C(g(m))\le\alpha_M(m)$。这里的 $\mathsf{Completed}_n$ 只表示源事件的完成标签已经确定；一般模型允许该事件产生的消息稍后才进入 $H_n$。若研究“完成即进入”的特例，才另外增加 $H_n=M_n^{\mathrm{src}}$。输出没有另设延迟进入链，故由 $Z_n^{\mathrm{comp}}$ 直接记录。
 
-一条阶段化暴露轨迹**合法**，当且仅当对每个阶段满足：式 (33) 的有效性、式 (34) 的单调性、式 (40) 的源事件约束、第 9.2 节的准备与选择首次进入条件，以及第 9.3 节的完成首次进入条件。第 9.5 节是这些条件的推论；第 9.6 节只给出构造某些有效边下界的一种充分方法，不是额外的合法性公理。本文取 $\mathsf{Prepared}_0=\mathsf{Selected}_0=\mathsf{Completed}_0=\varnothing$。
+定义关系：
+
+$$
+\operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi),
+$$
+
+它成立，当且仅当
+$\mathsf{Prepared}_0=\mathsf{Selected}_0
+=\mathsf{Completed}_0=\varnothing$，并且对每个阶段 $n$ 都满足：
+
+1. $\operatorname{ValidSeal}_{\mathcal T_x}
+   (E_n,H_n;\sigma_n^{\mathrm{in}},\sigma_n^A)$；
+2. 式 (34) 的 seal 单调性；
+3. 式 (40) 的源事件约束；
+4. 第 9.2 节的准备与选择首次进入条件；
+5. 第 9.3 节的完成首次进入条件。
+
+称满足这个关系的 $\boldsymbol\Xi$ 为一条**合法阶段化暴露轨迹**。第 9.5
+节是这些条件的推论；第 9.6 节只给出构造某些有效边下界的一种充分方法，
+不是额外的合法性公理。
 
 称合法暴露轨迹**完整**，当且仅当存在 $N\in\mathbb N$ 使：
 
@@ -2933,7 +2994,14 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > $$
 > $\Pi_{\mathrm{stage}}$ 同样必须预先固定；它只比 $\Pi$ 保留更多已有的阶段坐标，不得补写、重算或修正程序记录以制造一条合法轨迹。
 >
-> 令 $\mathsf{LegalExposure}(x)\subseteq\mathsf{StageTrace}$ 表示第 9 节中输入 $x$ 的全部完整合法阶段化暴露轨迹，并要求：
+> 与第 9.1 节的关系记号一致，令：
+> $$
+> \mathsf{LegalExposure}(x)
+> =\{\boldsymbol\Xi\in\mathsf{StageTrace}\mid
+> \operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi)
+> \text{，且 }\boldsymbol\Xi\text{ 满足第 9.1 节的完整性条件}\}.
+> $$
+> 因而这里不是把“合法”重新留给实现解释，而是直接取正文已经定义的轨迹关系。要求：
 > $$
 > \forall x\in\prod_{i\in\mathsf I}P^{[L_i]},\quad
 > \forall s\in\operatorname{Legal}_{\mathrm{impl}}(x),
