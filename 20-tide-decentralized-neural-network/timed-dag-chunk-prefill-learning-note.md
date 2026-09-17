@@ -2,6 +2,8 @@
 type: mathematical-learning-note
 status: active-learning
 as-of: 2026-09-17
+cssclasses:
+  - textbook-math
 tags:
   - tide
   - timed-dag
@@ -549,12 +551,12 @@ $$
 \begin{aligned}
 K^R_{j,I}
 ={}&\{P_{v,\theta}
-\mid v\in\mathcal R_j,\ \theta\in I,\
+\mid v\in\mathcal R_j,\ \theta\in I,
 (v,\theta)\in\mathcal E_x^{\mathrm{node}}\}
 \\
 &\cup
 \{U_{v,\theta}
-\mid v\in\mathcal R_j,\ \theta\in I,\
+\mid v\in\mathcal R_j,\ \theta\in I,
 (v,\theta)\in\mathcal E_x^{\mathrm{node}}\}
 \\
 &\cup
@@ -576,13 +578,13 @@ $$
 区域参考转导是式 (15) 的特例：
 
 $$
+\begin{aligned}
 \operatorname{RefRegionState}_{j,I}:
-\mathsf{RegionIn}_{j,I}
-\longrightarrow
-\mathsf{RegionStateOut}_{j,I},
-\qquad
+\quad &\mathsf{RegionIn}_{j,I}
+\longrightarrow\mathsf{RegionStateOut}_{j,I},\\
 \operatorname{RefRegionState}_{j,I}
-=\operatorname{Ref}_{K^R_{j,I}}.
+&=\operatorname{Ref}_{K^R_{j,I}}.
+\end{aligned}
 \tag{22}
 $$
 
@@ -605,7 +607,7 @@ $$
 K^{RF}_{j,I}
 =K^R_{j,I}\cup
 \{F_{v,\theta}\mid
-v\in\mathcal R_j,\ \theta\in I,\
+v\in\mathcal R_j,\ \theta\in I,
 F_{v,\theta}\in\mathscr V_x^F\},
 $$
 
@@ -759,28 +761,28 @@ $$
 $$
 m_v^U
 =
-\#\{B\in\mathcal L\mid\operatorname{kind}(B)=U,\
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=U,
 \operatorname{own}(B)=(\mathrm{node},v)\},
 $$
 
 $$
 m_v^F
 =
-\#\{B\in\mathcal L\mid\operatorname{kind}(B)=F,\
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=F,
 \operatorname{own}(B)=(\mathrm{node},v)\},
 $$
 
 $$
 m_v^{UF}
 =
-\#\{B\in\mathcal L\mid\operatorname{kind}(B)=UF,\
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=UF,
 \operatorname{own}(B)=(\mathrm{node},v)\},
 $$
 
 $$
 m_j^R
 =
-\#\{B\in\mathcal L\mid\operatorname{kind}(B)=R,\
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=R,
 \operatorname{own}(B)=(\mathrm{region},j)\}.
 \tag{27}
 $$
@@ -1271,7 +1273,7 @@ $$
 >
 > `ragged batch` 对应每个节点各自的有限时间集合，例如式 (41) 的 $\Theta_e$；不同节点的集合大小可以不同。
 
-> [!info]- S.3　state update、KV cache 与 SSM scan
+> [!info|keep]- S.3　state update、KV cache 与 SSM scan
 > `state update` 对应规范记录中由 $P$ 的候选状态计算、$S$ 的控制和 $U$ 的状态采用共同确定的持久状态转移。它在节点级可由式 (20) 表示，在具有共同 selector 时可由式 (22) 表示。
 >
 > `KV-cache update` 可以精化为一条状态轨迹；`causal attention` 可以由式 (21) 同时返回各前缀输出和右边界 KV 状态。
@@ -1300,7 +1302,7 @@ $$
 >
 > `message publication` 对应消息进入 $H_n$。源 $F$ 已经进入 $\mathsf F_n$ 是其前提。派生的 $\mathsf{Completed}_n$ 同时要求节点的 $U$ 已经进入，并要求激活节点的 $F$ 已经进入。
 
-> [!info]- S.8　continuation、checkpoint 与 resume
+> [!info|keep]- S.8　continuation、checkpoint 与 resume
 > `continuation` 对应式 (44) 的 $Q_c$。`checkpoint` 是 $Q_c$ 的可保存编码；无损编码满足读取以后恢复同一数学对象。
 >
 > `resume` 对应以 $Q_c$ 为左边界继续下一段参考递归。式 (42) 给出相邻 chunk 的组合等式。

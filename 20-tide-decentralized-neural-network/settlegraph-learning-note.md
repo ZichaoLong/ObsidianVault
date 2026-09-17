@@ -2,6 +2,8 @@
 type: mathematical-learning-note
 status: active-learning
 as-of: 2026-09-17
+cssclasses:
+  - textbook-math
 tags:
   - tide
   - settlegraph
@@ -179,11 +181,13 @@ $$
 称 $(\ell,D)$ 是图与区域划分的一组**合法时间编码**，记作：
 
 $$
+\begin{aligned}
 \operatorname{LegalTimeCode}_{G,\rho}(\ell,D)
-\Longleftrightarrow
+\Longleftrightarrow {}&
 \operatorname{LegalRegionRank}_{G,\rho}(\ell)
-\ \land\
-D>1+\max_{v\in V}\ell(\rho(v)).
+\\
+&{}\land D>1+\max_{v\in V}\ell(\rho(v)).
+\end{aligned}
 $$
 
 同一区域的节点具有相同的 $\theta_{v,t}$，记为 $\theta_{j,t}$。式 (2) 为每个输入位置留出一个区间 $[Dt,D(t+1))$：输入在左端进入，各区域位于中间，输出坐标也在右端以前。它给可能发生的计算指定时间；没有输入的节点在这个坐标上仍不计算。
@@ -786,7 +790,7 @@ $$
 \operatorname{lab}(\mathcal M^\chi_{v,t}),
 h_{\chi,t})
 \mid
-\chi\in\mathfrak X,\ t\in[L_\chi],\
+\chi\in\mathfrak X,\ t\in[L_\chi],
 \mathcal M^\chi_{v,t}\ne()\}.
 \end{aligned}
 \tag{19}
@@ -801,7 +805,7 @@ $$
 \{(&q^{\mathrm{cmp},\chi}_{v,t},\theta_{v,t},
 h^\chi_{v,t},c^\chi_{v,t})
 \mid
-\chi\in\mathfrak X,\ t\in[L_\chi],\
+\chi\in\mathfrak X,\ t\in[L_\chi],
 v\in\mathcal A^\chi_{\rho(v),t}\},
 \end{aligned}
 \tag{20}
@@ -831,13 +835,13 @@ $h_{\chi,t}$。
 
 $$
 \begin{aligned}
-&\forall v\in V,\
+&\forall v\in V,
 \forall(\theta,(i_1,\ldots,i_n),h)
 \in\operatorname{AdmAgg}_{\mathfrak X}(v):\\
 &\qquad
 \operatorname{Agg}_v
 (\theta,((i_1,h),\ldots,(i_n,h)))=h,\\[2mm]
-&\forall v\in V,\
+&\forall v\in V,
 \forall(q,\theta,h,c)
 \in\operatorname{AdmFull}_{\mathfrak X}(v):\\
 &\qquad

@@ -2,6 +2,8 @@
 type: mathematical-learning-note
 status: active-learning
 as-of: 2026-09-17
+cssclasses:
+  - textbook-math
 tags:
   - tide
   - timed-dag
@@ -1196,20 +1198,23 @@ $$
 \mathcal T_x
 =
 \left(
-(B_{v,\theta})_{\substack{v\in V\\\theta\in[0,\Theta_{\max}+1)}},
-(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta},c_{v,\theta},q^{\mathrm{cmp}}_{v,\theta})_
-{\substack{j\in J,\ \theta\in[0,\Theta_{\max}+1)\\
-v\in\mathcal C_{j,\theta}}},
-(\mathcal C_{j,\theta},\mathcal A_{j,\theta})_
-{\substack{j\in J\\\theta\in[0,\Theta_{\max}+1)}},
-(q_v^\theta)_
-{\substack{v\in V\\\theta\in[0,\Theta_{\max}+2)}},
-(y_j^\theta)_
-{\substack{j\in J\\\theta\in[0,\Theta_{\max}+2)}},
-M^*,Z^*,
-(f^A_{v,\theta},f^O_{v,\theta})_
-{\substack{j\in J,\ \theta\in[0,\Theta_{\max}+1)\\
+\begin{aligned}
+&(B_{v,\theta})_{\substack{v\in V\\\theta\in[0,\Theta_{\max}+1)}},\\
+&\bigl(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta},c_{v,\theta},
+q^{\mathrm{cmp}}_{v,\theta}\bigr)_{
+\substack{j\in J,\ \theta\in[0,\Theta_{\max}+1)\\
+v\in\mathcal C_{j,\theta}}},\\
+&(\mathcal C_{j,\theta},\mathcal A_{j,\theta})_{
+\substack{j\in J\\\theta\in[0,\Theta_{\max}+1)}},\\
+&(q_v^\theta)_{
+\substack{v\in V\\\theta\in[0,\Theta_{\max}+2)}},\\
+&(y_j^\theta)_{
+\substack{j\in J\\\theta\in[0,\Theta_{\max}+2)}},\\
+&M^*,Z^*,\\
+&(f^A_{v,\theta},f^O_{v,\theta})_{
+\substack{j\in J,\ \theta\in[0,\Theta_{\max}+1)\\
 v\in\mathcal A_{j,\theta}}}
+\end{aligned}
 \right),
 $$
 
@@ -1585,12 +1590,12 @@ $$
 固定正整数 $n$。给定第 2 节的固定结构，并按第 5.3 节为各区域取容量。令 $P=X_v=S_v=\mathbb R^n$、$D_v=\mathbb R$、$\mathsf C_v=[0,1]$，初始节点状态为零向量，各 $Y_j=\{*\}$、$y_j^{\mathrm{init}}=*$。令聚合为输入值的向量和，空集的和为零向量。用 $h_1,q_1$ 表示向量的第一坐标，并取：
 
 $$
-\operatorname{Upd}_v(q,\theta,h)=q+h,
-\qquad
-\operatorname{Read}^0_v(\theta,h)=h_1,
-\qquad
+\begin{aligned}
+\operatorname{Upd}_v(q,\theta,h)&=q+h,\\
+\operatorname{Read}^0_v(\theta,h)&=h_1,\\
 \operatorname{Read}^{-}_v(q,\theta,h)
-=\operatorname{Read}^{+}_v(q,\theta,h)=q_1.
+&=\operatorname{Read}^{+}_v(q,\theta,h)=q_1.
+\end{aligned}
 $$
 
 本例取 $\tau_j=0$，$\kappa_j$ 可以为 $0$ 或 $1$，$\operatorname{Next}$ 默认返回本次计算状态。先在每个区域内固定一个节点全序作为平局规则。对非空 $C$，按描述量从大到小选出 $\min(K_j,|C|)$ 个节点，平局按该全序决定，得到 $A$；同时令：
@@ -2290,17 +2295,17 @@ $$
 对 $v\in V$ 与 $b\in\mathbb N$ 定义谓词：
 
 $$
+\begin{aligned}
 \operatorname{DoneTo}_n(v,b)
-\Longleftrightarrow
-\left(
-\lambda_n(v)\ge b
-\land
+\Longleftrightarrow {}&
+\lambda_n(v)\ge b\\
+&{}\land
 \{U_{v,r}\mid(v,r)\in\mathcal E_x^{\mathrm{node}},\ r<b\}
-\subseteq\mathsf U_n
-\land
+\subseteq\mathsf U_n\\
+&{}\land
 \{F_{v,r}\in\mathscr V_x^F\mid r<b\}
-\subseteq\mathsf F_n
-\right).
+\subseteq\mathsf F_n.
+\end{aligned}
 \tag{41}
 $$
 
@@ -3126,7 +3131,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **semantic trace（语义记录）**对应唯一的 $\mathcal T_x$；**staged exposure trace（阶段化暴露轨迹）**对应第 9.1 节的递增子集与标签限制，同一 $x$ 可以有多条。**execution trace（执行记录）**属于实现另行定义的记录集合。普通语义精化只保留规范坐标；若要比较阶段化暴露，还须另给保留阶段秩与递增子集的精化投影。两种投影都在附录 S.9 定义。
 
-> [!info]- S.9　continuation、checkpoint、resume 与 refinement
+> [!info]- S.9a　continuation、checkpoint 与 resume
 > **continuation** 对应式 (46) 的 $Q_b$，其中同时含节点状态、selector-history 与跨界消息。只为继续未来计算而保存的 **checkpoint** 可以是 $Q_b$ 的某种可保存编码。
 >
 > 若保存与读取函数分别为 $\operatorname{save}$ 和 $\operatorname{load}$，无损编码至少要求：
@@ -3135,7 +3140,8 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > $$
 >
 > **resume** 对应从相同 $Q_b$ 与 $E_{\ge b}$ 再执行未来递归。定理 6 给出它与一次算完相同的数学目标。$Q_b$ 并不是规范左前缀 $\mathcal T_{x,<b}$ 的完整编码；若要重建整个语义记录，还须保存该前缀或保存足以重算它的数据。若只要求拼回完整外部输出记录，则至少还须保存 $Z_{<b}$，或保存这些输出已被可靠接收的等价证据。
->
+
+> [!info]- S.9b　普通语义 refinement
 > **refinement（实现精化）**把第 6.4 节的块投影扩展到完整执行记录。先给出调度集合 $\mathsf{Sched}$、程序记录集合 $\mathsf{ImplTrace}$，以及一个包含全部规范记录和可能错误的同形记录的集合 $\mathsf{SemTrace}$。再给出函数：
 > $$
 > \operatorname{Run}:
@@ -3147,7 +3153,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > $$
 > \mathsf{ImplTrace}_{\mathrm{legal}}
 > =\{\operatorname{Run}(x,s)\mid
-> x\in\prod_{i\in\mathsf I}P^{[L_i]},\
+> x\in\prod_{i\in\mathsf I}P^{[L_i]},
 > s\in\operatorname{Legal}_{\mathrm{impl}}(x)\}.
 > $$
 > 只需在这个子集上给出删除线程、墙钟和阶段等实现坐标的普通语义投影：
@@ -3155,7 +3161,10 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > \Pi:\mathsf{ImplTrace}_{\mathrm{legal}}\to
 > \mathsf{SemTrace}.
 > $$
-> 其中每个 $\mathcal T_x$ 都属于 $\mathsf{SemTrace}$。这里的 $\Pi$ 必须是预先固定的遗忘投影：它保留全部规范坐标及其原值，只删除线程、墙钟、缓存、阶段等额外实现坐标。它不得调用参考语义、重新执行递归，或按照输入修补程序记录中的错误值。下式是实现的**安全性**目标：
+> 其中每个 $\mathcal T_x$ 都属于 $\mathsf{SemTrace}$。这里的 $\Pi$ 必须是预先固定的遗忘投影：它保留全部规范坐标及其原值，只删除线程、墙钟、缓存、阶段等额外实现坐标。它不得调用参考语义、重新执行递归，或按照输入修补程序记录中的错误值。
+
+> [!info]- S.9c　安全性与可执行性
+> 下式是实现的**安全性**目标：
 > $$
 > \forall x\in\prod_{i\in\mathsf I}P^{[L_i]},\quad
 > \forall s\in\operatorname{Legal}_{\mathrm{impl}}(x),
@@ -3168,6 +3177,8 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > \qquad
 > \operatorname{Legal}_{\mathrm{impl}}(x)\ne\varnothing.
 > $$
+
+> [!info]- S.9d　staged refinement
 > $\Pi$ 的值不含第 8--9 节的阶段秩。若还要验证执行记录的分阶段进展，另给一个包含阶段信息的记录集合 $\mathsf{StageTrace}$、投影
 > $$
 > \Pi_{\mathrm{stage}}:
@@ -3179,9 +3190,14 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > 与第 9.1 节的关系记号一致，令：
 > $$
 > \mathsf{LegalExposure}(x)
-> =\{\boldsymbol\Xi\in\mathsf{StageTrace}\mid
-> \operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi)
-> \text{，且 }\boldsymbol\Xi\text{ 满足第 9.1 节的完整性条件}\}.
+> =
+> \left\{
+> \begin{aligned}
+> \boldsymbol\Xi\in\mathsf{StageTrace}\ \bigm| {}&
+> \operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi),\\
+> &\boldsymbol\Xi\text{ 满足第 9.1 节的完整性条件}
+> \end{aligned}
+> \right\}.
 > $$
 > 因而这里不是把“合法”重新留给实现解释，而是直接取正文已经定义的轨迹关系。要求：
 > $$
@@ -3193,7 +3209,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > $$
 > 这个条件保留阶段信息，不能用普通语义投影 $\Pi$ 代替。
 
-> [!info]- S.10　SettleGraph 的可选对应
+> [!info|page]- S.10　SettleGraph 的可选对应
 > 本块帮助比较 SettleGraph 受限规格与本文，不是阅读正文的前置知识。核心 SettleGraph 定义与嵌入见本地 [[settlegraph-learning-note|SettleGraph 教材]]；实验仓库负责声明它采用的具体实例与额外条件。
 >
 > 本块中的 Token 是 SettleGraph 给一个外部输入位置使用的标签，不是本文的内部消息或节点事件。

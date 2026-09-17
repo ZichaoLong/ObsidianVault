@@ -77,6 +77,55 @@
 }
 
 @media print {
+  .markdown-preview-view.textbook-math h1 {
+    font-size: 1.75em;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  .markdown-preview-view.textbook-math :is(h1, h2, h3, h4, h5, h6),
+  .markdown-preview-view.textbook-math .callout-title {
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
+  .markdown-preview-view.textbook-math :is(h1, h2, h3, h4, h5, h6)
+    + :is(p, ul, ol, blockquote, .math, .math-block, mjx-container) {
+    break-before: avoid-page;
+    page-break-before: avoid;
+  }
+
+  .markdown-preview-view.textbook-math p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .markdown-preview-view.textbook-math :is(.math-block, mjx-container[display="true"], table, pre) {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .markdown-preview-view.textbook-math mjx-container[display="true"] {
+    overflow-x: visible;
+    overflow-y: visible;
+  }
+
+  /* Opt in only short callouts; long appendix callouts must remain splittable. */
+  .markdown-preview-view.textbook-math .callout[data-callout-metadata~="keep"] {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .markdown-preview-view.textbook-math .callout[data-callout-metadata~="page"] {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .markdown-preview-view.textbook-math h2[data-heading^="附录 B"] {
+    break-before: page;
+    page-break-before: always;
+  }
+
   .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="定义"],
   .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="约束"],
   .markdown-preview-view.textbook-math :is(h3, h4)[data-heading^="引理"],

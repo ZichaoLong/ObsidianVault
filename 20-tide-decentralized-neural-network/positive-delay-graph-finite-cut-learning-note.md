@@ -2,6 +2,8 @@
 type: mathematical-learning-note
 status: active-learning
 as-of: 2026-09-17
+cssclasses:
+  - textbook-math
 tags:
   - tide
   - positive-delay-graph
@@ -423,13 +425,13 @@ $$
 \begin{aligned}
 M_\theta
 =\{&(\mathrm{msg},\theta,a,z)\mid
-v\in\mathcal A_{\rho(v),\theta},\
-a\in\operatorname{Out}(v),\
+v\in\mathcal A_{\rho(v),\theta},
+a\in\operatorname{Out}(v),
 f^A_{v,\theta}(a)=z\in P\},\\
 Z_\theta
 =\{&(\mathrm{out},\theta,o,z)\mid
-v\in\mathcal A_{\rho(v),\theta},\
-o\in\operatorname{OutPort}(v),\
+v\in\mathcal A_{\rho(v),\theta},
+o\in\operatorname{OutPort}(v),
 f^O_{v,\theta}(o)=z\in P\},\\
 M_{<\theta+1}^{\mathrm{send}}
 &=M_{<\theta}^{\mathrm{send}}\cup M_\theta.
@@ -622,12 +624,12 @@ $$
 取节点 $u,v$，共同组成一个容量为 $1$ 的 region。唯一消息边 $a:u\to v$ 的时延为 $2$；两个节点各有一个输入端口和一个输出端口。取 $P=S_u=S_v=X_u=X_v=D_u=D_v=\mathbb R$、$\mathsf C_u=\mathsf C_v=\mathbb R$，初始节点状态均为 $0$。聚合取载荷之和，空集的和为 $0$，并令：
 
 $$
-\operatorname{Upd}(q,\theta,h)=q+h,
-\qquad
-\operatorname{Read}^0(\theta,h)=h,
-\qquad
+\begin{aligned}
+\operatorname{Upd}(q,\theta,h)&=q+h,\\
+\operatorname{Read}^0(\theta,h)&=h,\\
 \operatorname{Read}^-(q,\theta,h)
-=\operatorname{Read}^+(q,\theta,h)=q.
+&=\operatorname{Read}^+(q,\theta,h)=q.
+\end{aligned}
 $$
 
 使用 $\tau=+$，所以选择器实际读取的描述量是候选新状态。
@@ -1020,14 +1022,14 @@ $$
 对满足式 (28a) 的 $\Xi$ 与 $r\in\mathbb N$，定义：
 
 $$
+\begin{aligned}
 \operatorname{DoneTo}_{\mathcal T_x}(\Xi;v,r)
-\Longleftrightarrow
-\left(
-\lambda_\xi(v)\ge r
-\ \land\
+\Longleftrightarrow {}&
+\lambda_\xi(v)\ge r\\
+&{}\land
 \{(v,\theta)\mid\theta<r,\ B_{v,\theta}\ne\varnothing\}
-\subseteq\mathsf{Done}
-\right).
+\subseteq\mathsf{Done}.
+\end{aligned}
 \tag{28}
 $$
 
@@ -1038,7 +1040,7 @@ $$
 若 $f:A\to\overline{\mathbb N}$，记
 $f[a\mapsto s]$ 为只把 $a$ 坐标改成 $s$、其余坐标保持不变的函数。
 
-> [!lemma] 引理 7：正时延出边的 seal 推进
+> [!lemma|keep] 引理 7：正时延出边的 seal 推进
 > 设 $a\in\operatorname{Out}(v)$。若
 > $\operatorname{DoneTo}_{\mathcal T_x}(\Xi;v,r)$ 成立，则：
 > $$
@@ -1277,7 +1279,7 @@ W_c
 =
 \left\{m\in
 W_b\cup\bigcup_{\eta\in[b,c)}M^{b\to c}_\eta
-\ \middle|\
+\;\middle|\;
 \operatorname{time}(m)\ge c
 \right\}.
 $$
@@ -1342,7 +1344,7 @@ $$
 =
 \left\{
 \bigl(Q_a(x'),E_{x',[a,b)}\bigr)
-\ \middle|\
+\;\middle|\;
 x'\in\mathfrak X
 \right\}.
 \tag{35a}
@@ -1357,15 +1359,15 @@ $Q_a\in\operatorname{Reach}_a$；“输入片段与过去相容且完整”精�
 令 $\mathsf{Rec}_{a,b}$ 为所有具有下文所列标签、定义域和值域的区间记录元组所成的环境集合；这个环境集合只给函数一个共同余域，不另外加入“合法”谓词。定义区间转导：
 
 $$
+\begin{aligned}
 \Phi_{a,b}:
-\operatorname{Adm}_{a,b}
-\longrightarrow
-\mathsf{Rec}_{a,b}\times\operatorname{Reach}_b,
-\qquad
+\quad &\operatorname{Adm}_{a,b}
+\longrightarrow\mathsf{Rec}_{a,b}\times\operatorname{Reach}_b,\\
 \Phi_{a,b}
 \bigl(Q_a(x'),E_{x',[a,b)}\bigr)
-=
+&=
 \bigl(\mathcal U_{x',[a,b)},Q_b(x')\bigr),
+\end{aligned}
 \tag{35}
 $$
 
@@ -1456,14 +1458,15 @@ $$
 \operatorname{TopoSchedule}_{x,<b}(\pi)
 \Longleftrightarrow
 \left\{
-\begin{array}{l}
+\begin{aligned}
+&
 \{e_1,\ldots,e_N\}
-=\mathscr V^{\mathrm{ev}}_{x,<b}
-\text{，且每个事件恰出现一次},\\
-\forall\,1\le r,s\le N:\quad
+=\mathscr V^{\mathrm{ev}}_{x,<b},\\
+&\text{每个事件在 }\pi\text{ 中恰出现一次},\\
+&\forall\,1\le r,s\le N:\quad
 (e_r,e_s)\in\mathscr E^{\mathrm{ev}}_{x,<b}
 \Longrightarrow r<s.
-\end{array}
+\end{aligned}
 \right.
 \tag{36a}
 $$
@@ -1575,8 +1578,8 @@ $$
 \mathcal S_G&=V/{\sim_G},\\
 E_{\mathrm{cond}}
 &=\{(C,D)\in\mathcal S_G^2\mid
-C\ne D,\ \exists a\in A:\
-\operatorname{src}(a)\in C,\
+C\ne D,\ \exists a\in A:
+\operatorname{src}(a)\in C,
 \operatorname{dst}(a)\in D\}.
 \end{aligned}
 $$
@@ -1649,10 +1652,10 @@ $$
 $$
 \begin{aligned}
 J_C&=\{j\in J\mid\mathcal R_j\subseteq C\},\\
-q^a\!\downarrow_C&=(q_v^a)_{v\in C},
-&y^a\!\downarrow_C&=(y_j^a)_{j\in J_C},\\
-W_a\!\downarrow_C&=\{m\in W_a\mid\operatorname{target}(m)\in C\},
-&E_{x,[a,b)}\!\downarrow_C
+q^a\!\downarrow_C&=(q_v^a)_{v\in C},\\
+y^a\!\downarrow_C&=(y_j^a)_{j\in J_C},\\
+W_a\!\downarrow_C&=\{m\in W_a\mid\operatorname{target}(m)\in C\},\\
+E_{x,[a,b)}\!\downarrow_C
 &=\{e\in E_{x,[a,b)}\mid\operatorname{target}(e)\in C\}.
 \end{aligned}
 $$
@@ -1664,7 +1667,7 @@ $$
 $$
 M^{D\to C}_{[a,b)}
 =\left\{m\in\bigcup_{\theta\in[a,b)}M_\theta
-\ \middle|\
+\;\middle|\;
 \operatorname{src}(\operatorname{edge}(m))\in D,
 \operatorname{target}(m)\in C
 \right\}.
@@ -1780,7 +1783,7 @@ $$
 Q_\rho
 =\left\{
 \bigl(\rho(\operatorname{src}(a)),\rho(\operatorname{dst}(a))\bigr)
-\ \middle|\
+\;\middle|\;
 a\in A,\ \rho(\operatorname{src}(a))\ne\rho(\operatorname{dst}(a))
 \right\}.
 $$
@@ -1884,12 +1887,12 @@ $\mathbf L=(L_i)_{i\in\mathsf I}\in\mathbb N^{\mathsf I}$，令：
 $$
 \begin{aligned}
 K_i^{\mathbf L}&=[L_i],
-&
+\\
 \iota_i^{\mathbf L}
 &=\bar\iota_i\!\upharpoonright_{[L_i]},\\
 \mathsf{Ext}_{\mathbf L}
 &=\{(\mathrm{ext},i,k,y)\in\mathsf{Ext}_\infty\mid k<L_i\},
-&
+\\
 \mathsf{Atom}_{\mathbf L,v}
 &=\mathsf{Atom}_{\infty,v}
 \cap(\mathsf{Ext}_{\mathbf L}\cup\mathsf{Msg}),\\
@@ -2019,20 +2022,20 @@ $\Theta\subseteq\mathbb N$，定义该解释下的合法 batch 输入域：
 $$
 \mathsf{Adm}_{v,\Theta}^{\mathbf F}
 =\left\{
+\begin{aligned}
+&
 \left(
 q^{\mathrm{cmp}}_{v,\theta}(\mathbf F,\omega),
 \theta,
 h_{v,\theta}(\mathbf F,\omega),
 c_{v,\theta}(\mathbf F,\omega)
 \right)_{\theta\in\Theta}
-\ \middle|\
-\begin{array}{l}
-\mathbf L\in\mathbb N^{\mathsf I},\
-a,b\in\mathbb N,\ a<b,\\
-\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F},\
-\Theta\subseteq
-\Lambda_v^{\mathbf F}([a,b);\omega)
-\end{array}
+\\[-1mm]
+&\quad\Bigm|\ \mathbf L\in\mathbb N^{\mathsf I},\quad
+a,b\in\mathbb N,\quad a<b,\\
+&\qquad \omega\in\Omega_{\mathbf L,a,b}^{\mathbf F},\quad
+\Theta\subseteq\Lambda_v^{\mathbf F}([a,b);\omega)
+\end{aligned}
 \right\}.
 $$
 
@@ -2083,9 +2086,9 @@ $\mathbf F\in\mathfrak F$，定义：
 
 $$
 \mathsf{Inst}^{\mathbf F}(K)
-=\left\{(\mathbf L,a,b,\omega)\ \middle|\
+=\left\{(\mathbf L,a,b,\omega)\;\middle|\;
 \begin{array}{l}
-\mathbf L\in\mathbb N^{\mathsf I},\ a<b,\
+\mathbf L\in\mathbb N^{\mathsf I},\ a<b,
 \omega\in\Omega_{\mathbf L,a,b}^{\mathbf F},\\
 K\subseteq\mathscr V^{\mathrm{ev}}_{\mathbf F,\omega,[a,b)}
 \end{array}
@@ -2123,14 +2126,15 @@ $$
 $\partial^-K$ 含有块内参考递归的全部外部自变量，因此相同的输入边界必定产生相同的输出边界。下面的赋值与实例见证的选择无关，并定义全函数：
 
 $$
+\begin{aligned}
 \operatorname{RefState}_K^{\mathbf F}:
-\mathsf{AdmIn}^{\mathbf F}(K)
-\longrightarrow\mathsf{StateOut}(K),
-\qquad
+\quad &\mathsf{AdmIn}^{\mathbf F}(K)
+\longrightarrow\mathsf{StateOut}(K),\\
 \operatorname{RefState}_K^{\mathbf F}
 (\beta_{K,\mathbf F}^-(\nu))
-=\beta_{K,\mathbf F}^+(\nu)
+&=\beta_{K,\mathbf F}^+(\nu)
 \quad(\nu\in\mathsf{Inst}^{\mathbf F}(K)).
+\end{aligned}
 $$
 
 当 $K$ 只含状态相关作用时，输出包含 $K$ 内全部 $P,S,U$ 标签、中间状态轨迹、选择历史轨迹与右边界状态。一个**因果状态块契约**是具有类型：
@@ -2186,12 +2190,14 @@ $\Pi_K^{\mathrm{blk}}(r)=\operatorname{RefState}_K^{\mathbf F}(z)$。
 定义契约种类集合与契约归属标识集合：
 
 $$
-\mathsf{ContractKind}=\{F,U,UF,R\},
-\qquad
+\begin{aligned}
+\mathsf{ContractKind}&=\{F,U,UF,R\},
+\\
 \mathsf{ContractOwner}
-=\bigl(\{\mathrm{node}\}\times V\bigr)
+&=\bigl(\{\mathrm{node}\}\times V\bigr)
 \sqcup
 \bigl(\{\mathrm{region}\}\times J\bigr).
+\end{aligned}
 $$
 
 一个登记契约是四元组：
@@ -2599,7 +2605,7 @@ $$
 >
 > **queue empty** 只描述某个当前编码中没有元素，不能证明式 (25) 中关于全部未来的全称命题。
 
-> [!info]- S.3　state adoption、completed、hard watermark 与 no-backdating
+> [!info|keep]- S.3　state adoption、completed、hard watermark 与 no-backdating
 > **selection control** 对应式 (13) 的 $c_{v,\theta}\in\mathsf C_v$，例如一个软门控系数。它只对候选节点定义；有控制量不等于节点被选中。
 >
 > **state adoption / state commit** 对应事件 $U_{v,\theta}$：先按式 (14) 给出本次计算快照 $q^{\mathrm{cmp}}_{v,\theta}$，再按式 (14a) 的 Next 得到唯一的下一持久状态 $q_v^{\theta+1}$。Full 使用前者，未来准备使用后者。默认 Next 返回快照，二者相等。这个事件不是把任意临时张量写入共享存储，也不读取本次 Full 结果。
@@ -2627,7 +2633,7 @@ $$
 >
 > **dependency-complete static graph** 的正式定义见第 9.4 节：每次运行的直接事件边经 owner 投影后，都必须留在同一 owner 或落到一条静态边上。固定这样的 $\Gamma$ 后，其宏候选是明确的 $\mathcal S_\Gamma$；本文默认 $\Gamma=G^\dagger$。式 (39) 给出这个安全但不必最小的构造，命题 13 证明其 dependency-complete。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息；它也不是 seal 或 closure 的在线证书，$\mathcal S_\Gamma$ 中的分量不自动获得宏 runtime 或性能保证。
 
-> [!info]- S.6　correctness、外层保块、work 与 span
+> [!info|keep]- S.6　correctness、外层保块、work 与 span
 > **exact / correctness** 表示所得记录等于本文指定的完整记录或明确投影。**cost profile** 对应第 10.2.1 节的成本标记。**节点级时间批暴露 / 外层保块**对应第 10.2 节的契约族 $\mathfrak B$ 与同一个 transcript 策略：它对解释类 $\mathfrak F$、输入长度、任意区间及合法实例统一 exact，并一致界定自适应阶段、状态块、完整输出批、状态—输出联合块和区域块。
 >
 > **causal state batch** 对应 $\operatorname{BatchState}_K$：调用边界给出左状态与整段驱动量，联合函数返回内部状态轨迹和右状态。**joint node batch** 对应 $\operatorname{BatchNode}_K$，同时覆盖 $U$ 与 $F$。`packed API` 可以承载若干已经定义的数学块。
