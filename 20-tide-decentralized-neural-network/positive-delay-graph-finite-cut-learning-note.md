@@ -46,11 +46,12 @@ tags:
 沿用：
 
 $$
+\begin{gathered}
 \mathbb N=\{0,1,2,\ldots\},
 \qquad
-\mathbb N_{>0}=\{1,2,3,\ldots\},
-\qquad
+\mathbb N_{>0}=\{1,2,3,\ldots\},\\
 [r,s)=\{\theta\in\mathbb N\mid r\le\theta<s\},
+\end{gathered}
 $$
 
 以及有限子集集合 $\mathcal P_{\mathrm{fin}}(X)$。固定非空承载值集合 $P$，另取 $\bot\notin P$，并令 $P_\bot=P\cup\{\bot\}$。
@@ -662,9 +663,7 @@ Full 向本节点输出端口给出 $c\,q^{\mathrm{cmp}}$。此外，只有 $u$ 
 
 ### 4.1 四类事件
 
-固定 $b$ 与 $\mathcal T_{x,<b}$，并取四个两两不同的标签
-$\mathrm{prep},\mathrm{select},\mathrm{adopt},\mathrm{full}$。若
-$B_{v,\theta}\ne\varnothing$，定义本地准备与状态采用事件：
+固定 $b$ 与 $\mathcal T_{x,<b}$，并取四个两两不同的标签 $\mathrm{prep},\mathrm{select},\mathrm{adopt},\mathrm{full}$。若 $B_{v,\theta}\ne\varnothing$，定义本地准备与状态采用事件：
 
 $$
 P_{v,\theta}=(\mathrm{prep},v,\theta),
@@ -721,8 +720,7 @@ $$
 \times\mathscr V^{\mathrm{ev}}_{x,<b}.
 $$
 
-与式 (1) 的消息图不同，每条事件边
-没有另设边标识符。
+与式 (1) 的消息图不同，每条事件边没有另设边标识符。
 
 函数作用事件之间只加入以下直接依赖：
 
@@ -741,9 +739,7 @@ $$
    \qquad
    S_{j,\theta}\longrightarrow F_{v,\theta}.
    $$
-   其中 $P_{v,\theta}\to U_{v,\theta}$ 记录快照与 Next 对旧状态、本地内容和候选新状态的读取，
-   $P_{v,\theta}\to F_{v,\theta}$ 记录完整输出读取本地内容，
-   $S_{j,\theta}\to F_{v,\theta}$ 记录完整输出直接读取控制量；
+   其中 $P_{v,\theta}\to U_{v,\theta}$ 记录快照与 Next 对旧状态、本地内容和候选新状态的读取，$P_{v,\theta}\to F_{v,\theta}$ 记录完整输出读取本地内容，$S_{j,\theta}\to F_{v,\theta}$ 记录完整输出直接读取控制量；
 2. 同一节点相邻两个实际节点事件之间的状态边：
    $$
    U_{v,\theta}\longrightarrow P_{v,\theta'}
@@ -760,9 +756,7 @@ $$
    P_{v,\eta+\delta(a)}.
    $$
 
-第 2、3 项中的“相邻”表示两者之间没有同一节点或同一 region 的另一个实际事件。
-即使 $P\to U$、$P\to F$ 与 $S\to F$ 已被同刻路径蕴含，仍因它们表示直接函数自变量而保留；
-其余间接依赖只由有向路径表示，不重复加入全部远距离边。
+第 2、3 项中的“相邻”表示两者之间没有同一节点或同一 region 的另一个实际事件。即使 $P\to U$、$P\to F$ 与 $S\to F$ 已被同刻路径蕴含，仍因它们表示直接函数自变量而保留；其余间接依赖只由有向路径表示，不重复加入全部远距离边。
 
 跨时间状态边仍从 $U$ 出发，因为下一持久状态由 Next 确定。Full 不回写状态或本次 selector-history；其结果若影响后续选择，只能先经已声明的正时延消息进入后续纤维。
 
@@ -848,8 +842,7 @@ $$
 \tag{23a}
 $$
 
-这里的 $\mathcal T_x$ 是全部相容 finite-cut 记录组成的语义族，不表示存在某个
-有限“最终完成时刻”。每个下文谓词仍只读取它公式中实际出现的有限 cut 坐标。
+这里的 $\mathcal T_x$ 是全部相容 finite-cut 记录组成的语义族，不表示存在某个有限“最终完成时刻”。每个下文谓词仍只读取它公式中实际出现的有限 cut 坐标。
 
 取当前已纳入求值记录的集合：
 
@@ -889,8 +882,7 @@ $$
 \xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)
 $$
 
-称为当前 **seal 截面**。称其中的下界相对于固定语义族
-$\mathcal T_x$ 与当前已纳入集合 $(E^\circ,H)$ **有效**，记作：
+称为当前 **seal 截面**。称其中的下界相对于固定语义族 $\mathcal T_x$ 与当前已纳入集合 $(E^\circ,H)$ **有效**，记作：
 
 $$
 \begin{aligned}
@@ -918,8 +910,7 @@ $$
 
 ### 5.2 节点前沿与纤维关闭
 
-对 seal 截面
-$\xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)$ 定义：
+对 seal 截面 $\xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)$ 定义：
 
 $$
 \begin{aligned}
@@ -944,10 +935,7 @@ B^\circ_{\xi;v,\theta}
 $$
 
 > [!lemma] 引理 5：节点纤维关闭
-> 若
-> $\operatorname{ValidSeal}_{\mathcal T_x}
-> (E^\circ,H;\sigma^{\mathrm{in}},\sigma^A)$
-> 且 $\lambda_\xi(v)>\theta$，则：
+> 若 $\operatorname{ValidSeal}_{\mathcal T_x} (E^\circ,H;\sigma^{\mathrm{in}},\sigma^A)$ 且 $\lambda_\xi(v)>\theta$，则：
 > $$
 > B^\circ_{\xi;v,\theta}=B_{v,\theta}.
 > \tag{27}
@@ -958,10 +946,7 @@ $$
 严格不等式不能改成 $\lambda_\xi(v)\ge\theta$：seal 等于 $\theta$ 仍允许一条到达时间恰为 $\theta$ 的记录尚未进入当前集合。
 
 > [!theorem] 定理 6：region 候选集合关闭
-> 若
-> $\operatorname{ValidSeal}_{\mathcal T_x}
-> (E^\circ,H;\sigma^{\mathrm{in}},\sigma^A)$
-> 且 $\lambda_\xi(\mathcal R_j)>\theta$，则：
+> 若 $\operatorname{ValidSeal}_{\mathcal T_x} (E^\circ,H;\sigma^{\mathrm{in}},\sigma^A)$ 且 $\lambda_\xi(\mathcal R_j)>\theta$，则：
 > $$
 > \{v\in\mathcal R_j\mid B^\circ_{\xi;v,\theta}\ne\varnothing\}
 > =\mathcal C_{j,\theta}.
@@ -985,9 +970,7 @@ $$
 \mathcal E_x^{\mathrm{node}}.
 $$
 
-这里 $(v,\theta)\in\mathsf{Done}$ 表示：$P_{v,\theta}$、相应的
-$S_{\rho(v),\theta}$ 与 $U_{v,\theta}$ 已经完成；若 $v$ active，则
-$F_{v,\theta}$ 也已经完成，它产生的输出已经确定，并且它产生的每条内部消息都已经纳入当前 $H$。这一定义把“函数已经返回”与“结果已经进入当前数学记录”一并包括在 $\mathsf{Done}$ 的成员关系中。
+这里 $(v,\theta)\in\mathsf{Done}$ 表示：$P_{v,\theta}$、相应的 $S_{\rho(v),\theta}$ 与 $U_{v,\theta}$ 已经完成；若 $v$ active，则 $F_{v,\theta}$ 也已经完成，它产生的输出已经确定，并且它产生的每条内部消息都已经纳入当前 $H$。这一定义把“函数已经返回”与“结果已经进入当前数学记录”一并包括在 $\mathsf{Done}$ 的成员关系中。
 
 把当前部分求值状态记为：
 
@@ -995,10 +978,7 @@ $$
 \Xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A,\mathsf{Done}),
 $$
 
-其前四个坐标的投影仍记为
-$\xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)$。定义 $\Xi$ 相对于
-$\mathcal T_x$ **可接受用于 seal/completion 推理**，记作
-$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi)$，当且仅当：
+其前四个坐标的投影仍记为 $\xi=(E^\circ,H,\sigma^{\mathrm{in}},\sigma^A)$。定义 $\Xi$ 相对于 $\mathcal T_x$ **可接受用于 seal/completion 推理**，记作 $\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi)$，当且仅当：
 
 $$
 \begin{aligned}
@@ -1016,8 +996,7 @@ $$
 
 最后一行同时形式化两项要求：消息不能先于源复合节点事件进入 $H$；一个事件一旦属于本文所用的强 $\mathsf{Done}$，它已经产生的全部实际消息也都已经进入 $H$。若实现需要允许“函数已返回但消息尚未公开”的中间状态，就必须像前置 TimedDAG 教材那样另设较弱的 completed 集合，不能把它仍记作这里的 $\mathsf{Done}$。
 
-式 (28a) 只命名第 5--6 节证明使用的 seal、完成与 publication 一致性；它不单独
-声称某个逐作用调度已经合法。第 8.1 节将先定义完整事件排列的拓扑条件，再定义带 seal 截面的在线动作条件。
+式 (28a) 只命名第 5--6 节证明使用的 seal、完成与 publication 一致性；它不单独声称某个逐作用调度已经合法。第 8.1 节将先定义完整事件排列的拓扑条件，再定义带 seal 截面的在线动作条件。
 
 对满足式 (28a) 的 $\Xi$ 与 $r\in\mathbb N$，定义：
 
@@ -1037,17 +1016,20 @@ $$
 
 这里的 $\mathsf{Done}$ 特意比前置 TimedDAG 教材中的 $\operatorname{Completed}_n$ 更强：后者允许完整输出先完成、消息随后才进入公开集合；本文的成员关系已经要求相应内部消息属于 $H$。这个加强正是下一个引理可以直接使用 $m\in H$ 的原因。式 (28) 的谓词是当前部分状态、节点和时间界之间的关系，不是 $(v,r)$ 脱离 $\Xi$ 后的一元完成事实。
 
-若 $f:A\to\overline{\mathbb N}$，记
-$f[a\mapsto s]$ 为只把 $a$ 坐标改成 $s$、其余坐标保持不变的函数。
+若 $f:A\to\overline{\mathbb N}$，记 $f[a\mapsto s]$ 为只把 $a$ 坐标改成 $s$、其余坐标保持不变的函数。
 
 > [!lemma|keep] 引理 7：正时延出边的 seal 推进
-> 设 $a\in\operatorname{Out}(v)$。若
-> $\operatorname{DoneTo}_{\mathcal T_x}(\Xi;v,r)$ 成立，则：
+> 设 $a\in\operatorname{Out}(v)$。若 $\operatorname{DoneTo}_{\mathcal T_x}(\Xi;v,r)$ 成立，令
+> $$
+> \widehat\sigma^A
+> =\sigma^A\!\left[
+> a\mapsto\max\{\sigma^A(a),r+\delta(a)\}
+> \right],
+> $$
+> 则：
 > $$
 > \operatorname{ValidSeal}_{\mathcal T_x}
-> \left(E^\circ,H;\sigma^{\mathrm{in}},
-> \sigma^A\!\left[a\mapsto
-> \max\{\sigma^A(a),r+\delta(a)\}\right]\right).
+> \left(E^\circ,H;\sigma^{\mathrm{in}},\widehat\sigma^A\right).
 > \tag{29}
 > $$
 
@@ -1072,15 +1054,11 @@ $$
 ### 5.4 source-sealed cut 一定可以有限推进
 
 > [!theorem] 定理 8：严格正时延规格的 finite-cut productivity
-> 固定 $b\in\mathbb N$ 与 $E^\circ\subseteq E_x$。若对每个输入端口 $i$ 都有 $\sigma^{\mathrm{in}}(i)\ge b$ 且
-> $E_x(i,<\sigma^{\mathrm{in}}(i))\subseteq E^\circ$，则存在一条按逻辑时间递增的求值轨迹，完成所有 $\theta<b$ 的节点事件与选择事件，产生恰好 $\mathcal T_{x,<b}$，并证明此后不会新增时间小于 $b$ 的外部输出。该轨迹只含有限多个抽象函数作用。
+> 固定 $b\in\mathbb N$ 与 $E^\circ\subseteq E_x$。若对每个输入端口 $i$ 都有 $\sigma^{\mathrm{in}}(i)\ge b$ 且 $E_x(i,<\sigma^{\mathrm{in}}(i))\subseteq E^\circ$，则存在一条按逻辑时间递增的求值轨迹，完成所有 $\theta<b$ 的节点事件与选择事件，产生恰好 $\mathcal T_{x,<b}$，并证明此后不会新增时间小于 $b$ 的外部输出。该轨迹只含有限多个抽象函数作用。
 
 **证明。** 当 $b=0$ 时结论为空。以下轨迹只从 $E^\circ$ 读取外部记录；对任意 $\theta<b$，输入 seal 假设与 $E^\circ\subseteq E_x$ 保证其中时间为 $\theta$ 的记录恰好等于 $E_x$ 的相应记录。
 
-设 $b>0$。令
-$\mathsf{Done}_\theta=\mathcal E^{\mathrm{node}}_{x,<\theta}$。
-在开始处理时间 $\theta$ 时，记当前消息集合与边 seal 为
-$H_\theta,\sigma^A_\theta$，并记：
+设 $b>0$。令 $\mathsf{Done}_\theta=\mathcal E^{\mathrm{node}}_{x,<\theta}$。在开始处理时间 $\theta$ 时，记当前消息集合与边 seal 为 $H_\theta,\sigma^A_\theta$，并记：
 
 $$
 \begin{aligned}
@@ -1102,36 +1080,17 @@ H_0=\varnothing,
 \mathsf{Done}_0=\varnothing.
 $$
 
-式 (30) 证明这些初始 seal 有效；输入端口 seal 也严格大于时间 $0$，且式 (28a) 的源消息等式在两个空集之间成立。因此
-$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_0)$。所以所有时间 $0$ 的节点纤维和 region 候选集合都由引理 5、定理 6 关闭。先准备全部候选，再为每个 region 应用式 (13)，最后应用式 (14)--(16) 并立即把实际消息纳入 $H_1$。
+式 (30) 证明这些初始 seal 有效；输入端口 seal 也严格大于时间 $0$，且式 (28a) 的源消息等式在两个空集之间成立。因此 $\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_0)$。所以所有时间 $0$ 的节点纤维和 region 候选集合都由引理 5、定理 6 关闭。先准备全部候选，再为每个 region 应用式 (13)，最后应用式 (14)--(16) 并立即把实际消息纳入 $H_1$。
 
-更一般地，在开始处理时间 $\theta<b$ 时使用以下归纳不变量：
-$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_\theta)$、
-$H_\theta=\bigcup_{\eta<\theta}M_\eta$，而且每条边 $a$ 已有有效 seal：
+更一般地，在开始处理时间 $\theta<b$ 时使用以下归纳不变量：$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_\theta)$、$H_\theta=\bigcup_{\eta<\theta}M_\eta$，而且每条边 $a$ 已有有效 seal：
 
 $$
 \sigma^A_\theta(a)=\theta+\delta(a).
 $$
 
-记 $\lambda_\theta=\lambda_{\xi_\theta}$。上述不变量在 $\theta=0$ 时由式 (30) 成立。由于 $\delta(a)>0$ 且外部输入 seal 至少为 $b$，每个节点都满足 $\lambda_\theta(v)>\theta$；较早状态采用和 selector-history 更新也已经完成。因此可以唯一完成时间 $\theta$ 的全部作用，并令
-$H_{\theta+1}=H_\theta\cup M_\theta$、
-$\mathsf{Done}_{\theta+1}
-=\mathsf{Done}_\theta\cup
-\{(v,\theta)\mid
-(v,\theta)\in\mathcal E_x^{\mathrm{node}}\}$。
+记 $\lambda_\theta=\lambda_{\xi_\theta}$。上述不变量在 $\theta=0$ 时由式 (30) 成立。由于 $\delta(a)>0$ 且外部输入 seal 至少为 $b$，每个节点都满足 $\lambda_\theta(v)>\theta$；较早状态采用和 selector-history 更新也已经完成。因此可以唯一完成时间 $\theta$ 的全部作用，并令 $H_{\theta+1}=H_\theta\cup M_\theta$、$\mathsf{Done}_{\theta+1} =\mathsf{Done}_\theta\cup \{(v,\theta)\mid (v,\theta)\in\mathcal E_x^{\mathrm{node}}\}$。
 
-完成以后，对每条 $c\in\operatorname{In}(v)$ 都有
-$\sigma^A_\theta(c)=\theta+\delta(c)\ge\theta+1$；输入端口 seal 也至少为 $b\ge\theta+1$。所以 $\lambda_\theta(v)\ge\theta+1$。令
-$\Xi_\theta^+
-=(E^\circ,H_{\theta+1},\sigma^{\mathrm{in}},
-\sigma^A_\theta,\mathsf{Done}_{\theta+1})$。
-扩大 $H$ 不会破坏旧 seal，且新消息与新完成事件恰满足式 (28a)，所以
-$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_\theta^+)$，并且
-$\operatorname{DoneTo}_{\mathcal T_x}
-(\Xi_\theta^+;v,\theta+1)$ 对每个 $v$ 成立。逐边应用引理 7，并令
-$\sigma^A_{\theta+1}(a)=\theta+1+\delta(a)$，正好建立
-$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_{\theta+1})$
-及下一时间的不变量。
+完成以后，对每条 $c\in\operatorname{In}(v)$ 都有 $\sigma^A_\theta(c)=\theta+\delta(c)\ge\theta+1$；输入端口 seal 也至少为 $b\ge\theta+1$。所以 $\lambda_\theta(v)\ge\theta+1$。令 $\Xi_\theta^+ =(E^\circ,H_{\theta+1},\sigma^{\mathrm{in}}, \sigma^A_\theta,\mathsf{Done}_{\theta+1})$。扩大 $H$ 不会破坏旧 seal，且新消息与新完成事件恰满足式 (28a)，所以 $\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_\theta^+)$，并且 $\operatorname{DoneTo}_{\mathcal T_x} (\Xi_\theta^+;v,\theta+1)$ 对每个 $v$ 成立。逐边应用引理 7，并令 $\sigma^A_{\theta+1}(a)=\theta+1+\delta(a)$，正好建立 $\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_{\theta+1})$ 及下一时间的不变量。
 
 直到 $b-1$ 的归纳产生定理 1 的唯一记录。以后任何节点事件的输出时间都不小于 $b$，所以不能新增输出时间小于 $b$ 的记录。有限函数作用数由式 (20) 得到。$\square$
 
@@ -1146,9 +1105,7 @@ $\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi_{\theta+1})$
 
 ### 6.1 完整切面
 
-对一份满足
-$\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi)$
-的部分记录，定义：
+对一份满足 $\operatorname{AdmissiblePartial}_{\mathcal T_x}(\Xi)$ 的部分记录，定义：
 
 $$
 \operatorname{CutDone}_{\mathcal T_x}(\Xi;b)
@@ -1156,8 +1113,7 @@ $$
 \mathcal E^{\mathrm{node}}_{x,<b}\subseteq\mathsf{Done}.
 $$
 
-称部分状态 $\Xi$ **完成 cut $b$**，当且仅当
-$\operatorname{CutDone}_{\mathcal T_x}(\Xi;b)$ 成立。每个实际选择事件至少有一个候选节点，所以这个集合包含关系同时蕴含：全部 $\theta<b$ 的准备、选择与状态采用已经完成；全部 active 节点的 $\operatorname{Full}$ 已经完成；并且：
+称部分状态 $\Xi$ **完成 cut $b$**，当且仅当 $\operatorname{CutDone}_{\mathcal T_x}(\Xi;b)$ 成立。每个实际选择事件至少有一个候选节点，所以这个集合包含关系同时蕴含：全部 $\theta<b$ 的准备、选择与状态采用已经完成；全部 active 节点的 $\operatorname{Full}$ 已经完成；并且：
 
 $$
 M_{<b}^{\mathrm{send}}\subseteq H.
@@ -1229,9 +1185,7 @@ $$
 
 因为这里停在完整 cut，左侧的所有 Full 已经使用完各自的 $q^{\mathrm{cmp}}$ 与 $c$。这两个当前事件坐标不再是未来递归的独立输入，所以不加入 $Q_b$；它们仍属于完整历史记录。保存 $q^{\mathrm{cmp}}$ 而漏掉 Next 的最终状态，会破坏第 3.4 节的恢复结果。
 
-把第 3.3 节的单节点自环继续手算三步，可以同时看见这些对象。设唯一外部输入在时间 $0$ 到达，输入端口 seal 为 $\infty$，$\delta(a)=2$，并记时间 $0,2$ 发出的消息为 $m_0,m_2$。完成 $[0,b)$ 后可取 $H_b=\bigcup_{\eta<b}M_\eta$、$\sigma_b^A(a)=b+2$。令 $\xi_b$ 为相应 seal 截面并简写
-$\lambda_b=\lambda_{\xi_b}$，于是 $\lambda_b(v)=b+2$。令 $\Xi_b$ 表示由这些集合、seal 和
-$\mathsf{Done}_b=\mathcal E^{\mathrm{node}}_{x,<b}$ 组成的式 (28a) 部分状态。因为只有一个节点和一个 region，表中省略状态族的下标。前四个切面为：
+把第 3.3 节的单节点自环继续手算三步，可以同时看见这些对象。设唯一外部输入在时间 $0$ 到达，输入端口 seal 为 $\infty$，$\delta(a)=2$，并记时间 $0,2$ 发出的消息为 $m_0,m_2$。完成 $[0,b)$ 后可取 $H_b=\bigcup_{\eta<b}M_\eta$、$\sigma_b^A(a)=b+2$。令 $\xi_b$ 为相应 seal 截面并简写 $\lambda_b=\lambda_{\xi_b}$，于是 $\lambda_b(v)=b+2$。令 $\Xi_b$ 表示由这些集合、seal 和 $\mathsf{Done}_b=\mathcal E^{\mathrm{node}}_{x,<b}$ 组成的式 (28a) 部分状态。因为只有一个节点和一个 region，表中省略状态族的下标。前四个切面为：
 
 | $b$ | $H_b$ | $\sigma_b^A(a)=\lambda_b(v)$ | 已成立的完成谓词 | $W_b$ | $Q_b$ |
 | ---: | --- | ---: | --- | --- | --- |
@@ -1311,11 +1265,17 @@ $$
 对内部消息定义：
 
 $$
-M^\infty_{\ge b}(a,<s)
-=\{m\in M^\infty\mid
-\operatorname{edge}(m)=a,
-\operatorname{send}(m)\ge b,
-\operatorname{time}(m)<s\}.
+\begin{aligned}
+&M^\infty_{\ge b}(a,<s)\\
+&\quad=
+\left\{m\in M^\infty\ \middle|\
+\begin{aligned}
+&\operatorname{edge}(m)=a,\\
+&\operatorname{send}(m)\ge b,\\
+&\operatorname{time}(m)<s
+\end{aligned}
+\right\}.
+\end{aligned}
 $$
 
 边 $a$ 的相对封闭条件是 $M^\infty_{\ge b}(a,<s)\subseteq H^{\ge b}$。这里的“相对”表示只量化恢复以后发送的消息。当前纤维从 $E^{\ge b}\cup W_b\cup H^{\ge b}$ 取得；其中 $W_b$ 已经完整提供所有左侧发送、右侧到达的消息。
@@ -1326,11 +1286,7 @@ $$
 
 ### 7.1 区间转导
 
-固定第 1 节除输入载荷函数以外的全部规格数据，包括
-$(K_i,\iota_i)_{i\in\mathsf I}$。令 $\mathfrak X$ 为所有类型正确的输入历史
-$x'=(x'_i:K_i\to P)_{i\in\mathsf I}$。第 2--3 节的规范递归为每个
-$x'\in\mathfrak X$ 和有限 cut $a$ 唯一给出 continuation，以下写成
-$Q_a(x')$。定义：
+固定第 1 节除输入载荷函数以外的全部规格数据，包括 $(K_i,\iota_i)_{i\in\mathsf I}$。令 $\mathfrak X$ 为所有类型正确的输入历史 $x'=(x'_i:K_i\to P)_{i\in\mathsf I}$。第 2--3 节的规范递归为每个 $x'\in\mathfrak X$ 和有限 cut $a$ 唯一给出 continuation，以下写成 $Q_a(x')$。定义：
 
 $$
 \operatorname{Reach}_a
@@ -1350,11 +1306,7 @@ x'\in\mathfrak X
 \tag{35a}
 $$
 
-因此，“$Q_a$ 可达”现在精确表示
-$Q_a\in\operatorname{Reach}_a$；“输入片段与过去相容且完整”精确表示相应
-二元组属于 $\operatorname{Adm}_{a,b}$。这里的完整性不是当前已公开输入的
-任意子集，而是某个见证输入历史在整个区间中的全部记录。见证 $x'$ 本身不作为
-求值器可读的额外坐标。
+因此，“$Q_a$ 可达”现在精确表示 $Q_a\in\operatorname{Reach}_a$；“输入片段与过去相容且完整”精确表示相应二元组属于 $\operatorname{Adm}_{a,b}$。这里的完整性不是当前已公开输入的任意子集，而是某个见证输入历史在整个区间中的全部记录。见证 $x'$ 本身不作为求值器可读的额外坐标。
 
 令 $\mathsf{Rec}_{a,b}$ 为所有具有下文所列标签、定义域和值域的区间记录元组所成的环境集合；这个环境集合只给函数一个共同余域，不另外加入“合法”谓词。定义区间转导：
 
@@ -1371,11 +1323,7 @@ $$
 \tag{35}
 $$
 
-其中 $\mathcal U_{x',[a,b)}$ 保存本区间的全部式 (10)--(16) 坐标、发送时间位于 $[a,b)$ 的新消息和输出时间位于 $[a,b)$ 的新输出。它不把 $W_a$ 重复登记成“本段新产生的消息”。若两个见证输入历史给出同一个
-$(Q_a,E_{[a,b)})$，定理 9 对相同 continuation 和相同区间输入的归纳给出相同的
-$\mathcal U_{[a,b)}$ 与 $Q_b$，所以式 (35) 确实定义函数而不是依赖见证的关系。
-source seal 是在线执行者证明二元组属于式 (35a) 的方式之一，不是
-$\Phi_{a,b}$ 的自变量。
+其中 $\mathcal U_{x',[a,b)}$ 保存本区间的全部式 (10)--(16) 坐标、发送时间位于 $[a,b)$ 的新消息和输出时间位于 $[a,b)$ 的新输出。它不把 $W_a$ 重复登记成“本段新产生的消息”。若两个见证输入历史给出同一个 $(Q_a,E_{[a,b)})$，定理 9 对相同 continuation 和相同区间输入的归纳给出相同的 $\mathcal U_{[a,b)}$ 与 $Q_b$，所以式 (35) 确实定义函数而不是依赖见证的关系。source seal 是在线执行者证明二元组属于式 (35a) 的方式之一，不是 $\Phi_{a,b}$ 的自变量。
 
 对空区间定义：
 
@@ -1398,10 +1346,7 @@ $$
 ### 7.2 composition 定理
 
 > [!theorem] 定理 10：cut composition
-> 任取 $a\le b\le c$ 与 $x\in\mathfrak X$，并记
-> $Q_a=Q_a(x)$、$Q_b=Q_b(x)$、$Q_c=Q_c(x)$；因此下列三个输入对分别属于
-> $\operatorname{Adm}_{a,b}$、$\operatorname{Adm}_{b,c}$ 与
-> $\operatorname{Adm}_{a,c}$。若：
+> 任取 $a\le b\le c$ 与 $x\in\mathfrak X$，并记 $Q_a=Q_a(x)$、$Q_b=Q_b(x)$、$Q_c=Q_c(x)$；因此下列三个输入对分别属于 $\operatorname{Adm}_{a,b}$、$\operatorname{Adm}_{b,c}$ 与 $\operatorname{Adm}_{a,c}$。若：
 > $$
 > \begin{aligned}
 > \Phi_{a,b}(Q_a,E_{x,[a,b)})
@@ -1449,34 +1394,30 @@ $$
 
 ### 8.1 直接递归是定义，不是唯一实现顺序
 
-式 (10)--(16) 按时间写出，是为了给每个数学坐标一个无歧义值。先把“调度”
-拆成两个不同关系。令
-$N=|\mathscr V^{\mathrm{ev}}_{x,<b}|$。对事件排列
-$\pi=(e_1,\ldots,e_N)$，定义：
+式 (10)--(16) 按时间写出，是为了给每个数学坐标一个无歧义值。先把“调度”拆成两个不同关系。令 $N=|\mathscr V^{\mathrm{ev}}_{x,<b}|$。对事件排列 $\pi=(e_1,\ldots,e_N)$，定义：
 
 $$
-\operatorname{TopoSchedule}_{x,<b}(\pi)
-\Longleftrightarrow
+\begin{aligned}
+&\operatorname{TopoSchedule}_{x,<b}(\pi)\\
+&\quad\Longleftrightarrow
 \left\{
 \begin{aligned}
-&
-\{e_1,\ldots,e_N\}
+&\{e_1,\ldots,e_N\}
 =\mathscr V^{\mathrm{ev}}_{x,<b},\\
 &\text{每个事件在 }\pi\text{ 中恰出现一次},\\
-&\forall\,1\le r,s\le N:\quad
+&\forall\,1\le r,s\le N:\\
+&\qquad
 (e_r,e_s)\in\mathscr E^{\mathrm{ev}}_{x,<b}
 \Longrightarrow r<s.
 \end{aligned}
 \right.
+\end{aligned}
 \tag{36a}
 $$
 
-这只是“完整事件集合已经给定以后”的值求解顺序。由定理 4，事件图是有限
-DAG；任意满足式 (36a) 的排列都给出相同函数值。
+这只是“完整事件集合已经给定以后”的值求解顺序。由定理 4，事件图是有限 DAG；任意满足式 (36a) 的排列都给出相同函数值。
 
-在线执行还必须证明自己没有漏掉尚未公开的候选或消息。令
-$D_0=\varnothing$，并对 $1\le k\le N$ 令
-$D_k=\{e_1,\ldots,e_k\}$；再给每个决策点配一个 seal 截面：
+在线执行还必须证明自己没有漏掉尚未公开的候选或消息。令 $D_0=\varnothing$，并对 $1\le k\le N$ 令 $D_k=\{e_1,\ldots,e_k\}$；再给每个决策点配一个 seal 截面：
 
 $$
 \xi_k=(E_k^\circ,H_k,
@@ -1484,39 +1425,17 @@ $$
 \qquad(0\le k\le N).
 $$
 
-定义
-$\operatorname{LegalOnlineSchedule}_{\mathcal T_x,<b}
-(\pi,(\xi_k)_{k=0}^N)$
-成立，当且仅当：
+定义 $\operatorname{LegalOnlineSchedule}_{\mathcal T_x,<b} (\pi,(\xi_k)_{k=0}^N)$ 成立，当且仅当：
 
 1. $\operatorname{TopoSchedule}_{x,<b}(\pi)$；
-2. $E_k^\circ,H_k$ 随 $k$ 递增，seal 逐坐标不减，
-   $E_k^\circ\subseteq E_x$、$H_k\subseteq M_{<b}^{\mathrm{send}}$，并且每个
-   $0\le k\le N$ 都满足
-   $\operatorname{ValidSeal}_{\mathcal T_x}
-   (E_k^\circ,H_k;\sigma_k^{\mathrm{in}},\sigma_k^A)$；
-3. 对每个 $0\le k<N$，若 $e_{k+1}=P_{v,\theta}$，则
-   $\lambda_{\xi_k}(v)>\theta$；若
-   $e_{k+1}=S_{j,\theta}$，则
-   $\lambda_{\xi_k}(\mathcal R_j)>\theta$，且
-   $P_{v,\theta}\in D_k$ 对每个
-   $v\in\mathcal C_{j,\theta}$ 成立；
-4. 对每个 $0\le k\le N$ 与 $m\in H_k$，其源完整输出事件
-   $F_{\operatorname{src}(\operatorname{edge}(m)),
-   \operatorname{send}(m)}$ 属于 $D_k$；
-5. 在最终决策点，$E_{x,<b}\subseteq E_N^\circ$ 且
-   $H_N=M_{<b}^{\mathrm{send}}$。
+2. $E_k^\circ,H_k$ 随 $k$ 递增，seal 逐坐标不减，$E_k^\circ\subseteq E_x$、$H_k\subseteq M_{<b}^{\mathrm{send}}$，并且每个 $0\le k\le N$ 都满足 $\operatorname{ValidSeal}_{\mathcal T_x} (E_k^\circ,H_k;\sigma_k^{\mathrm{in}},\sigma_k^A)$；
+3. 对每个 $0\le k<N$，若 $e_{k+1}=P_{v,\theta}$，则 $\lambda_{\xi_k}(v)>\theta$；若 $e_{k+1}=S_{j,\theta}$，则 $\lambda_{\xi_k}(\mathcal R_j)>\theta$，且 $P_{v,\theta}\in D_k$ 对每个 $v\in\mathcal C_{j,\theta}$ 成立；
+4. 对每个 $0\le k\le N$ 与 $m\in H_k$，其源完整输出事件 $F_{\operatorname{src}(\operatorname{edge}(m)), \operatorname{send}(m)}$ 属于 $D_k$；
+5. 在最终决策点，$E_{x,<b}\subseteq E_N^\circ$ 且 $H_N=M_{<b}^{\mathrm{send}}$。
 
-式 (36a) 已经禁止晚状态更新越过早状态更新、跳过较早 selector-history，以及
-在同刻 selector 以前执行状态采用或 Full；第三项再证明候选集合确实完整，第四项
-禁止消息先于源 Full 公开，第五项则要求完整 cut 中的源记录与内部消息最终都已
-纳入记录。selector 的确定平局规则属于
-$\operatorname{SelStep}$ 本身，调度不得用线程完成顺序替代它。
+式 (36a) 已经禁止晚状态更新越过早状态更新、跳过较早 selector-history，以及在同刻 selector 以前执行状态采用或 Full；第三项再证明候选集合确实完整，第四项禁止消息先于源 Full 公开，第五项则要求完整 cut 中的源记录与内部消息最终都已纳入记录。selector 的确定平局规则属于 $\operatorname{SelStep}$ 本身，调度不得用线程完成顺序替代它。
 
-因此，后文若只讨论已知事件 DAG 的重排，使用
-$\operatorname{TopoSchedule}$；若讨论带 seal 与 publication 的在线求值，则使用
-$\operatorname{LegalOnlineSchedule}$。这避免把“拓扑序”和“已经证明当前事件集合
-完整”混成同一个未命名的“合法调度”。
+因此，后文若只讨论已知事件 DAG 的重排，使用 $\operatorname{TopoSchedule}$；若讨论带 seal 与 publication 的在线求值，则使用 $\operatorname{LegalOnlineSchedule}$。这避免把“拓扑序”和“已经证明当前事件集合完整”混成同一个未命名的“合法调度”。
 
 ### 8.2 最小 reference interpreter 契约
 
@@ -1570,17 +1489,20 @@ u\text{ 在 }G\text{ 中可达 }v
 \tag{37}
 $$
 
-$\sim_G$ 是等价关系：长度为 $0$ 的可达给出自反性，定义本身给出对称性，
-有向路径的拼接给出传递性。因此可以定义它的等价类集合及分量间边关系：
+$\sim_G$ 是等价关系：长度为 $0$ 的可达给出自反性，定义本身给出对称性，有向路径的拼接给出传递性。因此可以定义它的等价类集合及分量间边关系：
 
 $$
 \begin{aligned}
-\mathcal S_G&=V/{\sim_G},\\
-E_{\mathrm{cond}}
-&=\{(C,D)\in\mathcal S_G^2\mid
-C\ne D,\ \exists a\in A:
-\operatorname{src}(a)\in C,
-\operatorname{dst}(a)\in D\}.
+&\mathcal S_G=V/{\sim_G},\\
+&E_{\mathrm{cond}}\\
+&\quad=
+\left\{(C,D)\in\mathcal S_G^2\ \middle|\
+\begin{aligned}
+&C\ne D,\ \exists a\in A:\\
+&\operatorname{src}(a)\in C,\\
+&\operatorname{dst}(a)\in D
+\end{aligned}
+\right\}.
 \end{aligned}
 $$
 
@@ -1665,24 +1587,21 @@ $$
 若前驱 $D$ 已经完成区间 $[a,b)$，它交给 $C$ 的直接跨入消息精确为：
 
 $$
-M^{D\to C}_{[a,b)}
-=\left\{m\in\bigcup_{\theta\in[a,b)}M_\theta
+\begin{aligned}
+&M^{D\to C}_{[a,b)}\\
+&\quad=
+\left\{m\in\bigcup_{\theta\in[a,b)}M_\theta
 \;\middle|\;
-\operatorname{src}(\operatorname{edge}(m))\in D,
-\operatorname{target}(m)\in C
+\begin{aligned}
+&\operatorname{src}(\operatorname{edge}(m))\in D,\\
+&\operatorname{target}(m)\in C
+\end{aligned}
 \right\}.
+\end{aligned}
 $$
 
 > [!theorem] 定理 12：SCC-local profile 的精确外层 cut 调度
-> 假设式 (38) 成立。固定 $Q_a\in\operatorname{Reach}_a$、
-> $a\le b$，并取
-> $(Q_a,E_{x,[a,b)})\in\operatorname{Adm}_{a,b}$。按定理 11 选择 message SCC
-> 的任一拓扑序；对每个 $C$，把 $q^a\!\downarrow_C$、
-> $y^a\!\downarrow_C$、$W_a\!\downarrow_C$ 作为左边界，把
-> $E_{x,[a,b)}\!\downarrow_C$ 与所有前驱 $D$ 已产生的
-> $M^{D\to C}_{[a,b)}$ 作为输入，在 $C$ 内按式 (34) 的逻辑时间顺序推进到
-> $b$。按上述 owner 规则并合所得全图区间记录与 $Q_b$，恰等于式 (35) 的
-> $\Phi_{a,b}$。
+> 假设式 (38) 成立。固定 $Q_a\in\operatorname{Reach}_a$、$a\le b$，并取 $(Q_a,E_{x,[a,b)})\in\operatorname{Adm}_{a,b}$。按定理 11 选择 message SCC 的任一拓扑序；对每个 $C$，把 $q^a\!\downarrow_C$、$y^a\!\downarrow_C$、$W_a\!\downarrow_C$ 作为左边界，把 $E_{x,[a,b)}\!\downarrow_C$ 与所有前驱 $D$ 已产生的 $M^{D\to C}_{[a,b)}$ 作为输入，在 $C$ 内按式 (34) 的逻辑时间顺序推进到 $b$。按上述 owner 规则并合所得全图区间记录与 $Q_b$，恰等于式 (35) 的 $\Phi_{a,b}$。
 
 **证明。** 对 SCC 的拓扑序归纳。一个 SCC 的所有跨边界输入消息只可能来自 condensation graph 中的前驱；否则存在一条来自尚未处理后继的反向边，与拓扑序矛盾。归纳假设因此已经给出该 SCC 在区间内的全部跨边界消息，$W_a$ 又给出过去产生但尚未到达的消息。
 
@@ -1694,12 +1613,9 @@ $$
 
 ### 9.4 dependency-complete 静态图
 
-沿用第 4.2 节已经正式定义的事件图
-$\mathscr G^{\mathrm{ev}}_{x,<b}$。它随输入历史与 cut 改变。
+沿用第 4.2 节已经正式定义的事件图 $\mathscr G^{\mathrm{ev}}_{x,<b}$。它随输入历史与 cut 改变。
 
-为了寻找不随一次运行改变的宏边界，先把每个事件投影到持有相应节点状态或
-selector-history 的对象。取与 $V$ 不交的带标签集合
-$\{s_j\mid j\in J\}$，定义：
+为了寻找不随一次运行改变的宏边界，先把每个事件投影到持有相应节点状态或 selector-history 的对象。取与 $V$ 不交的带标签集合 $\{s_j\mid j\in J\}$，定义：
 
 $$
 \begin{aligned}
@@ -1713,24 +1629,16 @@ $$
 这里的 $s_j$ 只是 selector $j$ 及其历史 $y_j$ 的 owner 标识，不是消息节点。
 
 > [!definition] dependency-complete 静态图
-> 顶点集为 $V^\dagger=V\sqcup\{s_j\mid j\in J\}$ 的有向图
-> $\Gamma=(V^\dagger,E_\Gamma)$，其中
-> $E_\Gamma\subseteq V^\dagger\times V^\dagger$，称为对本文事件语义
-> **dependency-complete**，若对
-> 任意合法输入历史 $x$、任意 cut $b$，以及
-> 任意 $(e,e')\in\mathscr E^{\mathrm{ev}}_{x,<b}$，都有
+> 顶点集为 $V^\dagger=V\sqcup\{s_j\mid j\in J\}$ 的有向图 $\Gamma=(V^\dagger,E_\Gamma)$，其中 $E_\Gamma\subseteq V^\dagger\times V^\dagger$，称为对本文事件语义 **dependency-complete**，若对任意合法输入历史 $x$、任意 cut $b$，以及任意 $(e,e')\in\mathscr E^{\mathrm{ev}}_{x,<b}$，都有
 > $$
 > \operatorname{own}(e)=\operatorname{own}(e')
 > \quad\text{或}\quad
 > \bigl(\operatorname{own}(e),\operatorname{own}(e')\bigr)\in E_\Gamma.
 > $$
 
-换言之，把一条实际事件路径投影到 owner 并删去连续重复项以后，所得有限顶点
-序列的每对相邻项都是 $\Gamma$ 的一条边。这个定义只要求静态图不漏掉第 4.2
-节的直接依赖，不要求每条静态边都在每次运行中出现。
+换言之，把一条实际事件路径投影到 owner 并删去连续重复项以后，所得有限顶点序列的每对相邻项都是 $\Gamma$ 的一条边。这个定义只要求静态图不漏掉第 4.2 节的直接依赖，不要求每条静态边都在每次运行中出现。
 
-对任一固定的 dependency-complete 图 $\Gamma$，定义 $z\sim_\Gamma z'$ 当且仅当
-$z,z'$ 在 $\Gamma$ 中互相可达。与 $\sim_G$ 相同，它也是等价关系。令：
+对任一固定的 dependency-complete 图 $\Gamma$，定义 $z\sim_\Gamma z'$ 当且仅当 $z,z'$ 在 $\Gamma$ 中互相可达。与 $\sim_G$ 相同，它也是等价关系。令：
 
 $$
 \mathcal S_\Gamma=V^\dagger/{\sim_\Gamma}.
@@ -1752,21 +1660,12 @@ E^\dagger
 \tag{39}
 $$
 
-记 $G^\dagger=(V^\dagger,E^\dagger)$。
-$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示 active set 与控制量可能改变节点的快照、Next 或完整输出。$\mathcal S_{G^\dagger}$ 会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
+记 $G^\dagger=(V^\dagger,E^\dagger)$。$v\to s_j$ 表示 selector 可能读取节点描述量，$s_j\to v$ 表示 active set 与控制量可能改变节点的快照、Next 或完整输出。$\mathcal S_{G^\dagger}$ 会自动把跨 message-SCC 的 region 依赖合入同一个宏边界。
 
 > [!proposition] 命题 13：$G^\dagger$ 是 dependency-complete 静态图
 > 式 (39) 的 $G^\dagger$ 满足上述定义。
 
-**证明。** 逐类检查第 4.2 节的直接事件边。同刻边
-$P_{v,\theta}\to S_{j,\theta}$ 投影成 $v\to s_j$，而
-$S_{j,\theta}\to U_{v,\theta}$ 与直接控制边
-$S_{j,\theta}\to F_{v,\theta}$ 都投影成 $s_j\to v$；这些边都在式 (39)
-中。$P_{v,\theta}\to U_{v,\theta}$、$U_{v,\theta}\to F_{v,\theta}$ 与
-$P_{v,\theta}\to F_{v,\theta}$ 的 owner 都相同。节点状态边两端都由 $v$
-持有，selector-history 边两端都由 $s_j$ 持有。最后，消息边
-$F_{u,\eta}\to P_{v,\eta+\delta(a)}$ 投影成原消息边 $u\to v$，也在
-式 (39) 中。直接依赖已经穷尽，结论成立。$\square$
+**证明。** 逐类检查第 4.2 节的直接事件边。同刻边 $P_{v,\theta}\to S_{j,\theta}$ 投影成 $v\to s_j$，而 $S_{j,\theta}\to U_{v,\theta}$ 与直接控制边 $S_{j,\theta}\to F_{v,\theta}$ 都投影成 $s_j\to v$；这些边都在式 (39) 中。$P_{v,\theta}\to U_{v,\theta}$、$U_{v,\theta}\to F_{v,\theta}$ 与 $P_{v,\theta}\to F_{v,\theta}$ 的 owner 都相同。节点状态边两端都由 $v$ 持有，selector-history 边两端都由 $s_j$ 持有。最后，消息边 $F_{u,\eta}\to P_{v,\eta+\delta(a)}$ 投影成原消息边 $u\to v$，也在式 (39) 中。直接依赖已经穷尽，结论成立。$\square$
 
 除非明确换用另一张已证明 dependency-complete 的静态图，第 10--12 节固定取 $\Gamma=G^\dagger$，因而 $\mathcal S_\Gamma=\mathcal S_{G^\dagger}$。下文所谓宏分量均指某个明确的 $C\in\mathcal S_\Gamma$。
 
@@ -1776,8 +1675,7 @@ $F_{u,\eta}\to P_{v,\eta+\delta(a)}$ 投影成原消息边 $u\to v$，也在
 u → v → w
 ```
 
-并令 $\mathcal R_A=\{u,w\}$、$\mathcal R_B=\{v\}$。记两条边的时延为
-$d_1,d_2>0$。本节只为比较而定义区域商图边集：
+并令 $\mathcal R_A=\{u,w\}$、$\mathcal R_B=\{v\}$。记两条边的时延为 $d_1,d_2>0$。本节只为比较而定义区域商图边集：
 
 $$
 Q_\rho
@@ -1797,8 +1695,7 @@ $$
 | 静态图 $G^\dagger$ | 增加 $u,w\leftrightarrow s_A$ 与 $v\leftrightarrow s_B$ | 含有 $u\to v\to w\to s_A\to u$，且五个顶点都在同一 SCC。 |
 | 一次运行的 $\mathscr G^{\mathrm{ev}}_{x,<b}$ | 只含本次实际存在的带时间事件 | 仍由定理 4 保证是有限 DAG。 |
 
-例如，若 $F_{u,\theta}$ 产生第一条消息，$v$ 随后 active 并产生第二条消息，
-且 $b>\theta+d_1+d_2$，事件图便含有路径
+例如，若 $F_{u,\theta}$ 产生第一条消息，$v$ 随后 active 并产生第二条消息，且 $b>\theta+d_1+d_2$，事件图便含有路径
 
 $$
 \begin{aligned}
@@ -1812,23 +1709,11 @@ F_{u,\theta}
 \end{aligned}
 $$
 
-若 $u$ 在最后一个时间也成为候选并被选中，这条路径还可继续到
-$U_{u,\theta+d_1+d_2}\to F_{u,\theta+d_1+d_2}$。其 owner 已经沿
-$G^\dagger$ 返回 $u$，事件却到达了更晚时间的另一个 $F_u$，并未返回
-$F_{u,\theta}$。所以 $G^\dagger$ 的静态环不是 finite-cut 事件环。
+若 $u$ 在最后一个时间也成为候选并被选中，这条路径还可继续到 $U_{u,\theta+d_1+d_2}\to F_{u,\theta+d_1+d_2}$。其 owner 已经沿 $G^\dagger$ 返回 $u$，事件却到达了更晚时间的另一个 $F_u$，并未返回 $F_{u,\theta}$。所以 $G^\dagger$ 的静态环不是 finite-cut 事件环。
 
-式 (39) 是安全但不必最小的静态包络：它不检查某类事件是否对所有合法输入都
-不可能出现。若另行证明某对 owner 之间的全部直接依赖在每个合法运行中都不会
-实例化，可以删去这对 owner 之间的静态边。只看到某次输入没有激活它，不足以
-这样做。若还要利用“selector 在整个定义域上与某个输入坐标无关”来删边，则须
-先相应细化第 4.2 节的保守事件依赖关系，再对
-细化后的关系证明 dependency-complete。
+式 (39) 是安全但不必最小的静态包络：它不检查某类事件是否对所有合法输入都不可能出现。若另行证明某对 owner 之间的全部直接依赖在每个合法运行中都不会实例化，可以删去这对 owner 之间的静态边。只看到某次输入没有激活它，不足以这样做。若还要利用“selector 在整个定义域上与某个输入坐标无关”来删边，则须先相应细化第 4.2 节的保守事件依赖关系，再对细化后的关系证明 dependency-complete。
 
-$G^\dagger$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把
-$v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻
-依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。命题 13 只证明它是安全的静态边界；
-它还丢弃了平行消息边的身份。后续宏 runtime 仍须保留每个 $a\in A$，并另外
-证明完整多端口契约与外层保块。
+$G^\dagger$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把 $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。命题 13 只证明它是安全的静态边界；它还丢弃了平行消息边的身份。后续宏 runtime 仍须保留每个 $a\in A$，并另外证明完整多端口契约与外层保块。
 
 ## 10. 有限 cut 上的因果作用块与最大前沿
 
@@ -1848,9 +1733,7 @@ $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代
 
 #### 10.2.1 共同语义骨架、函数类与成本标记
 
-先固定一份不含 $\operatorname{Full}$ 的**无限日程骨架**
-$\mathfrak B_\infty$。对每个 $i\in\mathsf I$，先固定严格递增的共同注入日程
-$\bar\iota_i:\mathbb N\to\mathbb N$。为使不同输入长度具有共同的函数类型，定义：
+先固定一份不含 $\operatorname{Full}$ 的**无限日程骨架** $\mathfrak B_\infty$。对每个 $i\in\mathsf I$，先固定严格递增的共同注入日程 $\bar\iota_i:\mathbb N\to\mathbb N$。为使不同输入长度具有共同的函数类型，定义：
 
 $$
 \mathsf{Ext}_\infty
@@ -1858,21 +1741,18 @@ $$
 i\in\mathsf I,\ k\in\mathbb N,\ y\in P\}.
 $$
 
-对 $e=(\mathrm{ext},i,k,y)\in\mathsf{Ext}_\infty$，令
-$\operatorname{target}(e)=\gamma(i)$、
-$\operatorname{time}(e)=\bar\iota_i(k)$、$\operatorname{value}(e)=y$。
-再令：
+对 $e=(\mathrm{ext},i,k,y)\in\mathsf{Ext}_\infty$，令 $\operatorname{target}(e)=\gamma(i)$、$\operatorname{time}(e)=\bar\iota_i(k)$、$\operatorname{value}(e)=y$。再令：
 
 $$
+\begin{aligned}
 \mathsf{Atom}_\infty
-=\mathsf{Ext}_\infty\cup\mathsf{Msg},
-\qquad
+&=\mathsf{Ext}_\infty\cup\mathsf{Msg},\\
 \mathsf{Atom}_{\infty,v}
-=\{z\in\mathsf{Atom}_\infty\mid\operatorname{target}(z)=v\}.
+&=\{z\in\mathsf{Atom}_\infty\mid\operatorname{target}(z)=v\}.
+\end{aligned}
 $$
 
-骨架还包含第 1 节的图、端口、region、容量与模式、状态及控制量空间、初态，全部
-$\operatorname{Upd},\operatorname{Read},\operatorname{SelStep},\operatorname{Next}$，以及共同全函数：
+骨架还包含第 1 节的图、端口、region、容量与模式、状态及控制量空间、初态，全部 $\operatorname{Upd},\operatorname{Read},\operatorname{SelStep},\operatorname{Next}$，以及共同全函数：
 
 $$
 \operatorname{Agg}_v^\infty:
@@ -1881,8 +1761,7 @@ $$
 \longrightarrow X_v.
 $$
 
-对长度向量
-$\mathbf L=(L_i)_{i\in\mathsf I}\in\mathbb N^{\mathsf I}$，令：
+对长度向量 $\mathbf L=(L_i)_{i\in\mathsf I}\in\mathbb N^{\mathsf I}$，令：
 
 $$
 \begin{aligned}
@@ -1904,8 +1783,7 @@ K_i^{\mathbf L}&=[L_i],
 \end{aligned}
 $$
 
-因此改变 $\mathbf L$ 只取共同对象的限制，不会暗中更换 aggregation 规则。
-令：
+因此改变 $\mathbf L$ 只取共同对象的限制，不会暗中更换 aggregation 规则。令：
 
 $$
 \mathcal O_v
@@ -1913,32 +1791,23 @@ $$
 \times(P_\bot)^{\operatorname{OutPort}(v)}.
 $$
 
-再固定一个非空的 $\operatorname{Full}$ **解释类**
-$\mathfrak F$。它的元素是函数族
-$\mathbf F=(F_v)_{v\in V}$，其中：
+再固定一个非空的 $\operatorname{Full}$ **解释类** $\mathfrak F$。它的元素是函数族 $\mathbf F=(F_v)_{v\in V}$，其中：
 
 $$
 F_v:S_v\times\mathbb N\times X_v\times\mathsf C_v
 \longrightarrow\mathcal O_v.
 $$
 
-若不利用 $\operatorname{Full}$ 的额外结构，$\mathfrak F$ 可取全部这种全函数族；
-也可用明确写出的统一结构契约限制它。后文计划只能使用这份共同契约，不能读取
-当前 $\mathbf F$ 的身份。对每个 $\mathbf F\in\mathfrak F$ 与 $\mathbf L$，
-记 $\mathfrak G_{\mathbf L}^{\mathbf F}$ 为令
-$K_i=K_i^{\mathbf L}$、$\iota_i=\iota_i^{\mathbf L}$，把第 1 节的
-$\mathsf{Ext},\mathsf{Atom}_v,\operatorname{Agg}_v$ 分别取成
-$\mathsf{Ext}_{\mathbf L},\mathsf{Atom}_{\mathbf L,v},\operatorname{Agg}_v^{\mathbf L}$，
-并令 $\operatorname{Full}_v=F_v$ 得到的规格。
-再固定有限成本种类集合 $\mathsf{CostKind}$、主要种类子集
-$\mathsf{MajorKind}\subseteq\mathsf{CostKind}$。定义与输入无关的规范作用坐标全集：
+若不利用 $\operatorname{Full}$ 的额外结构，$\mathfrak F$ 可取全部这种全函数族；也可用明确写出的统一结构契约限制它。后文计划只能使用这份共同契约，不能读取当前 $\mathbf F$ 的身份。对每个 $\mathbf F\in\mathfrak F$ 与 $\mathbf L$，记 $\mathfrak G_{\mathbf L}^{\mathbf F}$ 为令 $K_i=K_i^{\mathbf L}$、$\iota_i=\iota_i^{\mathbf L}$，把第 1 节的 $\mathsf{Ext},\mathsf{Atom}_v,\operatorname{Agg}_v$ 分别取成 $\mathsf{Ext}_{\mathbf L},\mathsf{Atom}_{\mathbf L,v},\operatorname{Agg}_v^{\mathbf L}$，并令 $\operatorname{Full}_v=F_v$ 得到的规格。再固定有限成本种类集合 $\mathsf{CostKind}$、主要种类子集 $\mathsf{MajorKind}\subseteq\mathsf{CostKind}$。定义与输入无关的规范作用坐标全集：
 
 $$
-\mathsf{ActCoord}_\infty
-=\bigl(\{\mathrm{prep},\mathrm{adopt},\mathrm{full}\}
-\times V\times\mathbb N\bigr)
-\sqcup
+\begin{aligned}
+&\mathsf{ActCoord}_\infty\\
+&\quad=\bigl(\{\mathrm{prep},\mathrm{adopt},\mathrm{full}\}
+\times V\times\mathbb N\bigr)\\
+&\qquad\sqcup
 \bigl(\{\mathrm{select}\}\times J\times\mathbb N\bigr),
+\end{aligned}
 $$
 
 并固定一个不读取当前函数值的标记函数：
@@ -1953,12 +1822,7 @@ $$
 
 #### 10.2.2 可见区间输入与唯一参考记录
 
-固定 $\mathbf F,\mathbf L$ 与 $a<b$，并写 $T=b-a$。令
-$Q_a^{\mathbf F}(x)$ 表示输入
-$x=(x_i:[L_i]\to P)_{i\in\mathsf I}$ 的规范递归在完整 cut $a$ 上产生的
-式 (33) continuation。定义
-$\omega=(Q_a,E,\sigma^{\mathrm{in}})\in\Omega_{\mathbf L,a,b}^{\mathbf F}$，
-当且仅当存在上述输入 $x$，使：
+固定 $\mathbf F,\mathbf L$ 与 $a<b$，并写 $T=b-a$。令 $Q_a^{\mathbf F}(x)$ 表示输入 $x=(x_i:[L_i]\to P)_{i\in\mathsf I}$ 的规范递归在完整 cut $a$ 上产生的式 (33) continuation。定义 $\omega=(Q_a,E,\sigma^{\mathrm{in}})\in\Omega_{\mathbf L,a,b}^{\mathbf F}$，当且仅当存在上述输入 $x$，使：
 
 $$
 \begin{aligned}
@@ -1973,8 +1837,7 @@ E_x(i,<\sigma^{\mathrm{in}}(i))
 \end{aligned}
 $$
 
-最后一行正是式 (25) 相对于 $E_{x,<a}\cup E$ 有效。对固定
-$\mathbf F$，所有这些三元组都属于共同集合：
+最后一行正是式 (25) 相对于 $E_{x,<a}\cup E$ 有效。对固定 $\mathbf F$，所有这些三元组都属于共同集合：
 
 $$
 \left(
@@ -1994,17 +1857,7 @@ $$
 \Omega_{\mathbf L,a,b}^{\mathbf F}.
 $$
 
-相同可见元组在这个并集中只算同一个元素；$\mathbf L$ 与见证 $x$ 不是计划可读
-坐标。即使同一 $\omega$ 有两个不同的 $\mathbf L,x$ 见证，它们也从相同
-$Q_a$ 和区间输入 $E$ 开始；source seal 排除区间内遗漏输入，而两边的
-aggregation 都是同一个 $\operatorname{Agg}_v^\infty$ 在当前纤维上的值。
-按 $\theta=a,\ldots,b-1$ 归纳，式 (34) 与式 (11)--(16) 的全部坐标因此相同。
-所以对固定 $\mathbf F$，$\omega$ 唯一确定参考区间记录
-$\mathcal U_{x,[a,b)}^{\mathbf F}$ 与 $Q_b^{\mathbf F}$。
-下文用 $q_v^\theta(\mathbf F,\omega)$、
-$q^{\mathrm{cmp}}_{v,\theta}(\mathbf F,\omega)$、
-$c_{v,\theta}(\mathbf F,\omega)$、$h_{v,\theta}(\mathbf F,\omega)$ 和
-$\mathcal A_{j,\theta}^{\mathbf F}(\omega)$ 表示这份唯一参考记录中的相应坐标。
+相同可见元组在这个并集中只算同一个元素；$\mathbf L$ 与见证 $x$ 不是计划可读坐标。即使同一 $\omega$ 有两个不同的 $\mathbf L,x$ 见证，它们也从相同 $Q_a$ 和区间输入 $E$ 开始；source seal 排除区间内遗漏输入，而两边的 aggregation 都是同一个 $\operatorname{Agg}_v^\infty$ 在当前纤维上的值。按 $\theta=a,\ldots,b-1$ 归纳，式 (34) 与式 (11)--(16) 的全部坐标因此相同。所以对固定 $\mathbf F$，$\omega$ 唯一确定参考区间记录 $\mathcal U_{x,[a,b)}^{\mathbf F}$ 与 $Q_b^{\mathbf F}$。下文用 $q_v^\theta(\mathbf F,\omega)$、$q^{\mathrm{cmp}}_{v,\theta}(\mathbf F,\omega)$、$c_{v,\theta}(\mathbf F,\omega)$、$h_{v,\theta}(\mathbf F,\omega)$ 和 $\mathcal A_{j,\theta}^{\mathbf F}(\omega)$ 表示这份唯一参考记录中的相应坐标。
 
 定义 active 时间集合：
 
@@ -2016,8 +1869,7 @@ $$
 
 #### 10.2.3 完整输出、因果状态与联合节点契约
 
-对 $\mathbf F\in\mathfrak F$ 与非空有限
-$\Theta\subseteq\mathbb N$，定义该解释下的合法 batch 输入域：
+对 $\mathbf F\in\mathfrak F$ 与非空有限 $\Theta\subseteq\mathbb N$，定义该解释下的合法 batch 输入域：
 
 $$
 \mathsf{Adm}_{v,\Theta}^{\mathbf F}
@@ -2046,12 +1898,7 @@ $$
 =\prod_{\theta\in\Theta}\mathcal O_v.
 $$
 
-一次显式 batch query 写成
-$\mathsf{Query}(v,\Theta,\xi)$，其中
-$\xi=((s_\theta,\theta,h_\theta,c_\theta))_{\theta\in\Theta}$ 且
-$\xi\in\mathsf{Adm}_{v,\Theta}^{\mathbf F}$。query 的语法不携带
-$\mathbf F$；在解释
-$\mathbf F$ 下，它的唯一精确回答由下列全函数给出：
+一次显式 batch query 写成 $\mathsf{Query}(v,\Theta,\xi)$，其中 $\xi=((s_\theta,\theta,h_\theta,c_\theta))_{\theta\in\Theta}$ 且 $\xi\in\mathsf{Adm}_{v,\Theta}^{\mathbf F}$。query 的语法不携带 $\mathbf F$；在解释 $\mathbf F$ 下，它的唯一精确回答由下列全函数给出：
 
 $$
 \begin{aligned}
@@ -2072,17 +1919,9 @@ K^F_{v,\Theta}
 =\{F_{v,\theta}\mid\theta\in\Theta\}.
 $$
 
-状态递归采用另一种边界。先取
-$\mathbf F_0\in\mathfrak F$、$\mathbf L_0\in\mathbb N^{\mathsf I}$、
-$a_0<b_0$ 与
-$\omega_0\in\Omega_{\mathbf L_0,a_0,b_0}^{\mathbf F_0}$，并取第 10.2.2 节定义中见证 $\omega_0$ 的任一输入 $x_0$。取有限事件块
-$K\subseteq\mathscr V^{\mathrm{ev}}_{x_0,<b_0}$，其内部包含同一节点或同一 region 的一段 $P/S/U$ 轨迹，并要求每条从 $K$ 外进入 $K$ 的事件边起点已经完成。
+状态递归采用另一种边界。先取 $\mathbf F_0\in\mathfrak F$、$\mathbf L_0\in\mathbb N^{\mathsf I}$、$a_0<b_0$ 与 $\omega_0\in\Omega_{\mathbf L_0,a_0,b_0}^{\mathbf F_0}$，并取第 10.2.2 节定义中见证 $\omega_0$ 的任一输入 $x_0$。取有限事件块 $K\subseteq\mathscr V^{\mathrm{ev}}_{x_0,<b_0}$，其内部包含同一节点或同一 region 的一段 $P/S/U$ 轨迹，并要求每条从 $K$ 外进入 $K$ 的事件边起点已经完成。
 
-对任意 $\mathbf F,\mathbf L,a,b,\omega$ 满足
-$\mathbf F\in\mathfrak F$、$\mathbf L\in\mathbb N^{\mathsf I}$、$a<b$ 与
-$\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F}$，把第 10.2.2 节唯一参考区间记录的作用集合记为
-$\mathscr V^{\mathrm{ev}}_{\mathbf F,\omega,[a,b)}$。对固定
-$\mathbf F\in\mathfrak F$，定义：
+对任意 $\mathbf F,\mathbf L,a,b,\omega$ 满足 $\mathbf F\in\mathfrak F$、$\mathbf L\in\mathbb N^{\mathsf I}$、$a<b$ 与 $\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F}$，把第 10.2.2 节唯一参考区间记录的作用集合记为 $\mathscr V^{\mathrm{ev}}_{\mathbf F,\omega,[a,b)}$。对固定 $\mathbf F\in\mathfrak F$，定义：
 
 $$
 \mathsf{Inst}^{\mathbf F}(K)
@@ -2098,21 +1937,23 @@ $$
 对每个带名字的语义坐标 $\gamma$，用 $\mathsf{Type}(\gamma)$ 表示第 1--4 节给出的值空间。输入坐标签名 $\partial^-K$ 由以下坐标组成：块外直接前驱作用值，块内首次读取的左边界节点状态和选择历史，进入块内纤维而不由块内作用产生的输入与消息，以及证明这些纤维完整的 seal 坐标。输出坐标签名 $\partial^+K$ 包含 $K$ 中全部规范作用值，以及它们产生并离开块的状态、历史、消息和外部输出。定义：
 
 $$
+\begin{aligned}
 \mathsf{BndIn}(K)
-=\prod_{\gamma\in\partial^-K}\mathsf{Type}(\gamma),
-\qquad
+&=\prod_{\gamma\in\partial^-K}\mathsf{Type}(\gamma),\\
 \mathsf{StateOut}(K)
-=\prod_{\gamma\in\partial^+K}\mathsf{Type}(\gamma).
+&=\prod_{\gamma\in\partial^+K}\mathsf{Type}(\gamma).
+\end{aligned}
 $$
 
 把完整参考实例限制到这两组坐标，得到：
 
 $$
+\begin{aligned}
 \beta_{K,\mathbf F}^-:\mathsf{Inst}^{\mathbf F}(K)
-\to\mathsf{BndIn}(K),
-\qquad
+&\to\mathsf{BndIn}(K),\\
 \beta_{K,\mathbf F}^+:\mathsf{Inst}^{\mathbf F}(K)
-\to\mathsf{StateOut}(K),
+&\to\mathsf{StateOut}(K),
+\end{aligned}
 $$
 
 并定义合法边界域：
@@ -2156,9 +1997,7 @@ $$
 
 的全函数。它从左边界状态和整段已关闭驱动量产生内部状态轨迹；规范上的跨时间状态边保留在 $K$ 内。
 
-当 $K$ 是节点 $v$ 的局部状态块时，令 $K^{UF}$ 为 $K$ 加上其中全部 active 坐标的 $F$。上述边界构造给出
-$\mathsf{AdmIn}^{\mathbf F}(K^{UF})$、$\mathsf{StateOut}(K^{UF})$ 与
-$\operatorname{RefState}_{K^{UF}}^{\mathbf F}$。具有类型：
+当 $K$ 是节点 $v$ 的局部状态块时，令 $K^{UF}$ 为 $K$ 加上其中全部 active 坐标的 $F$。上述边界构造给出 $\mathsf{AdmIn}^{\mathbf F}(K^{UF})$、$\mathsf{StateOut}(K^{UF})$ 与 $\operatorname{RefState}_{K^{UF}}^{\mathbf F}$。具有类型：
 
 $$
 \operatorname{BatchNode}_{K^{UF}}^{\mathbf F}:
@@ -2184,8 +2023,7 @@ $$
 \mathsf{EvalRec}(K)\longrightarrow\mathsf{StateOut}(K).
 $$
 
-具体记录 $r$ 在解释 $\mathbf F$ 的边界 $z$ 上精化到规范块，当
-$\Pi_K^{\mathrm{blk}}(r)=\operatorname{RefState}_K^{\mathbf F}(z)$。
+具体记录 $r$ 在解释 $\mathbf F$ 的边界 $z$ 上精化到规范块，当 $\Pi_K^{\mathrm{blk}}(r)=\operatorname{RefState}_K^{\mathbf F}(z)$。
 
 定义契约种类集合与契约归属标识集合：
 
@@ -2206,8 +2044,7 @@ $$
 B=(\operatorname{kind}(B),\operatorname{cown}(B),K_B,\mathcal K_B),
 $$
 
-其中 $\operatorname{kind}(B)\in\mathsf{ContractKind}$，
-$\operatorname{cown}(B)\in\mathsf{ContractOwner}$，而
+其中 $\operatorname{kind}(B)\in\mathsf{ContractKind}$，$\operatorname{cown}(B)\in\mathsf{ContractOwner}$，而
 
 $$
 \mathcal K_B
@@ -2217,14 +2054,7 @@ $$
 \right)_{\mathbf F\in\mathfrak F}
 $$
 
-是一族在各自整个定义域等于
-$\operatorname{RefState}_{K_B}^{\mathbf F}$ 的全函数。节点契约的归属标识是相应
-$(\mathrm{node},v)$；区域契约的归属标识是相应
-$(\mathrm{region},j)$。它与第 9.4 节作用级的 $\operatorname{own}$ 映射具有不同定义域。对逐坐标完整输出块 $K^F_{v,\Theta}$，按规范标签识别
-$\mathsf{AdmIn}^{\mathbf F}(K^F_{v,\Theta})$ 与
-$\mathsf{Adm}_{v,\Theta}^{\mathbf F}$，并识别
-$\mathsf{StateOut}(K^F_{v,\Theta})$ 与
-$\mathsf{BOut}_{v,\Theta}$ 经式 (15)--(16) 展开消息和外部输出以后所得的规范记录；相应契约的归属标识为 $(\mathrm{node},v)$。
+是一族在各自整个定义域等于 $\operatorname{RefState}_{K_B}^{\mathbf F}$ 的全函数。节点契约的归属标识是相应 $(\mathrm{node},v)$；区域契约的归属标识是相应 $(\mathrm{region},j)$。它与第 9.4 节作用级的 $\operatorname{own}$ 映射具有不同定义域。对逐坐标完整输出块 $K^F_{v,\Theta}$，按规范标签识别 $\mathsf{AdmIn}^{\mathbf F}(K^F_{v,\Theta})$ 与 $\mathsf{Adm}_{v,\Theta}^{\mathbf F}$，并识别 $\mathsf{StateOut}(K^F_{v,\Theta})$ 与 $\mathsf{BOut}_{v,\Theta}$ 经式 (15)--(16) 展开消息和外部输出以后所得的规范记录；相应契约的归属标识为 $(\mathrm{node},v)$。
 
 固定登记契约集合 $\mathfrak B$，并定义：
 
@@ -2248,13 +2078,7 @@ $$
 
 #### 10.2.4 自适应阶段与因果策略
 
-一个**自适应阶段**
-$\pi_r=(\mathsf{Ctrl}_r,\mathsf{Block}_r)$ 有两个依次发生的部分。
-$\mathsf{Ctrl}_r$ 是当前成本标记下的普通作用闭包；
-$\mathsf{Block}_r$ 是随后一次确定的有限个两两不交契约调用。每个调用的
-边界输入和块外事件前驱都由 $\omega$、较早阶段或
-$\mathsf{Ctrl}_r$ 确定。全部返回标签、消息和输出在阶段末共同进入
-$\mathsf{Pub}_r$。
+一个**自适应阶段** $\pi_r=(\mathsf{Ctrl}_r,\mathsf{Block}_r)$ 有两个依次发生的部分。$\mathsf{Ctrl}_r$ 是当前成本标记下的普通作用闭包；$\mathsf{Block}_r$ 是随后一次确定的有限个两两不交契约调用。每个调用的边界输入和块外事件前驱都由 $\omega$、较早阶段或 $\mathsf{Ctrl}_r$ 确定。全部返回标签、消息和输出在阶段末共同进入 $\mathsf{Pub}_r$。
 
 在第 $r$ 个阶段已经完成 $k$ 条控制作用的决策点，定义**可见求值记录**（transcript）：
 
@@ -2267,17 +2091,11 @@ $$
 \right),
 $$
 
-其中 $\mathsf{Ctrl}_{r,\le k}$ 同时记录已经发生的普通作用及其值。一个
-**因果策略** $\mathscr S$ 是从 $(a,b,\mathfrak t_{r,k})$ 到下一动作的
-同一个确定函数；下一动作可以是求一个当前合法的普通作用，确定本阶段的
-契约调用族，或在目标 cut 已完成时停止。函数解释 $\mathbf F$ 只通过已经
-记录的契约回答影响后续动作。两个相同 transcript 因而给出相同动作。
+其中 $\mathsf{Ctrl}_{r,\le k}$ 同时记录已经发生的普通作用及其值。一个 **因果策略** $\mathscr S$ 是从 $(a,b,\mathfrak t_{r,k})$ 到下一动作的同一个确定函数；下一动作可以是求一个当前合法的普通作用，确定本阶段的契约调用族，或在目标 cut 已完成时停止。函数解释 $\mathbf F$ 只通过已经记录的契约回答影响后续动作。两个相同 transcript 因而给出相同动作。
 
-新的主要作用值只经 $\mathfrak B$ 中的显式契约回答进入
-$\mathsf{Pub}_r$。transcript 的坐标不含 $\mathbf L$、见证输入 $x$、区间外输入、未来选择结果或尚未回答的主要作用值。这给出本文的因果可见性条件。
+新的主要作用值只经 $\mathfrak B$ 中的显式契约回答进入 $\mathsf{Pub}_r$。transcript 的坐标不含 $\mathbf L$、见证输入 $x$、区间外输入、未来选择结果或尚未回答的主要作用值。这给出本文的因果可见性条件。
 
-阶段 $r$ 的返回标签可以经精化映射进入一条合法
-$P/S/U/F$ 过滤的某个截面。阶段号、过滤索引与逻辑时间分别记录求值轮次、公开次序与语义坐标。
+阶段 $r$ 的返回标签可以经精化映射进入一条合法 $P/S/U/F$ 过滤的某个截面。阶段号、过滤索引与逻辑时间分别记录求值轮次、公开次序与语义坐标。
 
 #### 10.2.5 精确性与三类批次数
 
@@ -2288,10 +2106,7 @@ $$
 =(\pi_1,\ldots,\pi_{N_{\mathbf F}(a,b,\omega)}).
 $$
 
-称这次运行 **exact**，若最终记录与 continuation 恰等于
-$(\mathcal U_{x,[a,b)}^{\mathbf F},Q_b^{\mathbf F})$，包括越过右切面的新消息；
-每个阶段调用的联合函数都满足其精确契约，并且这些调用在精化以后恰好覆盖
-区间内的全部规范作用一次。
+称这次运行 **exact**，若最终记录与 continuation 恰等于 $(\mathcal U_{x,[a,b)}^{\mathbf F},Q_b^{\mathbf F})$，包括越过右切面的新消息；每个阶段调用的联合函数都满足其精确契约，并且这些调用在精化以后恰好覆盖区间内的全部规范作用一次。
 
 对节点 $v$，分别记因果状态块、逐坐标完整输出批和状态—输出联合块数量为：
 
@@ -2301,12 +2116,9 @@ m_v^F(a,b,\mathbf F,\omega),\qquad
 m_v^{UF}(a,b,\mathbf F,\omega).
 $$
 
-区域状态块另外按 $j$ 计数为 $m_j^R$。一个联合块同时覆盖 $U,F$ 时计入
-$m_v^{UF}$；其细粒度覆盖集合仍经精化分别等于相应规范坐标集合。
+区域状态块另外按 $j$ 计数为 $m_j^R$。一个联合块同时覆盖 $U,F$ 时计入 $m_v^{UF}$；其细粒度覆盖集合仍经精化分别等于相应规范坐标集合。
 
-称解释类、成本标记与契约族
-$(\mathfrak B_\infty,\mathfrak F;\mathfrak B)$ 具有
-**一致因果时间批暴露**，若量词顺序为：
+称解释类、成本标记与契约族 $(\mathfrak B_\infty,\mathfrak F;\mathfrak B)$ 具有 **一致因果时间批暴露**，若量词顺序为：
 
 $$
 \begin{aligned}
@@ -2321,7 +2133,8 @@ $$
 \begin{cases}
 \text{上述运行 exact},\\
 N_{\mathbf F}(a,b,\omega)\le C_R,\\
-m_v^U\le C_v^U,\quad m_v^F\le C_v^F,\quad
+m_v^U\le C_v^U,\quad m_v^F\le C_v^F
+\quad(v\in V),\\
 m_v^{UF}\le C_v^{UF}\quad(v\in V),\\
 m_j^R\le C_j^R\quad(j\in J).
 \end{cases}
@@ -2340,24 +2153,21 @@ $$
 \mathsf{Front}_{\mathfrak B}(\Xi_r).
 $$
 
-同时求值这族联合函数，在阶段末加入全部回答与实际消息，再进入下一轮。称所得递归为
-$\operatorname{EagerBlock}_{\mathfrak B}$。若契约族为每个主要作用提供单作用后备见证，finite-cut 事件 DAG 的有限性保证递归终止；逐块精确性与第 4 节事件偏序归纳保证最终记录等于参考 cut trace。
+同时求值这族联合函数，在阶段末加入全部回答与实际消息，再进入下一轮。称所得递归为 $\operatorname{EagerBlock}_{\mathfrak B}$。若契约族为每个主要作用提供单作用后备见证，finite-cut 事件 DAG 的有限性保证递归终止；逐块精确性与第 4 节事件偏序归纳保证最终记录等于参考 cut trace。
 
 > [!theorem] 定理 14：有限 cut 上的最大前沿
 > 对任意 source-sealed finite cut、任意精确且具有单作用后备见证的固定契约族，$\operatorname{EagerBlock}_{\mathfrak B}$ 在有限阶段后停止，并返回唯一参考 cut trace 与右 continuation。
 
 **证明。** 每个普通闭包或联合阶段都加入尚未完成的规范作用；单作用后备见证保证目标尚未完成时至少有一个作用进入。finite-cut 事件集合有限，所以递归停止。普通作用取参考函数值，联合块满足其逐坐标精确契约，且每条进入边的起点已经完成。沿实际块顺序归纳，全部返回标签、消息与右 continuation 等于第 2 节参考递归。$\square$
 
-固定一次运行选出的联合块以后，若后一块的输入读取前一块回答，写成
-$B\prec_{\mathfrak B}B'$。定义宏作用秩：
+固定一次运行选出的联合块以后，若后一块的输入读取前一块回答，写成 $B\prec_{\mathfrak B}B'$。定义宏作用秩：
 
 $$
 r(B)=1+\max_{B'\prec_{\mathfrak B}B}r(B'),
 \qquad\max\varnothing=0.
 $$
 
-最大前沿递归在每一回答层立即求全部可取块，因而使用
-$\max_B r(B)$ 个自适应阶段。任何对同一组宏作用求值、且阶段内调用都在回答公开以前一次确定的因果策略，都至少需要这么多阶段。更强的状态块或联合节点契约会改变宏作用分解，所以阶段最优性相对于固定分解陈述。
+最大前沿递归在每一回答层立即求全部可取块，因而使用 $\max_B r(B)$ 个自适应阶段。任何对同一组宏作用求值、且阶段内调用都在回答公开以前一次确定的因果策略，都至少需要这么多阶段。更强的状态块或联合节点契约会改变宏作用分解，所以阶段最优性相对于固定分解陈述。
 
 > [!proposition] 命题 15：固定宏作用图的阶段最优性
 > 在上述阶段可见性条件下，最大前沿递归以 $\max_B r(B)$ 个阶段完成固定宏作用图；任一对同一组宏作用求值的因果策略至少需要该阶段数。
@@ -2372,12 +2182,7 @@ $$
 h_{\theta+1}=f_\theta(h_\theta).
 $$
 
-取 Full 解释类为全部这种函数族 $(f_\theta)_{\theta\in\mathbb N}$，并固定
-$\mathfrak B=\mathfrak B^F$：契约族只含逐坐标完整输出 query，不含跨越
-$F_\theta\to P_{\theta+1}$ 反馈边的状态—输出或区域联合契约。即使全部 active
-坐标已经知道，下一次 query 的输入 $h_{\theta+1}$ 仍须等待前一次 Full 返回。
-区间 $[0,T)$ 因此需要 $T$ 个阶段。固定 $\Gamma=G^\dagger$ 时，
-$\mathcal S_\Gamma$ 只有一个分量；把它命名为宏节点不会缩短这条链。这一反馈经正时延消息发生，不需要让 Full 直接回写节点状态。
+取 Full 解释类为全部这种函数族 $(f_\theta)_{\theta\in\mathbb N}$，并固定 $\mathfrak B=\mathfrak B^F$：契约族只含逐坐标完整输出 query，不含跨越 $F_\theta\to P_{\theta+1}$ 反馈边的状态—输出或区域联合契约。即使全部 active 坐标已经知道，下一次 query 的输入 $h_{\theta+1}$ 仍须等待前一次 Full 返回。区间 $[0,T)$ 因此需要 $T$ 个阶段。固定 $\Gamma=G^\dagger$ 时，$\mathcal S_\Gamma$ 只有一个分量；把它命名为宏节点不会缩短这条链。这一反馈经正时延消息发生，不需要让 Full 直接回写节点状态。
 
 若一段节点状态或选择历史递归具有因果状态块契约，它可以整体成为一个联合块。使自适应阶段增长的是随 $T$ 反复出现的跨块交替，例如：
 
@@ -2392,8 +2197,7 @@ $$
 
 #### 10.3.3 严格分层的有限层次
 
-严格分层类存在 $\ell:J\to\mathbb N$，使每条消息边 $a$ 都满足
-$\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a)))$。记一个 region 的状态—控制块为 $\mathsf C_j$，其中某个节点的完整输出批为 $\mathsf F_v$。[[timed-dag-chunk-prefill-learning-note#7-严格分层-region-的整块定理|TimedDAG 分块教材第 7 节]]给出的形状是：
+严格分层类存在 $\ell:J\to\mathbb N$，使每条消息边 $a$ 都满足 $\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a)))$。记一个 region 的状态—控制块为 $\mathsf C_j$，其中某个节点的完整输出批为 $\mathsf F_v$。[[timed-dag-chunk-prefill-learning-note#7-严格分层-region-的整块定理|TimedDAG 分块教材第 7 节]]给出的形状是：
 
 $$
 \mathsf C_j\longrightarrow\mathsf F_v
@@ -2456,8 +2260,7 @@ $$
 
 是一张有向带权多重图；忘掉边标识符与权重并合并平行边，恰得到式 (39) 的 $G^\dagger$。
 
-对 $n\in\mathbb N_{>0}$，称
-$\zeta=(e_1,\ldots,e_n)\in(\widehat A^\dagger)^n$ 为闭游走，若：
+对 $n\in\mathbb N_{>0}$，称 $\zeta=(e_1,\ldots,e_n)\in(\widehat A^\dagger)^n$ 为闭游走，若：
 
 $$
 \widehat{\operatorname{dst}}(e_r)

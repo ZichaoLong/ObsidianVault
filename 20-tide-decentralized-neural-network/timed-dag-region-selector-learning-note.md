@@ -329,8 +329,7 @@ $$
 i\in\mathsf I,\ k\in[L_i],\ y\in P\}.
 $$
 
-这里 $\mathrm{ext}$ 表示外部输入记录；下面的 $\mathrm{msg}$ 与 $\mathrm{out}$ 分别表示内部消息与输出记录。
-对 $e=(\mathrm{ext},i,k,y)\in\mathsf{Ext}$ 定义：
+这里 $\mathrm{ext}$ 表示外部输入记录；下面的 $\mathrm{msg}$ 与 $\mathrm{out}$ 分别表示内部消息与输出记录。对 $e=(\mathrm{ext},i,k,y)\in\mathsf{Ext}$ 定义：
 
 $$
 \operatorname{inport}(e)=i,
@@ -1071,18 +1070,13 @@ P_{v,\theta}=(\mathrm{prep},v,\theta),
 U_{v,\theta}=(\mathrm{adopt},v,\theta).
 $$
 
-$P_{v,\theta}$ 取完整时间纤维和旧持久状态，确定
-$h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta}$；
-$U_{v,\theta}$ 取本次选择结果，确定
-$q^{\mathrm{cmp}}_{v,\theta}$ 与 $q_v^{\theta+1}$。对
-$(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$ 定义：
+$P_{v,\theta}$ 取完整时间纤维和旧持久状态，确定 $h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta}$；$U_{v,\theta}$ 取本次选择结果，确定 $q^{\mathrm{cmp}}_{v,\theta}$ 与 $q_v^{\theta+1}$。对 $(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$ 定义：
 
 $$
 S_{j,\theta}=(\mathrm{select},j,\theta).
 $$
 
-它确定 $\mathcal A_{j,\theta}$、完整局部控制族以及
-$y_j^{\theta+1}$。对每个 $v\in\mathcal A_{j,\theta}$ 定义：
+它确定 $\mathcal A_{j,\theta}$、完整局部控制族以及 $y_j^{\theta+1}$。对每个 $v\in\mathcal A_{j,\theta}$ 定义：
 
 $$
 F_{v,\theta}=(\mathrm{full},v,\theta),
@@ -1131,8 +1125,7 @@ y_j^{\theta+1}),\\
 \end{aligned}
 $$
 
-对有限集合 $K\subseteq\mathscr V_x^{\mathrm{ev}}$，令
-$\mathsf{SemRec}(K)$ 为在 $K$ 的每个作用坐标上赋予类型正确函数值的全部记录所成的集合，$\mathcal T_x^{\mathrm{act}}\!\upharpoonright_K$ 表示规范作用记录在这些坐标上的限制。一个 $K$ 上的**联合记录规格**由集合 $\mathsf{JointRec}(K)$ 和一个预先固定的投影组成：
+对有限集合 $K\subseteq\mathscr V_x^{\mathrm{ev}}$，令 $\mathsf{SemRec}(K)$ 为在 $K$ 的每个作用坐标上赋予类型正确函数值的全部记录所成的集合，$\mathcal T_x^{\mathrm{act}}\!\upharpoonright_K$ 表示规范作用记录在这些坐标上的限制。一个 $K$ 上的**联合记录规格**由集合 $\mathsf{JointRec}(K)$ 和一个预先固定的投影组成：
 
 $$
 \Pi_K:\mathsf{JointRec}(K)\longrightarrow\mathsf{SemRec}(K).
@@ -1220,10 +1213,7 @@ $$
 
 其中时间纤维、本地量、选择和逐坐标输出函数值的时间坐标满足 $0\le\theta\le\Theta_{\max}$，两类状态还包含递归结束后的 $\theta=\Theta_{\max}+1$。称 $\mathcal T_x$ 为输入 $x$ 的完整计算记录。
 
-第 6.4 节的 $\mathcal T_x^{\mathrm{act}}$ 由这个元组中的本地量、选择、状态采用与完整输出坐标唯一导出；以后也把它视为 $\mathcal T_x$ 的规范作用投影。因此，对任意
-$K\subseteq\mathscr V_x^{\mathrm{ev}}$，记号
-$\mathcal T_x\!\upharpoonright_K$ 与
-$\mathcal T_x^{\mathrm{act}}\!\upharpoonright_K$ 表示同一带标签作用记录。
+第 6.4 节的 $\mathcal T_x^{\mathrm{act}}$ 由这个元组中的本地量、选择、状态采用与完整输出坐标唯一导出；以后也把它视为 $\mathcal T_x$ 的规范作用投影。因此，对任意 $K\subseteq\mathscr V_x^{\mathrm{ev}}$，记号 $\mathcal T_x\!\upharpoonright_K$ 与 $\mathcal T_x^{\mathrm{act}}\!\upharpoonright_K$ 表示同一带标签作用记录。
 
 本文把第 1--5 节的数据以及第 6 节所定义的直接语义合称为一个**带区域选择的 TimedDAG 规格**。
 
@@ -1337,11 +1327,11 @@ $$
 于是 $\rho$ 是满射，区域划分为：
 
 $$
-\rho^{-1}(\{0\})=\mathcal R_0=\{s_0\},
-\qquad
-\rho^{-1}(\{1\})=\mathcal R_1=\{s_1\},
-\qquad
-\rho^{-1}(\{2\})=\mathcal R_2=\{a,b\}.
+\begin{aligned}
+\rho^{-1}(\{0\})&=\mathcal R_0=\{s_0\},\\
+\rho^{-1}(\{1\})&=\mathcal R_1=\{s_1\},\\
+\rho^{-1}(\{2\})&=\mathcal R_2=\{a,b\}.
+\end{aligned}
 $$
 
 从输入目标节点出发的最长路径是 $s_0\to a$，总时延为 $5$。因此：
@@ -1639,11 +1629,13 @@ $$
 $$
 
 $$
-\operatorname{Read}^0_v(\theta,h)=h,
-\qquad
+\begin{aligned}
+\operatorname{Read}^0_v(\theta,h)&=h,\\
 \operatorname{Read}^{-}_v(q,\theta,h)
-=\operatorname{Read}^{+}_v(q,\theta,h)
-=\operatorname{Eff}(q,\theta).
+&=\operatorname{Eff}(q,\theta),\\
+\operatorname{Read}^{+}_v(q,\theta,h)
+&=\operatorname{Eff}(q,\theta).
+\end{aligned}
 $$
 
 选择函数按描述量选出 $\min(K_j,|C|)$ 个节点，平局按事先固定的节点全序，局部控制恒为 $*$、选择历史保持 $*$。由于 $\kappa_j=1$，所有候选都用当前输入产生的状态作为本次计算快照。令完整输出把 $\operatorname{Eff}(q^{\mathrm{cmp}},\theta)$ 送到每个出边与输出端口；再定义：
@@ -1774,8 +1766,7 @@ $$
 \sigma_n^{A}:A\to\overline{\mathbb N}.
 $$
 
-称它们相对于固定完整记录 $\mathcal T_x$ 的当前 filtration 截面
-$(E_n,H_n)$ **有效**。把这个关系记为：
+称它们相对于固定完整记录 $\mathcal T_x$ 的当前 filtration 截面 $(E_n,H_n)$ **有效**。把这个关系记为：
 
 $$
 \begin{aligned}
@@ -1801,9 +1792,7 @@ $$
 \tag{33}
 $$
 
-附录 S 把 $\sigma$ 称为 seal。式 (33) 才是这个词的数学含义；“有效”不是
-$\sigma_n$ 脱离上下文的一元性质。因为 $(E_n,H_n)$ 由
-$(\alpha_E,\alpha_M,n)$ 决定，也可以把左边等价地写成：
+附录 S 把 $\sigma$ 称为 seal。式 (33) 才是这个词的数学含义；“有效”不是 $\sigma_n$ 脱离上下文的一元性质。因为 $(E_n,H_n)$ 由 $(\alpha_E,\alpha_M,n)$ 决定，也可以把左边等价地写成：
 
 $$
 \operatorname{ValidSeal}_{\mathcal T_x}
@@ -1811,9 +1800,7 @@ $$
 \sigma_n^{\mathrm{in}},\sigma_n^A).
 $$
 
-不过式 (33) 的真值只使用当前截面与固定完整记录；两个不同阶段秩若在阶段
-$n$ 诱导同一个 $(E_n,H_n)$，就给出相同的有效性判断。后文说“有效下界”时，
-均指上述关系在当前截面成立。
+不过式 (33) 的真值只使用当前截面与固定完整记录；两个不同阶段秩若在阶段 $n$ 诱导同一个 $(E_n,H_n)$，就给出相同的有效性判断。后文说“有效下界”时，均指上述关系在当前截面成立。
 
 为了把这个全称命题改写成集合覆盖关系，对 $i\in\mathsf I$、$a\in A$ 与 $b\in\overline{\mathbb N}$ 定义：
 
@@ -2112,8 +2099,7 @@ $$
 (f^A_{v,\theta},f^O_{v,\theta}).
 $$
 
-阶段 $n$ 的函数值就是四个标签函数在
-$\mathsf P_n,\mathsf S_n,\mathsf U_n,\mathsf F_n$ 上的限制。作用首次进入时增加相应规范标签；第 9.2--9.3 节的条件保证该标签的全部自变量已经属于更早截面。
+阶段 $n$ 的函数值就是四个标签函数在 $\mathsf P_n,\mathsf S_n,\mathsf U_n,\mathsf F_n$ 上的限制。作用首次进入时增加相应规范标签；第 9.2--9.3 节的条件保证该标签的全部自变量已经属于更早截面。
 
 把一个阶段截面的全部数据打包为：
 
@@ -2179,11 +2165,9 @@ $$
 \operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi),
 $$
 
-它成立，当且仅当
-$\mathsf P_0=\mathsf S_0=\mathsf U_0=\mathsf F_0=\varnothing$，并且对每个阶段 $n$ 都满足：
+它成立，当且仅当 $\mathsf P_0=\mathsf S_0=\mathsf U_0=\mathsf F_0=\varnothing$，并且对每个阶段 $n$ 都满足：
 
-1. $\operatorname{ValidSeal}_{\mathcal T_x}
-   (E_n,H_n;\sigma_n^{\mathrm{in}},\sigma_n^A)$；
+1. $\operatorname{ValidSeal}_{\mathcal T_x} (E_n,H_n;\sigma_n^{\mathrm{in}},\sigma_n^A)$；
 2. 式 (34) 的 seal 单调性；
 3. 式 (40) 的源事件约束；
 4. 第 9.2 节的 $P,S$ 首次进入条件；
@@ -2194,21 +2178,17 @@ $\mathsf P_0=\mathsf S_0=\mathsf U_0=\mathsf F_0=\varnothing$，并且对每个�
 称合法暴露轨迹**完整**，当且仅当存在 $N\in\mathbb N$ 使：
 
 $$
-E_N=E_x,
-\quad H_N=M^*,
-\quad
-\mathsf P_N=\mathscr V_x^P,
-\quad
-\mathsf S_N=\mathscr V_x^S,
-\quad
-\mathsf U_N=\mathscr V_x^U,
-\quad
-\mathsf F_N=\mathscr V_x^F.
+\begin{aligned}
+E_N&=E_x,
+&H_N&=M^*,\\
+\mathsf P_N&=\mathscr V_x^P,
+&\mathsf S_N&=\mathscr V_x^S,\\
+\mathsf U_N&=\mathscr V_x^U,
+&\mathsf F_N&=\mathscr V_x^F.
+\end{aligned}
 $$
 
-在第 8.8 节的状态与历史就绪关系中，以下分别取
-$\mathsf{Done}=\{(v,\theta)\mid U_{v,\theta}\in\mathsf U_n\}$ 与
-$\mathsf{Selected}=\{(j,\theta)\mid S_{j,\theta}\in\mathsf S_n\}$。
+在第 8.8 节的状态与历史就绪关系中，以下分别取 $\mathsf{Done}=\{(v,\theta)\mid U_{v,\theta}\in\mathsf U_n\}$ 与 $\mathsf{Selected}=\{(j,\theta)\mid S_{j,\theta}\in\mathsf S_n\}$。
 
 ### 9.2 合法准备与合法选择
 
@@ -2253,8 +2233,7 @@ $$
 
 ### 9.3 合法状态采用与完整输出
 
-若 $v\in\mathcal C_{j,\theta}$，作用 $U_{v,\theta}$ 可以属于
-$\Delta\mathsf U_n$，当且仅当：
+若 $v\in\mathcal C_{j,\theta}$，作用 $U_{v,\theta}$ 可以属于 $\Delta\mathsf U_n$，当且仅当：
 
 1. $P_{v,\theta}\in\mathsf P_n$；
 2. $S_{j,\theta}\in\mathsf S_n$；
@@ -2262,8 +2241,7 @@ $\Delta\mathsf U_n$，当且仅当：
 
 进入时按式 (25a)、(25) 确定本次计算快照与下一持久状态。不同节点拥有不同的状态坐标，因此同一区域的多个 $U$ 可以在选择以后进入不同阶段；同一节点的 $U$ 按逻辑时间递增。
 
-若 $v\in\mathcal A_{j,\theta}$，作用 $F_{v,\theta}$ 可以属于
-$\Delta\mathsf F_n$，当且仅当 $U_{v,\theta}\in\mathsf U_n$。它进入时应用式 (26)，并由式 (27)--(28) 派生实际消息与输出。派生消息从这一阶段起属于 $M^{\mathrm{src}}$，再依式 (40) 进入某个当前或后续的 $H$ 截面。
+若 $v\in\mathcal A_{j,\theta}$，作用 $F_{v,\theta}$ 可以属于 $\Delta\mathsf F_n$，当且仅当 $U_{v,\theta}\in\mathsf U_n$。它进入时应用式 (26)，并由式 (27)--(28) 派生实际消息与输出。派生消息从这一阶段起属于 $M^{\mathrm{src}}$，再依式 (40) 进入某个当前或后续的 $H$ 截面。
 
 ### 9.4 作用值、暂存值与规范坐标
 
@@ -2373,19 +2351,17 @@ $$
 &=\{(j,\theta)\in\mathcal E_x^{\mathrm{sel}}
 \mid S_{j,\theta}\in\mathsf S_n\},\\
 \mathsf{Completed}_n
-&=\{(v,\theta)\in\mathcal E_x^{\mathrm{node}}
-\mid U_{v,\theta}\in\mathsf U_n,
+&=\{(v,\theta)\mid
+(v,\theta)\in\mathcal E_x^{\mathrm{node}},\\
+&\qquad U_{v,\theta}\in\mathsf U_n,
 (v\notin\mathcal A_{\rho(v),\theta}
 \ \lor\ F_{v,\theta}\in\mathsf F_n)\}.
 \end{aligned}
 $$
 
-$\mathsf{Prepared}_n$ 表示本地准备标签已经进入，
-$\mathsf{Selected}_n$ 表示一次区域共同选择的全部输出已经进入，
-$\mathsf{Completed}_n$ 表示节点的状态采用已经进入，并且激活节点的完整输出也已经进入。它们由 $\Xi_n$ 唯一确定，适合陈述节点级的公开进度。
+$\mathsf{Prepared}_n$ 表示本地准备标签已经进入，$\mathsf{Selected}_n$ 表示一次区域共同选择的全部输出已经进入，$\mathsf{Completed}_n$ 表示节点的状态采用已经进入，并且激活节点的完整输出也已经进入。它们由 $\Xi_n$ 唯一确定，适合陈述节点级的公开进度。
 
-细粒度截面还保留两项派生视图未表达的信息：$U$ 与 $F$ 可以分属不同阶段，且一条已由 $F$ 产生的消息可以在更晚阶段进入 $H$。因此，状态批、完整输出批和消息公开分别直接使用
-$\mathsf U_n,\mathsf F_n,H_n$ 计量。
+细粒度截面还保留两项派生视图未表达的信息：$U$ 与 $F$ 可以分属不同阶段，且一条已由 $F$ 产生的消息可以在更晚阶段进入 $H$。因此，状态批、完整输出批和消息公开分别直接使用 $\mathsf U_n,\mathsf F_n,H_n$ 计量。
 
 ## 10. 一次计算产生的事件 DAG
 
@@ -2393,8 +2369,7 @@ $\mathsf U_n,\mathsf F_n,H_n$ 计量。
 
 ### 10.1 函数作用事件的集合
 
-固定输入 $x$ 及其完整记录 $\mathcal T_x$，取第 6.4 节的有限不交并
-$\mathscr V_x^{\mathrm{ev}}$ 作为顶点集合。
+固定输入 $x$ 及其完整记录 $\mathcal T_x$，取第 6.4 节的有限不交并 $\mathscr V_x^{\mathrm{ev}}$ 作为顶点集合。
 
 令：
 
@@ -2542,8 +2517,7 @@ $$
 \tag{43}
 $$
 
-这个秩由事件坐标固定，只用于证明无环；阶段化暴露另由
-$\alpha_E,\alpha_M,\alpha_P,\alpha_S,\alpha_U,\alpha_F$ 给出。
+这个秩由事件坐标固定，只用于证明无环；阶段化暴露另由 $\alpha_E,\alpha_M,\alpha_P,\alpha_S,\alpha_U,\alpha_F$ 给出。
 
 这里的字典序定义为：
 
@@ -2605,27 +2579,26 @@ $$
 U_{v,\theta}\longrightarrow P_{v,\theta'}
 $$
 
-规定后一作用读取前一作用留下的持久状态。对一个递增时间集合
-$\Theta=\{\theta_1<\cdots<\theta_k\}$，这组边形成一条状态递归。下面先定义这类递归的一般联合契约。
+规定后一作用读取前一作用留下的持久状态。对一个递增时间集合 $\Theta=\{\theta_1<\cdots<\theta_k\}$，这组边形成一条状态递归。下面先定义这类递归的一般联合契约。
 
-固定非空状态集合 $\mathsf Q$、驱动集合
-$\mathsf Z_1,\ldots,\mathsf Z_k$ 和全函数：
+固定非空状态集合 $\mathsf Q$、驱动集合 $\mathsf Z_1,\ldots,\mathsf Z_k$ 和全函数：
 
 $$
 T_i:\mathsf Q\times\mathsf Z_i\longrightarrow\mathsf Q
 \qquad(1\le i\le k).
 $$
 
-从 $q_0\in\mathsf Q$ 与 $(z_i)_{i=1}^k$ 出发，递归定义
-$q_i=T_i(q_{i-1},z_i)$。由此得到参考状态转导：
+从 $q_0\in\mathsf Q$ 与 $(z_i)_{i=1}^k$ 出发，递归定义 $q_i=T_i(q_{i-1},z_i)$。由此得到参考状态转导：
 
 $$
-\operatorname{RefState}_{\Theta}:
-\mathsf Q\times\prod_{i=1}^{k}\mathsf Z_i
-\longrightarrow\mathsf Q^{\{0,\ldots,k\}},
-\qquad
+\begin{aligned}
 \operatorname{RefState}_{\Theta}
-(q_0,(z_i)_{i=1}^{k})=(q_i)_{i=0}^{k}.
+&:\mathsf Q\times\prod_{i=1}^{k}\mathsf Z_i
+\longrightarrow\mathsf Q^{\{0,\ldots,k\}},\\
+\operatorname{RefState}_{\Theta}
+(q_0,(z_i)_{i=1}^{k})
+&=(q_i)_{i=0}^{k}.
+\end{aligned}
 $$
 
 同类型全函数
@@ -2842,9 +2815,7 @@ T_\theta:\mathsf Q\times\mathsf Z_\theta\longrightarrow\mathsf Q
 \qquad(b\le\theta<c).
 $$
 
-给定左边界状态 $q_b\in\mathsf Q$ 和有序驱动族
-$(z_\theta)_{\theta\in[b,c)}\in
-\prod_{\theta\in[b,c)}\mathsf Z_\theta$，参考递归定义：
+给定左边界状态 $q_b\in\mathsf Q$ 和有序驱动族 $(z_\theta)_{\theta\in[b,c)}\in \prod_{\theta\in[b,c)}\mathsf Z_\theta$，参考递归定义：
 
 $$
 q_{\theta+1}=T_\theta(q_\theta,z_\theta),
@@ -2864,13 +2835,13 @@ $$
 精确因果状态契约要求：
 
 $$
-\operatorname{BatchState}_{[b,c)}
-(q_b,(z_\theta)_{\theta\in[b,c)})
-=
-(q_\theta)_{\theta\in[b,c+1)}
-=
-\operatorname{RefState}_{[b,c)}
+\begin{aligned}
+&\operatorname{BatchState}_{[b,c)}
+(q_b,(z_\theta)_{\theta\in[b,c)})\\
+&\qquad=(q_\theta)_{\theta\in[b,c+1)}\\
+&\qquad=\operatorname{RefState}_{[b,c)}
 (q_b,(z_\theta)_{\theta\in[b,c)}).
+\end{aligned}
 $$
 
 中间状态可以在联合函数内部产生。定理 3 提供关闭输入域，式 (48) 与这个全定义域等式分别提供完整输出批和状态块的精确性见证。
@@ -3089,13 +3060,12 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > 若三类事件需要共享一个整数 ID 空间，先取三个两两不同的标签 $\mathrm{node},\mathrm{sel},\mathrm{act}$，并定义有限编码域：
 > $$
+> \begin{aligned}
 > \mathsf{EventRef}_x
-> =
-> (\{\mathrm{node}\}\times\mathcal E_x^{\mathrm{node}})
-> \cup
-> (\{\mathrm{sel}\}\times\mathcal E_x^{\mathrm{sel}})
-> \cup
-> (\{\mathrm{act}\}\times\mathscr V_x^{\mathrm{ev}}).
+> ={}&(\{\mathrm{node}\}\times\mathcal E_x^{\mathrm{node}})\\
+> &\cup(\{\mathrm{sel}\}\times\mathcal E_x^{\mathrm{sel}})\\
+> &\cup(\{\mathrm{act}\}\times\mathscr V_x^{\mathrm{ev}}).
+> \end{aligned}
 > $$
 > 再固定单射：
 > $$
@@ -3120,8 +3090,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **runtime / executor（运行时、解释器）**不是正文定义的数学对象。第 9.1 节的轨迹已经是固定 $\mathcal T_x$ 上的阶段化暴露，不能单凭“程序产生了这样一条轨迹”证明程序算对；实现与规范完整记录之间还必须给出附录 S.9 的全局精化关系。
 >
-> **scheduler（调度器）**在通过精化投影以后，对应选择哪些合格作用进入第 9.2--9.3 节的
-> $\Delta\mathsf P_n,\Delta\mathsf S_n,\Delta\mathsf U_n,\Delta\mathsf F_n$。投影后的调度只改变阶段秩，保留 $\mathcal T_x$ 的规范值。
+> **scheduler（调度器）**在通过精化投影以后，对应选择哪些合格作用进入第 9.2--9.3 节的 $\Delta\mathsf P_n,\Delta\mathsf S_n,\Delta\mathsf U_n,\Delta\mathsf F_n$。投影后的调度只改变阶段秩，保留 $\mathcal T_x$ 的规范值。
 >
 > **workspace（临时工作区）**可以保存第 9.4 节提前求出的 $h,\widetilde q,d$。临时变量不等于式 (25) 确定的下一持久状态。
 >
@@ -3189,23 +3158,27 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > 与第 9.1 节的关系记号一致，令：
 > $$
-> \mathsf{LegalExposure}(x)
-> =
-> \left\{
 > \begin{aligned}
-> \boldsymbol\Xi\in\mathsf{StageTrace}\ \bigm| {}&
-> \operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi),\\
+> &\mathsf{LegalExposure}(x)\\
+> &\quad=
+> \left\{\boldsymbol\Xi\ \middle|\
+> \begin{aligned}
+> &\boldsymbol\Xi\in\mathsf{StageTrace},\\
+> &\operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi),\\
 > &\boldsymbol\Xi\text{ 满足第 9.1 节的完整性条件}
 > \end{aligned}
 > \right\}.
+> \end{aligned}
 > $$
 > 因而这里不是把“合法”重新留给实现解释，而是直接取正文已经定义的轨迹关系。要求：
 > $$
-> \forall x\in\prod_{i\in\mathsf I}P^{[L_i]},\quad
-> \forall s\in\operatorname{Legal}_{\mathrm{impl}}(x),
-> \qquad
+> \begin{aligned}
+> &\forall x\in\prod_{i\in\mathsf I}P^{[L_i]},\\
+> &\forall s\in\operatorname{Legal}_{\mathrm{impl}}(x):\\
+> &\qquad
 > \Pi_{\mathrm{stage}}(\operatorname{Run}(x,s))
 > \in\mathsf{LegalExposure}(x).
+> \end{aligned}
 > $$
 > 这个条件保留阶段信息，不能用普通语义投影 $\Pi$ 代替。
 

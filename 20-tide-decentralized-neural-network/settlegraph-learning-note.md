@@ -81,13 +81,17 @@ $$
 若 $I$ 是带全序的有限标签集合，定义由互异、递增标签标记的非空序列：
 
 $$
-\operatorname{LSeq}^{+}(I,P)
-=
+\begin{aligned}
+&\operatorname{LSeq}^{+}(I,P)\\
+&\quad=
 \bigsqcup_{n\ge1}
 \left\{
-((i_1,p_1),\ldots,(i_n,p_n))\in(I\times P)^n:
-i_1<\cdots<i_n
+\begin{aligned}
+&((i_1,p_1),\ldots,(i_n,p_n))\in(I\times P)^n:\\
+&i_1<\cdots<i_n
+\end{aligned}
 \right\}.
+\end{aligned}
 $$
 
 标签区分来源，全序给这些二元组一个规范排列；后文的聚合接收整个二元组序列。
@@ -111,8 +115,12 @@ $$
 一列首尾相接的有向边称为有向游走；若它回到出发节点且至少含一条边，其中就含有有向环。本文要求不存在这样的游走，即图是有向无环图，简称 DAG；还要求不同边不具有同一对起终点。没有重复节点的游走称为路径，并允许只含一个节点的零长度路径。对 $v\in V$，定义
 
 $$
-\operatorname{In}(v)=\{a\in A:\operatorname{dst}(a)=v\},\qquad
-\operatorname{Out}(v)=\{a\in A:\operatorname{src}(a)=v\}.
+\begin{aligned}
+\operatorname{In}(v)
+&=\{a\in A:\operatorname{dst}(a)=v\},\\
+\operatorname{Out}(v)
+&=\{a\in A:\operatorname{src}(a)=v\}.
+\end{aligned}
 $$
 
 入口与终端节点分别是
@@ -148,12 +156,13 @@ $$
 把式 (1) 命名为关系：
 
 $$
-\operatorname{LegalRegionRank}_{G,\rho}(\ell)
-\Longleftrightarrow
+\begin{aligned}
+&\operatorname{LegalRegionRank}_{G,\rho}(\ell)\\
+&\quad\Longleftrightarrow
 \forall a\in A:\quad
 \ell(\rho(\operatorname{src}(a)))
-<
-\ell(\rho(\operatorname{dst}(a))).
+<\ell(\rho(\operatorname{dst}(a))).
+\end{aligned}
 $$
 
 因此同一区域内没有边，区域之间也没有有向环。节点图无环本身还不足以推出式 (1)：例如 $u\to v\to w$，把 $u,w$ 放在一个区域、$v$ 放在另一个区域，就不满足式 (1)。本教材显式采用这一较强限制。
@@ -194,9 +203,7 @@ $$
 
 $D$ 与 $\ell$ 是这个具体数学规格的一部分。它们不是墙钟耗时，也不要求实际程序按这些整数逐步等待。例如，把第 1 节的 $a,b$ 放在层级 $1$ 的区域，把 $c$ 单独放在层级 $2$ 的区域，再取 $D=4$；第一个输入对应时间 $0,1,2,3$，第二个对应 $4,5,6,7$。
 
-若局部函数忽略时间，不同满足
-$\operatorname{LegalTimeCode}_{G,\rho}(\ell,D)$
-的编码可以给出相同数值；若状态按时间衰减，改变这些坐标就可能改变数值，不能再把这种变化视为纯调度重排。本文所有时间衰减均按式 (2) 的统一逻辑时间，不按“访问了几次节点”计时。
+若局部函数忽略时间，不同满足 $\operatorname{LegalTimeCode}_{G,\rho}(\ell,D)$ 的编码可以给出相同数值；若状态按时间衰减，改变这些坐标就可能改变数值，不能再把这种变化视为纯调度重排。本文所有时间衰减均按式 (2) 的统一逻辑时间，不按“访问了几次节点”计时。
 
 ## 3. 每条边的一次结果
 
@@ -267,13 +274,14 @@ $$
 一个简单的身份感知实例是给每个 $i\in I_v$ 固定标量 $\eta_{v,i}$，只在本次实际出现的标签上归一化：
 
 $$
+\begin{aligned}
 \alpha_k
-=\frac{\exp(\eta_{v,i_k})}
-{\sum_{r=1}^n\exp(\eta_{v,i_r})},
-\qquad
+&=\frac{\exp(\eta_{v,i_k})}
+{\sum_{r=1}^n\exp(\eta_{v,i_r})},\\
 \operatorname{Agg}_v
 (\theta,((i_1,m_1),\ldots,(i_n,m_n)))
-=\sum_{k=1}^n\alpha_km_k.
+&=\sum_{k=1}^n\alpha_km_k.
+\end{aligned}
 $$
 
 这里 $\exp$ 是自然指数函数；权重随标签而变。
@@ -318,9 +326,14 @@ $$
 分别得到
 
 $$
-d_{v,t}^0=\operatorname{Read}_v^0(\theta_{v,t},h_{v,t}),\quad
-d_{v,t}^-=\operatorname{Read}_v^-(q_v^t,\theta_{v,t},h_{v,t}),\quad
-d_{v,t}^+=\operatorname{Read}_v^+(\widetilde q_{v,t},\theta_{v,t},h_{v,t}).
+\begin{aligned}
+d_{v,t}^0
+&=\operatorname{Read}_v^0(\theta_{v,t},h_{v,t}),\\
+d_{v,t}^-
+&=\operatorname{Read}_v^-(q_v^t,\theta_{v,t},h_{v,t}),\\
+d_{v,t}^+
+&=\operatorname{Read}_v^+(\widetilde q_{v,t},\theta_{v,t},h_{v,t}).
+\end{aligned}
 \tag{7}
 $$
 
@@ -531,9 +544,12 @@ $$
 全部局部控制空间和两区域的历史空间都是单点集 $\{*\}$，历史初态为 $*$，每次选择返回各候选的单点控制量并保持历史。区域 $j_0$ 取 $\tau_{j_0}=+$、$\kappa_{j_0}=1$。节点 $a,b$ 的状态与描述量空间都是 $\mathbb R$，状态初值分别为 $0,1$，函数为
 
 $$
-\operatorname{Upd}(q,\theta,h)=q+h,\qquad
-\operatorname{Read}^0(\theta,h)=h,\qquad
-\operatorname{Read}^-(q,\theta,h)=\operatorname{Read}^+(q,\theta,h)=q.
+\begin{aligned}
+\operatorname{Upd}(q,\theta,h)&=q+h,\\
+\operatorname{Read}^0(\theta,h)&=h,\\
+\operatorname{Read}^-(q,\theta,h)&=q,\\
+\operatorname{Read}^+(q,\theta,h)&=q.
+\end{aligned}
 $$
 
 所以本次使用的 $+$ 描述量就是候选新状态。对任意非空候选集合，选择描述量较大的一个，平票按节点序；空候选按第 4.3 节的恒等规则。两个候选均采用更新，完整计算为
@@ -765,22 +781,14 @@ $$
 
 ## 12. 接入已有模型时的函数保持
 
-若已有模型某处在位置 $t$ 输出 $h_t\in P$，新图输出 $b_t\in P$，则图残差为
-$b_t-h_t$。一种接入方式是在指定位置加上这个残差。函数保持不是图脱离接入范围的
-一元性质；先固定一个非空的**接入实例类**
-$\varnothing\ne\mathfrak X$。每个
-$\chi\in\mathfrak X$ 明确给出：
+若已有模型某处在位置 $t$ 输出 $h_t\in P$，新图输出 $b_t\in P$，则图残差为 $b_t-h_t$。一种接入方式是在指定位置加上这个残差。函数保持不是图脱离接入范围的一元性质；先固定一个非空的**接入实例类** $\varnothing\ne\mathfrak X$。每个 $\chi\in\mathfrak X$ 明确给出：
 
 1. 已有模型输入、所比较的初始化及插入位置；
-2. 某个 $L_\chi\in\mathbb N_{>0}$ 以及一段有限参考值
-   $(h_{\chi,t})_{t\in[L_\chi]}$；
+2. 某个 $L_\chi\in\mathbb N_{>0}$ 以及一段有限参考值 $(h_{\chi,t})_{t\in[L_\chi]}$；
 3. SettleGraph 的初始节点状态与 selector-history；
 4. 以 $h_{\chi,t}$ 为图输入得到的第 6 节完整记录。
 
-下文把该记录中的坐标加上标 $\chi$。这四项使“可达”只表示由某个
-$\chi\in\mathfrak X$ 的完整记录实际出现。若
-$\mathbf m=((i_1,m_1),\ldots,(i_n,m_n))$，记
-$\operatorname{lab}(\mathbf m)=(i_1,\ldots,i_n)$。定义节点聚合的可达支持域：
+下文把该记录中的坐标加上标 $\chi$。这四项使“可达”只表示由某个 $\chi\in\mathfrak X$ 的完整记录实际出现。若 $\mathbf m=((i_1,m_1),\ldots,(i_n,m_n))$，记 $\operatorname{lab}(\mathbf m)=(i_1,\ldots,i_n)$。定义节点聚合的可达支持域：
 
 $$
 \begin{aligned}
@@ -826,12 +834,9 @@ h_{\chi,t})
 \tag{21}
 $$
 
-这里式 (19) 与式 (21) 只从实际记录读取标签支持，再把第三坐标
-$h_{\chi,t}$ 用作待检查的共同 payload；它们没有预先假定实际消息值已经等于
-$h_{\chi,t}$。
+这里式 (19) 与式 (21) 只从实际记录读取标签支持，再把第三坐标 $h_{\chi,t}$ 用作待检查的共同 payload；它们没有预先假定实际消息值已经等于 $h_{\chi,t}$。
 
-定义 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，当且仅当下列三个
-全称条件同时成立：
+定义 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，当且仅当下列三个全称条件同时成立：
 
 $$
 \begin{aligned}
@@ -855,30 +860,17 @@ $$
 \tag{22}
 $$
 
-若 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，则对每个
-$\chi\in\mathfrak X$ 与 $t\in[L_\chi]$，按区域顺序归纳，所有有值消息均等于
-$h_{\chi,t}$，最终：
+若 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，则对每个 $\chi\in\mathfrak X$ 与 $t\in[L_\chi]$，按区域顺序归纳，所有有值消息均等于 $h_{\chi,t}$，最终：
 
 $$
 b_{\chi,t}=h_{\chi,t}.
 $$
 
-具体地，入口序列的载荷本来就是 $h_{\chi,t}$。若某个区域以前的全部有值边结果
-都等于它，则当前节点的实际标签支持属于式 (19)，式 (22) 的第一行使聚合结果仍为
-$h_{\chi,t}$；实际激活调用属于式 (20)，第二行又使每条新有值边结果仍为
-$h_{\chi,t}$。区域归纳完成后，实际终端支持属于式 (21)，第三行给出上述输出等式。
-状态、描述量、选择与控制量可以影响哪些标签实际出现，但不会越出这些可达域。
+具体地，入口序列的载荷本来就是 $h_{\chi,t}$。若某个区域以前的全部有值边结果都等于它，则当前节点的实际标签支持属于式 (19)，式 (22) 的第一行使聚合结果仍为 $h_{\chi,t}$；实际激活调用属于式 (20)，第二行又使每条新有值边结果仍为 $h_{\chi,t}$。区域归纳完成后，实际终端支持属于式 (21)，第三行给出上述输出等式。状态、描述量、选择与控制量可以影响哪些标签实际出现，但不会越出这些可达域。
 
-因而图残差在声明的实例类上为零。忽略标签的均值、按标签产生但归一化后权重和为
-$1$ 的加权平均，都是满足相应条件的实例；任意身份感知聚合则未必满足。若希望使用
-比可达域更强、与 $\mathfrak X$ 无关的充分条件，可以把式 (22) 的定义域扩大到
-全部类型正确的时间、非空标签列、状态、控制量与 $h\in P$，但必须明确写出这个
-更强量词。
+因而图残差在声明的实例类上为零。忽略标签的均值、按标签产生但归一化后权重和为 $1$ 的加权平均，都是满足相应条件的实例；任意身份感知聚合则未必满足。若希望使用比可达域更强、与 $\mathfrak X$ 无关的充分条件，可以把式 (22) 的定义域扩大到全部类型正确的时间、非空标签列、状态、控制量与 $h\in P$，但必须明确写出这个更强量词。
 
-新增私有状态可以在后台演化，只要它在 $\mathfrak X$ 的可达域内不破坏式 (22)。
-若函数保持声明还比较已有模型状态，则必须另外给出初始化嵌入 $\eta$ 与状态投影
-$\pi$。把两边在位置边界的状态轨迹分别记为
-$s^{\mathrm{base}}_{\chi,t}$ 与 $s^{\mathrm{grown}}_{\chi,t}$；还必须明确要求：
+新增私有状态可以在后台演化，只要它在 $\mathfrak X$ 的可达域内不破坏式 (22)。若函数保持声明还比较已有模型状态，则必须另外给出初始化嵌入 $\eta$ 与状态投影 $\pi$。把两边在位置边界的状态轨迹分别记为 $s^{\mathrm{base}}_{\chi,t}$ 与 $s^{\mathrm{grown}}_{\chi,t}$；还必须明确要求：
 
 $$
 \begin{aligned}
@@ -890,11 +882,9 @@ s^{\mathrm{grown}}_{\chi,0}
 \end{aligned}
 $$
 
-而不是要求所有新增坐标永远等于初始值。进一步推导见
-[[memos/mathematics/function-preserving-growth|函数保持生长备忘]]。
+而不是要求所有新增坐标永远等于初始值。进一步推导见 [[memos/mathematics/function-preserving-growth|函数保持生长备忘]]。
 
-这里证明的是相对于明示实例类与特定函数选择的输出保持。具体节点算法、插入位置、
-训练目标和实验结果由实验平台维护；式 (22) 并不保证训练以后仍保持原模型。
+这里证明的是相对于明示实例类与特定函数选择的输出保持。具体节点算法、插入位置、训练目标和实验结果由实验平台维护；式 (22) 并不保证训练以后仍保持原模型。
 
 ## 附录 A：系统用语对照
 
