@@ -214,7 +214,7 @@ $\operatorname{Agg}_v$ 虽然在所有有限子集上有定义，正文只在非
 
 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$ 的六个自变量依次是旧持久状态、本次完整计算读取的状态快照、统一逻辑时间、本地内容、是否被选择的指示值和本次选择控制量。它产生下一时刻的持久状态。$\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$ 则只产生消息与外部输出，不回写状态。两个函数可以读取同一个 $c$，但 $\operatorname{Next}$ 不读取或在内部重新求值本次 $\operatorname{Full}$。
 
-这些是函数的语义分工，不是成本断言。第 10 节会另外区分控制作用与昂贵作用；若主要计算位于 $\operatorname{Next}$ 等函数中，成本分类必须如实反映这一点。
+这些函数共同定义规范状态与输出。第 10 节另给作用成本标记，并分别为状态递归、完整输出以及二者的联合求值定义精确契约。
 
 ### 1.5 selector-history、控制量与两种状态
 
@@ -274,7 +274,7 @@ $$
 
 节点持久状态 $q_v$ 只属于节点 $v$，历史 $y_j$ 只属于 selector $j$。控制量和本次快照都是当前事件的值，不是新的跨切面状态 owner。多个局部函数可以使用同一个固定参数对象；固定参数不是一次前向运行中被前序事件改写的状态，所以这种共享不会给式 (8) 增加运行时依赖边。若允许两个节点共同读写可变状态，则必须另外定义它的唯一 owner 与读写次序；本文没有暗中允许这种情形。
 
-本教材只纳入能在完整输出以前确定的后续状态。依赖 Full 结果的状态回写，以及仅供本节点以后 Full 使用的递归私有状态，另见 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈与节点时间块备忘]]；它们不是这里的隐含特例。
+本教材只纳入能在完整输出以前确定的后续状态。依赖 Full 结果的状态回写，以及仅供本节点以后 Full 使用的递归私有状态，另见 [[memos/mathematics/state-feedback-and-node-chunks|完整输出反馈与节点因果块备忘]]；它们不是这里的隐含特例。
 
 ### 1.6 例：按统一逻辑时间读取衰减状态
 
@@ -1828,23 +1828,23 @@ $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代
 它还丢弃了平行消息边的身份。后续宏 runtime 仍须保留每个 $a\in A$，并另外
 证明完整多端口契约与外层保块。
 
-## 10. 正确求值、节点时间批与并行深度
+## 10. 有限 cut 上的因果作用块与最大前沿
 
-给定基本运算及其成本后，算法的总基本运算成本称为**工作量**（work），依赖图中最长路径的成本称为**跨度**（span）。它们都依赖所选计算模型，不能从逻辑时间本身读出。本节先研究一个更弱的性质：同一节点跨多个时间的完整输出作用，能否分成数量一致有界的批次。
+本节在第 4 节的 $P,S,U,F$ 事件 DAG 上定义联合求值块。完整输出可以按已知坐标组成时间批；状态递归可以从左边界状态出发组成因果状态块；同一个联合函数也可以同时返回状态轨迹与完整输出。所有批次数和自适应阶段数都相对于已经声明的联合契约族计量。
 
-### 10.1 本文已经得到哪一级算法
+给定基本运算及其成本后，总基本运算成本称为**工作量**，依赖图中最长路径成本称为**跨度**。联合块数量、工作量、跨度和具体设备测量构成四项分别陈述的性质。
 
-定理 8、10、12 分别给出 finite-cut 顺序求值、切面组合与式 (38) 的
-SCC-local 条件下的 message-SCC 调度；命题 13 只给出静态依赖包络。它们属于
-exact correctness 或 finite progress，尚不推出性能。
+### 10.1 有限进展给出的参考求值
 
-后文依次区分三个更强层级：外层是否保留节点时间批，给定成本模型后的 work/span，以及具体 backend 的硬件表现。前一层成立不自动推出后一层；第 10.2 节只定义第一层。
+定理 8 给出每个 source-sealed finite cut 的有限顺序求值，定理 10 给出切面组合，定理 12 给出 SCC-local 条件下的 message-SCC 调度，命题 13 给出 dependency-complete 静态包络。这些结果提供本节全部联合契约共同精化到的参考记录。
 
-### 10.2 第一性能台阶：节点级时间批暴露
+联合求值契约进一步指定：一个函数调用覆盖哪些规范作用、读取哪一组边界坐标，并返回哪些中间状态与输出。第 10.2 节定义这些对象，第 10.3 节给出契约相对的最大前沿，第 10.4--10.5 节分析反馈与 SCC 边界。
 
-本节的定义有五部分：固定共同函数骨架，给出求值者已知的区间输入，定义节点批量接口，规定如何因果地选择下一作用，最后要求同一策略具有一致的批次数界。这样才能区分“许多逐事件作用被装进一次调用”和“昂贵作用确实只需有界批次”。
+### 10.2 有限区间的联合求值契约
 
-#### 10.2.1 共同骨架与完整输出解释类
+本节依次固定共同函数类、合法可见区间、联合函数的精确契约、因果策略以及一致批次数界。量词同时覆盖输入长度、区间位置、函数解释和合法 continuation。
+
+#### 10.2.1 共同语义骨架、函数类与成本标记
 
 先固定一份不含 $\operatorname{Full}$ 的**无限日程骨架**
 $\mathfrak B_\infty$。对每个 $i\in\mathsf I$，先固定严格递增的共同注入日程
@@ -1928,8 +1928,7 @@ $K_i=K_i^{\mathbf L}$、$\iota_i=\iota_i^{\mathbf L}$，把第 1 节的
 $\mathsf{Ext},\mathsf{Atom}_v,\operatorname{Agg}_v$ 分别取成
 $\mathsf{Ext}_{\mathbf L},\mathsf{Atom}_{\mathbf L,v},\operatorname{Agg}_v^{\mathbf L}$，
 并令 $\operatorname{Full}_v=F_v$ 得到的规格。
-成本 profile 把 $F_v$ 查询视为昂贵作用，把骨架函数与 seal bookkeeping
-视为控制作用。
+再固定作用成本标记。它可以只标记 $F$，也可以把状态递归涉及的 $P,U$ 标记为主要作用，或把状态—输出联合块标记为主要作用。后文的契约族与批次数结论都相对于这项固定标记陈述。
 
 #### 10.2.2 可见区间输入与唯一参考记录
 
@@ -1994,7 +1993,7 @@ $$
 v\in\mathcal A_{\rho(v),\theta}^{\mathbf F}(\omega)\}.
 $$
 
-#### 10.2.3 节点的批量求值接口
+#### 10.2.3 完整输出、因果状态与联合节点契约
 
 对 $\mathbf F\in\mathfrak F$ 与非空有限
 $\Theta\subseteq\mathbb N$，定义该解释下的合法 batch 输入域：
@@ -2043,20 +2042,53 @@ $$
 \end{aligned}
 $$
 
-这族等式是解释类上的逐坐标精确 batch 契约；具体 backend witness 还须实现
-相应函数，本文不由此声称 batch 内部高效。
+这族等式定义**逐坐标完整输出契约**。每个 $s_\theta$ 是规范记录中的本次计算快照，整批四元组在调用边界已经确定。
 
-这里每个 $s_\theta$ 是本次计算快照，不是任意选取的初态。调用前必须已经确定整批的所有四元组；接口不接收一个初态后再从未知 Full 结果递推出其他调用自变量。那种更宽的有状态节点块接口见 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈与节点时间块备忘]]。
+状态递归采用另一种边界。取有限事件块
+$K\subseteq\mathscr V^{\mathrm{ev}}_{x,<b}$，其内部包含同一节点或同一 region 的一段 $P/S/U$ 轨迹，并要求每条从 $K$ 外进入 $K$ 的事件边起点已经完成。记这些进入坐标、左边界节点状态、左边界选择历史、关闭时间纤维与 seal 证据共同组成 $\partial^-K$。第 2 节的递归唯一给出参考函数：
 
-#### 10.2.4 外层阶段与因果策略
+$$
+\operatorname{RefState}_K:
+\mathsf{AdmIn}(K)\longrightarrow\mathsf{StateOut}(K).
+$$
 
-一个**外层阶段**
-$\pi_r=(\mathsf{Ctrl}_r,\mathsf{Batch}_r)$ 有两个依次发生的部分。
-$\mathsf{Ctrl}_r$ 是有限条因果合法的骨架作用及其值；
-$\mathsf{Batch}_r$ 是随后一次确定的有限组 $\mathsf{Query}$。确定它时，每个
-query 的输入及第 4.2 节中的全部事件前驱都必须已经由
-$\omega$、较早阶段或 $\mathsf{Ctrl}_r$ 确定。batch 开始以后，本阶段不再求
-新的控制值；回答及由它们产生的消息、输出只在阶段末一起进入
+其中输出包含 $K$ 内全部 $P,S,U$ 标签、中间状态轨迹、选择历史轨迹与右边界状态。一个**因果状态块契约**是满足：
+
+$$
+\operatorname{BatchState}_K(z)
+=
+\operatorname{RefState}_K(z)
+\qquad(z\in\mathsf{AdmIn}(K))
+$$
+
+的全函数。它从左边界状态和整段已关闭驱动量产生内部状态轨迹；规范上的跨时间状态边保留在 $K$ 内。
+
+当 $K$ 是节点局部块，且同一个精确函数还返回其中全部 active 坐标的
+$(f^A,f^O)$，就得到**状态—完整输出联合契约**
+$\operatorname{BatchNode}_K$。当共同 selector 连接多个节点时，$K$ 取整个
+region 的相应 $P/S/U$ 子图，得到区域状态契约；若它还返回区域内的
+$(f^A,f^O)$，就得到区域状态—输出联合契约。控制量已经由块边界确定时，
+$K$ 可以只取单节点状态链。
+
+把允许使用的全部逐坐标完整输出、因果状态、状态—输出联合与区域状态契约组成一个固定集合：
+
+$$
+\mathfrak B
+=
+\mathfrak B^F\cup\mathfrak B^U
+\cup\mathfrak B^{UF}\cup\mathfrak B^R.
+$$
+
+每个成员都携带其规范作用块、合法边界域和逐坐标精确等式。契约内部可以采用顺序递归、结合扫描或专用联合公式；这些选择分别影响工作量与跨度。
+
+#### 10.2.4 自适应阶段与因果策略
+
+一个**自适应阶段**
+$\pi_r=(\mathsf{Ctrl}_r,\mathsf{Block}_r)$ 有两个依次发生的部分。
+$\mathsf{Ctrl}_r$ 是当前成本标记下的普通作用闭包；
+$\mathsf{Block}_r$ 是随后一次确定的有限个两两不交契约调用。每个调用的
+边界输入和块外事件前驱都由 $\omega$、较早阶段或
+$\mathsf{Ctrl}_r$ 确定。全部返回标签、消息和输出在阶段末共同进入
 $\mathsf{Pub}_r$。
 
 在第 $r$ 个阶段已经完成 $k$ 条控制作用的决策点，定义**可见求值记录**（transcript）：
@@ -2070,24 +2102,19 @@ $$
 \right),
 $$
 
-其中 $\mathsf{Ctrl}_{r,\le k}$ 同时记录已经发生的骨架作用及其值。一个
-**因果外层策略** $\mathscr S$ 是从 $(a,b,\mathfrak t_{r,k})$ 到下一动作的
-同一个确定函数；下一动作可以是求一个当前合法的骨架作用，或确定
-$\mathsf{Batch}_r$ 并结束本阶段，或在阶段边界且目标 cut 已完成时停止。
-$\mathbf F$ 不是它的自变量。因此两个解释若给出相同的
-$(a,b,\mathfrak t_{r,k})$，$\mathscr S$ 必须给出相同动作；只有显式 query
-返回不同回答以后，后续动作才可分岔。
+其中 $\mathsf{Ctrl}_{r,\le k}$ 同时记录已经发生的普通作用及其值。一个
+**因果策略** $\mathscr S$ 是从 $(a,b,\mathfrak t_{r,k})$ 到下一动作的
+同一个确定函数；下一动作可以是求一个当前合法的普通作用，确定本阶段的
+契约调用族，或在目标 cut 已完成时停止。函数解释 $\mathbf F$ 只通过已经
+记录的契约回答影响后续动作。两个相同 transcript 因而给出相同动作。
 
-query 以外的求值器只含 $\mathfrak B_\infty$ 的函数与确定的集合
-bookkeeping。所以新的 $F_v$ 值，以及由它产生的消息或输出记录，只能经显式
-query 回答进入 $\mathsf{Pub}_r$；不得由控制作用复现、内联或免费产生。
-transcript 也不含 $\mathbf L$、见证 $x$、区间外输入或尚未回答的参考
-$F_v$ 值。这些条件合起来就是本文的**因果且无 oracle**要求。
+新的主要作用值只经 $\mathfrak B$ 中的显式契约回答进入
+$\mathsf{Pub}_r$。transcript 的坐标不含 $\mathbf L$、见证输入 $x$、区间外输入、未来选择结果或尚未回答的主要作用值。这给出本文的因果可见性条件。
 
-这里的 $r$ 是 heavy/control barrier 的外层阶段号，不是前置教材阶段化暴露
-$E_n,H_n$ 的索引 $n$，也不是逻辑时间 $\theta$；三者之间没有预设相等关系。
+阶段 $r$ 的返回标签可以经精化映射进入一条合法
+$P/S/U/F$ 过滤的某个截面。阶段号、过滤索引与逻辑时间分别记录求值轮次、公开次序与语义坐标。
 
-#### 10.2.5 精确性与一致有界的批次数
+#### 10.2.5 精确性与三类批次数
 
 固定 $\mathscr S$ 和回答解释 $\mathbf F$。若一次运行有限停止，记其阶段序列为：
 
@@ -2098,59 +2125,81 @@ $$
 
 称这次运行 **exact**，若最终记录与 continuation 恰等于
 $(\mathcal U_{x,[a,b)}^{\mathbf F},Q_b^{\mathbf F})$，包括越过右切面的新消息；
-并且对每个 $v$，令 $m=m_{v,\mathbf F}(a,b,\omega)$ 后，全部 query 恰为：
+每个阶段调用的联合函数都满足其精确契约，并且这些调用在精化以后恰好覆盖
+区间内的全部规范作用一次。
+
+对节点 $v$，分别记因果状态块、逐坐标完整输出批和状态—输出联合块数量为：
 
 $$
-\mathsf{Query}(v,\Theta_{v,1},\xi_{v,1}),\ldots,
-\mathsf{Query}(v,\Theta_{v,m},\xi_{v,m}).
+m_v^U(a,b,\mathbf F,\omega),\qquad
+m_v^F(a,b,\mathbf F,\omega),\qquad
+m_v^{UF}(a,b,\mathbf F,\omega).
 $$
 
-这里 $\xi_{v,k}$ 是相应参考坐标组成的元组，并且：
+区域状态块另外按 $j$ 计数为 $m_j^R$。一个联合块同时覆盖 $U,F$ 时计入
+$m_v^{UF}$；其细粒度覆盖集合仍经精化分别等于相应规范坐标集合。
 
-$$
-\Lambda_v^{\mathbf F}([a,b);\omega)
-=\bigsqcup_{k=1}^{m_{v,\mathbf F}(a,b,\omega)}
-\Theta_{v,k}.
-$$
-
-因此 exact 运行既不能遗漏或重复 active 坐标，也不能额外探测
-$F_v$。active 集为空时约定 $m_{v,\mathbf F}(a,b,\omega)=0$。
-
-称解释类 $(\mathfrak B_\infty,\mathfrak F)$ 具有
-**节点级时间批暴露**或**外层保块**，若量词顺序为：
+称解释类、成本标记与契约族
+$(\mathfrak B_\infty,\mathfrak F;\mathfrak B)$ 具有
+**一致因果时间批暴露**，若量词顺序为：
 
 $$
 \begin{aligned}
-\exists\mathscr S,\ B_{\mathrm{stage}}\in\mathbb N,\
-(B_v)_{v\in V}\in\mathbb N^V,\quad
+\exists\mathscr S,\ C_R\in\mathbb N,\\
+(C_v^U,C_v^F,C_v^{UF})_{v\in V}\in(\mathbb N^3)^V,\\
+(C_j^R)_{j\in J}\in\mathbb N^J,\quad\\
 \forall\mathbf F\in\mathfrak F,
 \forall\mathbf L\in\mathbb N^{\mathsf I},\\
-\forall a,b\in\mathbb N\ (a<b),\
+\forall a,b\in\mathbb N\ (a<b),\\
 \forall\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F}:
 \quad
 \begin{cases}
 \text{上述运行 exact},\\
-N_{\mathbf F}(a,b,\omega)\le B_{\mathrm{stage}},\\
-m_{v,\mathbf F}(a,b,\omega)\le B_v
-\quad(v\in V).
+N_{\mathbf F}(a,b,\omega)\le C_R,\\
+m_v^U\le C_v^U,\quad m_v^F\le C_v^F,\quad
+m_v^{UF}\le C_v^{UF}\quad(v\in V),\\
+m_j^R\le C_j^R\quad(j\in J).
 \end{cases}
 \end{aligned}
 $$
 
-策略和界必须先于 $\mathbf F$ 选择；这些界也不能依赖 $\mathbf L$、区间宽度
-$T$ 或实例 $\omega$。解释类可以携带明确的共同结构契约，但若
-$\mathfrak F$ 只是单点集，这个全称量词本身不足以见证 black-box 隔离：
-策略可能把唯一函数硬编码进去。此时还须另证策略只使用上述骨架与 query
-指令集，或改用足以区分相关回答的非平凡解释类。
+这些界独立于 $\mathbf F,\mathbf L,a,b$、区间宽度和实例 $\omega$。联合函数内部可以具有随区间宽度增长的工作量；一致时间批暴露约束外层块数与自适应阶段数。这里对任意多端口长度向量与任意有限区间同时量化。
 
-这个定义允许 $\Theta(T)$ 的顺序控制扫描，也允许同阶段 query 进入一个
-packed API；它只保护昂贵作用的外层分块，不给出 work、span 或硬件性能结论。
-相较于 TimedDAG chunk-prefill 教材对单输入流、对齐 cuts 的同类规则，这里对
-所有 $a<b$ 和多端口长度向量同时量化，是一个 interval-uniform 强化。
+### 10.3 契约相对的最大前沿与动态切口
 
-### 10.3 真正的外层保块障碍
+#### 10.3.1 最大前沿递归
 
-#### 10.3.1 每个新批次的输入都依赖上一个回答
+把当前 continuation、区间输入、有效 seal、已经完成的规范作用及其标签、已经公开的消息合成部分状态 $\Xi_r$。先反复求全部当前可取的普通作用，得到普通闭包。随后，取 $\mathfrak B$ 中全部当前边界输入已经确定的作用块，并用固定全序排列：同一契约类型和同一 owner 下，严格包含较多当前坐标的块排在前面，其余次序由契约优先序、owner 全序和坐标全序决定。按序扫描全部候选，收入每个与已选块两两不交的调用，得到极大不交族：
+
+$$
+\mathsf{Front}_{\mathfrak B}(\Xi_r).
+$$
+
+同时求值这族联合函数，在阶段末加入全部回答与实际消息，再进入下一轮。称所得递归为
+$\operatorname{EagerBlock}_{\mathfrak B}$。若契约族为每个主要作用提供单作用后备见证，finite-cut 事件 DAG 的有限性保证递归终止；逐块精确性与第 4 节事件偏序归纳保证最终记录等于参考 cut trace。
+
+> [!theorem] 定理 14：有限 cut 上的最大前沿
+> 对任意 source-sealed finite cut、任意精确且具有单作用后备见证的固定契约族，$\operatorname{EagerBlock}_{\mathfrak B}$ 在有限阶段后停止，并返回唯一参考 cut trace 与右 continuation。
+
+**证明。** 每个普通闭包或联合阶段都加入尚未完成的规范作用；单作用后备见证保证目标尚未完成时至少有一个作用进入。finite-cut 事件集合有限，所以递归停止。普通作用取参考函数值，联合块满足其逐坐标精确契约，且每条进入边的起点已经完成。沿实际块顺序归纳，全部返回标签、消息与右 continuation 等于第 2 节参考递归。$\square$
+
+固定一次运行选出的联合块以后，若后一块的输入读取前一块回答，写成
+$B\prec_{\mathfrak B}B'$。定义宏作用秩：
+
+$$
+r(B)=1+\max_{B'\prec_{\mathfrak B}B}r(B'),
+\qquad\max\varnothing=0.
+$$
+
+最大前沿递归在每一回答层立即求全部可取块，因而使用
+$\max_B r(B)$ 个自适应阶段。任何对同一组宏作用求值、且阶段内调用都在回答公开以前一次确定的因果策略，都至少需要这么多阶段。更强的状态块或联合节点契约会改变宏作用分解，所以阶段最优性相对于固定分解陈述。
+
+> [!proposition] 命题 15：固定宏作用图的阶段最优性
+> 在上述阶段可见性条件下，最大前沿递归以 $\max_B r(B)$ 个阶段完成固定宏作用图；任一对同一组宏作用求值的因果策略至少需要该阶段数。
+
+**证明。** 每条 $B\prec_{\mathfrak B}B'$ 都要求 $B'$ 严格晚于 $B$ 的回答阶段，所以对式中的秩归纳给出下界。对最大前沿实际产生的固定不交分解，已经可取的宏作用与较早阶段所选宏作用不相交，完整候选扫描会在当前阶段收入它；它只会等待尚未公开的宏前驱。对秩归纳得到同一上界。$\square$
+
+#### 10.3.2 正时延反馈逐轮确定下一输入
 
 考虑延迟为 $1$ 的单节点自环。令 $P=X_v=\mathbb N$，时间 $0$ 注入唯一外部值 $0$，以后没有外部输入。节点始终选择唯一候选，状态、描述量、历史与控制量取单点集，聚合读取唯一到达原子的载荷。对其他纤维可把聚合补全为载荷之和。令每个 $f_\theta:\mathbb N\to\mathbb N$ 是全函数，Full 在时间 $\theta$ 沿自环发送载荷 $f_\theta(h_\theta)$。于是下一时间的本地内容满足：
 
@@ -2158,9 +2207,14 @@ $$
 h_{\theta+1}=f_\theta(h_\theta).
 $$
 
-取 Full 解释类为全部这种函数族 $(f_\theta)_{\theta\in\mathbb N}$，并让每个 $f_\theta$ 的值只能通过显式 batch query 得到。即使全部 active 坐标已经知道，下一次 query 的输入 $h_{\theta+1}$ 仍须等待前一次 Full 返回。按第 10.2 节的接口，区间 $[0,T)$ 因此需要 $T$ 个阶段。固定 $\Gamma=G^\dagger$ 时，$\mathcal S_\Gamma$ 只有一个分量；把它命名为宏节点不会缩短这条链。这一反馈经正时延消息发生，不需要让 Full 直接回写节点状态。
+取 Full 解释类为全部这种函数族 $(f_\theta)_{\theta\in\mathbb N}$，并固定
+$\mathfrak B=\mathfrak B^F$：契约族只含逐坐标完整输出 query，不含跨越
+$F_\theta\to P_{\theta+1}$ 反馈边的状态—输出或区域联合契约。即使全部 active
+坐标已经知道，下一次 query 的输入 $h_{\theta+1}$ 仍须等待前一次 Full 返回。
+区间 $[0,T)$ 因此需要 $T$ 个阶段。固定 $\Gamma=G^\dagger$ 时，
+$\mathcal S_\Gamma$ 只有一个分量；把它命名为宏节点不会缩短这条链。这一反馈经正时延消息发生，不需要让 Full 直接回写节点状态。
 
-另一方面，若某条节点状态或历史递归只使用廉价控制函数，扫描结束后才调用不再反馈到本块控制的昂贵作用，后者仍可按 node 打包。线性控制链本身不是反例。真正的障碍是随 $T$ 增长的 heavy/control 交替，例如：
+若一段节点状态或选择历史递归具有因果状态块契约，它可以整体成为一个联合块。使自适应阶段增长的是随 $T$ 反复出现的跨块交替，例如：
 
 $$
 \text{heavy}_{\theta}
@@ -2169,12 +2223,12 @@ $$
 \longrightarrow \cdots .
 $$
 
-若较早昂贵输出经反馈消息以及由此引起的节点状态变化，改变较晚候选描述量和 route，外层就必须反复等待昂贵作用以后才能确定下一批参数，所需 batch 数可能增长为 $\Theta(T)$。任意 selector-history 递归只有在造成这种反馈时才成为外层保块的反例；顺序 history 扫描本身不是反例。
+若较早联合块的输出经反馈消息和状态变化改变较晚候选描述量与选择，后一块的真实边界只能在前一回答以后形成，阶段数可以增长为 $\Theta(T)$。
 
-#### 10.3.2 严格分层为什么避开这种反馈
+#### 10.3.3 严格分层的有限层次
 
-可以把严格分层类与一般反馈类的差别看成事件块之间的差别。这里“严格分层”指存在 $\ell:J\to\mathbb N$，使每条消息边 $a$ 都满足
-$\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a)))$；它是消息图无环的一个特例。记一个 control-only 事件块为 $\mathsf C$，同一节点的一批昂贵作用为 $\mathsf F$。其精确分块证明见 [[timed-dag-chunk-prefill-learning-note#9.4 严格分层类的节点级时间批暴露|TimedDAG chunk-prefill 教材第 9.4 节]]；这里只使用它允许的形状：
+严格分层类存在 $\ell:J\to\mathbb N$，使每条消息边 $a$ 都满足
+$\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a)))$。记一个 region 的状态—控制块为 $\mathsf C_j$，其中某个节点的完整输出批为 $\mathsf F_v$。[[timed-dag-chunk-prefill-learning-note#7-严格分层-region-的整块定理|TimedDAG 分块教材第 7 节]]给出的形状是：
 
 $$
 \mathsf C_j\longrightarrow\mathsf F_v
@@ -2183,7 +2237,7 @@ $$
 \quad \ell(k)>\ell(j),
 $$
 
-其中 $\mathsf C_j$ 包含准备、选择、计算快照与 Next。它们都不读取尚未调用的本区域 Full，因此选后清空、按统一逻辑时间读取衰减状态，以及把控制量交给 Full 的软门控都可留在这个分块内。
+其中 $\mathsf C_j$ 精确覆盖区域的 $P/S/U$ 轨迹，也可以在具有联合契约时覆盖 $F$。选后清空、统一逻辑时间衰减和局部控制都属于相应状态块的参考转导。
 
 每条继续经过昂贵作用的跨区域依赖都会严格增加 region 层次。一般正时延反馈则可能沿逻辑时间展开为
 
@@ -2193,9 +2247,9 @@ $$
 \longrightarrow\cdots .
 $$
 
-后一条链并不与定理 4 冲突：静态图可以有环，而任一有限切面中展开后的事件图仍是有限 DAG；返回边只是从较早时间指向较晚时间。
+在一般正时延反馈图中，返回边从较早时间指向较晚时间，所以任一 finite cut 的事件图仍为有限 DAG；随着 cut 加宽，宏作用链可以继续增长。
 
-#### 10.3.3 闭游走的消息时延
+#### 10.3.4 闭游走的消息时延
 
 下面定义一个描述潜在反馈的结构量。它不参与前面反例的证明，也不单独给出批次数界。
 
@@ -2262,9 +2316,22 @@ $d_{\mathrm{fb}}$ 不是完整事件路径的总时长；一条实际实现该�
 
 因此，若某个与 $T$ 无关的常数 $R$ 保证至多发生 $R$ 轮有效返回，并且其余依赖可按第 10.2 节成批安排，就仍可能保持 $O(1)$ 的节点级时间批暴露；$O(\log T)$、$o(T)$ 等增长率也可作为以后研究的弱化 profile。这里的交替轮数只是寻找正类与反例的候选指标，不是本文已经证明的结构定理。要得到外层保块上界，还必须给出一个因果、满足 no-oracle 要求的统一调度 witness，不能只在完整运行结束后观察事件图。
 
-### 10.4 在外层保块之上，何时还能得到 scan
+#### 10.3.5 TotalEmit 函数类
 
-递归并不必然只能顺序求值。取域 $\mathbb F$ 上的向量空间 $\mathcal Q$，记 $\operatorname{End}_{\mathbb F}(\mathcal Q)$ 为 $\mathcal Q$ 上线性算子的集合，并设 $q^\theta,b_\theta\in\mathcal Q$、$A_\theta\in\operatorname{End}_{\mathbb F}(\mathcal Q)$。若：
+对每个 active 坐标增加条件：
+
+$$
+v\in\mathcal A_{\rho(v),\theta}
+\Longrightarrow
+\forall a\in\operatorname{Out}(v),
+\quad f^A_{v,\theta}(a)\in P.
+$$
+
+在这个函数类中，active set 确定每条出边是否具有消息槽位，完整输出值确定载荷。最大前沿递归和联合契约保持相同定义；具体输入产生的事件 DAG 通常包含更稠密的消息边。载荷仍可改变未来聚合、状态与选择，所以正时延反馈仍能形成第 10.3.2 节的动态切口。
+
+### 10.4 因果状态块的内部算法
+
+因果状态块契约规定输入输出等式；其内部算法由状态转移的代数结构决定。取域 $\mathbb F$ 上的向量空间 $\mathcal Q$，记 $\operatorname{End}_{\mathbb F}(\mathcal Q)$ 为 $\mathcal Q$ 上线性算子的集合，并设 $q^\theta,b_\theta\in\mathcal Q$、$A_\theta\in\operatorname{End}_{\mathbb F}(\mathcal Q)$。若：
 
 $$
 q^{\theta+1}=A_\theta q^\theta+b_\theta,
@@ -2279,13 +2346,14 @@ $$
 \tag{40}
 $$
 
-式 (40) 仍表示仿射函数，且函数复合的结合律使这个二元组运算也满足结合律。因此可先组合相邻区间的转移，再求各时间前缀的状态；这就是此处的并行前缀扫描。还必须在扫描开始以前取得全部系数 $(A_\theta,b_\theta)$，并计算这些算子复合的成本；若后一个系数要等待前缀状态或尚未查询的 $\operatorname{Full}$ 值，结合律本身并没有提供可并行的输入序列。其他可能缩短控制跨度的情形包括：
+式 (40) 仍表示仿射函数，函数复合的结合律使这个二元组运算也满足结合律。因此可以组合相邻区间转移，再求各时间前缀状态。扫描开始以前需要取得全部系数 $(A_\theta,b_\theta)$；系数生成本身也计入工作量与依赖跨度。其他状态块算法包括：
 
 - 固定轮数展开；
 - 具有紧凑结合摘要的递归；
-- 已证明等价的 causal-bulk kernel；
+- 已证明等价的因果联合函数；
+- KV 前缀追加与带因果遮罩的 Attention 联合计算。
 
-与这些 low-span witness 不同，“顺序控制扫描后，把不再影响后续控制的昂贵节点作用按 node packed”只证明第 10.2 节的外层保块。它的额外前提正是：被推迟的节点作用不能经反馈消息及其随后引起的状态变化改变本块后续 selector。只知道“它们都在同一个 $C\in\mathcal S_\Gamma$”远远不够。
+一个顺序实现同样可以满足因果状态块契约，并具有线性跨度；式 (40) 进一步提供对数级组合树的候选见证。若后一个系数等待前缀状态或尚未返回的完整输出，最大前沿会在相应跨块边处分段。
 
 ### 10.5 固定 $\Gamma$ 的 SCC profile 应分别登记什么
 
@@ -2295,15 +2363,15 @@ $$
 | --- | --- |
 | reference semantics | 是否等于第 2 节的微观递归？ |
 | finite-cut progress | 对哪些 sealed cuts 必然返回？ |
-| cost profile | 哪些作用是控制，哪些节点作用是昂贵计算？ |
-| temporal batch exposure | 外层 heavy/control 阶段需要多少轮；每个节点的昂贵时间事件需要多少批；二者是否与 $T$ 无关？ |
+| cost profile | $P,S,U,F$ 中哪些作用属于主要成本；允许哪些联合契约？ |
+| temporal batch exposure | 自适应阶段、状态块、完整输出批、联合节点块与区域块各有多少？ |
 | work | 总 primitive 数怎样随有限时间区间的宽度增长？ |
 | control span | 控制扫描的最长依赖链怎样增长？是否有代数 scan witness？ |
 | memory | continuation、临时量和批量张量多大？ |
 | communication | 跨 $\mathcal S_\Gamma$ 分量的逐边消息与 seal 有多少？ |
-| lowering witness | sequential loop、packed loop、scan、fixed unfold 还是专用 kernel？ |
+| lowering witness | 顺序递归、逐坐标联合、结合扫描、固定展开或专用因果联合函数中的哪一种？ |
 
-`sequential fallback` 只见证 correctness；`packed API` 只有显式满足第 10.2 节的分解与一致界时才见证外层保块，仍不见证其内部 span 或硬件表现。
+这张表把有限 cut 正确性、外层块数、块内算法与设备测量分别登记。一个精确顺序递归可以作为单作用后备见证；一个长因果状态块还需明确其规范覆盖、边界输入与状态轨迹输出。
 
 ## 11. 已证明结果、开放问题与练习
 
@@ -2317,7 +2385,9 @@ $$
 6. 节点状态、selector-history、绝对时间与跨界消息构成充分 continuation（定理 9）；
 7. 任意完整时间切分满足 cut composition（定理 10）；
 8. message condensation graph 是 DAG；在 SCC-local region profile 下，可以按其拓扑序精确构造一个 cut（定理 11--12）；
-9. owner 投影把每次运行的直接事件依赖健全地抽象到式 (39) 的 dependency-complete 静态图（命题 13）。
+9. owner 投影把每次运行的直接事件依赖健全地抽象到式 (39) 的 dependency-complete 静态图（命题 13）；
+10. 对任意精确完备契约族，最大前沿递归在 finite cut 上有限停止并返回参考记录（定理 14）；
+11. 对固定宏作用图与阶段可见性条件，最大前沿达到最少自适应阶段（命题 15）。
 
 ### 11.2 本文没有证明
 
@@ -2326,8 +2396,8 @@ $$
 - 任意共享可变状态或来源未声明的公共 context；
 - 任意 region 下按 message SCC 独立求值；
 - $\mathcal S_\Gamma$ 中任意分量的通用多端口 runtime；
-- $\mathcal S_\Gamma$ 中任意分量都具有节点级时间批暴露；
-- 任意具有这种批量暴露的 $\mathcal S_\Gamma$ 分量还具有低 span；
+- $\mathcal S_\Gamma$ 中任意分量都具有与区间宽度无关的状态块数和完整输出批数；
+- 任意因果状态块都具有低跨度；
 - 图结构本身推出某种硬件利用率。
 
 ### 11.3 建议练习
@@ -2339,14 +2409,16 @@ $$
 5. 构造两个输入历史，它们在 $[0,b)$ 相同、在 $[b,\infty)$ 不同，并直接验证定理 3。
 6. 对第 9.4 节的三节点例子，分别画出消息图 $G$、区域商图 $(J,Q_\rho)$、静态图 $G^\dagger$ 和一次 finite-cut 事件图；计算前三张图的 SCC，验证 dependency-complete 条件，并求闭游走 $u\to v\to w\to s_A\to u$ 的消息时延。
 7. 给出一种递归摘要及其结合复合律；再给出一种没有紧凑闭合摘要的黑盒递归。
+8. 为第 3.1 节自环分别选择逐坐标 Full 契约与一个假设的因果联合契约，画出两种宏作用图并比较秩 $r(B)$。
+9. 给一个 region 状态块写出 $\partial^-K$，并逐项列出它精化得到的 $P,S,U$ 标签。
 
 ## 12. 从已证明结论出发的研究问题
 
 本文给出了正时延有环图的有限切面语义；进一步的问题可以分别沿第 9 节的模块边界和第 10 节的批量求值条件展开。例如，对一个固定的 $C\in\mathcal S_\Gamma$，可以定义保留原边身份的边界投影，证明它的局部递归与全图相容；也可以在明确的成本分类下，寻找阶段数与每节点批次数一致有界的函数类。
 
-若进一步研究并行深度，就需要类似式 (40) 的代数表示及其成本分析。边界相容、节点可批和低跨度是不同的数学问题，各自可以独立推进。具体程序、训练与硬件效果由下游实验平台验证，不能反过来代替这些证明。
+若进一步研究并行深度，就需要类似式 (40) 的代数表示及其成本分析。边界相容、状态或输出可成块、块内跨度和设备效果分别具有自己的假设与记录。
 
-剩余候选按问题记录在 [[memos/research-questions|研究问题备忘]]。这些问题继续保持正整数消息时延与已声明的状态所有权；依赖 Full 结果的状态回写只在 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈备忘]] 中讨论，不是本教材开放的局部函数选择。
+剩余候选按问题记录在 [[memos/research-questions|研究问题备忘]]。本教材的核心局部语义保持 $\operatorname{Next}$ 不读取本次 Full；依赖 Full 的私有状态递归可以作为一个更强的状态—输出联合契约研究，其边界条件见 [[memos/mathematics/state-feedback-and-node-chunks|完整输出反馈与节点因果块备忘]]。
 
 ## 附录 S：系统语言与本文数学对象的对应
 
@@ -2397,9 +2469,11 @@ $$
 > **dependency-complete static graph** 的正式定义见第 9.4 节：每次运行的直接事件边经 owner 投影后，都必须留在同一 owner 或落到一条静态边上。固定这样的 $\Gamma$ 后，其宏候选是明确的 $\mathcal S_\Gamma$；本文默认 $\Gamma=G^\dagger$。式 (39) 给出这个安全但不必最小的构造，命题 13 证明其 dependency-complete。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息；它也不是 seal 或 closure 的在线证书，$\mathcal S_\Gamma$ 中的分量不自动获得宏 runtime 或性能保证。
 
 > [!info]- S.6　correctness、外层保块、work 与 span
-> **exact / correctness** 表示所得记录等于本文指定的完整记录或明确投影。**cost profile** 是对控制与昂贵作用的附加分类。**节点级时间批暴露 / 外层保块**对应第 10.2 节同一个 action-level transcript 策略：它只经显式 query 取得 $\operatorname{Full}$ 值，并对解释类 $\mathfrak F$、输入长度、任意区间及合法实例统一 exact；$B_{\mathrm{stage}},B_v$ 也按相同量词一致有界。外层阶段号 $r$ 不等于阶段化暴露索引 $n$ 或逻辑时间 $\theta$。
+> **exact / correctness** 表示所得记录等于本文指定的完整记录或明确投影。**cost profile** 对应第 10.2.1 节的成本标记。**节点级时间批暴露 / 外层保块**对应第 10.2 节的契约族 $\mathfrak B$ 与同一个 transcript 策略：它对解释类 $\mathfrak F$、输入长度、任意区间及合法实例统一 exact，并一致界定自适应阶段、状态块、完整输出批、状态—输出联合块和区域块。
 >
-> 控制可以顺序扫描，交错信号也可在同一时间纤维汇合；只有必须反复等待“昂贵作用—后续控制—昂贵作用”时，batch 数才可能随 $T$ 增长。`packed API` 只是若干已定义 batch 的共同调用边界。**work/span** 对应第 10 节开头的成本量，式 (40) 是一种 scan witness；硬件性能还需另外的设备成本模型与测量。
+> **causal state batch** 对应 $\operatorname{BatchState}_K$：调用边界给出左状态与整段驱动量，联合函数返回内部状态轨迹和右状态。**joint node batch** 对应 $\operatorname{BatchNode}_K$，同时覆盖 $U$ 与 $F$。`packed API` 可以承载若干已经定义的数学块。
+>
+> **adaptive round / heavy-control round** 对应第 10.2.4 节的阶段。式 (36) 型跨块依赖使轮次增长。**work/span** 对应第 10 节开头的成本量，式 (40) 是一种 scan witness；硬件性能还需另外的设备成本模型与测量。
 
 > [!info]- S.7　参数共享与状态共享
 > 多个节点函数使用同一个固定参数，对应这些函数具有同一个参数坐标。在一次前向语义中该坐标不被事件改写，所以不会增加 finite-cut 事件依赖边。在损失是可微标量、并采用通常的反向模式微分时，共享参数的总梯度是各使用点对该参数贡献的和；不满足这些微分前提时，本文不使用这句话定义“梯度”。

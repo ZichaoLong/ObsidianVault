@@ -110,4 +110,4 @@ $$
 
 若有限算子链的每个局部 chunk 契约已证明，且状态不隐式交叉读写，则可以按层运行整段：第一层输出逐项相同；把它交给第二层，第二层前提相同；对有限层数归纳即可。
 
-进入一般 TimedDAG 后，要另外处理完整时间纤维、区域选择、selector-history 和跨切面消息。仅有几个可以 scan 的 kernel，不足以忽略它们之间的控制依赖。反过来，控制递推顺序执行也不必然阻止独立的 Full 作用按节点打包；这两种并行问题由 [状态反馈与节点批](state-feedback-and-node-chunks.md) 区分。
+进入一般 TimedDAG 后，还要处理完整时间纤维、区域选择、selector-history 和跨切面消息。上述局部等式分别提供 `BatchFull`、`BatchState` 或 `BatchNode` 的候选见证；图级可取范围与动态切口由 [分块教材](../../timed-dag-chunk-prefill-learning-note.md) 的契约相对最大前沿确定。Full 参与下一状态递归时的扩展边界见 [状态反馈与节点因果块](state-feedback-and-node-chunks.md)。

@@ -18,9 +18,9 @@ tags:
 
 | 教材 | 权威范围 |
 |---|---|
-| [[timed-dag-region-selector-learning-note]] | TimedDAG 集合与函数、直接语义、关闭、合法暴露、事件依赖与切面继续 |
-| [[positive-delay-graph-finite-cut-learning-note]] | 正时延有环图、有限切面相容性与组合、SCC 及其边界 |
-| [[timed-dag-chunk-prefill-learning-note]] | 支持集、合法时间块、严格分层类的节点级时间批及适用条件 |
+| [[timed-dag-region-selector-learning-note]] | TimedDAG 集合与函数、直接语义、$P/S/U/F$ 合法 filtration、事件依赖与切面继续 |
+| [[positive-delay-graph-finite-cut-learning-note]] | 正时延有环图、有限切面相容性与组合、SCC、因果作用块及其边界 |
+| [[timed-dag-chunk-prefill-learning-note]] | 因果状态块、完整输出时间批、契约相对最大前沿与严格分层正例 |
 | [[settlegraph-learning-note]] | 单次结算受限实例、前向序列组合、向 TimedDAG 的时间与边界编码 |
 
 在明确编码与投影下，SettleGraph 核心属于 TimedDAG 的受限类；TimedDAG 是 PositiveDelayGraph 的无环、有限输入特例。入门顺序不要求从最一般对象开始。
@@ -45,9 +45,9 @@ tags:
 
 局部控制量允许前向使用选择权重，包括 SOFTP。HARD 与 HST 可以具有相同前向值，但 HST 的替代反向规则必须另外声明；前向相同不自动证明梯度相同。
 
-节点级时间批需要固定昂贵作用范围与精确 batch 契约。严格分层类的正面结果依赖“本区域控制可先确定整块 Full 的全部输入，再按节点成批求值”。控制扫描可以顺序执行；结论不声称低 span、设备吞吐或训练收益。
+节点级时间批需要固定作用成本标记与精确联合契约。当前分块教材分别定义逐坐标 Full 批、从左边界状态出发的因果状态块、状态—Full 联合节点块和区域控制—状态块。最大前沿递归相对于这组契约在线构造当前合法块，并分别计量自适应阶段、状态批与 Full 批。严格分层类在具有相应精确见证时得到与 chunk 长度无关的外层块数。
 
-以下内容仅留在 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈与节点时间块备忘]]：Full 结果决定下一状态、该状态影响后续区域选择，以及以初态和输入序列为参数的更宽有状态节点块。它们不是本版本开放的配置项。
+核心局部语义仍要求 Next 在本次 Full 以前确定。Full 结果决定下一私有状态或共同选择的扩展边界记录在 [[memos/mathematics/state-feedback-and-node-chunks|完整输出反馈与节点因果块备忘]]；这种扩展需要改变规范事件边并重新证明 continuation。
 
 零时延边不进入当前设计与研究候选。证明中解释正时延前提的重要性不表示计划实现零时延。
 

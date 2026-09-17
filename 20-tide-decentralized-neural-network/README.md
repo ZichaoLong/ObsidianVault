@@ -26,7 +26,7 @@ tags:
 
 “Graph”在当前框架中指 PositiveDelayGraph，不表示任意带副作用程序。零时延边不在设计范围内。
 
-[[timed-dag-chunk-prefill-learning-note|TimedDAG 分块预填充教材]] 是执行专题，不是第四种架构。它区分正确继续、节点级时间批、节点内部并行性与硬件效果。
+[[timed-dag-chunk-prefill-learning-note|TimedDAG 分块预填充教材]] 是执行专题。它从 $P/S/U/F$ 作用 DAG 出发，分别定义因果状态块、完整输出时间批、联合节点块与最大前沿递归，并把外层块数、块内并行性和硬件效果分开。
 
 ## 阅读路线
 

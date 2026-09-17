@@ -988,7 +988,7 @@ $$
 
 所以时间 $\theta$ 才产生的消息不会反过来改变式 (21) 已经定义的当前时间纤维。
 
-### 6.4 节点事件与区域选择事件
+### 6.4 节点事件、区域选择事件与四类作用
 
 本节中的“事件”不是概率论中作为样本空间子集的事件。这里先定义相应集合，再把属于这些集合的元素称为相应事件；“发生一次”只是对这种元素的文字称呼，不是额外的数学关系。
 
@@ -1040,7 +1040,64 @@ $$
 
 所以同一区域、同一逻辑时间的一个或多个节点事件共同对应一个区域选择事件。区域选择事件是否存在由 $\mathcal C_{j,\theta}$ 是否非空决定，不由 $\mathcal A_{j,\theta}$ 是否非空决定。
 
-从本节以后，不加限定的“节点事件”总是指 $\mathcal E_x^{\mathrm{node}}$ 的元素，“区域选择事件”总是指 $\mathcal E_x^{\mathrm{sel}}$ 的元素。第 10 节还会把它们分解成更细的函数作用事件，并单独定义这些细分事件的集合。
+每个节点事件包含两个必有的函数作用。若节点被激活，还包含一个完整输出作用。每个区域选择事件包含一个选择作用。取四个两两不同的标签
+
+$$
+\mathsf{ActKind}
+=
+\{\mathrm{prep},\mathrm{select},\mathrm{adopt},\mathrm{full}\}.
+$$
+
+对 $(v,\theta)\in\mathcal E_x^{\mathrm{node}}$ 定义：
+
+$$
+P_{v,\theta}=(\mathrm{prep},v,\theta),
+\qquad
+U_{v,\theta}=(\mathrm{adopt},v,\theta).
+$$
+
+$P_{v,\theta}$ 取完整时间纤维和旧持久状态，确定
+$h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta}$；
+$U_{v,\theta}$ 取本次选择结果，确定
+$q^{\mathrm{cmp}}_{v,\theta}$ 与 $q_v^{\theta+1}$。对
+$(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$ 定义：
+
+$$
+S_{j,\theta}=(\mathrm{select},j,\theta).
+$$
+
+它确定 $\mathcal A_{j,\theta}$、完整局部控制族以及
+$y_j^{\theta+1}$。对每个 $v\in\mathcal A_{j,\theta}$ 定义：
+
+$$
+F_{v,\theta}=(\mathrm{full},v,\theta),
+$$
+
+它确定式 (26) 的完整输出值。相应的四个有限集合记为：
+
+$$
+\begin{aligned}
+\mathscr V_x^P
+&=\{P_{v,\theta}\mid(v,\theta)\in\mathcal E_x^{\mathrm{node}}\},\\
+\mathscr V_x^S
+&=\{S_{j,\theta}\mid(j,\theta)\in\mathcal E_x^{\mathrm{sel}}\},\\
+\mathscr V_x^U
+&=\{U_{v,\theta}\mid(v,\theta)\in\mathcal E_x^{\mathrm{node}}\},\\
+\mathscr V_x^F
+&=\{F_{v,\theta}\mid v\in\mathcal A_{\rho(v),\theta}\}.
+\end{aligned}
+$$
+
+令：
+
+$$
+\mathscr V_x^{\mathrm{ev}}
+=
+\mathscr V_x^P\sqcup\mathscr V_x^S
+\sqcup\mathscr V_x^U\sqcup\mathscr V_x^F.
+$$
+
+四类作用属于规范记录本身。它们描述函数值之间的数学依赖；一次联合求值可以同时实现许多个作用，只要它经精化仍给出这些作用的全部规范坐标。第 8--10 节将依次定义作用之间的依赖、部分记录的封闭证书以及合法的阶段化暴露。
 
 ### 6.5 有限性与唯一性定理
 
@@ -1943,28 +2000,27 @@ $$
 
 ## 9. 规范记录的合法阶段化暴露
 
-第 6 节按逻辑时间递增定义唯一结果。本节只研究这份规范记录的坐标可以按哪些阶段次序暴露；它不是一套从未知结果独立生成 $\mathcal T_x$ 的解释器语义。程序是否正确地算出这些坐标，还须另外给出附录 S.9 所述的精化投影。
+第 6 节按逻辑时间递增定义唯一结果。本节在同一份规范记录上安排四类作用进入递增子集的阶段。每个截面同时携带已经出现的外部记录、内部消息、作用值与封闭下界，因此构成一族带证书的过滤。附录 S.9 再说明具体求值过程怎样精化到这种数学轨迹。
 
 ### 9.1 阶段化暴露轨迹
 
-再取三个阶段秩函数，并对 $n\in\mathbb N$ 定义相应子集：
+对四类作用分别取阶段秩函数，并定义：
 
 $$
 \begin{aligned}
-\alpha_P&:\mathcal E_x^{\mathrm{node}}\to\overline{\mathbb N},
-&\mathsf{Prepared}_n
-&=\{e\in\mathcal E_x^{\mathrm{node}}\mid\alpha_P(e)\le n\},\\
-\alpha_S&:\mathcal E_x^{\mathrm{sel}}\to\overline{\mathbb N},
-&\mathsf{Selected}_n
-&=\{s\in\mathcal E_x^{\mathrm{sel}}\mid\alpha_S(s)\le n\},\\
-\alpha_C&:\mathcal E_x^{\mathrm{node}}\to\overline{\mathbb N},
-&\mathsf{Completed}_n
-&=\{e\in\mathcal E_x^{\mathrm{node}}\mid\alpha_C(e)\le n\}.
+\alpha_P&:\mathscr V_x^P\to\overline{\mathbb N},
+&\mathsf P_n&=\{\xi\in\mathscr V_x^P\mid\alpha_P(\xi)\le n\},\\
+\alpha_S&:\mathscr V_x^S\to\overline{\mathbb N},
+&\mathsf S_n&=\{\xi\in\mathscr V_x^S\mid\alpha_S(\xi)\le n\},\\
+\alpha_U&:\mathscr V_x^U\to\overline{\mathbb N},
+&\mathsf U_n&=\{\xi\in\mathscr V_x^U\mid\alpha_U(\xi)\le n\},\\
+\alpha_F&:\mathscr V_x^F\to\overline{\mathbb N},
+&\mathsf F_n&=\{\xi\in\mathscr V_x^F\mid\alpha_F(\xi)\le n\}.
 \end{aligned}
 \tag{39}
 $$
 
-三个集合分别索引已经确定节点本地量、已经应用式 (24) 并同时确定激活集合、局部控制族与下一选择历史，以及已经应用式 (25a)、(25)--(28) 中相应坐标的事件。三个集合依次称为准备事件集、选择事件集与完成事件集；阶段秩不是事件固有的逻辑时间。
+四个集合分别索引已经确定的准备、选择、状态采用与完整输出作用。阶段秩给出作用进入当前过滤截面的先后；逻辑时间仍由作用自身的最后一个坐标给出。
 
 为了使轨迹中的函数值也形式确定，对每个节点事件定义规范准备标签：
 
@@ -1985,20 +2041,24 @@ $$
 \mathcal A_{j,\theta},(c_{v,\theta})_{v\in\mathcal C_{j,\theta}},y_j^{\theta+1}),
 $$
 
-并对每个节点事件定义规范完成标签：
+对每个节点事件定义规范状态采用标签：
 
 $$
-\operatorname{Lab}_C(v,\theta)
+\operatorname{Lab}_U(v,\theta)
 =
-\begin{cases}
-(q^{\mathrm{cmp}}_{v,\theta},q_v^{\theta+1},(f^A_{v,\theta},f^O_{v,\theta})),
-&v\in\mathcal A_{\rho(v),\theta},\\
-(q^{\mathrm{cmp}}_{v,\theta},q_v^{\theta+1},()),
-&v\notin\mathcal A_{\rho(v),\theta}.
-\end{cases}
+(q^{\mathrm{cmp}}_{v,\theta},q_v^{\theta+1}),
 $$
 
-阶段 $n$ 的三类函数值分别是这些标签函数在 $\mathsf{Prepared}_n,\mathsf{Selected}_n,\mathsf{Completed}_n$ 上的限制。它们不是另行任取的坐标：第 9.2--9.3 节只约束何时可以扩大限制；事件首次进入时，新增值就是相应的规范标签，而关闭与前驱条件保证其全部自变量已经确定。完成标签中的 $f^A,f^O$ 再按式 (27)--(28) 唯一派生消息与输出记录。
+并对每个激活坐标定义规范完整输出标签：
+
+$$
+\operatorname{Lab}_F(v,\theta)
+=
+(f^A_{v,\theta},f^O_{v,\theta}).
+$$
+
+阶段 $n$ 的函数值就是四个标签函数在
+$\mathsf P_n,\mathsf S_n,\mathsf U_n,\mathsf F_n$ 上的限制。作用首次进入时增加相应规范标签；第 9.2--9.3 节的条件保证该标签的全部自变量已经属于更早截面。
 
 把一个阶段截面的全部数据打包为：
 
@@ -2006,60 +2066,57 @@ $$
 \begin{aligned}
 \Xi_n=\bigl(&E_n,H_n,
 \sigma_n^{\mathrm{in}},\sigma_n^A,
-\mathsf{Prepared}_n,\mathsf{Selected}_n,\mathsf{Completed}_n,\\
-&\operatorname{Lab}_P|_{\mathsf{Prepared}_n},
-\operatorname{Lab}_S|_{\mathsf{Selected}_n},
-\operatorname{Lab}_C|_{\mathsf{Completed}_n}\bigr).
+\mathsf P_n,\mathsf S_n,\mathsf U_n,\mathsf F_n,\\
+&\operatorname{Lab}_P|_{\mathsf P_n},
+\operatorname{Lab}_S|_{\mathsf S_n},
+\operatorname{Lab}_U|_{\mathsf U_n},
+\operatorname{Lab}_F|_{\mathsf F_n}\bigr).
 \end{aligned}
 $$
 
-第 8 节的记录链、下界函数、式 (39) 的三条事件链及上述标签限制合在一起，称为一条**阶段化暴露轨迹**：
+第 8 节的记录链、下界函数、式 (39) 的四条作用链及上述标签限制合在一起，称为一条**阶段化暴露轨迹**：
 
 $$
 \boldsymbol\Xi=(\Xi_n)_{n\in\mathbb N}.
 $$
 
-所以 $\Xi_n$ 是单个 filtration 截面，$\boldsymbol\Xi$ 是整条带阶段索引的轨迹。
-下面先补上内部消息与其源事件之间的约束，再给出“合法”的完整条件。
+其中 $\Xi_n$ 是一个 filtration 截面，$\boldsymbol\Xi$ 是整条带阶段索引的轨迹。
 
-每条实际消息都有唯一的源节点事件。定义：
+每条实际消息都有唯一的源完整输出作用。定义：
 
 $$
-g:M^*\to\mathcal E_x^{\mathrm{node}},
+g_F:M^*\to\mathscr V_x^F,
 \qquad
-g(m)=
-\bigl(\operatorname{src}(\operatorname{edge}(m)),
-\operatorname{send}(m)\bigr).
+g_F(m)=F_{\operatorname{src}(\operatorname{edge}(m)),\operatorname{send}(m)}.
 $$
 
-由式 (27)，$g(m)$ 确实属于节点事件集合。定义源事件已完成的消息集合，并要求：
+定义源作用已经进入截面的消息集合：
 
 $$
 M_n^{\mathrm{src}}
-=g^{-1}(\mathsf{Completed}_n),
+=g_F^{-1}(\mathsf F_n),
 \qquad
 H_n\subseteq M_n^{\mathrm{src}}
 \qquad(n\in\mathbb N).
 \tag{40}
 $$
 
-每条实际输出记录也有唯一的源节点事件。定义：
+每条实际输出记录也有唯一的源完整输出作用。令：
 
 $$
-g_Z:Z^*\to\mathcal E_x^{\mathrm{node}},
+g_Z:Z^*\to\mathscr V_x^F,
 \qquad
 g_Z(z)=
-(\varepsilon(\operatorname{outport}(z)),\operatorname{outtime}(z)),
+F_{\varepsilon(\operatorname{outport}(z)),\operatorname{outtime}(z)},
 $$
 
-以及完成标签已经确定的输出集合：
+并定义当前已经确定的输出集合：
 
 $$
-Z_n^{\mathrm{comp}}
-=g_Z^{-1}(\mathsf{Completed}_n).
+Z_n^F=g_Z^{-1}(\mathsf F_n).
 $$
 
-因此 $H_n\subseteq M_n^{\mathrm{src}}\subseteq M^*\subseteq\mathsf{Msg}$。等价地，对每个 $m\in M^*$ 都有 $\alpha_C(g(m))\le\alpha_M(m)$。这里的 $\mathsf{Completed}_n$ 只表示源事件的完成标签已经确定；一般模型允许该事件产生的消息稍后才进入 $H_n$。若研究“完成即进入”的特例，才另外增加 $H_n=M_n^{\mathrm{src}}$。输出没有另设延迟进入链，故由 $Z_n^{\mathrm{comp}}$ 直接记录。
+式 (40) 允许一个 $F$ 标签先进入截面，其内部消息随后进入 $H$；每条消息进入 $H$ 时，其源 $F$ 已经属于同一截面。输出由 $Z_n^F$ 随源 $F$ 一起确定。
 
 定义关系：
 
@@ -2068,19 +2125,16 @@ $$
 $$
 
 它成立，当且仅当
-$\mathsf{Prepared}_0=\mathsf{Selected}_0
-=\mathsf{Completed}_0=\varnothing$，并且对每个阶段 $n$ 都满足：
+$\mathsf P_0=\mathsf S_0=\mathsf U_0=\mathsf F_0=\varnothing$，并且对每个阶段 $n$ 都满足：
 
 1. $\operatorname{ValidSeal}_{\mathcal T_x}
    (E_n,H_n;\sigma_n^{\mathrm{in}},\sigma_n^A)$；
 2. 式 (34) 的 seal 单调性；
 3. 式 (40) 的源事件约束；
-4. 第 9.2 节的准备与选择首次进入条件；
-5. 第 9.3 节的完成首次进入条件。
+4. 第 9.2 节的 $P,S$ 首次进入条件；
+5. 第 9.3 节的 $U,F$ 首次进入条件。
 
-称满足这个关系的 $\boldsymbol\Xi$ 为一条**合法阶段化暴露轨迹**。第 9.5
-节是这些条件的推论；第 9.6 节只给出构造某些有效边下界的一种充分方法，
-不是额外的合法性公理。
+称满足这个关系的 $\boldsymbol\Xi$ 为一条**合法阶段化暴露轨迹**。第 9.5 节给出从状态前缀和消息公开推出新边下界的构造。
 
 称合法暴露轨迹**完整**，当且仅当存在 $N\in\mathbb N$ 使：
 
@@ -2088,73 +2142,84 @@ $$
 E_N=E_x,
 \quad H_N=M^*,
 \quad
-\mathsf{Prepared}_N=\mathsf{Completed}_N
-=\mathcal E_x^{\mathrm{node}},
+\mathsf P_N=\mathscr V_x^P,
 \quad
-\mathsf{Selected}_N=\mathcal E_x^{\mathrm{sel}}.
+\mathsf S_N=\mathscr V_x^S,
+\quad
+\mathsf U_N=\mathscr V_x^U,
+\quad
+\mathsf F_N=\mathscr V_x^F.
 $$
 
-所以 $H_n=\varnothing$ 可以是合法暴露轨迹的中间截面，却不能在 $M^*\ne\varnothing$ 时成为完整轨迹的最终截面。
-
-在第 8.8 节的状态就绪定义中，以下取 $\mathsf{Done}=\mathsf{Completed}_n$。
+在第 8.8 节的状态与历史就绪关系中，以下分别取
+$\mathsf{Done}=\{(v,\theta)\mid U_{v,\theta}\in\mathsf U_n\}$ 与
+$\mathsf{Selected}=\{(j,\theta)\mid S_{j,\theta}\in\mathsf S_n\}$。
 
 ### 9.2 合法准备与合法选择
 
-为避免“已经”一词隐藏先后关系，定义阶段 $n$ 到 $n+1$ 的首次进入集合：
+定义阶段 $n$ 到 $n+1$ 的四个增量：
 
 $$
-\Delta\mathsf{Prepared}_n
-=\mathsf{Prepared}_{n+1}\setminus\mathsf{Prepared}_n,
+\Delta\mathsf P_n=\mathsf P_{n+1}\setminus\mathsf P_n,
+\qquad
+\Delta\mathsf S_n=\mathsf S_{n+1}\setminus\mathsf S_n,
 $$
 
-并类似定义 $\Delta\mathsf{Selected}_n$ 与 $\Delta\mathsf{Completed}_n$。以下前提都在阶段 $n$ 的集合上检查，因此同一步新增事件不能互为这些前提。
+$$
+\Delta\mathsf U_n=\mathsf U_{n+1}\setminus\mathsf U_n,
+\qquad
+\Delta\mathsf F_n=\mathsf F_{n+1}\setminus\mathsf F_n.
+$$
 
-节点事件 $(v,\theta)$ 只有满足下列条件才可属于 $\Delta\mathsf{Prepared}_n$：
+每个增量的前提均在截面 $\Xi_n$ 上检查。这样，一条作用边的起点与终点至少分属相邻的两个截面。
+
+作用 $P_{v,\theta}$ 可以属于 $\Delta\mathsf P_n$，当且仅当：
 
 1. $\lambda_n(v)>\theta$；
-2. $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Completed}_n$。
+2. 每个更早的实际节点事件 $(v,r)$ 都满足 $U_{v,r}\in\mathsf U_n$。
 
 进入时，以 $B^{(n)}_{v,\theta}$ 和 $q_v^\theta$ 求出 $h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta}$。引理 2 保证这些值等于第 6 节的相应坐标。
 
-区域选择事件 $(j,\theta)$ 只有满足下列条件才可属于 $\Delta\mathsf{Selected}_n$：
+作用 $S_{j,\theta}$ 可以属于 $\Delta\mathsf S_n$，当且仅当：
 
 1. $\lambda_n(\mathcal R_j)>\theta$；
-2. 每个 $v\in\mathcal C_{j,\theta}$ 都满足 $(v,\theta)\in\mathsf{Prepared}_n$；
-3. $\operatorname{HistPred}(j,\theta)\subseteq\mathsf{Selected}_n$。
+2. 每个 $v\in\mathcal C_{j,\theta}$ 都满足 $P_{v,\theta}\in\mathsf P_n$；
+3. 每个更早的实际选择事件 $(j,r)$ 都满足 $S_{j,r}\in\mathsf S_n$。
 
-合法选择必须把完整函数族：
+这次选择把完整函数族：
 
 $$
 (d_{v,\theta})_{v\in\mathcal C_{j,\theta}}
 $$
 
-与旧选择历史 $y_j^\theta$ 一次交给式 (24)。不能只对已经较早准备好的真子集作出不可撤销选择，也不能跳过一个尚未应用的较早选择作用。
+与旧选择历史 $y_j^\theta$ 一次交给式 (24)，由此共同产生激活集合、局部控制族与下一选择历史。
 
-若 $\mathcal C_{j,\theta}=\varnothing$，则 $(j,\theta)\notin\mathcal E_x^{\mathrm{sel}}$。此时式 (24) 已按定义令激活集合为空并保持历史，不需要执行选择作用，也不在 $\mathsf{Selected}_n$ 中留下记录。
+若 $\mathcal C_{j,\theta}=\varnothing$，式 (24) 的恒等分支直接传递历史；相应坐标不属于 $\mathscr V_x^S$。
 
-### 9.3 合法节点完成
+### 9.3 合法状态采用与完整输出
 
-若 $v\in\mathcal C_{j,\theta}$，则 $(v,\theta)$ 只有满足下列条件才可属于 $\Delta\mathsf{Completed}_n$：
+若 $v\in\mathcal C_{j,\theta}$，作用 $U_{v,\theta}$ 可以属于
+$\Delta\mathsf U_n$，当且仅当：
 
-1. $(j,\theta)\in\mathsf{Selected}_n$；
-2. $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Completed}_n$。
+1. $P_{v,\theta}\in\mathsf P_n$；
+2. $S_{j,\theta}\in\mathsf S_n$；
+3. 每个更早的实际节点事件 $(v,r)$ 都满足 $U_{v,r}\in\mathsf U_n$。
 
-合法完成使用该次选择确定的 $\mathcal A_{j,\theta}$ 与本节点 $c_{v,\theta}$，并按式 (25a)、(25) 唯一确定本次计算快照与下一持久状态。只有激活节点应用式 (26)，并且只把式 (27)--(28) 中非 $\bot$ 的坐标加入实际消息或输出集合。事件进入 $\mathsf{Completed}_{n+1}$ 时，其消息与输出分别属于 $M_{n+1}^{\mathrm{src}}$ 与 $Z_{n+1}^{\mathrm{comp}}$；这些消息可以同时进入 $H_{n+1}$，也可以稍后进入，但式 (40) 禁止它们更早进入。
+进入时按式 (25a)、(25) 确定本次计算快照与下一持久状态。不同节点拥有不同的状态坐标，因此同一区域的多个 $U$ 可以在选择以后进入不同阶段；同一节点的 $U$ 按逻辑时间递增。
 
-同一区域中的不同节点事件在选择以后可以具有不同完成阶段，因为它们修改的是不同状态坐标 $S_v$。但同一节点的节点事件必须按逻辑时间递增完成。
+若 $v\in\mathcal A_{j,\theta}$，作用 $F_{v,\theta}$ 可以属于
+$\Delta\mathsf F_n$，当且仅当 $U_{v,\theta}\in\mathsf U_n$。它进入时应用式 (26)，并由式 (27)--(28) 派生实际消息与输出。派生消息从这一阶段起属于 $M^{\mathrm{src}}$，再依式 (40) 进入某个当前或后续的 $H$ 截面。
 
-### 9.4 纯函数可以提前求值，规范坐标不能提前暴露
+### 9.4 作用值、暂存值与规范坐标
 
-固定 $v\in\mathcal C_{j,\theta}$。若 $B_{v,\theta}$ 已经由引理 2 确定，可以先求 $h_{v,\theta}$。若旧状态也已经确定，还可以先求 $\widetilde q_{v,\theta}$ 和三个描述量。若旧选择历史尚未就绪，则仍不能提前确定式 (24) 的任一输出。
+固定 $v\in\mathcal C_{j,\theta}$。纤维关闭以后，$h_{v,\theta}$ 已具有唯一值；旧状态确定以后，$\widetilde q_{v,\theta}$ 与三个描述量也具有唯一值。具体求值过程可以暂存这些值。过滤截面只在相应作用满足第 9.2--9.3 节条件时把它们收入规范标签限制。
 
-这些值可以保存在临时变量中，但在区域选择以前不得：
+由此得到一条简单的封闭原则：
 
-- 让更大逻辑时间的节点事件读取 $\widetilde q_{v,\theta}$；
-- 令 $(v,\theta)$ 属于 $\mathsf{Completed}_n$；
-- 令任何满足 $g(m)=(v,\theta)$ 的 $m\in M^*$ 属于 $H_n$；
-- 令任何满足 $g_Z(z)=(v,\theta)$ 的 $z\in Z^*$ 属于 $Z_n^{\mathrm{comp}}$。
-
-后三项分别违反第 9.3 节、式 (40) 或 $Z_n^{\mathrm{comp}}$ 的逆像定义。提前算出的临时值不是阶段化暴露轨迹中的规范完成标签。
+- 后续状态只读取已经属于 $\mathsf U_n$ 的前驱状态；
+- 选择只读取已经属于 $\mathsf P_n$ 的完整候选描述族；
+- 完整输出只读取已经属于 $\mathsf U_n$ 的计算快照；
+- 内部消息只从已经属于 $\mathsf F_n$ 的源作用进入 $H_n$。
 
 ### 9.5 有效下界约束消息阶段秩
 
@@ -2180,15 +2245,18 @@ $$
 \left(
 \lambda_n(v)\ge b
 \land
-\operatorname{StatePred}(v,b)
-\subseteq\mathsf{Completed}_n
+\{U_{v,r}\mid(v,r)\in\mathcal E_x^{\mathrm{node}},\ r<b\}
+\subseteq\mathsf U_n
+\land
+\{F_{v,r}\in\mathscr V_x^F\mid r<b\}
+\subseteq\mathsf F_n
 \right).
 \tag{41}
 $$
 
-称 $\operatorname{DoneTo}_n(v,b)$ 成立为“阶段 $n$ 节点 $v$ 已完成到 $b$”。第一项覆盖时间小于 $b$ 的输入，第二项覆盖相应的全部节点事件；这两个条件不能互相替代。
+谓词 $\operatorname{DoneTo}_n(v,b)$ 同时覆盖时间小于 $b$ 的输入纤维、状态采用前缀与实际完整输出前缀。
 
-若 $\operatorname{DoneTo}_n(v,b)$ 成立，则尚未属于 $\mathsf{Completed}_n$ 的任何节点事件 $(v,\theta)$ 都满足 $\theta\ge b$。对任意 $a\in\operatorname{Out}(v)$，这些事件对应消息的到达时间不小于：
+若 $\operatorname{DoneTo}_n(v,b)$ 成立，则该节点时间小于 $b$ 的全部状态采用与实际完整输出作用均已进入截面。对任意 $a\in\operatorname{Out}(v)$，以后由该节点新增的完整输出作用所产生的消息，其到达时间不小于：
 
 $$
 b+\delta(a).
@@ -2211,93 +2279,67 @@ $$
 
 是一个有效下界。
 
-事实上，任取 $m\in M^*(a,<b+\delta(a))$，都有 $\operatorname{send}(m)<b$，故 $g(m)\in\operatorname{StatePred}(v,b)\subseteq\mathsf{Completed}_n$。于是 $m$ 属于上述交集，并由附加条件属于 $H_n$；再用式 (33) 即得结论。
+事实上，任取 $m\in M^*(a,<b+\delta(a))$，都有 $\operatorname{send}(m)<b$，所以其源 $F$ 属于 $\mathsf F_n$，即 $m\in M_n^{\mathrm{src}}$。附加条件给出 $m\in H_n$，再用式 (33) 即得结论。
 
-式 (42) 使用的是谓词 (41) 和两个有限集合的包含关系，而不是“当前队列为空”。附录 S 把前者翻译为上游完成，把后者翻译为较早消息均已可见。
+式 (42) 把状态采用前缀、源 $F$ 作用和消息进入 $H$ 的三个条件合成一项边下界证书。
 
 ### 9.7 一条顺序参考轨迹
 
 > [!proposition] 命题 4：完整合法顺序参考轨迹存在
 > 对任意固定规格与输入 $x$，至少存在一条完整合法阶段化暴露轨迹。
 
-**证明。** 令全部外部记录从阶段 $0$ 起属于 $E_n$。从空的三类事件集合与 $H_0=\varnothing$ 开始，依次处理 $\theta=0,1,\ldots,\Theta_{\max}$：先在一次阶段转移中准备时间 $\theta$ 的全部节点事件，再在下一次转移中选择时间 $\theta$ 的全部区域选择事件，最后完成时间 $\theta$ 的全部节点事件。每次完成转移后，令 $H_{n+1}=M_{n+1}^{\mathrm{src}}$；在其余转移中也保持 $H_n=M_n^{\mathrm{src}}$。每个阶段都取第 8.3 节由当前 $E_n,H_n$ 定义的最大有效下界 $\widehat\sigma_n^{\mathrm{in}},\widehat\sigma_n^A$。
+**证明。** 令全部外部记录从阶段 $0$ 起属于 $E_n$。从四个空作用集合与 $H_0=\varnothing$ 开始，依次处理 $\theta=0,1,\ldots,\Theta_{\max}$。对每个时间依次用四次阶段转移加入本时间的全部 $P$、全部 $S$、全部 $U$ 和全部实际 $F$。加入 $F$ 后令 $H_{n+1}=M_{n+1}^{\mathrm{src}}$；其余转移保持同一等式。每个阶段都取第 8.3 节由当前 $E_n,H_n$ 定义的最大有效下界 $\widehat\sigma_n^{\mathrm{in}},\widehat\sigma_n^A$。
 
-在准备时间 $\theta$ 以前，所有更小逻辑时间的节点事件都已完成。若一条尚未属于 $H_n$ 的消息满足 $\operatorname{time}(m)\le\theta$，则由正时延有 $\operatorname{send}(m)<\theta$；其源事件已经完成，又因 $H_n=M_n^{\mathrm{src}}$，得到 $m\in H_n$，矛盾。因此每条入边的最大有效下界都严格大于 $\theta$；外部记录已经全部属于 $E_n$，所以输入端口下界为 $\infty$。于是每个节点 $v$ 都满足 $\lambda_n(v)>\theta$，待准备事件的状态前驱也均已完成。
+在加入时间 $\theta$ 的 $P$ 以前，所有更小逻辑时间的 $U$ 与实际 $F$ 都已进入。若一条尚未属于 $H_n$ 的消息满足 $\operatorname{time}(m)\le\theta$，则正时延给出 $\operatorname{send}(m)<\theta$；其源 $F$ 已经进入，又由 $H_n=M_n^{\mathrm{src}}$ 得到 $m\in H_n$，矛盾。因此每条入边的最大有效下界严格大于 $\theta$；外部记录已经全部属于 $E_n$，所以输入端口下界为 $\infty$。每个待加入的 $P$ 因而具有关闭纤维与完整状态前缀。
 
-下一次转移时，本时间的准备事件都已进入，所有更早选择事件也已进入；再下一次转移时，本时间的选择事件均已进入。因此第 9.2--9.3 节的条件逐项成立。$E_n,H_n$ 只增不减，故最大有效下界满足式 (34)，而 $H_n=M_n^{\mathrm{src}}$ 满足式 (40)。各次首次进入暴露第 6.3 节的规范标签。最后在某个阶段 $N$，全部事件均进入且 $H_N=M^*$。对所有 $n\ge N$，令全部集合、标签限制与下界保持阶段 $N$ 的值，便得到定义在整个 $\mathbb N$ 上的完整轨迹。$\square$
+随后，本时间的全部 $P$ 为 $S$ 提供完整描述族，本时间的 $S$ 为全部 $U$ 提供选择结果，本时间的 $U$ 为实际 $F$ 提供计算快照。第 9.2--9.3 节的条件逐项成立。$E_n,H_n$ 只增不减，最大有效下界满足式 (34)，而 $H_n=M_n^{\mathrm{src}}$ 满足式 (40)。最后在某个阶段 $N$，四类作用全部进入且 $H_N=M^*$。对所有 $n\ge N$ 保持阶段 $N$ 的截面，便得到定义在整个 $\mathbb N$ 上的完整轨迹。$\square$
 
-命题 4 只证明合法性条件并非空设；它没有声称这种逐逻辑时间轨迹是唯一或高效的暴露次序。
+命题 4 给出一条基准轨迹；其他合法轨迹可以同时加入任意多个已经满足前提的作用。
 
 ### 9.8 完整暴露的终值
 
 > [!theorem] 定理 5：规范记录的完整暴露与次序无关
-> 任取两条从相同固定规格与输入 $x$ 开始的完整合法阶段化暴露轨迹。它们可以具有不同阶段秩和中间子集，但在各自完整阶段暴露相同的 $E_x,M^*,Z^*$ 以及全部规范准备、选择与完成标签；忽略阶段秩以后，终端所暴露的规范记录都是同一个 $\mathcal T_x$。
+> 任取两条从相同固定规格与输入 $x$ 开始的完整合法阶段化暴露轨迹。它们可以具有不同阶段秩和中间子集，但在各自完整阶段暴露相同的 $E_x,M^*,Z^*$ 以及全部 $P,S,U,F$ 标签；忽略阶段秩以后，终端所暴露的规范记录都是同一个 $\mathcal T_x$。
 
-**证明。** 完整性给出 $E_N=E_x$、$H_N=M^*$ 以及三类事件集合的完整定义域。第 9.1 节又把每个阶段的函数值定义为固定规范标签函数在相应子集上的限制，所以完整定义域上的限制就是标签函数本身；并且 $Z_N^{\mathrm{comp}}=Z^*$。对空纤维 $B_{v,\theta}=\varnothing$ 与空候选集合 $\mathcal C_{j,\theta}=\varnothing$，式 (25) 与式 (24) 的恒等情形分别唯一补出 $q_v^{\theta+1}=q_v^\theta$ 与 $y_j^{\theta+1}=y_j^\theta$。阶段秩只改变这些限制扩大的先后，不改变其终值。$\square$
+**证明。** 完整性给出 $E_N=E_x$、$H_N=M^*$ 以及四类作用集合的完整定义域。第 9.1 节把每个阶段的函数值定义为固定规范标签函数在相应子集上的限制，所以完整定义域上的限制就是标签函数本身，并且 $Z_N^F=Z^*$。空纤维和空候选集合分别由式 (25) 与式 (24) 的恒等分支补齐状态坐标。阶段秩只改变限制扩大的先后。$\square$
 
-定理 5 是固定 $\mathcal T_x$ 上的过滤结论，不是独立的解释器正确性定理。程序正确性需要另行给出实现记录到规范记录的精化证明；见附录 S.9。
+定理 5 给出固定 $\mathcal T_x$ 上的过滤唯一性。附录 S.9 用精化映射把具体求值记录连接到这里的规范标签与阶段截面。
 
-## 10. 一次计算产生的事件 DAG
+### 9.9 三个派生的节点级公开视图
 
-第 6.4 节把 $(v,\theta)$ 作为一个完整的节点事件。但一个节点事件内部既有本地准备和状态采用，同一区域的多个节点事件又共同依赖一次区域选择。为了表示这些依赖，本节把节点事件与区域选择事件进一步拆成较细的**函数作用事件**，再构造它们之间的值、节点状态与选择历史依赖图。
-
-第 8--9 节用来判定“以后不会再有另一个原子”的封闭证书没有作为函数作用事件加入本图。若要研究这些证书本身的推导过程，还需另外加入相应顶点与依赖关系；本文不会把未画出的封闭证明冒充为值依赖边。
-
-### 10.1 函数作用事件的集合
-
-固定一次输入 $x$ 及其完整记录 $\mathcal T_x$。先取一个恰有四个元素的集合：
-
-$$
-\mathsf{ActKind}
-=
-\{\mathrm{prep},\mathrm{select},\mathrm{adopt},\mathrm{full}\},
-$$
-
-并明确规定其中四个标签两两不同。对节点事件 $(v,\theta)\in\mathcal E_x^{\mathrm{node}}$ 定义：
-
-$$
-P_{v,\theta}=(\mathrm{prep},v,\theta),
-\qquad
-U_{v,\theta}=(\mathrm{adopt},v,\theta).
-$$
-
-它们分别称为该节点事件的**本地准备作用事件**与**状态采用作用事件**。后一作用同时确定式 (25a) 的计算快照与式 (25) 的下一持久状态；两项状态值属于同一次作用。对区域选择事件 $(j,\theta)\in\mathcal E_x^{\mathrm{sel}}$ 定义：
-
-$$
-S_{j,\theta}=(\mathrm{select},j,\theta),
-$$
-
-称为该区域选择事件的**选择作用事件**。它是式 (24) 的一次函数作用，同时产生 $\mathcal A_{j,\theta}$、$(c_{v,\theta})_{v\in\mathcal C_{j,\theta}}$ 与 $y_j^{\theta+1}$。若 $v\in\mathcal A_{j,\theta}$，再定义：
-
-$$
-F_{v,\theta}=(\mathrm{full},v,\theta),
-$$
-
-称为激活节点的**完整输出作用事件**。四个两两不同的标签保证四类函数作用事件彼此不同，即使它们其余坐标在集合论上碰巧相同。
-
-定义全部函数作用事件所成的有限集合：
+从四类作用截面可以取出三个较粗的索引集合：
 
 $$
 \begin{aligned}
-\mathscr V_x^{\mathrm{ev}}
-={}&
-\{P_{v,\theta},U_{v,\theta}\mid
-v\in V,\ \theta\in[0,\Theta_{\max}+1),
-B_{v,\theta}\ne\varnothing\}
-\\
-&\cup
-\{S_{j,\theta}\mid
-j\in J,\ \theta\in[0,\Theta_{\max}+1),
-\mathcal C_{j,\theta}\ne\varnothing\}
-\\
-&\cup
-\{F_{v,\theta}\mid
-j\in J,\ \theta\in[0,\Theta_{\max}+1),
-v\in\mathcal A_{j,\theta}\}.
+\mathsf{Prepared}_n
+&=\{(v,\theta)\in\mathcal E_x^{\mathrm{node}}
+\mid P_{v,\theta}\in\mathsf P_n\},\\
+\mathsf{Selected}_n
+&=\{(j,\theta)\in\mathcal E_x^{\mathrm{sel}}
+\mid S_{j,\theta}\in\mathsf S_n\},\\
+\mathsf{Completed}_n
+&=\{(v,\theta)\in\mathcal E_x^{\mathrm{node}}
+\mid U_{v,\theta}\in\mathsf U_n,
+(v\notin\mathcal A_{\rho(v),\theta}
+\ \lor\ F_{v,\theta}\in\mathsf F_n)\}.
 \end{aligned}
 $$
 
-这里的 $P,S,U,F$ 只是上述带标签有序组的简称。$\mathscr V_x^{\mathrm{ev}}$ 的元素将成为另一张有向图的顶点；这个定义不向固定节点集合 $V$、区域集合 $J$、节点事件集合 $\mathcal E_x^{\mathrm{node}}$ 或区域选择事件集合 $\mathcal E_x^{\mathrm{sel}}$ 添加元素。
+$\mathsf{Prepared}_n$ 表示本地准备标签已经进入，
+$\mathsf{Selected}_n$ 表示一次区域共同选择的全部输出已经进入，
+$\mathsf{Completed}_n$ 表示节点的状态采用已经进入，并且激活节点的完整输出也已经进入。它们由 $\Xi_n$ 唯一确定，适合陈述节点级的公开进度。
+
+细粒度截面还保留两项派生视图未表达的信息：$U$ 与 $F$ 可以分属不同阶段，且一条已由 $F$ 产生的消息可以在更晚阶段进入 $H$。因此，状态批、完整输出批和消息公开分别直接使用
+$\mathsf U_n,\mathsf F_n,H_n$ 计量。
+
+## 10. 一次计算产生的事件 DAG
+
+第 6.4 节已经从完整记录中取出 $P,S,U,F$ 四类作用。本节用有向边记录它们之间的直接函数自变量依赖。所得图刻画一次具体输入实际产生的因果结构；第 8 节的封闭下界则作为作用进入过滤截面的证书。
+
+### 10.1 函数作用事件的集合
+
+固定输入 $x$ 及其完整记录 $\mathcal T_x$，取第 6.4 节的有限不交并
+$\mathscr V_x^{\mathrm{ev}}$ 作为顶点集合。
 
 令：
 
@@ -2445,7 +2487,8 @@ $$
 \tag{43}
 $$
 
-这个秩由事件坐标固定，只用于证明无环；它不是第 8--9 节可随轨迹改变的阶段秩 $\alpha_E,\alpha_M,\alpha_P,\alpha_S,\alpha_C$。
+这个秩由事件坐标固定，只用于证明无环；阶段化暴露另由
+$\alpha_E,\alpha_M,\alpha_P,\alpha_S,\alpha_U,\alpha_F$ 给出。
 
 这里的字典序定义为：
 
@@ -2499,6 +2542,21 @@ $$
 
 这不构成函数作用事件图中的有向环。即使某次计算确实沿这两条空间边依次产生消息，每条消息依赖边也会因 $\delta(a)>0$ 而严格增加逻辑时间。若第一条消息由逻辑时间 $\theta$ 的节点事件产生，那么返回区域 $0$ 时，对应的节点事件与区域选择事件具有某个逻辑时间 $\theta'>\theta$。选择历史只给同一个 $j$ 的选择事件增加跨时间边，不增加式 (44) 的跨区域边。本文因此不要求区域商图无环。
 
+### 10.7 因果链与联合求值
+
+同一节点相邻时间的边
+
+$$
+U_{v,\theta}\longrightarrow P_{v,\theta'}
+$$
+
+规定后一作用读取前一作用留下的持久状态。对一个递增时间集合
+$\Theta=\{\theta_1<\cdots<\theta_k\}$，这组边形成一条状态递归。一个联合函数可以从左边界状态和整段已经确定的驱动量出发，在一次函数调用中返回全部中间状态与右边界状态；其正确性要求返回轨迹逐坐标等于式 (22)--(25) 的递归。
+
+因此，事件 DAG 给出规范上的偏序，联合函数给出这张偏序的一种求值方式。一次具体联合调用经过精化以后可以对应许多个 $P,U$，也可以同时对应其后的 $F$。内部的状态边仍保留在规范记录中，而联合调用在外层只占一个求值块。
+
+哪些作用计入主要成本、哪些递归具有状态块、哪些状态与完整输出可以融合，都由附加的函数类与联合求值契约给出。[[timed-dag-chunk-prefill-learning-note|分块预填充教材]] 在本节事件 DAG 上定义这些契约，并分别计量状态批、完整输出批与自适应阶段。
+
 ## 11. 在逻辑时间切面停止与继续
 
 ### 11.1 完整记录的左前缀
@@ -2506,8 +2564,8 @@ $$
 固定 $b\in\mathbb N$，并要求 $0\le b\le\Theta_{\max}+1$。定义 $\mathcal T_x$ 在切面 $b$ 左侧的**规范前缀** $\mathcal T_{x,<b}$，它由以下坐标组成：
 
 1. $q_v^0,\ldots,q_v^b$ 与 $y_j^0,\ldots,y_j^b$；
-2. 所有逻辑时间小于 $b$ 的规范准备、选择与完成标签；
-3. 由这些完成标签按式 (27)--(28) 派生的全部内部消息与外部输出记录。
+2. 所有逻辑时间小于 $b$ 的规范 $P,S,U,F$ 标签；
+3. 由这些 $F$ 标签按式 (27)--(28) 派生的全部内部消息与外部输出记录。
 
 等价地，第二项取第 10 节中满足 $\operatorname{etime}(\xi)<b$ 的全部函数作用事件及其函数值。由于一个 $S_{j,\theta}$ 同时确定激活集合、局部控制族与 $y_j^{\theta+1}$，这个前缀不会停在一次区域选择的三个输出之间。$\mathcal T_{x,<b}$ 是唯一完整记录 $\mathcal T_x$ 的限制，不依赖某条阶段轨迹是否已经求得它。
 
@@ -2611,7 +2669,7 @@ $$
 
 这个定理说明式 (46) 中的持久节点状态、选择历史与跨界消息共同足以从规范前缀 $\mathcal T_{x,<b}$ 的右边继续当前模型。完整切面左边的所有完整输出已经求出，因此不需再保存过去的 $c_{v,\theta}$ 或 $q^{\mathrm{cmp}}_{v,\theta}$；它们留在完整记录中，却不是未来递归所需的持久坐标。若停在某次完整输出尚未求出的中间阶段，就不是这里的完整切面，仍须保存其待用快照和控制量。
 
-## 12. 正确性、区域结构与联合求值必须分层
+## 12. 从规范记录到联合求值的层次
 
 ### 12.1 区域前沿由最慢成员决定
 
@@ -2623,7 +2681,7 @@ $$
 
 例如成员前沿分别为 $100,96,17$ 时，区域前沿是 $17$。前两个节点已经能够证明更远时间的纤维完整，但整个区域在时间不小于 $17$ 处仍可能新增候选成员。
 
-这不是实现策略，而是最小值定义的直接结果。
+这个最小值决定整个 region 当前可以共同使用的时间范围。
 
 ### 12.2 当前已经关闭的区域时间集合
 
@@ -2639,17 +2697,15 @@ $$
 \tag{47}
 $$
 
-对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。集合很大只表示有很多区域时间位置的输入完整；它不自动给出一个能同时求值所有节点状态与选择历史递归的快速公式。
+对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。这些关闭坐标构成区域联合函数的合法输入范围；状态与选择历史怎样整段求值由相应因果契约给出。
 
-### 12.3 区域商图无环只是一项可选附加条件
+### 12.3 区域拓扑次序
 
-若式 (44) 的 $(J,Q_\rho)$ 恰好无环，可以选择一个区域全序，使每条商图边的起点都排在终点以前；这样的全序称为区域拓扑序。其存在性可对 $|J|$ 归纳证明：有限 DAG 至少有一个无入边顶点，否则不断逆着入边行走会重复顶点并形成环；先把该顶点排在最前，删除后对剩余有限 DAG 重复。随后可以沿这个次序研究一种更规则的前沿传播方法。这可能帮助构造较大的式 (47)，但它不改变式 (33)--(36) 中任何一个已给下界的数值。
+若式 (44) 的 $(J,Q_\rho)$ 无环，可以选择一个区域全序，使每条商图边的起点排在终点以前；这样的全序称为区域拓扑序。其存在性可对 $|J|$ 归纳证明：有限 DAG 至少有一个无入边顶点；先把该顶点排在最前，删除后对剩余图重复。
 
-反之，区域商图有环也不破坏第 6 节的语义、定理 3 或第 10.5 节的事件 DAG 证明。
+区域拓扑序允许前一 region 的完整区间输出成为后一 region 的关闭输入，从而构造分层时间块。一般区域商图仍由第 6 节的逻辑时间递归和第 10 节事件 DAG 处理；性能分析使用与该图相容的联合契约。
 
-因此，区域商图无环可以是以后性能定理的附加前提，但不是当前合法性的前提。
-
-### 12.4 联合求值还需要函数的代数性质
+### 12.4 两种联合求值等式
 
 固定 $k\in\mathbb N_{>0}$。对每个 $\ell\in\{1,\ldots,k\}$，给定集合 $X_\ell,Y_\ell$ 和函数：
 
@@ -2687,20 +2743,35 @@ $$
 \tag{48}
 $$
 
-这里每个 $f_\ell$ 可以是一次局部作用，也可以是按第 6 节递归定义的一段完整计算。若要合并的是后一种情形，应先以该段的初始状态和完整输入定义 $f_\ell$；相互依赖的中间状态不能被当作彼此独立的已知输入。
+式 (48) 适合全部输入坐标已经分别确定的逐坐标函数，例如一组 $F$ 作用。状态递归采用因果形式。给定左边界状态 $q_b$ 和有序驱动序列 $z_b,\ldots,z_{c-1}$，参考递归定义：
 
-定理 3 证明输入不再增加；式 (48) 证明一次联合计算没有改变结果。这是两个不同命题。
+$$
+q_{\theta+1}=T_\theta(q_\theta,z_\theta),
+\qquad b\le\theta<c.
+$$
 
-### 12.5 四层研究顺序
+一个因果联合函数需要返回完整状态轨迹与右边界状态，并满足：
 
-可以把后续工作分成四层：
+$$
+\operatorname{BatchState}
+(q_b,(z_\theta)_{\theta\in[b,c)})
+=
+((q_\theta)_{\theta\in[b,c)},q_c).
+$$
+
+右侧由上述标量递归定义。它允许中间状态在联合函数内部产生。定理 3 提供关闭输入域，式 (48) 与因果状态等式分别提供完整输出批和状态块的精确性见证。
+
+### 12.5 五层研究顺序
+
+可以把后续工作分成五层：
 
 1. **语义层**：第 1--6 节定义映射 $x\mapsto\mathcal T_x$；
-2. **阶段层**：第 8--9 节定义阶段秩、合法暴露轨迹与关闭条件；
-3. **代数层**：证明哪些逐时间函数满足式 (48) 一类联合求值等式；
-4. **实现层**：选定计算模型、算法与成本函数以后研究效率。
+2. **作用层**：第 6.4 与第 10 节给出 $P/S/U/F$ 和事件 DAG；
+3. **过滤层**：第 8--9 节定义合法暴露、关闭条件和派生进度视图；
+4. **契约层**：式 (48)、因果状态等式及分块续篇定义精确联合函数；
+5. **成本层**：选定计算模型以后研究块数、工作量、跨度和设备测量。
 
-每一层都有自己的假设与结论。区域划分给出共同选择的边界，但不会替任意节点函数制造可联合求值性质。若进一步研究一类节点函数的统一求值算法，还须明确这类函数中哪些量允许变化。例如，固定其他局部函数而改变 $\operatorname{Full}$ 时，不能同时暗中改变 $\operatorname{Next}$。相关函数类与成本条件由分块预填充续篇另行定义。
+区域划分给出共同选择边界，函数类给出可用的联合契约。[[timed-dag-chunk-prefill-learning-note|分块预填充续篇]] 以本教材的作用 DAG 和 filtration 为规范基础，构造契约相对的最大前沿递归。
 
 ## 13. 定义边界与推广范围
 
@@ -2730,7 +2801,7 @@ $$
 
 当前式 (14) 只允许选择作用读取旧历史、逻辑时间和当前描述量，式 (17a) 的 $\operatorname{Next}$ 也只读取声明的控制与本地状态；二者均在不调用 $\operatorname{Full}$ 的条件下确定。若要让 $y_j^{\theta+1}$ 读取某个 $f^A_{v,\theta}$ 或 $f^O_{v,\theta}$，就必须改变式 (14)，并把历史更新从当前选择作用中拆出。
 
-另一种扩展是让完整输出写回仅供该节点未来完整计算读取的私有状态；它也超出了式 (12) 的值域与当前状态规则，不能把这种递归藏进一个看似无状态写回的全函数。若该状态还影响后续区域选择，则增加了更强的控制反馈。两种扩展及其节点时间块契约另见 [[memos/mathematics/state-feedback-and-node-chunks|状态反馈与节点时间块备忘]]，均不是本文核心默认。
+另一种扩展是让完整输出写回仅供该节点未来完整计算读取的私有状态；它也超出了式 (12) 的值域与当前状态规则，不能把这种递归藏进一个看似无状态写回的全函数。若该状态还影响后续区域选择，则增加了更强的控制反馈。两种扩展及其节点时间块契约另见 [[memos/mathematics/state-feedback-and-node-chunks|完整输出反馈与节点因果块备忘]]，均不是本文核心默认。
 
 事件图随后会出现从 $F_{v,\theta}$ 到后续状态或历史更新作用的边。直接语义仍需重新规定更新发生在哪个逻辑时间；第 10 节的依赖图、第 11 节的分段继续，以及“先确定整个时间块的选择、再批量应用 $\operatorname{Full}$”的求值次序都要重新证明。
 
@@ -2748,16 +2819,17 @@ $$
 4. 至少一条完整合法顺序暴露轨迹存在（命题 4）；
 5. 规范记录的完整暴露与阶段次序无关（定理 5）；
 6. 规范逻辑时间左前缀上的继续等于一次算完（定理 6）；
-7. 选择历史的唯一递归、跨时间依赖与切面保存；
-8. 每次有限运行的规范值与状态依赖事件图无环；
-9. 区域商图不必无环。
+7. $P/S/U/F$ 四类作用的合法细粒度 filtration，以及由它派生的 Prepared/Selected/Completed 视图；
+8. 选择历史的唯一递归、跨时间依赖与切面保存；
+9. 每次有限运行的规范值与状态依赖事件图无环；
+10. 区域商图允许有环，联合求值按附加契约分析。
 
 仍需单独完成的工作包括：
 
-- 把第 9 节实现成规范记录上的阶段暴露检查器，并以随机合法阶段秩检验式 (33)--(40)；程序求值的正确性则按附录 S.9 另作精化检验；
+- 把第 9 节实现成规范记录上的阶段暴露检查器，并以随机合法阶段秩检验式 (33)--(40)；程序求值的正确性按附录 S.9 作精化检验；
 - 为更多受限模型与具体实现给出完整坐标映射或精化证明，而不只比较最终输出；
 - 找到能推出较大关闭窗口的区域结构定理；
-- 对具体神经节点证明式 (48) 的联合求值等式与复杂度；
+- 对具体神经节点证明式 (48) 或因果状态等式的联合求值契约与复杂度；
 - 若改变当前事件触发规则或有限性前提，重新证明有限切面以下的工作有限；保留当前节点规则的正时延有环图已由续篇处理。
 
 ## 15. 建议的学习顺序
@@ -2836,7 +2908,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **stage（阶段）**对应第 8.1 节的索引 $n$。它排列阶段化暴露轨迹，不是逻辑时间或墙钟时间。
 >
-> 外部输入记录的 **visibility（可见）**对应 $\alpha_E(e)\le n$，内部消息的 **visibility / publication（可见、公开）**对应 $\alpha_M(m)\le n$。它们不等于“可以由现有数据推导”；消息还须满足式 (40) 的源事件约束。外部输出记录在阶段 $n$ 已经确定对应 $z\in Z_n^{\mathrm{comp}}$；本文没有再为输出定义一个独立的 publication 阶段秩。
+> 外部输入记录的 **visibility（可见）**对应 $\alpha_E(e)\le n$，内部消息的 **visibility / publication（可见、公开）**对应 $\alpha_M(m)\le n$。消息还须满足式 (40) 的源 $F$ 作用约束。外部输出记录在阶段 $n$ 已经确定对应 $z\in Z_n^F$。
 >
 > 本文只有一个全局 $H_n$。若不同消费者可以在不同阶段得到同一消息，必须另加消费者坐标并定义 $H_{c,n}$；这不是当前模型的一部分。
 
@@ -2862,7 +2934,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **local control / gate（局部控制、门控量）**对应 $c_{v,\theta}\in\mathsf C_v$。`Full` 只读取本节点控制量；它不直接读取整个 region 的描述量或控制族。控制可以在 `Next` 或 selector-history 中产生持久影响，但控制量本身不自动成为 continuation 坐标。
 >
-> **active node / selected node（激活、选中节点）**对应 $v\in\mathcal A_{j,\theta}$。只有这类节点应用式 (26)；$\mathsf{Selected}_n$ 则是已应用区域选择事件的集合，不是 active nodes 的集合。
+> **active node / selected node（激活、选中节点）**对应 $v\in\mathcal A_{j,\theta}$。只有这类节点应用式 (26)；派生集合 $\mathsf{Selected}_n$ 索引已经进入 $\mathsf S_n$ 的区域选择事件。
 >
 > **Top-K**只是式 (14) 的一种实例。若分数相等，固定平局规则属于函数定义的一部分。
 >
@@ -2877,7 +2949,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > 因此 `content/pre/post` 决定 selector 读取什么；`SD/BO` 决定哪些候选状态用于本次计算。下一持久状态还由 `Next` 单独指定；只有它返回计算快照时，采用与最终保存才是同一状态。
 >
-> **proposal** 对应候选新状态 $\widetilde q$。**state commit（状态提交）**对应同时给出式 (25a) 本次快照与式 (25) 下一持久状态的作用 $U_{v,\theta}$；选择作用 $S_{j,\theta}$ 同时确定 active set、局部控制族与下一 selector-history。二者都不同于节点事件进入 $\mathsf{Completed}_n$，也不同于消息进入 $H_n$；单独使用 `commit` 时必须说明提交哪一种对象。**expensive compute / NodeCompute** 对应式 (12) 与 (26) 的 $\operatorname{Full}_v$；“昂贵”不是数学性质。
+> **proposal** 对应候选新状态 $\widetilde q$。**state commit（状态提交）**对应同时给出式 (25a) 本次快照与式 (25) 下一持久状态的作用 $U_{v,\theta}$；选择作用 $S_{j,\theta}$ 同时确定 active set、局部控制族与下一 selector-history。派生的 $\mathsf{Completed}_n$ 要求 $U$ 已进入，并要求 active 坐标的 $F$ 也已进入。**expensive compute / NodeCompute** 由分块教材的成本标记确定，可以对应 $U$、$F$ 或二者的联合块。
 
 > [!info]- S.5　seal、frontier、watermark、closure 与 ready
 > **seal（封闭下界）**对应式 (33) 的 $\sigma$。例如边 seal 为 $b$ 精确表示 $M^*(a,<b)\subseteq H_n$，不是“当前队列为空”。
@@ -2890,7 +2962,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **watermark** 若表示“输入确定到哪里”，对应某个 $\sigma$ 或 $\lambda$；若表示“节点完成到哪里”，对应式 (41) 的 $\operatorname{DoneTo}_n(v,b)$。必须注明采用哪一种。
 >
-> **ready（就绪）**对节点状态对应第 8.8 节的 $\operatorname{StatePred}(v,\theta)\subseteq\mathsf{Done}$，对选择历史对应 $\operatorname{HistPred}(j,\theta)\subseteq\mathsf{Selected}$；区域选择还要满足第 9.2 节的纤维关闭与准备条件。
+> **ready（就绪）**对节点状态对应较早 $U$ 全部属于 $\mathsf U_n$，对选择历史对应较早 $S$ 全部属于 $\mathsf S_n$；区域选择还要满足第 9.2 节的纤维关闭与完整 $P$ 描述族条件。
 >
 > **barrier（屏障）**是实现等待这些数学条件成立的位置，并不要求所有处理器同时停止。
 
@@ -2925,7 +2997,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **prefill** 通常表示一次联合处理许多已知输入位置；**decode** 通常表示逐个或小批增加输入位置。要声称二者等价，必须比较第 6 节的节点状态、selector-history、内部消息、所有输出端口、候选集合和 active sets，而不只是最后一个张量。
 >
-> **packing / packed attention** 是式 (48) 中 $\operatorname{Pack},\mathcal K,\operatorname{Unpack}$ 的具体实现候选。seal 证明输入不会再增加；式 (48) 证明联合求值等于参考递归。两项证明不能互相替代。
+> **packing / packed attention** 可以实现式 (48) 的逐坐标联合等式，也可以实现第 12.4 节的因果状态等式。seal 给出合法输入域，联合等式给出逐坐标精确性。
 >
 > **fast path** 可以在额外图结构和代数条件成立时使用联合函数；一般路径仍须得到第 6 节的规范记录。若还要比较分阶段进展，则另须投影到第 9 节的合法阶段化暴露轨迹。
 
@@ -2934,11 +3006,12 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **runtime / executor（运行时、解释器）**不是正文定义的数学对象。第 9.1 节的轨迹已经是固定 $\mathcal T_x$ 上的阶段化暴露，不能单凭“程序产生了这样一条轨迹”证明程序算对；实现与规范记录之间还必须另行给出附录 S.9 定义的精化关系。
 >
-> **scheduler（调度器）**在通过精化投影以后，对应选择哪些合格事件进入第 9.2--9.3 节的 $\Delta\mathsf{Prepared}_n,\Delta\mathsf{Selected}_n,\Delta\mathsf{Completed}_n$。选择事件还必须满足 selector-history 就绪条件；投影后的调度只改变阶段秩，不能改变 $\mathcal T_x$。
+> **scheduler（调度器）**在通过精化投影以后，对应选择哪些合格作用进入第 9.2--9.3 节的
+> $\Delta\mathsf P_n,\Delta\mathsf S_n,\Delta\mathsf U_n,\Delta\mathsf F_n$。投影后的调度只改变阶段秩，保留 $\mathcal T_x$ 的规范值。
 >
 > **workspace（临时工作区）**可以保存第 9.4 节提前求出的 $h,\widetilde q,d$。临时变量不等于式 (25) 确定的下一持久状态。
 >
-> **event completion（事件完成）**对应 $(v,\theta)\in\mathsf{Completed}_n$，即 $\alpha_C((v,\theta))\le n$。**completed to $b$（完成到 $b$）**对应式 (41) 的复合谓词。二者都不等于消息可见：本文允许源事件完成以后，其消息再在更晚阶段进入 $H_n$。若另一份规格把“消息已经进入 $H$”也纳入 completed 的定义，那是更强的另一种约定，不能与本文的 $\mathsf{Completed}_n$ 混用。
+> **event completion（事件完成）**对应第 9.9 节的派生成员关系 $(v,\theta)\in\mathsf{Completed}_n$：$U$ 已进入，且 active 坐标的 $F$ 已进入。**completed to $b$（完成到 $b$）**对应式 (41) 的复合谓词。消息进入 $H_n$ 具有独立的阶段秩 $\alpha_M$。
 >
 > **atomic commit（原子提交）**在本文中的最小要求是：节点状态后继只能读取式 (25) 确定以前的 $q_v^\theta$ 或确定以后的 $q_v^{\theta+1}$；选择历史后继只能读取式 (24) 确定以前的 $y_j^\theta$ 或确定以后的 $y_j^{\theta+1}$。二者都不能读取规格未定义的中间状态。这不声称使用某条特定处理器原子指令。
 >
