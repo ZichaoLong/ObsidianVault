@@ -134,7 +134,7 @@ $$
 2. **时间批暴露**：状态采用与完整输出只被分成少量联合求值块；
 3. **块内复杂度**：每个联合函数内部具有怎样的工作量、并行深度与存储量。
 
-第一项由前置语义和本文的精化定理控制。第二项由第 4--7 节定义。第三项随 Attention、SSM、MoE expert 等具体函数族改变。
+第一项要求每个联合求值逐坐标返回同一份参考区间记录。第二项由第 4--7 节定义。第三项随 Attention、SSM、MoE expert 等具体函数族改变。
 
 ## 2. 路径时延、支持区间与切面边界
 
@@ -227,6 +227,14 @@ K\subseteq\mathscr V_x^{\mathrm{ev}}.
 \tag{13}
 $$
 
+对每个作用 $\xi\in\mathscr V_x^{\mathrm{ev}}$，先定义它在事件 DAG 中的直接前驱集合：
+
+$$
+\operatorname{Pred}(\xi)
+=\{\eta\in\mathscr V_x^{\mathrm{ev}}
+\mid(\eta,\xi)\in\mathscr A_x^{\mathrm{ev}}\}.
+$$
+
 给定已经完成的作用集合 $D\subseteq\mathscr V_x^{\mathrm{ev}}$，定义：
 
 $$
@@ -238,32 +246,79 @@ $$
 \tag{14}
 $$
 
-其中 $\operatorname{Pred}(\xi)$ 是事件 DAG 中 $\xi$ 的直接前驱集合。式 (14) 允许块内保留依赖边，同时要求每条进入块的边已经在左边界取得函数值。
+式 (14) 允许块内保留依赖边，同时要求每条进入块的边已经在左边界取得函数值。
 
 若 $K$ 含有 $P_{v,\theta}$，还要求相应时间纤维由有效封闭下界证明完整。若 $K$ 含有 $S_{j,\theta}$，同一 $(j,\theta)$ 的全部候选 $P$ 都属于 $K\cup D$，并且旧选择历史由左边界或块内更早的 $S$ 给出。
 
 ### 3.2 块边界
 
-作用块 $K$ 的数学输入包含：
+为了让联合函数在一个真正的集合上有定义，暂时允许输入变化而保持 TimedDAG 规格固定。一个**合法区间实例**是元组：
 
-- 从 $Q_b$ 或更早作用进入块的节点状态与选择历史；
-- 进入块内时间纤维的外部记录和跨界消息；
-- 由 $K$ 外前驱给出的本地内容、控制量或计算快照；
-- 证明相关时间纤维完整的封闭下界。
+$$
+\omega=(b,c,Q_b,E_{[b,c)},\boldsymbol\sigma,
+\mathcal U_{[b,c)},Q_c),
+$$
 
-记所有这些带标签坐标组成的集合为 $\partial^-K$。块的输出 $\partial^+K$ 包含 $K$ 中作用的全部规范标签、离开块的持久状态与选择历史、内部消息和外部输出。
+其中 $b<c$，$Q_b$ 是某份完整参考记录在切面 $b$ 的状态，
+$E_{[b,c)}$ 是区间外部记录，$\boldsymbol\sigma$ 是覆盖目标区间的有效封闭下界，而
+$(\mathcal U_{[b,c)},Q_c)$ 是前置教材分段继续递归唯一确定的区间记录与右切面。令
+$\mathsf{IntervalInst}$ 为全部这种元组所成的集合，并记该实例的作用集合为
+$\mathscr V^{\mathrm{ev}}(\omega)$。对带标签作用块 $K$，定义：
 
-固定完整记录以后，前置教材的递归给出参考函数：
+$$
+\mathsf{Inst}(K)
+=\{\omega\in\mathsf{IntervalInst}
+\mid K\subseteq\mathscr V^{\mathrm{ev}}(\omega)\}.
+$$
+
+每类带名字的语义坐标 $\gamma$ 都有前置教材指定的值空间，记为 $\mathsf{Type}(\gamma)$。定义块的输入坐标签名 $\partial^-K$，它恰好包含：
+
+1. $\bigcup_{\xi\in K}\operatorname{Pred}(\xi)\setminus K$ 中全部作用的值坐标；
+2. 在 $K$ 内首次读取、却不由 $K$ 内作用产生的节点状态与选择历史坐标；
+3. 进入 $K$ 内时间纤维、却不由 $K$ 内 $F$ 产生的外部记录与跨界消息坐标；
+4. 证明 $K$ 中各个 $P$ 所用时间纤维完整的封闭下界坐标。
+
+定义输出坐标签名 $\partial^+K$，使它包含 $K$ 中全部规范作用值，以及这些作用产生并离开块的持久状态、选择历史、内部消息和外部输出。相应的类型化记录空间是：
+
+$$
+\mathsf{BndIn}(K)
+=\prod_{\gamma\in\partial^-K}\mathsf{Type}(\gamma),
+\qquad
+\mathsf{BndOut}(K)
+=\prod_{\gamma\in\partial^+K}\mathsf{Type}(\gamma).
+$$
+
+对 $\omega\in\mathsf{Inst}(K)$，分别把完整参考实例限制到这两组坐标，得到边界抽取函数：
+
+$$
+\beta^-_K:\mathsf{Inst}(K)\to\mathsf{BndIn}(K),
+\qquad
+\beta^+_K:\mathsf{Inst}(K)\to\mathsf{BndOut}(K).
+$$
+
+定义：
+
+$$
+\mathsf{AdmIn}(K)
+=\{\beta^-_K(\omega)\mid\omega\in\mathsf{Inst}(K)\},
+\qquad
+\mathsf{Out}(K)=\mathsf{BndOut}(K).
+$$
+
+$\partial^-K$ 已经包含每个块外函数自变量以及所需封闭证据。因此，若两个合法实例具有相同的 $\beta^-_K$，对块内事件偏序归纳可知它们也具有相同的 $\beta^+_K$。于是下面的赋值与实例见证的选择无关，并定义一个全函数：
+
 
 $$
 \operatorname{Ref}_K:
 \mathsf{AdmIn}(K)
 \longrightarrow
-\mathsf{Out}(K).
+\mathsf{Out}(K),
+\qquad
+\operatorname{Ref}_K(\beta^-_K(\omega))
+=\beta^+_K(\omega)
+\qquad(\omega\in\mathsf{Inst}(K)).
 \tag{15}
 $$
-
-$\mathsf{AdmIn}(K)$ 由所有实际完整记录中出现的合法边界组成。这样，式 (15) 的定义域已经包含输入相容性、状态相容性和 seal 相容性。
 
 ### 3.3 精确联合求值与精化
 
@@ -284,7 +339,36 @@ $$
 \tag{16}
 $$
 
-具体求值记录可以含有联合调用编号、临时数组和执行位置。精化投影删除这些附加坐标，把一次联合调用展开成 $K$ 中的规范作用及其标签。式 (16) 保证展开后的每个 $P,S,U,F$ 坐标与 $\mathcal T_x$ 一致。
+令 $\mathsf{EvalRec}(K)$ 为具体联合求值记录的集合，并固定只遗忘附加坐标的投影：
+
+$$
+\Pi_K^{\mathrm{blk}}:
+\mathsf{EvalRec}(K)\longrightarrow\mathsf{Out}(K).
+$$
+
+具体记录 $r$ 在边界 $z\in\mathsf{AdmIn}(K)$ 上**精化到**规范块，当
+$\Pi_K^{\mathrm{blk}}(r)=\operatorname{Ref}_K(z)$。投影只删除辅助坐标，并保留 $\partial^+K$ 的全部坐标及其原值。式 (16) 因而保证展开后的每个 $P,S,U,F$ 坐标与 $\mathcal T_x$ 一致。
+
+为统一后文记号，定义契约种类与**归属标识**集合：
+
+$$
+\mathsf{ContractKind}=\{F,U,UF,R\},
+\qquad
+\mathsf{Owner}
+=\bigl(\{\mathrm{node}\}\times V\bigr)
+\sqcup
+\bigl(\{\mathrm{region}\}\times J\bigr).
+$$
+
+一个**类型化联合契约**是四元组：
+
+$$
+B=(\operatorname{kind}(B),\operatorname{own}(B),K_B,\mathcal K_B),
+$$
+
+其中 $\operatorname{kind}(B)\in\mathsf{ContractKind}$，
+$\operatorname{own}(B)\in\mathsf{Owner}$，$K_B$ 是有限作用块，并且
+$\mathcal K_B:\mathsf{AdmIn}(K_B)\to\mathsf{Out}(K_B)$ 是式 (16) 的精确见证。种类 $F,U,UF$ 的归属标识分别是相应节点 $(\mathrm{node},v)$；种类 $R$ 的归属标识是相应 region $(\mathrm{region},j)$。给定 $z\in\mathsf{AdmIn}(K_B)$ 后，二元组 $(B,z)$ 称为一次**契约调用**，它覆盖的规范作用集合是 $K_B$。
 
 多个两两不交的作用块若满足进入边依赖，就可以按任一拓扑顺序替换参考递归。对块顺序作归纳即可得到：
 
@@ -295,13 +379,32 @@ $$
 
 ### 4.1 语义作用与成本标记
 
-式 (1) 的四类作用由语义固定。另取有限的成本种类集合 $\mathsf{CostKind}$，并给每个局部函数作用一个成本标记。本文重点研究其中被标记为主要节点作用的部分；常见选择包括：
+式 (1) 的四类作用由语义固定。另取有限的成本种类集合 $\mathsf{CostKind}$、子集
+$\mathsf{MajorKind}\subseteq\mathsf{CostKind}$，并固定一个与输入值无关的标记规则。它在每次运行上诱导函数：
+
+$$
+\operatorname{cost}_x:
+\mathscr V_x^{\mathrm{ev}}\longrightarrow\mathsf{CostKind}.
+$$
+
+定义主要作用集与普通作用集：
+
+$$
+\mathscr V_x^{\mathrm{major}}
+=\operatorname{cost}_x^{-1}(\mathsf{MajorKind}),
+\qquad
+\mathscr V_x^{\mathrm{ordinary}}
+=\mathscr V_x^{\mathrm{ev}}
+\setminus\mathscr V_x^{\mathrm{major}}.
+$$
+
+本文重点研究主要作用；常见标记包括：
 
 - 只把 $F$ 标记为主要作用；
 - 把状态递归涉及的 $P,U$ 与 $F$ 都标记为主要作用；
-- 把一个融合的状态—输出联合函数视为主要作用。
+- 把一个融合状态—输出契约所覆盖的 $P,U,F$ 都标记为主要作用。
 
-成本标记与 $P,S,U,F$ 标签相互独立。同一个 $U$ 在轻量计数状态中可以属于普通作用，在大规模记忆更新中可以属于主要作用。所有批次数结论都相对于已经固定的成本标记和联合契约陈述。
+成本标记与 $P,S,U,F$ 标签相互独立。同一个 $U$ 在轻量计数状态中可以属于普通作用，在大规模记忆更新中可以属于主要作用。一个联合契约可以共同覆盖若干主要作用；所有批次数结论都相对于已经固定的成本标记和联合契约陈述。
 
 ### 4.2 逐坐标完整输出契约
 
@@ -314,7 +417,22 @@ h_{v,\theta},c_{v,\theta})
 \qquad(\theta\in\Theta)
 $$
 
-已经确定时，定义逐坐标完整输出联合函数：
+已经确定时，令：
+
+$$
+K^F_{v,\Theta}
+=\{F_{v,\theta}\mid\theta\in\Theta\}.
+$$
+
+若 $\Theta=\{\theta_1<\cdots<\theta_k\}$，记号
+$(a_\theta)_{\theta\in\Theta}^{\uparrow}$ 表示有序元组
+$(a_{\theta_1},\ldots,a_{\theta_k})$。定义逐坐标完整输出联合函数及其类型：
+
+$$
+\operatorname{BatchFull}_{v,\Theta}:
+\mathsf{AdmIn}(K^F_{v,\Theta})
+\longrightarrow\mathsf{Out}(K^F_{v,\Theta}),
+$$
 
 $$
 \operatorname{BatchFull}_{v,\Theta}
@@ -324,6 +442,8 @@ h_{v,\theta},c_{v,\theta})_{\theta\in\Theta}^{\uparrow}
 \right).
 \tag{17}
 $$
+
+式 (17) 只是把 $\partial^-K^F_{v,\Theta}$ 中的带名字坐标按递增时间展示；这个元组按定义属于 $\mathsf{AdmIn}(K^F_{v,\Theta})$。
 
 其精确契约是：
 
@@ -338,7 +458,7 @@ h_{v,\theta},c_{v,\theta})
 \tag{18}
 $$
 
-式 (18) 的各坐标在调用前均已知，因而它描述相互独立的函数求值组成的时间批。
+式 (18) 右侧采用规范输出记录的简写：每个 $\operatorname{Full}_v$ 值放到相应 $F_{v,\theta}$ 标签上，并按前置教材式 (27)--(28) 展开成由它确定的消息与外部输出坐标。式 (18) 的各输入坐标在调用前均已知，因而它描述相互独立的函数求值组成的时间批。
 
 ### 4.3 因果状态块契约
 
@@ -353,8 +473,12 @@ z_i=(B_{v,\theta_i},
 c_{v,\theta_i}).
 $$
 
+连同 $q_{\mathrm{in}}$，这些带名字坐标构成
+$\mathsf{AdmIn}(K^U_{v,\Theta})$ 的一个元素；下面的调用记号采用这一规范排列。
+
 从左边界状态 $q_{\mathrm{in}}$ 出发，按时间递增应用块内保留的
-$P,S,U$ 参考规则，得到：
+$P,S,U$ 参考规则；把最后一个块内作用以后沿空档保持到块右边界的状态记为
+$q_{\mathrm{out}}$。由此得到：
 
 $$
 \bigl(
@@ -364,7 +488,13 @@ q_{\mathrm{out}}
 \tag{19}
 $$
 
-定义因果状态联合函数：
+定义因果状态联合函数及其完整类型：
+
+$$
+\operatorname{BatchState}_{v,\Theta}:
+\mathsf{AdmIn}(K^U_{v,\Theta})
+\longrightarrow\mathsf{Out}(K^U_{v,\Theta}),
+$$
 
 $$
 \operatorname{BatchState}_{v,\Theta}
@@ -372,13 +502,29 @@ $$
 \tag{20}
 $$
 
-并要求其值包含 $K^U_{v,\Theta}$ 的全部规范标签，状态坐标逐项等于式 (19) 的标量递归。调用式 (20) 时给出左边界状态、关闭纤维与块外驱动量；块内控制和中间状态由参考顺序产生。空档保持持久状态，逻辑时间坐标仍保留在每个驱动量中。
+是 $K^U_{v,\Theta}$ 的式 (16) 精确见证；其值包含该块的全部规范标签，状态坐标逐项等于式 (19) 的标量递归。调用式 (20) 时给出左边界状态、关闭纤维与块外驱动量；块内控制和中间状态由参考顺序产生。空档保持持久状态，逻辑时间坐标仍保留在每个驱动量中。
 
 这种契约称为**因果状态块契约**。它允许一次联合调用精化为一条包含许多个 $P,U$ 及其局部选择作用的状态链。共同 selector 读取多个节点描述量时，相应 $S$ 与所有参与节点一起进入区域契约。
 
 ### 4.4 状态—完整输出联合契约
 
-有些节点自然地在生成状态轨迹时同时给出每个激活坐标的完整输出。定义：
+有些节点自然地在生成状态轨迹时同时给出每个激活坐标的完整输出。令：
+
+$$
+K^{UF}_{v,\Theta}
+=K^U_{v,\Theta}
+\cup
+\{F_{v,\theta}\mid
+\theta\in\Theta\cap\Lambda_v^F(I;x)\}.
+$$
+
+定义：
+
+$$
+\operatorname{BatchNode}_{v,\Theta}:
+\mathsf{AdmIn}(K^{UF}_{v,\Theta})
+\longrightarrow\mathsf{Out}(K^{UF}_{v,\Theta}),
+$$
 
 $$
 \operatorname{BatchNode}_{v,\Theta}
@@ -393,17 +539,50 @@ $$
 (f^A_{v,\theta_i},f^O_{v,\theta_i}).
 $$
 
-精确契约要求这些坐标共同等于参考递归。一次式 (21) 调用经精化同时覆盖 $K^U_{v,\Theta}$ 与相应的 $F$。实现可以采用融合表示，数学输出仍包含足以确定完整规范轨迹的坐标。
+它是 $K^{UF}_{v,\Theta}$ 的式 (16) 精确见证。一次式 (21) 调用经精化同时覆盖 $K^U_{v,\Theta}$ 与相应的 $F$。实现可以采用融合表示，数学输出仍包含足以确定完整规范轨迹的坐标。
 
 ### 4.5 区域控制—状态契约
 
-一个 region 的选择在同一时间联合读取所有候选描述量，选择历史又跨时间递归。固定 $j\in J$ 与区间 $I=[b,c)$，若该区域全部时间纤维已经关闭，定义区域参考转导：
+一个 region 的选择在同一时间联合读取所有候选描述量，选择历史又跨时间递归。固定 $j\in J$ 与区间 $I=[b,c)$，定义区域状态作用块：
+
+$$
+\begin{aligned}
+K^R_{j,I}
+={}&\{P_{v,\theta}
+\mid v\in\mathcal R_j,\ \theta\in I,\
+(v,\theta)\in\mathcal E_x^{\mathrm{node}}\}
+\\
+&\cup
+\{U_{v,\theta}
+\mid v\in\mathcal R_j,\ \theta\in I,\
+(v,\theta)\in\mathcal E_x^{\mathrm{node}}\}
+\\
+&\cup
+\{S_{j,\theta}\mid
+\theta\in I,\ (j,\theta)\in\mathcal E_x^{\mathrm{sel}}\}.
+\end{aligned}
+$$
+
+若该区域全部相关时间纤维已经关闭，定义：
+
+$$
+\mathsf{RegionIn}_{j,I}
+=\mathsf{AdmIn}(K^R_{j,I}),
+\qquad
+\mathsf{RegionStateOut}_{j,I}
+=\mathsf{Out}(K^R_{j,I}).
+$$
+
+区域参考转导是式 (15) 的特例：
 
 $$
 \operatorname{RefRegionState}_{j,I}:
 \mathsf{RegionIn}_{j,I}
 \longrightarrow
-\mathsf{RegionStateOut}_{j,I}.
+\mathsf{RegionStateOut}_{j,I},
+\qquad
+\operatorname{RefRegionState}_{j,I}
+=\operatorname{Ref}_{K^R_{j,I}}.
 \tag{22}
 $$
 
@@ -413,16 +592,41 @@ $B_{v,\theta}$；输出包括区域内全部 $P,S,U$ 标签、完整节点状态
 一个区域联合函数
 
 $$
-\operatorname{BatchRegionState}_{j,I}
+\operatorname{BatchRegionState}_{j,I}:
+\mathsf{RegionIn}_{j,I}
+\longrightarrow\mathsf{RegionStateOut}_{j,I}
 $$
 
-满足区域控制—状态契约，当它在整个合法定义域上等于式 (22)。它可以容纳选择描述量读取节点状态、选择结果再改变下一持久状态的递归。若还同时返回区域内全部 $F$ 标签，就得到区域状态—输出联合契约。
+满足区域控制—状态契约，当它在整个合法定义域上等于式 (22)。它可以容纳选择描述量读取节点状态、选择结果再改变下一持久状态的递归。
+
+若还同时返回区域内全部 $F$ 标签，令
+
+$$
+K^{RF}_{j,I}
+=K^R_{j,I}\cup
+\{F_{v,\theta}\mid
+v\in\mathcal R_j,\ \theta\in I,\
+F_{v,\theta}\in\mathscr V_x^F\},
+$$
+
+并取一个从 $\mathsf{AdmIn}(K^{RF}_{j,I})$ 到
+$\mathsf{Out}(K^{RF}_{j,I})$ 的式 (16) 精确见证；这就是区域状态—输出联合契约。
 
 式 (20) 与式 (22) 首先给出外层因果块的数学边界。一次有意义的状态批分析还为联合函数登记具体求值见证及其工作量、跨度和存储量。顺序递归见证对应一个外层块和线性内部跨度；式 (33) 的结合扫描、因果 Attention 等见证可以进一步缩短内部跨度或改善实际联合计算。
 
 ### 4.6 契约族
 
-把一次分析中允许使用的全部精确联合函数组成集合：
+固定一个类型化联合契约词汇 $\mathfrak B$，并要求对每个有限作用集合、契约种类和归属标识只登记有限多个见证。按第 3.3 节已经定义的种类，令：
+
+$$
+\mathfrak B^\kappa
+=\{B\in\mathfrak B\mid
+\operatorname{kind}(B)=\kappa\}
+\qquad
+(\kappa\in\mathsf{ContractKind}).
+$$
+
+于是：
 
 $$
 \mathfrak B
@@ -434,7 +638,9 @@ $$
 \tag{23}
 $$
 
-四部分分别由式 (17)、(20)、(21)、(22) 型见证组成。可以只选择其中一部分。例如，只给出 $\mathfrak B^F$ 时，后文算法退化为先求状态与选择，再批量求完整输出；给出 $\mathfrak B^U$ 或 $\mathfrak B^{UF}$ 时，状态递归本身也获得显式时间块。
+四部分分别由式 (17)、(20)、(21)、(22) 型见证组成；$\mathfrak B^R$ 也可以包含第 4.5 节的区域状态—输出见证。可以只选择其中一部分。例如，只给出 $\mathfrak B^F$ 时，后文算法退化为先求状态与选择，再批量求完整输出；给出 $\mathfrak B^U$ 或 $\mathfrak B^{UF}$ 时，状态递归本身也获得显式时间块。
+
+为使最大前沿成为确定函数，在 $\mathsf{ContractKind}$、$\mathsf{Owner}$ 和规范作用坐标上各固定一个全序，并给同种类、同归属标识、同覆盖集合的多个登记见证固定优先序。有限集合总能取这样的全序。这些次序都是规格的一部分，不依赖本次作用值。
 
 一个更强的契约族可以把更多规范边收进同一联合函数。后文的最大前沿、阶段数与批次数均写成相对于 $\mathfrak B$ 的量。
 
@@ -452,13 +658,22 @@ D,\mathsf{Val},H),
 \tag{24}
 $$
 
-其中 $E_I$ 是已经给定的区间外部记录，$\boldsymbol\sigma$ 是有效封闭下界，$D$ 是已经由普通作用或联合函数完成的规范作用集合，$\mathsf{Val}$ 保存这些作用的标签，$H$ 保存已经进入当前截面的内部消息。要求 $(D,\mathsf{Val},H)$ 能嵌入前置教材的一条合法 $P/S/U/F$ 暴露轨迹。
+其中：
 
-一个普通作用 $\xi$ 在 $\Omega$ 中**可取**，当它的直接前驱属于 $D$，其时间纤维已经关闭，并且所需函数属于当前成本标记允许逐项求值的普通作用。
+$$
+E_I=\{e\in E_x\mid b\le\operatorname{time}(e)<c\},
+$$
 
-一个契约调用 $B\in\mathfrak B$ 在 $\Omega$ 中**可取**，当：
+$\boldsymbol\sigma$ 是前置教材定义的输入边与消息边封闭下界族，且对当前
+$(E_I,H)$ 有效；$D\subseteq\mathscr V_x^{\mathrm{ev}}$ 是已经由普通作用或联合函数完成的规范作用集合；$\mathsf{Val}$ 是 $D$ 上的类型正确值函数，并满足
+$\mathsf{Val}=\mathcal T_x\!\upharpoonright_D$；$H\subseteq M^*$ 是已经进入当前截面的内部消息。要求 $(D,\mathsf{Val},H)$ 能嵌入前置教材的一条合法 $P/S/U/F$ 暴露轨迹。
 
-1. 它覆盖的规范作用尚未属于 $D$；
+一个普通作用 $\xi\in\mathscr V_x^{\mathrm{ordinary}}$ 在 $\Omega$ 中**可取**，当它的直接前驱属于 $D$，其时间纤维已经关闭，并且当前成本标记允许逐项求值其局部函数。
+
+对契约 $B\in\mathfrak B$，若 $\Omega$ 已经确定
+$z_B\in\mathsf{AdmIn}(K_B)$ 的全部坐标，就得到调用 $(B,z_B)$。这个调用在 $\Omega$ 中**可取**，当：
+
+1. $K_B\cap D=\varnothing$；
 2. 每条从块外进入块内的事件边起点属于 $D$；
 3. 契约定义域要求的时间纤维、左边界状态、选择结果或驱动量已经确定；
 4. 相关封闭下界覆盖块内全部 $P$；
@@ -475,7 +690,7 @@ $$
 ### 5.3 最大可取块族
 
 令 $\mathcal C_{\mathfrak B}(\Omega)$ 为
-$\operatorname{CtrlCl}(\Omega)$ 上全部当前可取的契约调用。它是有限集合。固定一个与输入值无关的全序：对同一契约类型和同一 owner，严格包含较多当前坐标的块排在前面；其余次序由契约优先序、owner 全序和坐标全序决定。
+$\operatorname{CtrlCl}(\Omega)$ 上全部当前可取的调用 $(B,z_B)$。有限目标作用集、每个覆盖集合上的有限登记数以及第 4.6 节的固定次序保证它是有限有序集合。对同一契约种类和同一 $\operatorname{own}(B)$，$K_B$ 严格包含较多当前坐标的调用排在前面；其余次序依次由契约优先序、归属标识全序和坐标全序决定。
 
 按这个全序扫描 $\mathcal C_{\mathfrak B}(\Omega)$。一个调用与此前已经选出的块两两不交时就收入当前族，否则跳过；扫描持续到候选集合末尾。所得族记为：
 
@@ -484,7 +699,7 @@ $$
 \tag{25}
 $$
 
-它是当前全部可取调用中的极大不交族：任何未选调用都与某个已选调用相交。同 owner 的大块优先给出尽可能长的当前坐标集合，继续扫描又会把所有与已选块相容的剩余调用加入本阶段。固定全序只消除表示歧义；它不读取未来作用值，也不改变任一块的参考函数。
+它是当前全部可取调用中的极大不交族：任何未选调用都与某个已选调用相交。同一 $\operatorname{own}(B)$ 的大块优先给出尽可能长的当前坐标集合，继续扫描又会把所有与已选块相容的剩余调用加入本阶段。固定全序只消除表示歧义；它不读取未来作用值，也不改变任一块的参考函数。
 
 ### 5.4 最大前沿算法
 
@@ -539,30 +754,34 @@ $$
 
 ### 5.6 三类节点批次数与区域块数
 
-对一次区间求值，定义：
+对一次区间求值，令 $\mathcal L$ 为各阶段实际选中契约调用的有限集合；以下的 $B$ 均遍历 $\mathcal L$，并用 $B$ 同时表示调用及其类型化契约部分。定义：
 
 $$
 m_v^U
 =
-\#\{\text{以节点 }v\text{ 为 owner 的因果状态块}\},
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=U,\
+\operatorname{own}(B)=(\mathrm{node},v)\},
 $$
 
 $$
 m_v^F
 =
-\#\{\text{覆盖节点 }v\text{ 的逐坐标完整输出批}\},
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=F,\
+\operatorname{own}(B)=(\mathrm{node},v)\},
 $$
 
 $$
 m_v^{UF}
 =
-\#\{\text{以节点 }v\text{ 为 owner 的状态—输出联合块}\},
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=UF,\
+\operatorname{own}(B)=(\mathrm{node},v)\},
 $$
 
 $$
 m_j^R
 =
-\#\{\text{以 region }j\text{ 为 owner 的区域状态或状态—输出块}\}.
+\#\{B\in\mathcal L\mid\operatorname{kind}(B)=R,\
+\operatorname{own}(B)=(\mathrm{region},j)\}.
 \tag{27}
 $$
 
@@ -570,7 +789,17 @@ $$
 $m_v^{UF}$；若分析者还需要两个语义投影的覆盖数，可以从该块所含
 $U,F$ 坐标分别统计。
 
-称一个规格族具有**一致节点时间批暴露**，当存在固定完备精确契约族和常数：
+这里的**共同规格族** $\mathfrak S$ 是一组共享下列数据的 TimedDAG 规格：
+
+1. 有限集合 $V,A,J$、端口集合、映射 $\rho,\operatorname{src},\operatorname{dst}$、时延与输入时间规则；
+2. 节点状态、选择历史、本地内容、描述量、控制量和输出的值空间，以及全部局部函数的定义域和值域；
+3. 第 4.1 节的成本标记规则、联合契约的共同形状规则与全部固定全序。
+
+一个**共同契约模式**是按规格索引的契约族
+$(B_{\mathcal G})_{\mathcal G\in\mathfrak S}$：所有
+$B_{\mathcal G}$ 具有相同契约种类、归属标识和作用坐标选择规则，而其见证函数分别在规格 $\mathcal G$ 的合法边界域上满足式 (16)。第 4.6 节的词汇现在理解为一组固定的共同契约模式。族中规格可以改变共同类型内的局部函数值，见证函数随 $\mathcal G$ 取相应成员；模式、调度规则与下列常数不随 $\mathcal G$ 改变。因此，这些常数由共同的 $V,J$ 索引，量词也确实比较同一组节点与 region。
+
+称共同规格族 $\mathfrak S$ 具有**一致节点时间批暴露**，当存在上述固定完备精确契约词汇和常数：
 
 $$
 C_R,\qquad
@@ -580,7 +809,7 @@ C_R,\qquad
 \tag{28}
 $$
 
-使任意输入位置 $q$、任意长度 $T$ 和任意合法左边界都满足：
+使任意规格 $\mathcal G\in\mathfrak S$、任意输入位置 $q$、任意长度 $T$ 和任意合法左边界都满足：
 
 $$
 R\le C_R,\qquad
@@ -777,7 +1006,7 @@ $$
 ### 7.4 按层最大前沿
 
 具有相同 $\ell$ 值的 region 可以位于同一个最大前沿阶段。令
-$H_\rho$ 为区域商图最长路径上的顶点数，则：
+$H_\rho$ 为区域商图最长路径上的顶点数；这里允许只含一个顶点、零条边的路径，所以非空 $J$ 总有 $H_\rho\ge1$。于是：
 
 $$
 R\le 2H_\rho
@@ -864,7 +1093,27 @@ $$
 
 ### 9.1 chunk 组合
 
-取 $a<b<c$。若先从 $Q_a$ 精确推进到 $Q_b$，再从 $Q_b$ 精确推进到 $Q_c$，前置教材的继续定理给出：
+先定义本节使用的区间转导。令 $\mathsf{Cut}(a)$ 为时间 $a$ 上全部类型正确切面状态 $Q_a$ 的集合，$\mathsf{SegIn}[a,b)$ 为区间外部记录与覆盖该区间的有效封闭下界所成的集合，$\mathsf{SegRec}[a,b)$ 为该区间全部类型正确规范记录的集合。合法输入域
+
+$$
+\mathsf{AdmRun}[a,b)
+\subseteq
+\mathsf{Cut}(a)\times\mathsf{SegIn}[a,b)
+$$
+
+只保留能够由前置教材的某个完整记录产生的左切面和区间输入。分段继续定理定义全函数：
+
+$$
+\operatorname{Run}_{[a,b)}:
+\mathsf{AdmRun}[a,b)
+\longrightarrow
+\mathsf{SegRec}[a,b)\times\mathsf{Cut}(b),
+$$
+
+它返回唯一参考区间记录及其右切面。对相邻区间，符号
+$\operatorname{Run}_{[b,c)}\circ\operatorname{Run}_{[a,b)}$ 表示把第一次返回的 $Q_b$ 连同第二段输入交给第二个转导，并把两段规范记录作不交并合。
+
+取 $a<b<c$。每个 $\mathsf{AdmRun}[a,c)$ 元素按时间限制得到两段区间输入；以下等式是在这个共同定义域上的转导等式。前置教材的继续定理给出：
 
 $$
 \operatorname{Run}_{[b,c)}

@@ -105,6 +105,19 @@ $$
 
 对一个命题 $P$，记 $\mathbf1[P]$ 为它的指示值：$P$ 成立时取 $1$，不成立时取 $0$。例如 $\mathbf1[v\in A]$ 表示节点 $v$ 是否属于集合 $A$。
 
+若有限个集合 $X_1,\ldots,X_k$ 两两不交，记它们的并为：
+
+$$
+X_1\sqcup\cdots\sqcup X_k.
+$$
+
+符号 $\sqcup$ 强调每个元素的来源分支可以由元素本身唯一恢复。对未必两两不交的带标号集合族 $(X_i)_{i\in I}$，其带标号不交并写成：
+
+$$
+\bigsqcup_{i\in I}X_i
+=\{(i,x)\mid i\in I,\ x\in X_i\}.
+$$
+
 ### 1.2 带名字的函数坐标
 
 设 $C$ 是有限集合，并且每个 $v\in C$ 都有一个集合 $D_v$。定义：
@@ -1097,7 +1110,39 @@ $$
 \sqcup\mathscr V_x^U\sqcup\mathscr V_x^F.
 $$
 
-四类作用属于规范记录本身。它们描述函数值之间的数学依赖；一次联合求值可以同时实现许多个作用，只要它经精化仍给出这些作用的全部规范坐标。第 8--10 节将依次定义作用之间的依赖、部分记录的封闭证书以及合法的阶段化暴露。
+四类作用的首标签互异，所以这里的 $\sqcup$ 符合第 1.1 节的不交性要求。
+
+式 (22)--(26) 已经给每个作用坐标唯一赋值。把下列带标签值族定义为**规范作用记录** $\mathcal T_x^{\mathrm{act}}$：
+
+$$
+\begin{aligned}
+\mathcal T_x^{\mathrm{act}}(P_{v,\theta})
+&=(h_{v,\theta},\widetilde q_{v,\theta},d_{v,\theta}),\\
+\mathcal T_x^{\mathrm{act}}(S_{j,\theta})
+&=(\mathcal A_{j,\theta},
+(c_{v,\theta})_{v\in\mathcal C_{j,\theta}},
+y_j^{\theta+1}),\\
+\mathcal T_x^{\mathrm{act}}(U_{v,\theta})
+&=(q^{\mathrm{cmp}}_{v,\theta},q_v^{\theta+1}),\\
+\mathcal T_x^{\mathrm{act}}(F_{v,\theta})
+&=(f^A_{v,\theta},f^O_{v,\theta}).
+\end{aligned}
+$$
+
+对有限集合 $K\subseteq\mathscr V_x^{\mathrm{ev}}$，令
+$\mathsf{SemRec}(K)$ 为在 $K$ 的每个作用坐标上赋予类型正确函数值的全部记录所成的集合，$\mathcal T_x^{\mathrm{act}}\!\upharpoonright_K$ 表示规范作用记录在这些坐标上的限制。一个 $K$ 上的**联合记录规格**由集合 $\mathsf{JointRec}(K)$ 和一个预先固定的投影组成：
+
+$$
+\Pi_K:\mathsf{JointRec}(K)\longrightarrow\mathsf{SemRec}(K).
+$$
+
+$\mathsf{JointRec}(K)$ 可以另外携带辅助坐标；$\Pi_K$ 保留 $K$ 的全部规范坐标及其原值，只删除辅助坐标。它不调用参考递归，也不按输入修补函数值。称联合记录 $r\in\mathsf{JointRec}(K)$ **精化到**本次规范记录，当且仅当：
+
+$$
+\Pi_K(r)=\mathcal T_x^{\mathrm{act}}\!\upharpoonright_K.
+$$
+
+四类作用属于规范记录本身，并描述函数值之间的数学依赖。一次联合求值可以同时实现许多个作用，只要它的联合记录按上述定义精化到这些作用的全部规范坐标。第 8--10 节将依次定义作用之间的依赖、部分记录的封闭证书以及合法的阶段化暴露。
 
 ### 6.5 有限性与唯一性定理
 
@@ -1169,6 +1214,11 @@ v\in\mathcal A_{j,\theta}}}
 $$
 
 其中时间纤维、本地量、选择和逐坐标输出函数值的时间坐标满足 $0\le\theta\le\Theta_{\max}$，两类状态还包含递归结束后的 $\theta=\Theta_{\max}+1$。称 $\mathcal T_x$ 为输入 $x$ 的完整计算记录。
+
+第 6.4 节的 $\mathcal T_x^{\mathrm{act}}$ 由这个元组中的本地量、选择、状态采用与完整输出坐标唯一导出；以后也把它视为 $\mathcal T_x$ 的规范作用投影。因此，对任意
+$K\subseteq\mathscr V_x^{\mathrm{ev}}$，记号
+$\mathcal T_x\!\upharpoonright_K$ 与
+$\mathcal T_x^{\mathrm{act}}\!\upharpoonright_K$ 表示同一带标签作用记录。
 
 本文把第 1--5 节的数据以及第 6 节所定义的直接语义合称为一个**带区域选择的 TimedDAG 规格**。
 
@@ -2551,7 +2601,44 @@ U_{v,\theta}\longrightarrow P_{v,\theta'}
 $$
 
 规定后一作用读取前一作用留下的持久状态。对一个递增时间集合
-$\Theta=\{\theta_1<\cdots<\theta_k\}$，这组边形成一条状态递归。一个联合函数可以从左边界状态和整段已经确定的驱动量出发，在一次函数调用中返回全部中间状态与右边界状态；其正确性要求返回轨迹逐坐标等于式 (22)--(25) 的递归。
+$\Theta=\{\theta_1<\cdots<\theta_k\}$，这组边形成一条状态递归。下面先定义这类递归的一般联合契约。
+
+固定非空状态集合 $\mathsf Q$、驱动集合
+$\mathsf Z_1,\ldots,\mathsf Z_k$ 和全函数：
+
+$$
+T_i:\mathsf Q\times\mathsf Z_i\longrightarrow\mathsf Q
+\qquad(1\le i\le k).
+$$
+
+从 $q_0\in\mathsf Q$ 与 $(z_i)_{i=1}^k$ 出发，递归定义
+$q_i=T_i(q_{i-1},z_i)$。由此得到参考状态转导：
+
+$$
+\operatorname{RefState}_{\Theta}:
+\mathsf Q\times\prod_{i=1}^{k}\mathsf Z_i
+\longrightarrow\mathsf Q^{\{0,\ldots,k\}},
+\qquad
+\operatorname{RefState}_{\Theta}
+(q_0,(z_i)_{i=1}^{k})=(q_i)_{i=0}^{k}.
+$$
+
+同类型全函数
+
+$$
+\operatorname{BatchState}_{\Theta}:
+\mathsf Q\times\prod_{i=1}^{k}\mathsf Z_i
+\longrightarrow\mathsf Q^{\{0,\ldots,k\}}
+$$
+
+满足
+
+$$
+\operatorname{BatchState}_{\Theta}
+=\operatorname{RefState}_{\Theta}
+$$
+
+时，称为这条递归的**精确因果状态契约**。它从左边界状态和整段已经确定的驱动量返回全部中间状态与右边界状态；等式在整个定义域上成立。
 
 因此，事件 DAG 给出规范上的偏序，联合函数给出这张偏序的一种求值方式。一次具体联合调用经过精化以后可以对应许多个 $P,U$，也可以同时对应其后的 $F$。内部的状态边仍保留在规范记录中，而联合调用在外层只占一个求值块。
 
@@ -2697,7 +2784,7 @@ $$
 \tag{47}
 $$
 
-对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。这些关闭坐标构成区域联合函数的合法输入范围；状态与选择历史怎样整段求值由相应因果契约给出。
+对每个 $\theta\in\mathcal W_{j,n}$，定理 3 已经固定候选集合。这些关闭坐标构成区域联合函数的合法输入范围；状态与选择历史怎样整段求值由第 10.7 节定义的精确因果状态契约给出。
 
 ### 12.3 区域拓扑次序
 
@@ -2743,23 +2830,45 @@ $$
 \tag{48}
 $$
 
-式 (48) 适合全部输入坐标已经分别确定的逐坐标函数，例如一组 $F$ 作用。状态递归采用因果形式。给定左边界状态 $q_b$ 和有序驱动序列 $z_b,\ldots,z_{c-1}$，参考递归定义：
+式 (48) 适合全部输入坐标已经分别确定的逐坐标函数，例如一组 $F$ 作用。状态递归采用第 10.7 节的因果形式。固定非空状态集合 $\mathsf Q$、驱动集合 $(\mathsf Z_\theta)_{\theta\in[b,c)}$ 和全函数：
+
+$$
+T_\theta:\mathsf Q\times\mathsf Z_\theta\longrightarrow\mathsf Q
+\qquad(b\le\theta<c).
+$$
+
+给定左边界状态 $q_b\in\mathsf Q$ 和有序驱动族
+$(z_\theta)_{\theta\in[b,c)}\in
+\prod_{\theta\in[b,c)}\mathsf Z_\theta$，参考递归定义：
 
 $$
 q_{\theta+1}=T_\theta(q_\theta,z_\theta),
 \qquad b\le\theta<c.
 $$
 
-一个因果联合函数需要返回完整状态轨迹与右边界状态，并满足：
+相应的参考转导与精确因果联合函数具有共同类型：
 
 $$
-\operatorname{BatchState}
+\operatorname{RefState}_{[b,c)},
+\operatorname{BatchState}_{[b,c)}:
+\mathsf Q\times\prod_{\theta\in[b,c)}\mathsf Z_\theta
+\longrightarrow
+\prod_{\theta\in[b,c+1)}\mathsf Q.
+$$
+
+精确因果状态契约要求：
+
+$$
+\operatorname{BatchState}_{[b,c)}
 (q_b,(z_\theta)_{\theta\in[b,c)})
 =
-((q_\theta)_{\theta\in[b,c)},q_c).
+(q_\theta)_{\theta\in[b,c+1)}
+=
+\operatorname{RefState}_{[b,c)}
+(q_b,(z_\theta)_{\theta\in[b,c)}).
 $$
 
-右侧由上述标量递归定义。它允许中间状态在联合函数内部产生。定理 3 提供关闭输入域，式 (48) 与因果状态等式分别提供完整输出批和状态块的精确性见证。
+中间状态可以在联合函数内部产生。定理 3 提供关闭输入域，式 (48) 与这个全定义域等式分别提供完整输出批和状态块的精确性见证。
 
 ### 12.5 五层研究顺序
 
@@ -3004,7 +3113,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 > [!info]- S.8　runtime、scheduler、workspace、commit 与 trace
 > **compute / evaluate（计算、求值）**在正文中只指取已给全函数的函数值；本文没有定义指令集或成本函数。因此“可求值”不包含时间复杂度结论。
 >
-> **runtime / executor（运行时、解释器）**不是正文定义的数学对象。第 9.1 节的轨迹已经是固定 $\mathcal T_x$ 上的阶段化暴露，不能单凭“程序产生了这样一条轨迹”证明程序算对；实现与规范记录之间还必须另行给出附录 S.9 定义的精化关系。
+> **runtime / executor（运行时、解释器）**不是正文定义的数学对象。第 9.1 节的轨迹已经是固定 $\mathcal T_x$ 上的阶段化暴露，不能单凭“程序产生了这样一条轨迹”证明程序算对；实现与规范完整记录之间还必须给出附录 S.9 的全局精化关系。
 >
 > **scheduler（调度器）**在通过精化投影以后，对应选择哪些合格作用进入第 9.2--9.3 节的
 > $\Delta\mathsf P_n,\Delta\mathsf S_n,\Delta\mathsf U_n,\Delta\mathsf F_n$。投影后的调度只改变阶段秩，保留 $\mathcal T_x$ 的规范值。
@@ -3027,7 +3136,7 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > **resume** 对应从相同 $Q_b$ 与 $E_{\ge b}$ 再执行未来递归。定理 6 给出它与一次算完相同的数学目标。$Q_b$ 并不是规范左前缀 $\mathcal T_{x,<b}$ 的完整编码；若要重建整个语义记录，还须保存该前缀或保存足以重算它的数据。若只要求拼回完整外部输出记录，则至少还须保存 $Z_{<b}$，或保存这些输出已被可靠接收的等价证据。
 >
-> **refinement（实现精化）**需要先给出调度集合 $\mathsf{Sched}$、程序记录集合 $\mathsf{ImplTrace}$，以及一个包含全部规范记录和可能错误的同形记录的集合 $\mathsf{SemTrace}$。再给出函数：
+> **refinement（实现精化）**把第 6.4 节的块投影扩展到完整执行记录。先给出调度集合 $\mathsf{Sched}$、程序记录集合 $\mathsf{ImplTrace}$，以及一个包含全部规范记录和可能错误的同形记录的集合 $\mathsf{SemTrace}$。再给出函数：
 > $$
 > \operatorname{Run}:
 > \left(\prod_{i\in\mathsf I}P^{[L_i]}\right)

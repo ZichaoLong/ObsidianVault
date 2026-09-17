@@ -1015,8 +1015,7 @@ $$
 最后一行同时形式化两项要求：消息不能先于源复合节点事件进入 $H$；一个事件一旦属于本文所用的强 $\mathsf{Done}$，它已经产生的全部实际消息也都已经进入 $H$。若实现需要允许“函数已返回但消息尚未公开”的中间状态，就必须像前置 TimedDAG 教材那样另设较弱的 completed 集合，不能把它仍记作这里的 $\mathsf{Done}$。
 
 式 (28a) 只命名第 5--6 节证明使用的 seal、完成与 publication 一致性；它不单独
-声称某个逐作用调度已经合法。完整的拓扑与在线动作条件在第 8.1 节分别由
-$\operatorname{TopoSchedule}$ 和 $\operatorname{LegalOnlineSchedule}$ 定义。
+声称某个逐作用调度已经合法。第 8.1 节将先定义完整事件排列的拓扑条件，再定义带 seal 截面的在线动作条件。
 
 对满足式 (28a) 的 $\Xi$ 与 $r\in\mathbb N$，定义：
 
@@ -1928,7 +1927,26 @@ $K_i=K_i^{\mathbf L}$、$\iota_i=\iota_i^{\mathbf L}$，把第 1 节的
 $\mathsf{Ext},\mathsf{Atom}_v,\operatorname{Agg}_v$ 分别取成
 $\mathsf{Ext}_{\mathbf L},\mathsf{Atom}_{\mathbf L,v},\operatorname{Agg}_v^{\mathbf L}$，
 并令 $\operatorname{Full}_v=F_v$ 得到的规格。
-再固定作用成本标记。它可以只标记 $F$，也可以把状态递归涉及的 $P,U$ 标记为主要作用，或把状态—输出联合块标记为主要作用。后文的契约族与批次数结论都相对于这项固定标记陈述。
+再固定有限成本种类集合 $\mathsf{CostKind}$、主要种类子集
+$\mathsf{MajorKind}\subseteq\mathsf{CostKind}$。定义与输入无关的规范作用坐标全集：
+
+$$
+\mathsf{ActCoord}_\infty
+=\bigl(\{\mathrm{prep},\mathrm{adopt},\mathrm{full}\}
+\times V\times\mathbb N\bigr)
+\sqcup
+\bigl(\{\mathrm{select}\}\times J\times\mathbb N\bigr),
+$$
+
+并固定一个不读取当前函数值的标记函数：
+
+$$
+\operatorname{cost}_\infty:
+\mathsf{ActCoord}_\infty
+\longrightarrow\mathsf{CostKind}.
+$$
+
+每个有限区间事件集上的成本标记是 $\operatorname{cost}_\infty$ 的限制。成本种类属于 $\mathsf{MajorKind}$ 的作用称为**主要作用**，其余称为**普通作用**。标记规则可以只把 $F$ 列为主要作用，也可以把状态递归涉及的 $P,U$ 与 $F$ 一同列入。状态—输出联合契约可以共同覆盖这些主要作用。后文的契约族与批次数结论都相对于这项固定标记陈述。
 
 #### 10.2.2 可见区间输入与唯一参考记录
 
@@ -2044,33 +2062,174 @@ $$
 
 这族等式定义**逐坐标完整输出契约**。每个 $s_\theta$ 是规范记录中的本次计算快照，整批四元组在调用边界已经确定。
 
-状态递归采用另一种边界。取有限事件块
-$K\subseteq\mathscr V^{\mathrm{ev}}_{x,<b}$，其内部包含同一节点或同一 region 的一段 $P/S/U$ 轨迹，并要求每条从 $K$ 外进入 $K$ 的事件边起点已经完成。记这些进入坐标、左边界节点状态、左边界选择历史、关闭时间纤维与 seal 证据共同组成 $\partial^-K$。第 2 节的递归唯一给出参考函数：
+相应的完整输出作用块记为：
 
 $$
-\operatorname{RefState}_K:
-\mathsf{AdmIn}(K)\longrightarrow\mathsf{StateOut}(K).
+K^F_{v,\Theta}
+=\{F_{v,\theta}\mid\theta\in\Theta\}.
 $$
 
-其中输出包含 $K$ 内全部 $P,S,U$ 标签、中间状态轨迹、选择历史轨迹与右边界状态。一个**因果状态块契约**是满足：
+状态递归采用另一种边界。先取
+$\mathbf F_0\in\mathfrak F$、$\mathbf L_0\in\mathbb N^{\mathsf I}$、
+$a_0<b_0$ 与
+$\omega_0\in\Omega_{\mathbf L_0,a_0,b_0}^{\mathbf F_0}$，并取第 10.2.2 节定义中见证 $\omega_0$ 的任一输入 $x_0$。取有限事件块
+$K\subseteq\mathscr V^{\mathrm{ev}}_{x_0,<b_0}$，其内部包含同一节点或同一 region 的一段 $P/S/U$ 轨迹，并要求每条从 $K$ 外进入 $K$ 的事件边起点已经完成。
+
+对任意 $\mathbf F,\mathbf L,a,b,\omega$ 满足
+$\mathbf F\in\mathfrak F$、$\mathbf L\in\mathbb N^{\mathsf I}$、$a<b$ 与
+$\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F}$，把第 10.2.2 节唯一参考区间记录的作用集合记为
+$\mathscr V^{\mathrm{ev}}_{\mathbf F,\omega,[a,b)}$。对固定
+$\mathbf F\in\mathfrak F$，定义：
 
 $$
-\operatorname{BatchState}_K(z)
+\mathsf{Inst}^{\mathbf F}(K)
+=\left\{(\mathbf L,a,b,\omega)\ \middle|\
+\begin{array}{l}
+\mathbf L\in\mathbb N^{\mathsf I},\ a<b,\
+\omega\in\Omega_{\mathbf L,a,b}^{\mathbf F},\\
+K\subseteq\mathscr V^{\mathrm{ev}}_{\mathbf F,\omega,[a,b)}
+\end{array}
+\right\}.
+$$
+
+对每个带名字的语义坐标 $\gamma$，用 $\mathsf{Type}(\gamma)$ 表示第 1--4 节给出的值空间。输入坐标签名 $\partial^-K$ 由以下坐标组成：块外直接前驱作用值，块内首次读取的左边界节点状态和选择历史，进入块内纤维而不由块内作用产生的输入与消息，以及证明这些纤维完整的 seal 坐标。输出坐标签名 $\partial^+K$ 包含 $K$ 中全部规范作用值，以及它们产生并离开块的状态、历史、消息和外部输出。定义：
+
+$$
+\mathsf{BndIn}(K)
+=\prod_{\gamma\in\partial^-K}\mathsf{Type}(\gamma),
+\qquad
+\mathsf{StateOut}(K)
+=\prod_{\gamma\in\partial^+K}\mathsf{Type}(\gamma).
+$$
+
+把完整参考实例限制到这两组坐标，得到：
+
+$$
+\beta_{K,\mathbf F}^-:\mathsf{Inst}^{\mathbf F}(K)
+\to\mathsf{BndIn}(K),
+\qquad
+\beta_{K,\mathbf F}^+:\mathsf{Inst}^{\mathbf F}(K)
+\to\mathsf{StateOut}(K),
+$$
+
+并定义合法边界域：
+
+$$
+\mathsf{AdmIn}^{\mathbf F}(K)
+=\{\beta_{K,\mathbf F}^-(\nu)
+\mid\nu\in\mathsf{Inst}^{\mathbf F}(K)\}.
+$$
+
+$\partial^-K$ 含有块内参考递归的全部外部自变量，因此相同的输入边界必定产生相同的输出边界。下面的赋值与实例见证的选择无关，并定义全函数：
+
+$$
+\operatorname{RefState}_K^{\mathbf F}:
+\mathsf{AdmIn}^{\mathbf F}(K)
+\longrightarrow\mathsf{StateOut}(K),
+\qquad
+\operatorname{RefState}_K^{\mathbf F}
+(\beta_{K,\mathbf F}^-(\nu))
+=\beta_{K,\mathbf F}^+(\nu)
+\quad(\nu\in\mathsf{Inst}^{\mathbf F}(K)).
+$$
+
+当 $K$ 只含状态相关作用时，输出包含 $K$ 内全部 $P,S,U$ 标签、中间状态轨迹、选择历史轨迹与右边界状态。一个**因果状态块契约**是具有类型：
+
+$$
+\operatorname{BatchState}_K^{\mathbf F}:
+\mathsf{AdmIn}^{\mathbf F}(K)
+\longrightarrow\mathsf{StateOut}(K)
+$$
+
+并在整个定义域满足：
+
+$$
+\operatorname{BatchState}_K^{\mathbf F}(z)
 =
-\operatorname{RefState}_K(z)
-\qquad(z\in\mathsf{AdmIn}(K))
+\operatorname{RefState}_K^{\mathbf F}(z)
+\qquad(z\in\mathsf{AdmIn}^{\mathbf F}(K))
 $$
 
 的全函数。它从左边界状态和整段已关闭驱动量产生内部状态轨迹；规范上的跨时间状态边保留在 $K$ 内。
 
-当 $K$ 是节点局部块，且同一个精确函数还返回其中全部 active 坐标的
-$(f^A,f^O)$，就得到**状态—完整输出联合契约**
-$\operatorname{BatchNode}_K$。当共同 selector 连接多个节点时，$K$ 取整个
-region 的相应 $P/S/U$ 子图，得到区域状态契约；若它还返回区域内的
-$(f^A,f^O)$，就得到区域状态—输出联合契约。控制量已经由块边界确定时，
-$K$ 可以只取单节点状态链。
+当 $K$ 是节点 $v$ 的局部状态块时，令 $K^{UF}$ 为 $K$ 加上其中全部 active 坐标的 $F$。上述边界构造给出
+$\mathsf{AdmIn}^{\mathbf F}(K^{UF})$、$\mathsf{StateOut}(K^{UF})$ 与
+$\operatorname{RefState}_{K^{UF}}^{\mathbf F}$。具有类型：
 
-把允许使用的全部逐坐标完整输出、因果状态、状态—输出联合与区域状态契约组成一个固定集合：
+$$
+\operatorname{BatchNode}_{K^{UF}}^{\mathbf F}:
+\mathsf{AdmIn}^{\mathbf F}(K^{UF})\longrightarrow
+\mathsf{StateOut}(K^{UF})
+$$
+
+并等于 $\operatorname{RefState}_{K^{UF}}^{\mathbf F}$ 的全函数称为**状态—完整输出联合契约**。
+
+当共同 selector 连接多个节点时，$K$ 取整个 region 的相应 $P/S/U$ 子图。由同一个构造得到的精确全函数：
+
+$$
+\operatorname{BatchRegionState}_K^{\mathbf F}:
+\mathsf{AdmIn}^{\mathbf F}(K)\longrightarrow\mathsf{StateOut}(K)
+$$
+
+称为区域状态契约；若 $K$ 还包含区域内相应的 $F$，则称为区域状态—输出联合契约。控制量已经由块边界确定时，$K$ 可以只取单节点状态链。
+
+令 $\mathsf{EvalRec}(K)$ 为块 $K$ 的具体联合求值记录集合；这类记录可以含有辅助坐标。对每个块固定一个只删除辅助坐标、保留 $\partial^+K$ 原值的投影：
+
+$$
+\Pi_K^{\mathrm{blk}}:
+\mathsf{EvalRec}(K)\longrightarrow\mathsf{StateOut}(K).
+$$
+
+具体记录 $r$ 在解释 $\mathbf F$ 的边界 $z$ 上精化到规范块，当
+$\Pi_K^{\mathrm{blk}}(r)=\operatorname{RefState}_K^{\mathbf F}(z)$。
+
+定义契约种类集合与契约归属标识集合：
+
+$$
+\mathsf{ContractKind}=\{F,U,UF,R\},
+\qquad
+\mathsf{ContractOwner}
+=\bigl(\{\mathrm{node}\}\times V\bigr)
+\sqcup
+\bigl(\{\mathrm{region}\}\times J\bigr).
+$$
+
+一个登记契约是四元组：
+
+$$
+B=(\operatorname{kind}(B),\operatorname{cown}(B),K_B,\mathcal K_B),
+$$
+
+其中 $\operatorname{kind}(B)\in\mathsf{ContractKind}$，
+$\operatorname{cown}(B)\in\mathsf{ContractOwner}$，而
+
+$$
+\mathcal K_B
+=\left(\mathcal K_B^{\mathbf F}:
+\mathsf{AdmIn}^{\mathbf F}(K_B)
+\to\mathsf{StateOut}(K_B)
+\right)_{\mathbf F\in\mathfrak F}
+$$
+
+是一族在各自整个定义域等于
+$\operatorname{RefState}_{K_B}^{\mathbf F}$ 的全函数。节点契约的归属标识是相应
+$(\mathrm{node},v)$；区域契约的归属标识是相应
+$(\mathrm{region},j)$。它与第 9.4 节作用级的 $\operatorname{own}$ 映射具有不同定义域。对逐坐标完整输出块 $K^F_{v,\Theta}$，按规范标签识别
+$\mathsf{AdmIn}^{\mathbf F}(K^F_{v,\Theta})$ 与
+$\mathsf{Adm}_{v,\Theta}^{\mathbf F}$，并识别
+$\mathsf{StateOut}(K^F_{v,\Theta})$ 与
+$\mathsf{BOut}_{v,\Theta}$ 经式 (15)--(16) 展开消息和外部输出以后所得的规范记录；相应契约的归属标识为 $(\mathrm{node},v)$。
+
+固定登记契约集合 $\mathfrak B$，并定义：
+
+$$
+\mathfrak B^\kappa
+=\{B\in\mathfrak B\mid
+\operatorname{kind}(B)=\kappa\}
+\qquad(\kappa\in\mathsf{ContractKind}).
+$$
+
+于是：
 
 $$
 \mathfrak B
@@ -2079,7 +2238,7 @@ $$
 \cup\mathfrak B^{UF}\cup\mathfrak B^R.
 $$
 
-每个成员都携带其规范作用块、合法边界域和逐坐标精确等式。契约内部可以采用顺序递归、结合扫描或专用联合公式；这些选择分别影响工作量与跨度。
+每个成员都携带其规范作用块、契约归属标识、合法边界域和逐坐标精确等式。对每个有限作用集合、种类和归属标识只登记有限多个见证，并在契约种类、$\mathsf{ContractOwner}$、规范坐标与同形见证上分别固定全序。契约内部可以采用顺序递归、结合扫描或专用联合公式；这些选择分别影响工作量与跨度。
 
 #### 10.2.4 自适应阶段与因果策略
 
@@ -2169,7 +2328,7 @@ $$
 
 #### 10.3.1 最大前沿递归
 
-把当前 continuation、区间输入、有效 seal、已经完成的规范作用及其标签、已经公开的消息合成部分状态 $\Xi_r$。先反复求全部当前可取的普通作用，得到普通闭包。随后，取 $\mathfrak B$ 中全部当前边界输入已经确定的作用块，并用固定全序排列：同一契约类型和同一 owner 下，严格包含较多当前坐标的块排在前面，其余次序由契约优先序、owner 全序和坐标全序决定。按序扫描全部候选，收入每个与已选块两两不交的调用，得到极大不交族：
+把当前 continuation、区间输入、有效 seal、已经完成的规范作用及其标签、已经公开的消息合成部分状态 $\Xi_r$。先反复求全部当前可取的普通作用，得到普通闭包。随后，取 $\mathfrak B$ 中全部当前边界输入已经确定的作用块，并用固定全序排列：同一契约类型和同一 $\operatorname{cown}(B)$ 下，严格包含较多当前坐标的块排在前面，其余次序由契约优先序、契约归属标识全序和坐标全序决定。按序扫描全部候选，收入每个与已选块两两不交的调用，得到极大不交族：
 
 $$
 \mathsf{Front}_{\mathfrak B}(\Xi_r).
