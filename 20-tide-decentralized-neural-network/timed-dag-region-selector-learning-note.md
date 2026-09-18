@@ -3158,23 +3158,21 @@ SOFTP 的前向是 $h+p(g-h)$，已经不同于 HARD/HST；在把三个输入视
 >
 > 与第 9.1 节的关系记号一致，令：
 > $$
+> \mathsf{LegalExposure}(x)
+> =
+> \left\{
 > \begin{aligned}
-> &\mathsf{LegalExposure}(x)\\
-> &\quad=
-> \left\{\boldsymbol\Xi\ \middle|\
-> \begin{aligned}
-> &\boldsymbol\Xi\in\mathsf{StageTrace},\\
-> &\operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi),\\
+> \boldsymbol\Xi\in\mathsf{StageTrace}\ \bigm| {}&
+> \operatorname{LegalExposure}_{\mathcal T_x}(\boldsymbol\Xi),\\
 > &\boldsymbol\Xi\text{ 满足第 9.1 节的完整性条件}
 > \end{aligned}
 > \right\}.
-> \end{aligned}
 > $$
 > 因而这里不是把“合法”重新留给实现解释，而是直接取正文已经定义的轨迹关系。要求：
 > $$
 > \begin{aligned}
-> &\forall x\in\prod_{i\in\mathsf I}P^{[L_i]},\\
-> &\forall s\in\operatorname{Legal}_{\mathrm{impl}}(x):\\
+> &\forall x\in\prod_{i\in\mathsf I}P^{[L_i]},\quad
+> \forall s\in\operatorname{Legal}_{\mathrm{impl}}(x):\\
 > &\qquad
 > \Pi_{\mathrm{stage}}(\operatorname{Run}(x,s))
 > \in\mathsf{LegalExposure}(x).

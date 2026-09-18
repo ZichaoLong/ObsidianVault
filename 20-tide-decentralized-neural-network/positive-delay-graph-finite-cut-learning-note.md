@@ -1268,7 +1268,7 @@ $$
 \begin{aligned}
 &M^\infty_{\ge b}(a,<s)\\
 &\quad=
-\left\{m\in M^\infty\ \middle|\
+\left\{m\in M^\infty\ \middle|\;
 \begin{aligned}
 &\operatorname{edge}(m)=a,\\
 &\operatorname{send}(m)\ge b,\\
@@ -1496,7 +1496,7 @@ $$
 &\mathcal S_G=V/{\sim_G},\\
 &E_{\mathrm{cond}}\\
 &\quad=
-\left\{(C,D)\in\mathcal S_G^2\ \middle|\
+\left\{(C,D)\in\mathcal S_G^2\ \middle|\;
 \begin{aligned}
 &C\ne D,\ \exists a\in A:\\
 &\operatorname{src}(a)\in C,\\
