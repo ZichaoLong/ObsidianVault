@@ -1,6 +1,10 @@
 ---
 type: cross-domain-research-memo
 status: analogies-and-hypotheses
+tags:
+  - tide
+  - neuroscience
+  - architecture
 semantic-baseline: tide-core-2
 ---
 

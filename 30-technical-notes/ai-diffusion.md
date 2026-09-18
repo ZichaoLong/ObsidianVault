@@ -1,3 +1,13 @@
+---
+type: technical-note
+status: active
+tags:
+  - technical-notes
+  - diffusion
+cssclasses:
+  - textbook-math
+---
+
 # Diffusion Process in AI
 
 ## 连续扩散模型

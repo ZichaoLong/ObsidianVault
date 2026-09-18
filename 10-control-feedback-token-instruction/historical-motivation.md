@@ -394,7 +394,7 @@ void thomas(const int X, double x[restrict X],
 
 * 问：**Sparse Attention**算不算自主控制反馈信源？毕竟训练过的Sparse Attention模块，可用来选择具体对哪些Tokens着重计算注意力。
 
-    * 答：不是，至少只说用Sparse Attention替代Full Attention不是。Sparse Attention更像是Full Attention的平替，它还是**System1内部的前馈计算**，计算完了之后，System1**必须**对外输出一个Token然后常常再Append这个Token。  
+    * 答：不是，至少只说用Sparse Attention替代Full Attention不是。Sparse Attention更像是Full Attention的平替，它还是**System1内部的前馈计算**，计算完了之后，System1**必须**对外输出一个Token然后常常再Append这个Token。
 而人类是靠控制信号对应的动作，决定读取哪些文字或图像，这里一个显性区别是：人类可以自主控制外部反馈信号来源，或比如闭眼思考以屏蔽外部反馈信号，而不是**必须一通固定操作**之后**必须输出某个Token**。
 
 * 问：**Tool Calls**是自主控制反馈对吧？我用某种方式让System1**缩短Tool Call语句的间隔**，就快速了？
@@ -783,7 +783,7 @@ Token[Instruction]=Opcode+Operands
 
 这张图实际复用了 [[20-tide-decentralized-neural-network/README|TIDE]] 的图结构直觉。放在这里，是为了说明当工作空间不是单一线性上下文，而是图结构、索引结构或分块状态时，`Load/Store` 的价值不只在于“能读写”，还在于能把搜索、定位、局部修补限制在更小的结构邻域中。
 
-### 与当前主线的关系
+### 当前主线的复盘
 
 这页只保留历史图示直觉。当前不直接主张 `Load/Store` 一定优于最强 LLM+Agent，而是先验证：
 

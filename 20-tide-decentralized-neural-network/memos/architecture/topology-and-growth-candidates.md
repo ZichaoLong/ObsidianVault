@@ -1,6 +1,10 @@
 ---
 type: architecture-research-memo
 status: optional-candidates
+tags:
+  - tide
+  - architecture
+  - topology
 semantic-baseline: tide-core-2
 ---
 

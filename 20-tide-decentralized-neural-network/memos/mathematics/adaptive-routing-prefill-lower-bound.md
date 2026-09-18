@@ -545,7 +545,7 @@ $$
 
 集合 $\Omega_N$ 有 $N$ 个元素，而 $U$ 至多有 $N-1$ 个元素。因此 $U$ 不可能包含 $\Omega_N$ 的全部元素，至少有一个 $q\in\Omega_N$ 不属于 $U$。
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ### 引理 5.2：两个 fresh addresses
 
@@ -575,7 +575,7 @@ $$
 
 个元素。从中选取两个不同元素，分别记为 $a,b$，结论成立。
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ## 6. 自适应路由链下界
 
@@ -737,7 +737,7 @@ $$
 R_{\mathcal A}\geq L.
 $$
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ## 7. Work-Efficient Prefill 不可能性
 
@@ -794,7 +794,7 @@ $$
 
 若 $\mathfrak A$ 满足定义 4.10，则应存在 $r(L)=o(L)$，对所有 $N$ 都有 $R_{\mathcal A_{L,N}}\leq r(L)$。特别地，应有 $R_{\mathcal A_{L,N(L)}}\leq r(L)$。但上式给出 $R_{\mathcal A_{L,N(L)}}\geq L$，所以 $r(L)\geq L$，与 $r(L)=o(L)$ 矛盾。
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ### 解释 7.2：为什么并行猜测没有推翻定理
 
@@ -884,7 +884,7 @@ $$
 
 所以唯一下一节点为 $(t+1,q_{t+1})$。从 $t=0$ 开始反复应用该结论，得到唯一 active path 的终点为 $(L,q_L)$。
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ### 推论 8.4：一条稀疏实际路径仍可具有线性查询深度
 
@@ -903,7 +903,7 @@ Layered routing graph 同时满足：
 
 由命题 8.3，确定 Graph 终点等价于计算 $q_L$。对该计算应用定理 6.1，即得 adaptive-depth 下界。
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ## 9. 较早输入位置的晚期控制结果与交错控制路径
 
@@ -979,7 +979,7 @@ $$
 
 根据定义 9.3，该模型类别可以实现定理 6.1 中任意 routing oracle family，并且每次获得 $F_t(q)$ 都计为一次 query。若存在题设中的 chunk prefill algorithm，把它应用于这些实例，就得到一个违反推论 7.1 的 adaptive routing algorithm scheme，矛盾。
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ### 定义 9.5：Weighted execution DAG 与 critical-path span
 
@@ -1039,7 +1039,7 @@ $$
 
 题设中的整条有向路径包含 $L-1$ 个互不重叠的连续 segments，每个 segment 的总执行成本至少为 $\lambda$。因此整条路径的总成本至少为 $\lambda(L-1)$。根据定义 9.5，DAG critical-path span 不小于任意一条有向路径的总成本，因此结论成立。
 
-<div class="qed" aria-label="证毕">∎</div>
+∎
 
 ### 解释 9.7：其他并行事件为什么不能消除下界
 

@@ -1,6 +1,10 @@
 ---
 type: background-reference
 status: reference
+tags:
+  - tide
+  - compiler
+  - dataflow
 semantic-baseline: tide-core-2
 ---
 

@@ -1,6 +1,10 @@
 ---
 type: mathematical-research-memo
 status: retained-derivation
+tags:
+  - tide
+  - mathematics
+  - architecture
 semantic-baseline: tide-core-2
 ---
 

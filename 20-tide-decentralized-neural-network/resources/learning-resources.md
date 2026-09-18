@@ -1,6 +1,10 @@
 ---
 type: learning-resource-index
 status: optional-reading
+tags:
+  - tide
+  - resources
+  - learning
 ---
 
 # 按问题选读的学习资源

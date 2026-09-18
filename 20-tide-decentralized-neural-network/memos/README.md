@@ -1,6 +1,9 @@
 ---
 type: research-memo-index
 status: active-index
+tags:
+  - tide
+  - index
 semantic-baseline: tide-core-2
 ---
 

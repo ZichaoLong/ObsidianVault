@@ -1,6 +1,10 @@
 ---
 type: research-memo
 status: analogies-and-testable-hypotheses
+tags:
+  - tide
+  - physics
+  - statistical-mechanics
 semantic-baseline: tide-core-2
 ---
 

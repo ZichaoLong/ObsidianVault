@@ -1,6 +1,9 @@
 ---
 type: historical-research-record
 status: historical
+tags:
+  - tide
+  - history
 snapshot-date: 2026-07-10
 source-vault-revision: 133d638
 ---

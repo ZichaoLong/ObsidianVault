@@ -1,6 +1,9 @@
 ---
 type: neuroscience-literature-survey
 status: background-reference
+tags:
+  - tide
+  - neuroscience
 survey-date: 2026-07-22
 ---
 

@@ -1,21 +1,31 @@
+---
+type: technical-note
+status: active
+tags:
+  - technical-notes
+  - transformer
+cssclasses:
+  - textbook-math
+---
+
 # Transformer and Beyond
 
 为了让文章各部分的表述更准确，下面将使用数学符号、公式来表达各个网络架构的计算方式，由于内容中涉及的符号、上下标较多，为了方便理解及避免混淆，这里事先进行统一说明：
 
-1. 用大写粗体字母表示<font color=red>矩阵</font>，例如$\pmb{A},\pmb{B}$。
-2. 用小写粗体字母表示<font color=red>向量</font>，例如$\pmb{x},\pmb{h}$，且<font color=red>默认</font>情况下它们表示<font color=red>行向量</font>，因此向量-矩阵乘法通常是矩阵右乘，例如$\pmb{x}\in\mathbb{R}^d,\pmb{A}\in\mathbb{R}^{d\times d'}$，$\pmb{xA}\in\mathbb{R}^{d'}$，该向量-矩阵乘法计算结果也是行向量，这一约定与通常的PyTorch实现相匹配。
-3. <font color=red>按行拼接</font>用方括号及分号表示：例如，输入序列$\pmb{u}^{[i_1]},\pmb{u}^{[i_2]},\cdots,\pmb{u}^{[i_T]}\in\mathbb{R}^d$组成$T$行的矩阵$\pmb{U}=[\pmb{u}^{[i_1]};\pmb{u}^{[i_2]};\cdots;\pmb{u}^{[i_T]}]\in\mathbb{R}^{T\times d}$；
-   <font color=red>按列拼接</font>用方括号及逗号表示：例如$d$维向量$\pmb{x}=[\pmb{x}_1,\cdots,\pmb{x}_d]\in\mathbb{R}^d$，多个$T\times *$维矩阵的拼接$\pmb{X}=[\pmb{X}^{[i_1]},\cdots,\pmb{X}^{[i_h]}]\in\mathbb{R}^{T\times \sum_{1}^{h} *}$。
-4. 用<font color=red>下标</font>表示<font color=red>矩阵或张量的索引</font>，下标维度与索引维度对应，下标表示方法遵从Matlab/Julia表示约定从1开始（非此类情况会进行说明）。例如，对向量$\pmb{x}$，用$\pmb{x}_k\in\mathbb{R}$表示它的第$k$个元素；对矩阵$\pmb{X}=[\pmb{x}^{[i_1]};\pmb{x}^{[i_2]};\cdots;\pmb{x}^{[i_T]}]\in\mathbb{R}^{T\times d}$，可用$\pmb{X}_{t}=\pmb{X}_{t,:}\in\mathbb{R}^d$表示$\pmb{x}^{[i_t]}$，用$\pmb{X}_{s:t}=\pmb{X}_{s:t,:}\in\mathbb{R}^{(t-s+1)\times d}$表示$[\pmb{x}^{[i_s]};\pmb{x}^{[i_{s+1}]};\cdots;\pmb{x}^{[i_t]}]$，。
-5. 用[<font color=red>上标</font>]表示<font color=red>矩阵或张量的属性</font>。
+1. 用大写粗体字母表示**矩阵**，例如$\pmb{A},\pmb{B}$。
+2. 用小写粗体字母表示**向量**，例如$\pmb{x},\pmb{h}$，且**默认**情况下它们表示**行向量**，因此向量-矩阵乘法通常是矩阵右乘，例如$\pmb{x}\in\mathbb{R}^d,\pmb{A}\in\mathbb{R}^{d\times d'}$，$\pmb{xA}\in\mathbb{R}^{d'}$，该向量-矩阵乘法计算结果也是行向量，这一约定与通常的PyTorch实现相匹配。
+3. **按行拼接**用方括号及分号表示：例如，输入序列$\pmb{u}^{[i_1]},\pmb{u}^{[i_2]},\cdots,\pmb{u}^{[i_T]}\in\mathbb{R}^d$组成$T$行的矩阵$\pmb{U}=[\pmb{u}^{[i_1]};\pmb{u}^{[i_2]};\cdots;\pmb{u}^{[i_T]}]\in\mathbb{R}^{T\times d}$；
+   **按列拼接**用方括号及逗号表示：例如$d$维向量$\pmb{x}=[\pmb{x}_1,\cdots,\pmb{x}_d]\in\mathbb{R}^d$，多个$T\times *$维矩阵的拼接$\pmb{X}=[\pmb{X}^{[i_1]},\cdots,\pmb{X}^{[i_h]}]\in\mathbb{R}^{T\times \sum_{1}^{h} *}$。
+4. 用**下标**表示**矩阵或张量的索引**，下标维度与索引维度对应，下标表示方法遵从Matlab/Julia表示约定从1开始（非此类情况会进行说明）。例如，对向量$\pmb{x}$，用$\pmb{x}_k\in\mathbb{R}$表示它的第$k$个元素；对矩阵$\pmb{X}=[\pmb{x}^{[i_1]};\pmb{x}^{[i_2]};\cdots;\pmb{x}^{[i_T]}]\in\mathbb{R}^{T\times d}$，可用$\pmb{X}_{t}=\pmb{X}_{t,:}\in\mathbb{R}^d$表示$\pmb{x}^{[i_t]}$，用$\pmb{X}_{s:t}=\pmb{X}_{s:t,:}\in\mathbb{R}^{(t-s+1)\times d}$表示$[\pmb{x}^{[i_s]};\pmb{x}^{[i_{s+1}]};\cdots;\pmb{x}^{[i_t]}]$，。
+5. 用[**上标**]表示**矩阵或张量的属性**。
    - 例如，针对一个输入序列$\pmb{X}\in\mathbb{R}^{T\times d}$，可能需要经过Query,Key,Value三个权重矩阵的线性变换，那么这三个权重矩阵可分别表示为$\pmb{W}^{[Q]},\pmb{W}^{[K]},\pmb{W}^{[V]}$；
    - 对于具有$N$层、每层具有$m$个注意头的多头注意力机制，在上标中增加对应属性描述即可，例如第$n\in\{1,\cdots,N\}$层，第$k\in\{1,\cdots,m\}$个注意力头，对应权重矩阵$\pmb{W}^{[Q,n,k]},\pmb{W}^{[K,n,k]},\pmb{W}^{[V,n,k]}$；
    - 由于张量较少有幂运算，在不引起混淆的情况下，可以省略方括号$[]$，例如前面例子中的$\pmb{x}^{[1]},\cdots,\pmb{x}^{[T]}$可写作$\pmb{x}^1,\cdots,\pmb{x}^T$。“集合+上标”不易混淆，一般不作说明，如$\mathbb{R}^d,\mathbb{R}^{T\times d},\mathbb{C}^{d\times d}$表示对应数域的向量、张量空间，其中$\mathbb{R},\mathbb{C}$分别表示实数集、复数集。
-6. <font color=red>逐元素四则运算及einops求四则运算</font>
+6. **逐元素四则运算及 einops 四则运算**
    - "$+,-,\odot,\div$"表示两个张量之间，逐元素加、减、乘(Hadamard积)、除。运算的两个张量对应维度要满足类似于[Numpy/PyTorch的Broadcasting机制](https://pytorch.org/docs/stable/notes/broadcasting.html)的要求：例如对向量及矩阵$\pmb{x}\in\mathbb{R}^d,\pmb{A},\pmb{B}\in\mathbb{R}^{T\times d}$，可定义$\pmb{A}\odot\pmb{B},\pmb{A}+\pmb{B}\in\mathbb{R}^{T\times d},\pmb{A}-\pmb{x},\pmb{A}\odot\pmb{x}\in\mathbb{R}^{T\times d}$。
    - 一类更广泛的运算符号$'\text{einsum notation}'\over{+/-/\odot/\div}$，可用于定义einops类型的加、减、乘、除，一般仅使用einops乘，且可适用于多个张量之间的运算，具体可参考[einops.einsum](https://einops.rocks/)。
-7. <font color=red>内积、点积"$\cdot$" </font>：可用于表示向量、矩阵之间的乘法，在不混淆的情况下，可省略"$\cdot$"符号，例如$\pmb{x},\pmb{y}\in\mathbb{R}^d,\pmb{A}\in\mathbb{R}^{T\times d},\pmb{B}\in\mathbb{R}^{d\times l}: \pmb{x}\cdot\pmb{y},\pmb{x}\cdot\pmb{A},\pmb{xA}\in\mathbb{R}^T,\pmb{A}\cdot\pmb{B},\pmb{AB}\in\mathbb{R}^{T\times l}$。
-8. <font color=red>多张量混合表示</font>：一些情况下，可能需要用一个符号表示多个张量，例如把模型运行过程的上下文状态张量放入一个集合中表示，可以用Calligraphic花写字体，例如$\mathcal{A,B,C,S}$。
+7. **内积、点积"$\cdot$"**：可用于表示向量、矩阵之间的乘法，在不混淆的情况下，可省略"$\cdot$"符号，例如$\pmb{x},\pmb{y}\in\mathbb{R}^d,\pmb{A}\in\mathbb{R}^{T\times d},\pmb{B}\in\mathbb{R}^{d\times l}: \pmb{x}\cdot\pmb{y},\pmb{x}\cdot\pmb{A},\pmb{xA}\in\mathbb{R}^T,\pmb{A}\cdot\pmb{B},\pmb{AB}\in\mathbb{R}^{T\times l}$。
+8. **多张量混合表示**：一些情况下，可能需要用一个符号表示多个张量，例如把模型运行过程的上下文状态张量放入一个集合中表示，可以用 Calligraphic 花写字体，例如$\mathcal{A,B,C,S}$。
 
 ## 原始Encoder-Decoder架构的Transformer
 
@@ -29,9 +39,11 @@
 
 注意力机制涉及到查询(Query)、键(Key)、值(Value)，在自注意力中，这三者可通过对隐层输入序列$\pmb{X}\in\mathbb{R}^{T\times d}$进行线性变换得到。记线性变换的参数为${\color{orange}\pmb{W}^{[Q]},\pmb{W}^{[K]}}\in\mathbb{R}^{d\times d'},{\color{orange}\pmb{W}^{[V]}}\in\mathbb{R}^{d\times d^{[V]}}$，则$\pmb{Q},\pmb{K},\pmb{V}$的分别是
 $$
-\pmb{Q}=\pmb{X}\cdot{\color{orange}\pmb{W}^{[Q]}}=[\pmb{Q}_1;\cdots;\pmb{Q}_T],
-\pmb{K}=\pmb{X}\cdot{\color{orange}\pmb{W}^{[K]}}=[\pmb{K}_1;\cdots;\pmb{K}_T]\in\mathbb{R}^{T\times d'},
-\pmb{V}=\pmb{X}\cdot{\color{orange}\pmb{W}^{[V]}}=[\pmb{V}_1;\cdots;\pmb{V}_T]\in\mathbb{R}^{T\times d^{[V]}},
+\begin{aligned}
+\pmb{Q} &= \pmb{X}\cdot{\color{orange}\pmb{W}^{[Q]}}=[\pmb{Q}_1;\cdots;\pmb{Q}_T] \\
+\pmb{K} &= \pmb{X}\cdot{\color{orange}\pmb{W}^{[K]}}=[\pmb{K}_1;\cdots;\pmb{K}_T]\in\mathbb{R}^{T\times d'} \\
+\pmb{V} &= \pmb{X}\cdot{\color{orange}\pmb{W}^{[V]}}=[\pmb{V}_1;\cdots;\pmb{V}_T]\in\mathbb{R}^{T\times d^{[V]}}
+\end{aligned}
 $$
 上述从$\pmb{X}$到$Q,K,V$的线性变换以及之后提到的线性变换也可引入bias，这里省略。
 
@@ -39,9 +51,13 @@ $$
 
 **单查询注意力** 给定单个查询(Query) $\pmb{q}\in\{\pmb{Q}_1,\cdots,\pmb{Q}_T\}$，注意力机制Attention计算该Query与所有Key之间的相似性，并作为权重用于各Value的加权求和
 $$
-\label{eq:attention-classical-form}
-\text{Attention}(\pmb{q};\pmb{K},\pmb{V})=\text{Softmax}(\frac{\pmb{q}\cdot\pmb{K}^\text{T}}{\sqrt{d'}})\cdot\pmb{V}=\sum_t \alpha_t\pmb{V}_t\in\mathbb{R}^{d^{[V]}},
+\begin{aligned}
+\text{Attention}(\pmb{q};\pmb{K},\pmb{V})
+  &=\text{Softmax}\left(\frac{\pmb{q}\cdot\pmb{K}^\text{T}}{\sqrt{d'}}\right)\cdot\pmb{V} \\
+  &=\sum_t \alpha_t\pmb{V}_t\in\mathbb{R}^{d^{[V]}}
+\end{aligned}
 $$
+^eq-attention-classical-form
 这里$\text{Softmax}(\pmb{a})=\frac{[e^{\pmb{a}_1},\cdots,e^{\pmb{a}_T}]}{\sum_i e^{\pmb{a}_i}},\alpha_t=
 \frac{\text{exp}(\pmb{q}\cdot\pmb{K}_t/\sqrt{d'})}{\sum_s\text{exp}(\pmb{q}\cdot\pmb{K}_s/\sqrt{d'})}$。其中，计算第$t$个Key的注意力权重$\pmb{q}\cdot\pmb{K}_t$也可替换为更一般的相似性函数$\frac{\pmb{q}\cdot\pmb{K}_t}{\sqrt{d'}}\triangleq\text{sim}(\pmb{q},\pmb{K}_t)$，
 $$
@@ -53,49 +69,43 @@ $$
 $$
 上述自注意力机制没有序列位置的距离信息，若希望引入位置信息，一种方式是再自注意力中引入相对位置编码，例如[ALiBi位置编码](https://arxiv.org/abs/2108.12409)，
 $$
-\text{Attention}^{[\text{ALiBi}]}(\pmb{X}_t;\pmb{X})=\text{Softmax}([\text{sim}(\pmb{Q}_t,\pmb{K}_s)-\lambda|t-s|]_{s})\cdot\pmb{V}\in\mathbb{R}^{d^{[V]}}.
+\begin{aligned}
+\text{Attention}^{[\text{ALiBi}]}(\pmb{X}_t;\pmb{X})
+  &= \text{Softmax}\left(
+      [\text{sim}(\pmb{Q}_t,\pmb{K}_s)-\lambda|t-s|]_{s}
+     \right)\cdot\pmb{V}
+     \in\mathbb{R}^{d^{[V]}}.
+\end{aligned}
 $$
-实际端到端的运行中，可根据是否在原始输入中引入绝对(相对)位置编码（参考后续Transformer [Encoder-Decoder](#transformer-encoder-decoder)），如[RoPE](https://arxiv.org/abs/2104.09864)，来决定是否在Attention计算中引入例如ALiBi位置编码，因此后续对Attention的讨论中，省略位置编码相关的部分。
+实际端到端的运行中，可根据是否在原始输入中引入绝对(相对)位置编码（参考后续 Transformer [[#原始Transformer的Encoder-Decoder架构|Encoder-Decoder]]），如[RoPE](https://arxiv.org/abs/2104.09864)，来决定是否在Attention计算中引入例如ALiBi位置编码，因此后续对Attention的讨论中，省略位置编码相关的部分。
 
 **序列自注意力** 基于上述单查询Attention公式，关于输入序列的完整的自注意力可以简单写作（用内积计算注意力权重相似度）
 $$
 \begin{split}
-\text{FullAttention}(\pmb{X}) &= 
-[\text{Attention}(\pmb{Q}_1;\pmb{K},\pmb{V});\text{Attention}(\pmb{Q}_2;\pmb{K},\pmb{V});\cdots,\text{Attention}(\pmb{Q}_T;\pmb{K},\pmb{V})]
-\\
-&= \text{Softmax}\left(\frac{1}{\sqrt{d'}}
-\left[
-\begin{array}{cccc}
-\pmb{Q}_1\cdot\pmb{K}_1, & \pmb{Q}_1\cdot\pmb{K}_2, & \cdots, & \pmb{Q}_1\cdot\pmb{K}_T \\
-\pmb{Q}_2\cdot\pmb{K}_1, & \pmb{Q}_2\cdot\pmb{K}_2, & \cdots, & \pmb{Q}_2\cdot\pmb{K}_T \\
-\vdots,                  & \vdots,                  & \ddots, & \vdots                  \\
-\pmb{Q}_T\cdot\pmb{K}_1, & \pmb{Q}_T\cdot\pmb{K}_2, & \cdots, & \pmb{Q}_T\cdot\pmb{K}_T \\
-\end{array}
-\right]
-\right)
-\cdot\left[\begin{array}{c}
-\pmb{V}_1\\
-\pmb{V}_2\\
-\vdots\\
-\pmb{V}_T
-\end{array}\right] \\
-&= \text{Softmax}(\frac{\pmb{Q}\cdot\pmb{K}^T}{\sqrt{d'}})\cdot\pmb{V} = \text{Softmax}\left(
-\left[
-\text{sim}(\pmb{Q}_i,\pmb{K}_j)
-\right]_{i,j\in\{1,\cdots,T\}}
-\right)\cdot\pmb{V}
-\in\mathbb{R}^{T\times d^{[V]}},
+\text{FullAttention}(\pmb{X})
+  &= \text{Softmax}\left(\frac{\pmb{Q}\cdot\pmb{K}^T}{\sqrt{d'}}\right)\cdot\pmb{V} \\
+  &= \text{Softmax}\left(
+      [\text{sim}(\pmb{Q}_i,\pmb{K}_j)]_{i,j\in\{1,\ldots,T\}}
+     \right)\cdot\pmb{V}
+     \in\mathbb{R}^{T\times d^{[V]}},
 \end{split}
 $$
 这里 $\text{Softmax}(\pmb{A})=[\text{Softmax}(\pmb{A}_1);\text{Softmax}(\pmb{A}_2);\cdots]$。
 
 更一般的是掩码注意力MaskedAttention，对给定的输入序列$\pmb{X}\in\mathbb{R}^{T\times d}$，Attention掩玛矩阵为$\pmb{M}\in\mathbb{R}^{T\times T}$，通常$\pmb{M}$的元素为$0$或$1$，掩玛注意力机制为
 $$
-\text{MaskedAttention}(\pmb{X})=\text{Softmax}\left(\pmb{M}\odot\left[\text{sim}(\pmb{Q}_i,\pmb{K}_j)\right]_{i,j\in\{1,\cdots,T\}}\right)\cdot\pmb{V}.
+\begin{aligned}
+\text{MaskedAttention}(\pmb{X})
+  &= \text{Softmax}\left(
+      \pmb{M}\odot
+      \left[\text{sim}(\pmb{Q}_i,\pmb{K}_j)\right]_{i,j\in\{1,\cdots,T\}}
+     \right)\cdot\pmb{V}.
+\end{aligned}
 $$
 完整注意力可理解为元素全为$1$的掩码矩阵下的掩码注意力，也可叫做双向注意力，对自然语言处理任务，通常在编码器中使用，将整个输入序列进行编码。对于需要满足前后序列的因果关系的任务而言，例如用于逐个输出目标序列元素的解码器，一般设置$\pmb{M}$为下三角矩阵以表达因果关系，原始Transformer解码器所用的掩码$\pmb{M}$即为下三角全为$1$的矩阵，此情形也常被称为因果注意力。出于计算性能、模型效果考虑，还可将掩玛设置为[因果]滑动窗口稀疏掩玛、[因果]$\Lambda$形稀疏掩玛等。典型的不同掩玛设置，以$T=7$为例
 $$
-\pmb{M}^{[\text{Causal}]}=\left[
+\begin{aligned}
+\pmb{M}^{[\text{Causal}]} &= \left[
 \begin{array}{ccccccc}
 {\color{black}1}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0} \\
 {\color{black}1}, & {\color{black}1}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0} \\
@@ -105,8 +115,8 @@ $$
 {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{gray }0} \\
 {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}
 \end{array}
-\right],
-\pmb{M}^{[\text{Causal,SWA}^{[3]}]}=\left[
+\right],\\[1ex]
+\pmb{M}^{[\text{Causal,SWA}^{[3]}]} &= \left[
 \begin{array}{ccccccc}
 {\color{black}1}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0} \\
 {\color{black}1}, & {\color{black}1}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0} \\
@@ -116,8 +126,8 @@ $$
 {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}, & {\color{gray }0} \\
 {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{black}1}, & {\color{black}1}, & {\color{black}1}
 \end{array}
-\right],
-\pmb{M}^{[\text{Causal},\Lambda^{[2]}]}=\left[
+\right],\\[1ex]
+\pmb{M}^{[\text{Causal},\Lambda^{[2]}]} &= \left[
 \begin{array}{ccccccc}
 {\color{black}1}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0} \\
 {\color{black}1}, & {\color{black}1}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0} \\
@@ -128,6 +138,7 @@ $$
 {\color{black}1}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }0}, & {\color{gray }1}, & {\color{black}1}, & {\color{black}1}
 \end{array}
 \right].
+\end{aligned}
 $$
 当掩码$\pmb{M}$为因果掩码$\pmb{M}^{[\text{Causal}]}$时，上述序列单头自注意力实际就是
 $$
@@ -146,11 +157,23 @@ $$
 
 以序列最末位输入$\pmb{X}_T$作为单查询的多头自注意力为例
 $$
-\pmb{Y}_T=\text{MHA}(\pmb{X}_T;\pmb{X})=[\text{Attention}^{[1]}(\pmb{X}_T;\pmb{X}),\cdots,\text{Attention}^{[m]}(\pmb{X}_T;\pmb{X})]\cdot{\color{orange}\pmb{W}^{[O]}}\in\mathbb{R}^d
+\begin{aligned}
+\pmb{Y}_T
+  &= \text{MHA}(\pmb{X}_T;\pmb{X}) \\
+  &= \operatorname{Concat}_{k=1}^{m}
+     \left(\text{Attention}^{[k]}(\pmb{X}_T;\pmb{X})\right)
+     \cdot{\color{orange}\pmb{W}^{[O]}}\in\mathbb{R}^d
+\end{aligned}
 $$
 带掩码的序列多头自注意力则为
 $$
-\pmb{Y}=\text{MHA}^{[M]}(\pmb{X})=[\text{MaskedAttention}^{[1]}(\pmb{X}),\cdots,\text{MaskedAttention}^{[m]}(\pmb{X})]\cdot{\color{orange}\pmb{W}^{[O]}}\in\mathbb{R}^{T\times d}.
+\begin{aligned}
+\pmb{Y}
+  &= \text{MHA}^{[M]}(\pmb{X}) \\
+  &= \operatorname{Concat}_{k=1}^{m}
+     \left(\text{MaskedAttention}^{[k]}(\pmb{X})\right)
+     \cdot{\color{orange}\pmb{W}^{[O]}}\in\mathbb{R}^{T\times d}.
+\end{aligned}
 $$
 通常，可将各单注意头$\pmb{V}$维度设置为$d^{[V]}=d/m$，许多当前LLM实现中也将$\pmb{Q},\pmb{K}$维度设置为$d'=d/m$。当掩码$\pmb{M}$为因果掩码$\pmb{M}^{[\text{Causal}]}$时，上述序列多头自注意力实际就是
 $$
@@ -218,7 +241,7 @@ $$
 \end{split}
 $$
 
-### <span id=transformer-encoder-decoder>原始Transformer的Encoder-Decoder架构</span>
+### 原始Transformer的Encoder-Decoder架构
 
 具体架构示意图可参考原始Transformer论文，下面使用公式说明其计算方式。
 
@@ -240,9 +263,9 @@ $$
 
 注意，这里对解码阶段的[第一个词元设置](https://www.tensorflow.org/text/tutorials/transformer)特别进行说明：这里约定$\pmb{u}^{[1,\text{de}]}$是一个固定起始词元（例如记作\<start\>）对应的词向量，将这个词向量同样经过位置编码可得到$\pmb{X}^{[0,\text{de}]}_1$。在推理阶段，循环的停止时刻$T'$通常是取决于输出某种终止词元（例如可能记作\<EOS\>）时终止循环。
 
-解码器的具体执行，也可参考下面的[Decoder-Only架构GPT](#decoder-only-gpt)一章中的图文说明。
+解码器的具体执行，也可参考下面的[[#Decoder-Only架构GPT|Decoder-Only架构GPT]]一章中的图文说明。
 
-## <span id=decoder-only-gpt>Decoder-Only架构GPT</span>
+## Decoder-Only架构GPT
 
 Decoder-Only架构舍弃了Encoder，仅包含Decoder，其典型代表是GPT系列
 
@@ -262,12 +285,12 @@ GPT在广义上也可理解为具有[输入-状态-输出概念的RNN](https://a
 ![[assets/fig/gpt-diagram.png]]
 
 $$
-\label{eq:gpt-form}
 \begin{split}
 \text{GPT-Update: } & {\color{blue}\pmb{\mathcal{S}}^{[T]}}={\color{blue}\pmb{\mathcal{S}}^{[T-1]}}.\text{append}(\pmb{X}_T^{[\ast]}) \\
 \text{GPT-Output: } & \pmb{v}^{[T]}=\text{OutEmb}(\pmb{X}_T^{[N]}),
 \end{split}
 $$
+^eq-gpt-form
 其中，在上述Decoder-Only Transformer架构中，更新隐藏状态${\color{blue}\pmb{\mathcal{S}}^{[T]}}$时，只需计算新的$\pmb{X}_T^{[\ast]}$，$\text{Attention}$所用的键值对(Key-Value pair) $\pmb{X}_T^{[n]}\cdot{\color{orange}\pmb{W}^{[K,n]}},\pmb{X}_T^{[n]}\cdot{\color{orange}\pmb{W}^{[V,n]}}$也可保存，供后续$t>T$推理时使用而无需重复计算，这就是所谓的KV-Cache技术。
 
 GPT架构的一个解读可参考博客[The GPT-3 Architecture, on a Napkin](https://dugas.ch/artificial_curiosity/GPT_architecture.html)。
@@ -280,29 +303,33 @@ $$
 $$
 基于已有的$T$个$\text{token}$生成下一个$\text{token}$的**计算量**为
 $$
-\label{eq:gpt-inference-cost}
-\text{Inference}_{\text{cost}}=O\left(N\cdot \big[m\cdot (T+d)\cdot(d'+d^{[V]})+d\cdot d^{[U]}\big]\right)=O(\text{Number}_{\text{params}})+O(TNd)
+\begin{aligned}
+\text{Inference}_{\text{cost}}
+  &=O\left(N\cdot \big[m\cdot (T+d)\cdot(d'+d^{[V]})+d\cdot d^{[U]}\big]\right) \\
+  &=O(\text{Number}_{\text{params}})+O(TNd)
+\end{aligned}
 $$
+^eq-gpt-inference-cost
 其中典型超参数设置$N=12$(GPT 125M)或$N=96$(GPT 175B)，中间维度$d=O(1000) \text{ or }O(10000), d'=d^{[V]}=d/m, d^{[U]}=4d$。
 
 ## 一些扩展讨论
 
-根据$\eqref{eq:gpt-inference-cost}$，GPT的推理下一个token的复杂度随上下文序列长$T$线性增长，进一步，对一个序列长为$T$的训练数据，每个词元都可对应一个训练样本并生成其对应的perplexity损失函数值，因此训练复杂度随$T$平方增长，这种高复杂度极大的限制了上下文序列长度。
+根据[[#^eq-gpt-inference-cost|GPT 推理复杂度公式]]，GPT的推理下一个token的复杂度随上下文序列长$T$线性增长，进一步，对一个序列长为$T$的训练数据，每个词元都可对应一个训练样本并生成其对应的perplexity损失函数值，因此训练复杂度随$T$平方增长，这种高复杂度极大的限制了上下文序列长度。
 
 早期的[RNN技术](https://en.wikipedia.org/wiki/Recurrent_neural_network)，一般的说，对于一个输入序列信号$\{\pmb{u}^{[t]}\}_{1\leq t\leq T}$，RNN在每个时刻的处理流程可表达为**更新隐藏状态+输出信号**两个步骤
 
 ![[assets/fig/rnn-diagram.png]]
 $$
-\label{eq:rnn-form}
 \begin{split}
 \text{RNN Update: } & {\color{blue}\pmb{\mathcal{S}}^{[T]}}=\text{Update}^{[\text{RNN}]}({\color{blue}\pmb{\mathcal{S}}^{[T-1]}},\pmb{u}^{[T]}) \\
 \text{RNN Output: } & \pmb{v}^{[T]}=\text{Output}^{[\text{RNN}]}({\color{blue}\pmb{\mathcal{S}}^{[T]}},\pmb{u}^{[T]}),
 \end{split}
 $$
+^eq-rnn-form
 
 其中$\text{Update}^{[\text{RNN}]}$可以是一个简单或复杂的函数，复杂的做法，例如可以是非线性方程的求解过程（只要能求训练所需的梯度或采用无梯度训练方法），而$\text{Output}^{[RNN]}$则可以取得较为简单（概念上，复杂计算都可放入$\text{Update}^{[\text{RNN}]}$中），例如由一个线性变换+非线性激活层组成。经典的RNN技术，隐层状态${\color{blue}\pmb{\mathcal{S}}^{[T]}}$维度固定，更新与输出$\text{Update}^{[\text{RNN}]},\text{Output}^{[RNN]}$是固定计算量的函数，因此RNN关于序列长度$T$的推理、训练复杂度是$O(1),O(T)$。
 
-对比$\eqref{eq:gpt-form}$与$\eqref{eq:rnn-form}$，我们可以知道，采用因果掩码注意力的GPT本质上也是一种RNN，而导致GPT推理、训练复杂度为$O(T),O(T^2)$的原因是：${\color{blue}\pmb{\mathcal{S}}^{[T]}}$维度随$T$线性增长且$\text{Update},\text{Output}$的计算要遍历${\color{blue}\pmb{\mathcal{S}}^{[T]}}$。要解决GPT的$O(T)$推理复杂度问题，可以归结为如下问题：
+对比[[#^eq-gpt-form|GPT 状态更新公式]]与[[#^eq-rnn-form|RNN 状态更新公式]]，我们可以知道，采用因果掩码注意力的GPT本质上也是一种RNN，而导致GPT推理、训练复杂度为$O(T),O(T^2)$的原因是：${\color{blue}\pmb{\mathcal{S}}^{[T]}}$维度随$T$线性增长且$\text{Update},\text{Output}$的计算要遍历${\color{blue}\pmb{\mathcal{S}}^{[T]}}$。要解决GPT的$O(T)$推理复杂度问题，可以归结为如下问题：
 
 **如何在能够保持上下文信息的同时让$\text{Update},\text{Output}$的计算量与$T$无关或为$\log(T)$量级**
 
@@ -311,7 +338,7 @@ $$
 许多尝试改良、替换Transformer的工作都借助了早期RNN的想法，侧重于让隐层状态${\color{blue}\pmb{\mathcal{S}}^{[T]}}$维度保持不变，因此$\text{Update},\text{Output}$的计算量自然与$T$无关。但对于一般的RNN，还有一个重要障碍：无法序列并行计算，每个时刻的隐藏状态依赖于前面所有的Token顺序计算。而从Linear Attention及之后的一系列工作，则属于特殊的RNN，可以进行序列并行计算。总体来说，它们的工作方式符合下面的架构：每个block的隐藏状态${\color{blue}\pmb{\mathcal{S}}^{[n,T]}}$依赖于上一时刻对应block的隐藏状态${\color{blue}\pmb{\mathcal{S}}^{[n-1,T]}}$及当前时刻上一block的输出$\pmb{X}^{[n-1]}_T$，
 $$
 \begin{split}
-{\color{blue}\pmb{\mathcal{S}}^{[n,T]}}&={\color{blue}\pmb{\mathcal{S}}^{[n-,T]}}\circ\pmb{X}_T^{[n-1]}\\
+{\color{blue}\pmb{\mathcal{S}}^{[n,T]}}&={\color{blue}\pmb{\mathcal{S}}^{[n-1,T]}}\circ\pmb{X}_T^{[n-1]}\\
 &={\color{blue}\pmb{\mathcal{S}}^{[n,0]}}\circ\pmb{X}_1^{[n-1]}\circ\pmb{X}_2^{[n-1]}\circ\cdots\circ\pmb{X}_T^{[n-1]}
 \end{split}
 $$
@@ -325,22 +352,30 @@ $$
 
 这篇文章是较早期提出“采用Causal掩码注意力的Transformer，本质上也是一种RNN”这一观点的工作。
 
-Linear Attention的计算方式与原始Transformer的区别是，将$\eqref{eq:attention-classical-form}$的
+Linear Attention的计算方式与原始Transformer的区别是，将[[#^eq-attention-classical-form|经典注意力公式]]的
 $\alpha_t=\frac{\text{exp}(\frac{\pmb{q}\cdot\pmb{K}_t}{\sqrt{d'}})}{(\text{归一化变量})}$改成核函数形式$\frac{\pmb{\phi}(\pmb{q})\cdot\pmb{\phi}(\pmb{K}_t)}{(\text{归一化变量})}$，这里$\pmb{\phi}(\pmb{q})\in\mathbb{R}^{d'}$，
 $$
 \begin{split}
 \text{Attention}^{[\text{Linear}]}(\pmb{q};\pmb{K},\pmb{V})
 &=\sum_t\frac{\pmb{\phi}(\pmb{q})\cdot\pmb{\phi}(\pmb{K}_t)}{\pmb{\phi}(\pmb{q})\cdot\sum_s\pmb{\phi}(\pmb{K}_{s})}\cdot\pmb{V}_t\\
-&=\frac{\big(\pmb{\phi}(\pmb{q})\cdot[\pmb{\phi}(\pmb{K})]^\text{T}\big)\cdot\pmb{V}}{\pmb{\phi}(\pmb{q})\cdot\sum_t\pmb{\phi}(\pmb{K}_{t})}=\frac{\pmb{\phi}(\pmb{q})\cdot\big(\big[\pmb{\phi}(\pmb{K})\big]^\text{T}\cdot\pmb{V}\big)}{\pmb{\phi}(\pmb{q})\cdot\sum_t\pmb{\phi}(\pmb{K}_{t})} \\
+&=\frac{\big(\pmb{\phi}(\pmb{q})\cdot[\pmb{\phi}(\pmb{K})]^\text{T}\big)\cdot\pmb{V}}{\pmb{\phi}(\pmb{q})\cdot\sum_t\pmb{\phi}(\pmb{K}_{t})} \\
+&=\frac{\pmb{\phi}(\pmb{q})\cdot\big(\big[\pmb{\phi}(\pmb{K})\big]^\text{T}\cdot\pmb{V}\big)}{\pmb{\phi}(\pmb{q})\cdot\sum_t\pmb{\phi}(\pmb{K}_{t})} \\
 &=\frac{\pmb{\phi}(\pmb{q})\cdot\big({\color{blue}\sum_t\pmb{\phi}(\pmb{K}_t)\cdot\pmb{V}_t}\big)}{\pmb{\phi}(\pmb{q})\cdot{\color{blue}\sum_t\pmb{\phi}(\pmb{K}_{t})}}\in\mathbb{R}^{d^{[V]}} \\
-\text{其中 }{\color{blue}\big[\pmb{\phi}(\pmb{K})\big]^\text{T}\cdot\pmb{V}} &= {\color{blue}\big[\pmb{\phi}(\pmb{K})\big]_{1:T-1}^\text{T}\cdot\pmb{V}_{1:T-1}}+\pmb{\phi}(\pmb{K}_T)^{[\text{T}]}\cdot\pmb{V}_T\in\mathbb{R}^{d'\times d^{[V]}},\\
+\text{其中 }{\color{blue}\big[\pmb{\phi}(\pmb{K})\big]^\text{T}\cdot\pmb{V}}
+  &= {\color{blue}\big[\pmb{\phi}(\pmb{K})\big]_{1:T-1}^\text{T}\cdot\pmb{V}_{1:T-1}} \\
+  &\quad+\pmb{\phi}(\pmb{K}_T)^{[\text{T}]}\cdot\pmb{V}_T
+     \in\mathbb{R}^{d'\times d^{[V]}},\\
 {\color{blue}\sum_{t=1}^T\pmb{\phi}(\pmb{K}_t)} &= {\color{blue}\sum_{t=1}^{T-1}\pmb{\phi}(\pmb{K}_t)}+\pmb{\phi}(\pmb{K}_{T-1})\in\mathbb{R}^{d'},
 \end{split}
 $$
 
 $\text{Attention}^{[\text{Linear}]}(\pmb{q};\pmb{K},\pmb{V})$的计算可随着$T$增量更新，一种最简化的做法是
 $$
-\text{Attention}^{[Linear]}(\pmb{q};\pmb{K},\pmb{V})=\frac{\pmb{q}\cdot({\color{blue}\pmb{K}^\text{T}\cdot\pmb{V}})}{{\color{blue}\pmb{1}\cdot\pmb{K}}\cdot\pmb{q}^\text{T}}.
+\begin{aligned}
+\text{Attention}^{[Linear]}(\pmb{q};\pmb{K},\pmb{V})
+  &= \frac{\pmb{q}\cdot({\color{blue}\pmb{K}^\text{T}\cdot\pmb{V}})}
+      {{\color{blue}\pmb{1}\cdot\pmb{K}}\cdot\pmb{q}^\text{T}}.
+\end{aligned}
 $$
 
 
@@ -357,20 +392,38 @@ $$
 $$
 其中，记$\pmb{X}^{[n,mi]}_t=\text{RMSNorm}^{[n]}(\pmb{X}^{[n]}_t)$，则$\delta\pmb{X}^{[n]}_t=\text{Mixer}^{[\text{Mamba},n]}(\pmb{X}^{[n,mi]}_t)$的计算过程是
 $$
-\begin{split}
-{\color{blue}\pmb{X}^{[n,mem]}_t} &= \text{Linear}(\pmb{X}^{[n,mi]}_t),\pmb{r}^{[n,t]}=\text{Linear}(\pmb{X}^{[n,mi]}_t)\in\mathbb{R}^{d^{[in]}}\\
-\pmb{X}^{[n,in]}_t &= \text{SiLU}\big({\color{orange}\pmb{c}^{[1]}}\odot{\color{blue}\pmb{X}^{[n,mem]}_t}+{\color{orange}\pmb{c}^{[2]}}\odot{\color{blue}\pmb{X}^{[n,mem]}_{t-1}}+\cdots+{\color{orange}\pmb{c}^{[K]}}\odot{\color{blue}\pmb{X}^{[n,mem]}_{t-K+1}}\big)\in\mathbb{R}^{d^{[in]}}, \text{ where }{\color{orange}\pmb{c}^{[k]}}\in\mathbb{R}^{d^{[in]}},\\
-\delta\pmb{X}^{[n]}_t &= \text{Linear}(\text{SSM}^{[n]}(\pmb{X}^{[n,in]}_t)\odot\text{SiLU}(\pmb{r}^{[n,t]}))\in\mathbb{R}^{d}
-\end{split}
+\begin{aligned}
+{\color{blue}\pmb{X}^{[n,mem]}_t}
+  &= \text{Linear}(\pmb{X}^{[n,mi]}_t), \qquad
+     \pmb{r}^{[n,t]}=\text{Linear}(\pmb{X}^{[n,mi]}_t)\in\mathbb{R}^{d^{[in]}} \\
+\pmb{X}^{[n,in]}_t
+  &= \text{SiLU}\left(\sum_{k=1}^{K}
+     {\color{orange}\pmb{c}^{[k]}}\odot
+     {\color{blue}\pmb{X}^{[n,mem]}_{t-k+1}}\right)
+     \in\mathbb{R}^{d^{[in]}},
+     \qquad {\color{orange}\pmb{c}^{[k]}}\in\mathbb{R}^{d^{[in]}} \\
+\delta\pmb{X}^{[n]}_t
+  &= \text{Linear}\left(\text{SSM}^{[n]}(\pmb{X}^{[n,in]}_t)
+     \odot\text{SiLU}(\pmb{r}^{[n,t]})\right)\in\mathbb{R}^{d}
+\end{aligned}
 $$
 这里$\text{SiLU}$是SiLU激活函数，计算$\pmb{X}^{[n,in]}_t$需要提取过去时刻的相应变量${\color{blue}\pmb{X}^{[n,mem]}_{t-K+1:t}}$，针对每个维度作卷积核大小为$K$的卷积操作。$\text{SSM}^{[n]}$即所谓的状态空间模型，具有参数$\pmb{A}=-\exp({\color{orange}logA})\in\mathbb{R}^{d^{[in]}\times d^{[state]}},{\color{orange}\pmb{D}}\in\mathbb{R}^{d^{[in]}}$，以及隐藏状态${\color{blue}\pmb{H}^{[n]}_{t-1}}\in\mathbb{R}^{d^{[in]}\times d^{[state]}}$，其计算方式如下
 $$
-\begin{split}
-\pmb{\Delta} &= \frac1\beta\log\big(1+\exp(\beta\cdot\text{Linear}^{[rankdt]}(\pmb{X}^{[n,in]}_t))\big)\in\mathbb{R}^{d^{[in]}}\\
-\pmb{B} &= \text{Linear}(\pmb{X}^{[n,in]}_t),\pmb{C}=\text{Linear}(\pmb{X}^{[n,in]}_t)\in\mathbb{R}^{d^{[state]}} \\
-{\color{blue}\pmb{H}^{[n]}_t} &= \pmb{\Delta}{\text{din,din dstate}\to\text{din dstate}\over\odot}\big(\pmb{A}\odot{\color{blue}\pmb{H}^{[n]}_{t-1}}\big)+\big(\pmb{\Delta}\odot\pmb{X}^{[n,in]}_t\big){\text{din,dstate}\to\text{din dstate}\over\odot}\pmb{B}\in\mathbb{R}^{d^{[in]}\times d^{[state]}} \\
-\text{SSM}^{[n]}(\pmb{X}^{[n,in]}_t) &= \pmb{C}^{\text{T}}\cdot({\color{blue}\pmb{H}^{[n]}_t})^{\text{T}}+\pmb{X}^{[n,in]}_t\odot{\color{orange}\pmb{D}}\in\mathbb{R}^{d^{[in]}}.
-\end{split}
+\begin{aligned}
+\pmb{\Delta}
+  &= \frac1\beta\log\big(1+\exp(\beta\cdot\text{Linear}^{[rankdt]}(\pmb{X}^{[n,in]}_t))\big)\in\mathbb{R}^{d^{[in]}} \\
+\pmb{B} &= \text{Linear}(\pmb{X}^{[n,in]}_t), \\
+\pmb{C} &= \text{Linear}(\pmb{X}^{[n,in]}_t)\in\mathbb{R}^{d^{[state]}} \\
+{\color{blue}\pmb{H}^{[n]}_t}
+  &= \pmb{\Delta}{\text{din,din dstate}\to\text{din dstate}\over\odot}
+     \big(\pmb{A}\odot{\color{blue}\pmb{H}^{[n]}_{t-1}}\big) \\
+  &\quad+\big(\pmb{\Delta}\odot\pmb{X}^{[n,in]}_t\big)
+     {\text{din,dstate}\to\text{din dstate}\over\odot}\pmb{B}
+     \in\mathbb{R}^{d^{[in]}\times d^{[state]}} \\
+\text{SSM}^{[n]}(\pmb{X}^{[n,in]}_t)
+  &= \pmb{C}^{\text{T}}\cdot({\color{blue}\pmb{H}^{[n]}_t})^{\text{T}}
+     +\pmb{X}^{[n,in]}_t\odot{\color{orange}\pmb{D}}\in\mathbb{R}^{d^{[in]}}.
+\end{aligned}
 $$
 原始论文[[2312.00752] Mamba: Linear-Time Sequence Modeling with Selective State Spaces (arxiv.org)](https://arxiv.org/abs/2312.00752)，[[2405.21060] Transformers are SSMs: Generalized Models and Efficient Algorithms Through Structured State Space Duality (arxiv.org)](https://arxiv.org/abs/2405.21060)包含许多与实现无关的内容，以上细节讨论主要参考下面的mamba-minimal实现。
 
@@ -402,18 +455,55 @@ $$
 
 RWKV-v4的实现与论文描述大致一致，但在一些细节处可能有些许差异，我们下面介绍论文中的版本，$\text{TimeMixer},\text{ChannelMixer}$的计算过程是
 $$
-\begin{split}
-\pmb{r}^{[\text{Time}]} &= {\color{orange}\pmb{W}^{[\text{Time},n,r]}}\cdot\big({\color{orange}\pmb{\mu}^{[\text{Time},n,r]}}\odot\pmb{X}'^{[n]}_t+(1-{\color{orange}\pmb{\mu}^{[\text{Time},n,r]}})\odot{\color{blue}\pmb{X}'^{[n]}_{t-1}}\big)\in\mathbb{R}^{d} \\
-\pmb{k}^{[\text{Time}]} &= {\color{orange}\pmb{W}^{[\text{Time},n,k]}}\cdot\big({\color{orange}\pmb{\mu}^{[\text{Time},n,k]}}\odot\pmb{X}'^{[n]}_t+(1-{\color{orange}\pmb{\mu}^{[\text{Time},n,k]}})\odot{\color{blue}\pmb{X}'^{[n]}_{t-1}}\big)\in\mathbb{R}^{d} \\
-\pmb{v}^{[\text{Time}]} &= {\color{orange}\pmb{W}^{[\text{Time},n,v]}}\cdot\big({\color{orange}\pmb{\mu}^{[\text{Time},n,v]}}\odot\pmb{X}'^{[n]}_t+(1-{\color{orange}\pmb{\mu}^{[\text{Time},n,v]}})\odot{\color{blue}\pmb{X}'^{[n]}_{t-1}}\big)\in\mathbb{R}^{d} \\
-\pmb{wkv} &= \frac{e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{a}^{[n,t-1]}}+e^{{\color{orange}\pmb{u}}+\pmb{k}^{[\text{Time}]}}\odot\pmb{v}^{[\text{Time}]}}{e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{b}^{[n,t-1]}}+e^{{\color{orange}\pmb{u}}+\pmb{k}^{[\text{Time}]}}}\in\mathbb{R}^d \\
-{\color{blue}\pmb{a}^{[n,t]}} &= e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{a}^{[n,t-1]}}+e^{\pmb{k}^{[\text{Time}]}}\odot\pmb{v}^{[\text{Time}]}\in\mathbb{R}^d \\
-{\color{blue}\pmb{b}^{[n,t]}} &= e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{b}^{[n,t-1]}}+e^{\pmb{k}^{[\text{Time}]}}\in\mathbb{R}^d \\
-\text{TimeMixer}^{[\text{RWKV},n]}(\pmb{X}'^{[n]}_t) &= {\color{orange}\pmb{W}^{[\text{Time},n,o]}}\cdot(\sigma(\pmb{r}^{[\text{Time}]})\odot\pmb{wkv})\in\mathbb{R}^d \\
-\pmb{r}^{[\text{Channel}]} &= {\color{orange}\pmb{W}^{[\text{Channel},n,r]}}\cdot\big({\color{orange}\pmb{\mu}^{[\text{Channel},n,r]}}\odot\pmb{X}'''^{[n]}_t+(1-{\color{orange}\pmb{\mu}^{[\text{Channel},n,r]}})\odot{\color{blue}\pmb{X}'''^{[n]}_{t-1}}\big)\in\mathbb{R}^{d} \\
-\pmb{k}^{[\text{Channel}]} &= {\color{orange}\pmb{W}^{[\text{Channel},n,k]}}\cdot\big({\color{orange}\pmb{\mu}^{[\text{Channel},n,k]}}\odot\pmb{X}'''^{[n]}_t+(1-{\color{orange}\pmb{\mu}^{[\text{Channel},n,k]}})\odot{\color{blue}\pmb{X}'''^{[n]}_{t-1}}\big)\in\mathbb{R}^{d} \\
-\text{ChannelMixer}^{[\text{RWKV},n]}(\pmb{X}'''^{[n]}_t) &= \sigma(\pmb{r}^{[\text{Channel}]})\odot({\color{orange}\pmb{W}^{[\text{Channel},n,v]}}\cdot\text{ReLU}(\pmb{k}^{[\text{Channel}]})^2)\in\mathbb{R}^{d}
-\end{split}
+\begin{aligned}
+\pmb{r}^{[\text{Time}]}
+  &= {\color{orange}\pmb{W}^{[\text{Time},n,r]}}\cdot
+     \Big({\color{orange}\pmb{\mu}^{[\text{Time},n,r]}}\odot\pmb{X}'^{[n]}_t \\
+  &\qquad +(1-{\color{orange}\pmb{\mu}^{[\text{Time},n,r]}})\odot
+     {\color{blue}\pmb{X}'^{[n]}_{t-1}}\Big)\in\mathbb{R}^{d} \\
+\pmb{k}^{[\text{Time}]}
+  &= {\color{orange}\pmb{W}^{[\text{Time},n,k]}}\cdot
+     \Big({\color{orange}\pmb{\mu}^{[\text{Time},n,k]}}\odot\pmb{X}'^{[n]}_t \\
+  &\qquad +(1-{\color{orange}\pmb{\mu}^{[\text{Time},n,k]}})\odot
+     {\color{blue}\pmb{X}'^{[n]}_{t-1}}\Big)\in\mathbb{R}^{d} \\
+\pmb{v}^{[\text{Time}]}
+  &= {\color{orange}\pmb{W}^{[\text{Time},n,v]}}\cdot
+     \Big({\color{orange}\pmb{\mu}^{[\text{Time},n,v]}}\odot\pmb{X}'^{[n]}_t \\
+  &\qquad +(1-{\color{orange}\pmb{\mu}^{[\text{Time},n,v]}})\odot
+     {\color{blue}\pmb{X}'^{[n]}_{t-1}}\Big)\in\mathbb{R}^{d} \\
+\pmb{wkv}
+  &= \frac{
+       e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{a}^{[n,t-1]}}
+       +e^{{\color{orange}\pmb{u}}+\pmb{k}^{[\text{Time}]}}
+        \odot\pmb{v}^{[\text{Time}]}}
+      {e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{b}^{[n,t-1]}}
+       +e^{{\color{orange}\pmb{u}}+\pmb{k}^{[\text{Time}]}}}
+      \in\mathbb{R}^{d} \\
+{\color{blue}\pmb{a}^{[n,t]}}
+  &= e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{a}^{[n,t-1]}}
+     +e^{\pmb{k}^{[\text{Time}]}}\odot\pmb{v}^{[\text{Time}]}
+     \in\mathbb{R}^{d} \\
+{\color{blue}\pmb{b}^{[n,t]}}
+  &= e^{-{\color{orange}\pmb{w}}}\odot{\color{blue}\pmb{b}^{[n,t-1]}}
+     +e^{\pmb{k}^{[\text{Time}]}}\in\mathbb{R}^{d} \\
+\text{TimeMixer}^{[\text{RWKV},n]}(\pmb{X}'^{[n]}_t)
+  &= {\color{orange}\pmb{W}^{[\text{Time},n,o]}}\cdot
+     \big(\sigma(\pmb{r}^{[\text{Time}]})\odot\pmb{wkv}\big)\in\mathbb{R}^{d} \\
+\pmb{r}^{[\text{Channel}]}
+  &= {\color{orange}\pmb{W}^{[\text{Channel},n,r]}}\cdot
+     \Big({\color{orange}\pmb{\mu}^{[\text{Channel},n,r]}}\odot\pmb{X}'''^{[n]}_t \\
+  &\qquad +(1-{\color{orange}\pmb{\mu}^{[\text{Channel},n,r]}})\odot
+     {\color{blue}\pmb{X}'''^{[n]}_{t-1}}\Big)\in\mathbb{R}^{d} \\
+\pmb{k}^{[\text{Channel}]}
+  &= {\color{orange}\pmb{W}^{[\text{Channel},n,k]}}\cdot
+     \Big({\color{orange}\pmb{\mu}^{[\text{Channel},n,k]}}\odot\pmb{X}'''^{[n]}_t \\
+  &\qquad +(1-{\color{orange}\pmb{\mu}^{[\text{Channel},n,k]}})\odot
+     {\color{blue}\pmb{X}'''^{[n]}_{t-1}}\Big)\in\mathbb{R}^{d} \\
+\text{ChannelMixer}^{[\text{RWKV},n]}(\pmb{X}'''^{[n]}_t)
+  &= \sigma(\pmb{r}^{[\text{Channel}]})\odot
+     \Big({\color{orange}\pmb{W}^{[\text{Channel},n,v]}}\cdot
+     \text{ReLU}(\pmb{k}^{[\text{Channel}]})^2\Big)\in\mathbb{R}^{d}
+\end{aligned}
 $$
 在RWKV-5,RWKV-6中，则将$\pmb{wkv}$所涉及的RNN隐藏变量由$\pmb{a}^{[n,t]},\pmb{b}^{[n,t]}\in\mathbb{R}^d$改为$\pmb{k}^\text{T}\cdot\pmb{v}\in\mathbb{R}^{d\times d}$并考虑使用MultiHead，这类似于Linear Attention，但加上了time decay机制，这里不再详细讨论。
 

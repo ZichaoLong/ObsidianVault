@@ -1,6 +1,10 @@
 ---
 type: systems-research-memo
 status: design-space-and-evidence
+tags:
+  - tide
+  - systems
+  - performance
 semantic-baseline: tide-core-2
 ---
 

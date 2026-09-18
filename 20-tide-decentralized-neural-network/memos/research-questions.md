@@ -1,6 +1,9 @@
 ---
 type: research-question-index
 status: open-questions
+tags:
+  - tide
+  - research
 semantic-baseline: tide-core-2
 ---
 

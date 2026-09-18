@@ -1,4 +1,17 @@
-加速定理
+---
+type: scratch-note
+status: draft
+tags:
+  - technical-notes
+  - scratch
+  - complexity
+cssclasses:
+  - textbook-math
+---
+
+# 零散笔记
+
+## 加速定理
 
 结构的普遍存在性
 
@@ -6,9 +19,9 @@
 
 还有一些别的研究，
 
-少量可随机读写的RAM + 无限只能写入一次但可随机读的Write\-once Memory，它与RAM/RASP的Gap是多少？
+少量可随机读写的 RAM + 无限只能写入一次但可随机读的 Write-once Memory，它与 RAM/RASP 的 Gap 是多少？
 
-**结论**🤜\[6\-m\]：RAM上执行步数$t$，消耗空间$s$的算法，在这类图灵机上可使用$t\cdot\log(s)$时间模拟。
+**结论**🤜[6-m]：RAM 上执行步数 $t$、消耗空间 $s$ 的算法，在这类图灵机上可使用 $t\cdot\log(s)$ 时间模拟。
 
 
 

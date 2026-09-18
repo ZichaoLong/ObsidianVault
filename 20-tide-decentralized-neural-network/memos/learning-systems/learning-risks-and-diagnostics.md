@@ -1,6 +1,10 @@
 ---
 type: training-research-memo
 status: hypotheses-and-diagnostics
+tags:
+  - tide
+  - training
+  - diagnostics
 semantic-baseline: tide-core-2
 ---
 

@@ -1,6 +1,10 @@
 ---
 type: mechanism-research-memo
 status: optional-instances
+tags:
+  - tide
+  - architecture
+  - memory
 semantic-baseline: tide-core-2
 ---
 
