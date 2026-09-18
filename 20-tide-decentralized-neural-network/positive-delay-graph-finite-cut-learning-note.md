@@ -2197,7 +2197,7 @@ $$
 
 #### 10.3.3 严格分层的有限层次
 
-严格分层类存在 $\ell:J\to\mathbb N$，使每条消息边 $a$ 都满足 $\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a)))$。记一个 region 的状态—控制块为 $\mathsf C_j$，其中某个节点的完整输出批为 $\mathsf F_v$。[[timed-dag-chunk-prefill-learning-note#7-严格分层-region-的整块定理|TimedDAG 分块教材第 7 节]]给出的形状是：
+严格分层类存在 $\ell:J\to\mathbb N$，使每条消息边 $a$ 都满足 $\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a)))$。记一个 region 的状态—控制块为 $\mathsf C_j$，其中某个节点的完整输出批为 $\mathsf F_v$。[[timed-dag-chunk-prefill-learning-note#6-严格分层-region-的整块定理|TimedDAG 分块教材第 6 节]]给出的形状是：
 
 $$
 \mathsf C_j\longrightarrow\mathsf F_v
