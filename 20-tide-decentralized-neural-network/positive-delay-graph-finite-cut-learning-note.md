@@ -1713,7 +1713,7 @@ $$
 
 式 (39) 是安全但不必最小的静态包络：它不检查某类事件是否对所有合法输入都不可能出现。若另行证明某对 owner 之间的全部直接依赖在每个合法运行中都不会实例化，可以删去这对 owner 之间的静态边。只看到某次输入没有激活它，不足以这样做。若还要利用“selector 在整个定义域上与某个输入坐标无关”来删边，则须先相应细化第 4.2 节的保守事件依赖关系，再对细化后的关系证明 dependency-complete。
 
-$G^\dagger$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把 $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。命题 13 只证明它是安全的静态边界；它还丢弃了平行消息边的身份。后续宏 runtime 仍须保留每个 $a\in A$，并另外证明完整多端口契约与外层保块。
+$G^\dagger$ 是“可能影响与所有权”的静态图，不是正时延消息图。不能把 $v\leftrightarrow s_j$ 草率解释为两条零时延消息，再宣称出现代数环；实际同刻依赖仍按式 (23) 的 $P<S<U<F$ 阶段前进。命题 13 只证明它是安全的静态边界；它还丢弃了平行消息边的身份。后续宏执行器仍须保留每个 $a\in A$，并另外证明完整多端口契约与外层保块。
 
 ## 10. 有限 cut 上的因果作用块与最大前沿
 
@@ -2363,7 +2363,7 @@ $$
 - 允许无限节点、无限同刻 firing、无限 batch 或隐藏 microstep 后的局部有限性；
 - 任意共享可变状态或来源未声明的公共 context；
 - 任意 region 下按 message SCC 独立求值；
-- $\mathcal S_\Gamma$ 中任意分量的通用多端口 runtime；
+- $\mathcal S_\Gamma$ 中任意分量的通用多端口执行器；
 - $\mathcal S_\Gamma$ 中任意分量都具有与区间宽度无关的状态块数和完整输出批数；
 - 任意因果状态块都具有低跨度；
 - 图结构本身推出某种硬件利用率。
@@ -2386,7 +2386,7 @@ $$
 
 若进一步研究并行深度，就需要类似式 (40) 的代数表示及其成本分析。边界相容、状态或输出可成块、块内跨度和设备效果分别具有自己的假设与记录。
 
-剩余候选按问题记录在 [[memos/research-questions|研究问题备忘]]。本教材的核心局部语义保持 $\operatorname{Next}$ 不读取本次 Full；依赖 Full 的私有状态递归可以作为一个更强的状态—输出联合契约研究，其边界条件见 [[memos/mathematics/state-feedback-and-node-chunks|完整输出反馈与节点因果块备忘]]。
+其余扩展不属于本教材的已证明范围。本教材的核心局部语义保持 $\operatorname{Next}$ 不读取本次 Full；依赖 Full 的私有状态递归可以作为一个更强的状态—输出联合契约研究，其边界条件见 [[memos/mathematics/state-feedback-and-node-chunks|完整输出反馈与节点因果块备忘]]。
 
 ## 附录 S：系统语言与本文数学对象的对应
 
@@ -2434,7 +2434,7 @@ $$
 >
 > **macro node** 若采用 message SCC，必须满足式 (38) 或另证 selector/control/state 依赖没有跨边界。否则 message SCC 只是图论集合，不是语义封闭模块。
 >
-> **dependency-complete static graph** 的正式定义见第 9.4 节：每次运行的直接事件边经 owner 投影后，都必须留在同一 owner 或落到一条静态边上。固定这样的 $\Gamma$ 后，其宏候选是明确的 $\mathcal S_\Gamma$；本文默认 $\Gamma=G^\dagger$。式 (39) 给出这个安全但不必最小的构造，命题 13 证明其 dependency-complete。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息；它也不是 seal 或 closure 的在线证书，$\mathcal S_\Gamma$ 中的分量不自动获得宏 runtime 或性能保证。
+> **dependency-complete static graph** 的正式定义见第 9.4 节：每次运行的直接事件边经 owner 投影后，都必须留在同一 owner 或落到一条静态边上。固定这样的 $\Gamma$ 后，其宏候选是明确的 $\mathcal S_\Gamma$；本文默认 $\Gamma=G^\dagger$。式 (39) 给出这个安全但不必最小的构造，命题 13 证明其 dependency-complete。它把 selector 的可能读取、控制和 history owner 纳入静态边界，但这些附加边不是普通正时延消息；它也不是 seal 或 closure 的在线证书，$\mathcal S_\Gamma$ 中的分量不自动获得宏执行器或性能保证。
 
 > [!info|keep]- S.6　correctness、外层保块、work 与 span
 > **exact / correctness** 表示所得记录等于本文指定的完整记录或明确投影。**cost profile** 对应第 10.2.1 节的成本标记。**节点级时间批暴露 / 外层保块**对应第 10.2 节的契约族 $\mathfrak B$ 与同一个 transcript 策略：它对解释类 $\mathfrak F$、输入长度、任意区间及合法实例统一 exact，并一致界定自适应阶段、状态块、完整输出批、状态—输出联合块和区域块。
@@ -2453,6 +2453,6 @@ $$
 - [[timed-dag-region-selector-learning-note|前置：TimedDAG 的完整数学语义]]；
 - [[timed-dag-chunk-prefill-learning-note|节点级时间批暴露在空间 DAG 上的正例]]；
 - [[memos/mathematics/adaptive-routing-prefill-lower-bound|黑盒自适应路由为什么一般不能自动低 span]]；
-- [[semantics-anchor|TIDE 语义锚点]]；剩余问题见 [[memos/research-questions|研究问题]]。
+- [[semantics-anchor|TIDE 语义锚点]]。
 
 这些文档中的系统接口或更一般宏契约不会反向改写本文定义。若以后推广本文，必须明确指出改变了哪个函数类型、状态 owner、时延条件或 cut 坐标。

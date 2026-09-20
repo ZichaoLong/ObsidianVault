@@ -4,7 +4,7 @@ status: active-index
 tags:
   - tide
   - index
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # Tide 研究备忘
@@ -21,7 +21,6 @@ semantic-baseline: tide-core-2
 
 ## 构型与机制
 
-- [拓扑与生长候选](architecture/topology-and-growth-candidates.md)：有界度、多跳、HB、固定 merge、head/group 与 checkpoint 生长坐标。
 - [Selector 与局部记忆](architecture/selector-and-memory.md)：内容/状态/history、时间衰减、恢复、Next 清理与单 owner 上下文。
 
 ## 学习与系统
@@ -36,14 +35,13 @@ semantic-baseline: tide-core-2
 - [编译器与 dataflow](background/compiler-and-dataflow.md)：ISA、SSA、抽象解释、验证、KPN/SDF、logical progress 与 provenance。
 - [统计力学与信息动力学](background/statistical-mechanics.md)：路径相关、路由熵与宏观极限的候选研究。
 
-## 问题、历史与资源
+## 历史与资源
 
-- [教材之外的研究问题](research-questions.md)：只记录当前仍未解决的部分。
-- [LH、旧 runtime 与 HB 历史](history/lh-and-runtime.md)：带日期的机制来源、旧程序与旧图。
+- [LH 历史位置](history/lh-history.md)：带日期的早期实现与语义设计来源。
 - [按问题选读的资源](../resources/learning-resources.md)：书目与小练习，无强制课程门槛。
 
 ## 保留方式与来源
 
-本次整理以 Git `133d638` 为旧材料追溯点。旧数学长文拆为可复用局部推导；旧架构长文按构型、状态、学习和系统问题拆分；旧 runtime 的当前政策身份移除，仅保留必要历史；背景调查与物理类比分开；SCC 原问题按教材已完成的范围收缩。
+本次整理以 Git `133d638` 为旧材料追溯点。旧数学长文拆为可复用局部推导；旧架构长文按状态、学习和系统问题拆分；LH 仅保留必要历史；背景调查与物理类比分开；SCC 相关内容以正典教材的已证明范围为准。
 
-阅读时区分五种主张：已有教材实例、有前提的局部推导、核心之外的扩展问题、经验假设、历史/外部背景。发现冲突应修订备忘；不通过备忘反向扩大教材。研究问题被解决后链接正式落点，不再维持重复答案。
+阅读时区分五种主张：已有教材实例、有前提的局部推导、核心之外的扩展问题、经验假设、历史/外部背景。发现冲突应修订备忘；不通过备忘反向扩大教材。已由教材确定的结论直接链接正式落点，不在备忘中维持重复答案。

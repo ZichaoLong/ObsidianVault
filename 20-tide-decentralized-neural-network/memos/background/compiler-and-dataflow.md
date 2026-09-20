@@ -5,7 +5,7 @@ tags:
   - tide
   - compiler
   - dataflow
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 编译器与 dataflow：对 Tide 有用的研究谱系
@@ -84,4 +84,4 @@ Differential Dataflow 的带时间集合与增量维护提供了另一种索引/
 
 ## 9. 对实现仓库的实际用途
 
-这些谱系支持一种工作方式：先固定模型和可观察行为，再用显式依赖表示设计变换，给局部充分条件，并验证实际 kernel、布局和状态保存。它们不要求上游笔记承担完整编译器、设备 runtime 或实验验收系统。
+这些谱系支持一种工作方式：先固定模型和可观察行为，再用显式依赖表示设计变换，给局部充分条件，并验证实际 kernel、布局和状态保存。它们不要求上游笔记承担完整编译器、设备执行层或实验验收系统。

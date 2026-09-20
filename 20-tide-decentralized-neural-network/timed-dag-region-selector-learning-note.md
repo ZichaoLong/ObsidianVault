@@ -2947,7 +2947,7 @@ $$
 - [[timed-dag-chunk-prefill-learning-note|以本文为唯一前置的分块预填充、时间块与严格分层区域续篇]]；
 - [[positive-delay-graph-finite-cut-learning-note|以本文为唯一前置的正时延有环图、有限切面与强连通分量续篇]]；
 - [[settlegraph-learning-note|单次结算 SettleGraph 入门与向本文的受限嵌入]]；
-- [[semantics-anchor|TIDE 语义锚点]]；剩余问题见 [[memos/research-questions|研究问题]]。
+- [[semantics-anchor|TIDE 语义锚点]]。
 
 这些材料中的同名词不能反过来改写本文公式；若两份文档要建立关系，必须给出从一边全部数学坐标到另一边全部数学坐标的函数或关系。
 

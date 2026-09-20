@@ -5,7 +5,7 @@ tags:
   - tide
   - mathematics
   - kernels
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 ---
 
 # 常用 kernel 为什么可以按 chunk 计算

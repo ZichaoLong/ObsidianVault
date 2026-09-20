@@ -1,7 +1,7 @@
 ---
 type: mathematical-research-memo
 status: retained-proof
-semantic-baseline: tide-core-2
+semantic-baseline: tide-core-3
 cssclasses:
   - textbook-math
 tags:
@@ -963,9 +963,9 @@ $$
 q_{t+1}=F_t(q_t),
 $$
 
-且 runtime 获得任意函数值 $F_t(q)$ 的唯一允许方式，是实际执行并计数一次对应 control evaluation，则称该模型类别允许长度为 $L$ 的 oracle-complete 交错控制链。
+且执行方获得任意函数值 $F_t(q)$ 的唯一允许方式，是实际执行并计数一次对应 control evaluation，则称该模型类别允许长度为 $L$ 的 oracle-complete 交错控制链。
 
-最后一个条件排除了 runtime 免费读取 transition 的完整符号表达或完整函数表；它把可用信息严格限制为第 4 节定义的 oracle queries。在该查询模型下，这条链没有额外暴露可供 scan 或 bulk composition 使用的 summary。
+最后一个条件排除了执行方免费读取 transition 的完整符号表达或完整函数表；它把可用信息严格限制为第 4 节定义的 oracle queries。在该查询模型下，这条链没有额外暴露可供 scan 或 bulk composition 使用的 summary。
 
 此外，要求这些 control events 具有定义 9.2 的严格递增逻辑时间。可以存在其他并行事件，但它们不能在查询接口之外额外暴露 oracle 的信息。
 
@@ -1088,7 +1088,7 @@ MoE 的 active expert graph 在执行 router 前同样未知，但一层中所�
 
 ### 10.7 不把免费离线预处理藏在模型之外
 
-本页把读取或求值 $F_t(q)$ 计为 query work。若所有 routing maps 在部署前已经固定，允许 runtime 免费获得完整函数表并做无限离线预处理，那么 oracle model 不再适用。
+本页把读取或求值 $F_t(q)$ 计为 query work。若所有 routing maps 在部署前已经固定，允许执行方免费获得完整函数表并做无限离线预处理，那么 oracle model 不再适用。
 
 对 Tide 使用本页结论时，需要满足至少一个条件：routing transition 依赖当前 token、hidden、node memory 或 selector state，因而只能在运行时确定；或者读取与预处理完整 routing maps 的成本必须计入 work。
 
@@ -1168,4 +1168,4 @@ $$
 
 该展开图的大小和深度随链长增长，不是一个固定 TimedDAG 的参数全部保持不变、只增加输入窗口。要用本页否定某个固定图的节点级批能力，还需给出保持目标复杂度指标的具体归约。控制扫描有线性 span，与节点的 Full 只调用一批可以同时成立。
 
-仍值得继续研究的是：具体 selector 是否有足够一般的 oracle embedding；其状态与 Next 是否出现可组合代数；Full 输出何时返回以后控制；以及查询 work、控制 span、Full 批数和硬件成本怎样分别计量。问题索引见 [教材之外的研究问题](../research-questions.md)。
+仍值得继续研究的是：具体 selector 是否有足够一般的 oracle embedding；其状态与 Next 是否出现可组合代数；Full 输出何时返回以后控制；以及查询 work、控制 span、Full 批数和硬件成本怎样分别计量。后续问题由独立研究记录维护。
