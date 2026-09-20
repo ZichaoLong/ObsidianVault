@@ -1,7 +1,7 @@
 ---
 type: index
 status: active
-as-of: 2026-09-14
+as-of: 2026-09-20
 tags:
   - tide
   - mathematics
@@ -52,7 +52,7 @@ fractal-latcarf 是 SettleGraph 的实验平台。它维护实际模块公式与
 
 ## 进一步阅读
 
-[[memos/README|研究备忘索引]] 按问题组织数学专题、学习风险、执行成本及外部背景。[[resources/learning-resources|学习资源]] 提供按需书目。[[memos/history/migration-map|旧内容迁移索引]] 记录重写来源与 Git 追溯方法；旧长文不再构成第二套核心。
+[[memos/README|研究备忘索引]] 按问题组织数学补充、机制与学习风险、外部背景及 LH 历史。[[resources/learning-resources|学习资源]] 提供按需书目。旧内容迁移索引仅供维护时追溯，不列入主要阅读路线。
 
 [正时延 Graph 教学 reference](examples/positive_delay_graph_reference.py) 验证有限切面、控制量、状态快照及继续等式。它属于教材附件，不承担完整神经模型或硬件平台职责。LH 仅作为历史设计来源保留。
 

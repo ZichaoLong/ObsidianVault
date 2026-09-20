@@ -1094,7 +1094,7 @@ MoE 的 active expert graph 在执行 router 前同样未知，但一层中所�
 
 ## 11. 逃离下界的结构化特例
 
-结构化正例的局部证明见 [kernel chunk 组合](kernel-chunk-composition.md)，图级条件见 [chunk 教材](../../timed-dag-chunk-prefill-learning-note.md)，实际成本问题见 [执行与成本](../learning-systems/execution-and-cost.md)。本节只说明哪些额外结构使实例不再属于任意黑盒 oracle family。
+结构化正例的图级条件见 [TimedDAG 分块预填充教材](../../timed-dag-chunk-prefill-learning-note.md)；本节只说明哪些额外结构使实例不再属于任意黑盒 oracle family。具体 kernel、设备和实测成本由实验仓库维护。
 
 ### 11.1 Token-local routing
 

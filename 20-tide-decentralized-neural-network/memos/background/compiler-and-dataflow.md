@@ -74,7 +74,7 @@ Lamport 的逻辑顺序区分因果先后与物理完成时间。Naiad/Timely �
 
 ## 8. Scan、provenance 与 confluence
 
-Prefix scan 的价值来自可结合且可有效表示的转移摘要，而不是“所有函数复合都结合”。相关推导见 [kernel chunk 组合](../mathematics/kernel-chunk-composition.md)。
+Prefix scan 的价值来自可结合且可有效表示的转移摘要，而不是“所有函数复合都结合”。节点状态块的形式化条件见 [TimedDAG 分块预填充教材第 5.1 节](../../timed-dag-chunk-prefill-learning-note.md#51-状态顺序与因果状态块)。
 
 数据库 provenance 提醒我们：聚合后能否回答来源问题，取决于是否保存相应信息；若后继只依赖总和，就无需为重建每项来源付费。CALM/confluence 研究顺序无关的分布式结果，但它们的前提不能直接替代任意神经状态更新的证明。
 

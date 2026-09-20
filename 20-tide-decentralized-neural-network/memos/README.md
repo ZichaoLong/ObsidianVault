@@ -9,39 +9,31 @@ semantic-baseline: tide-core-3
 
 # Tide 研究备忘
 
-这里保存核心教材之外的推导、可选构型、学习问题、外部背景与历史。数学入口见 [Tide 主入口](../README.md)；备忘中的候选不会自动修改 Graph、TimedDAG 或 SettleGraph 的定义。具体模块配置、实现等价性、训练和性能结果由实验仓库维护。
+这里保存核心教材之外的数学补充、机制与学习风险、外部背景和 LH 历史。数学入口见 [Tide 主入口](../README.md)；备忘中的候选不会自动修改 Graph、TimedDAG 或 SettleGraph 的定义。具体模块配置、实现等价性、训练和性能结果由实验仓库维护。
 
-## 数学问题
+## 数学补充
 
 - [函数保持生长](mathematics/function-preserving-growth.md)：投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包。
-- [Kernel 的 chunk 组合](mathematics/kernel-chunk-composition.md)：map、causal attention、affine scan 与 linear accumulator 的简短证明。
 - [来源、聚合与读出](mathematics/provenance-and-readout.md)：安全商、保守依赖集合与未来可观察行为。
-- [状态反馈与节点批](mathematics/state-feedback-and-node-chunks.md)：状态递推、控制扫描、私有计算与 Full 反馈的区别。
 - [自适应路由下界](mathematics/adaptive-routing-prefill-lower-bound.md)：自足的 deterministic exact 黑盒查询模型与证明；不能直接当作任意具体 selector 的下界。
 
-## 构型与机制
+## 机制与学习风险
 
-- [Selector 与局部记忆](architecture/selector-and-memory.md)：内容/状态/history、时间衰减、恢复、Next 清理与单 owner 上下文。
+- [Selector 与局部记忆](architecture/selector-and-memory.md)：评分、历史、衰减、恢复和清理的机制动机与设计风险。
+- [学习风险与诊断](learning-systems/learning-risks-and-diagnostics.md)：路径漂移、信用距离、粒度与状态负担、饥饿、辅助监督和机制对照。内容是实验前假设与诊断建议。
 
-## 学习与系统
-
-- [学习风险与诊断](learning-systems/learning-risks-and-diagnostics.md)：路径漂移、三种信用距离、饥饿、辅助监督与机制对照。
-- [执行与成本](learning-systems/execution-and-cost.md)：正确、有限、节点可批与实际更快需要哪些不同证据。
-
-## 背景阅读
+## 外部背景
 
 - [人脑信号传播调查](background/neuroscience-survey.md)：保留 2026-07-22 调查的解剖、生理与文献实质。
 - [脑科学启发与边界](background/neuroscience-model-ideas.md)：将调查中的事实转成可检验的数字模型问题。
 - [编译器与 dataflow](background/compiler-and-dataflow.md)：ISA、SSA、抽象解释、验证、KPN/SDF、logical progress 与 provenance。
 - [统计力学与信息动力学](background/statistical-mechanics.md)：路径相关、路由熵与宏观极限的候选研究。
 
-## 历史与资源
+## LH 历史与资源
 
-- [LH 历史位置](history/lh-history.md)：带日期的早期实现与语义设计来源。
+- [LH 历史位置](history/lh-history.md)：带日期的早期实现与语义设计来源，不是当前能力声明。
 - [按问题选读的资源](../resources/learning-resources.md)：书目与小练习，无强制课程门槛。
 
-## 保留方式与来源
+## 使用与维护
 
-本次整理以 Git `133d638` 为旧材料追溯点。旧数学长文拆为可复用局部推导；旧架构长文按状态、学习和系统问题拆分；LH 仅保留必要历史；背景调查与物理类比分开；SCC 相关内容以正典教材的已证明范围为准。
-
-阅读时区分五种主张：已有教材实例、有前提的局部推导、核心之外的扩展问题、经验假设、历史/外部背景。发现冲突应修订备忘；不通过备忘反向扩大教材。已由教材确定的结论直接链接正式落点，不在备忘中维持重复答案。
+对象定义、证明和正式能力声明以正典教材为准；备忘只提供局部推导、机制假设、背景调查和历史线索。阅读时区分教材实例、有前提的局部推导、核心之外的扩展问题、经验假设与外部类比。旧内容的去向和 Git 追溯方法见 [迁移索引](history/migration-map.md)；它是维护资料，不属于主要阅读路线。

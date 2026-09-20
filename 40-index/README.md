@@ -37,7 +37,6 @@ tags:
 - [[20-tide-decentralized-neural-network/positive-delay-graph-finite-cut-learning-note|正时延 Graph 有限切面教材]]
 - [[20-tide-decentralized-neural-network/memos/README|分类研究备忘]]
 - [[20-tide-decentralized-neural-network/resources/learning-resources|按需学习资源]]
-- [[20-tide-decentralized-neural-network/memos/history/migration-map|旧内容迁移与追溯]]
 
 ## 其他
 

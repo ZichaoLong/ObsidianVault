@@ -25,25 +25,31 @@ semantic-baseline: tide-core-3
 
 ## 2. 路由变化的频率、幅度和持续时间
 
-固定输入、边界状态和分支参数，令有限候选集合中第 $i$ 个分支的向量贡献为 $v_i$，active set 为 $A$，merge 为 $M$。若
+固定输入、边界状态和分支参数。设有限候选索引集为 $I$；对每个 $i\in I$，令向量贡献为 $v_i\in\mathbb R^d$。active set 是本次被选中的索引子集；令 $A,A'\subseteq I$ 为两次 active set，令 $z=(z_i)_{i\in I}$ 与 $z'=(z'_i)_{i\in I}$ 为 merge 的全部槽值。设
+$M:(\mathbb R^d)^I\to\mathbb R^p$ 为 merge 函数，并令 $\|\cdot\|_2$ 表示相应欧氏范数。若 $M$ 满足下述 Lipschitz 条件，取 $L_M\ge0$ 使
 
 $$
-\|M(z)-M(z')\|\le L_M\sum_i\|z_i-z_i'\|,
+\|M(z)-M(z')\|_2
+\le L_M\sum_{i\in I}\|z_i-z'_i\|_2 .
 $$
 
-把全部分支槽值组成 $z_A=(\mathbf1[i\in A]v_i)_i$，那么
+对称差定义为
+$A\triangle A'=(A\setminus A')\cup(A'\setminus A)$；记示性值 $\mathbf 1[i\in A]$ 在条件成立时为 $1$，否则为 $0$。把未选槽置零，定义
+$z_A=(\mathbf 1[i\in A]v_i)_{i\in I}$，则
 
 $$
-\|M(z_A)-M(z_{A'})\|
-\le L_M\sum_{i\in A\triangle A'}\|v_i\|.
+\begin{aligned}
+\|M(z_A)-M(z_{A'})\|_2
+&\le L_M\sum_{i\in I}
+  \|\mathbf 1[i\in A]v_i-\mathbf 1[i\in A']v_i\|_2 \\
+&=L_M\sum_{i\in A\triangle A'}\|v_i\|_2 .
+\end{aligned}
 \tag{1}
 $$
 
-**推导。** 两个 active set 的共同节点和共同未选节点贡献差为零，只剩对称差中的项；代入 Lipschitz 条件即可。
+推导只使用共同节点和共同未选节点的槽值相同。因而 active-set overlap、小 residual 和稳定 merge 可以限制固定输入上的换路扰动。若换路还改变共同选中节点的归一化权重或状态，就要把这些槽的变化一起计入；只增加候选数量不会自动缩小一次 Top-1 切换的影响。式 (1) 不证明训练中路由会少换，也不控制同时改变参数后的完整 checkpoint 漂移。
 
-因此 active-set overlap、小 residual 和稳定 merge 可以限制固定输入上的换路扰动。式中 $A\triangle A'$ 是恰好属于一个集合的节点组成的对称差。若换路还使共同选中节点的归一化权重或状态改变，就要把这些槽的变化一起计入，不能只保留对称差项。只增加候选数量，不会自动缩小一次 Top-1 切换的影响。式 (1) 不证明训练中路由会少换，也不控制同时改变参数后的完整 checkpoint 漂移。
-
-可分别记录切换频率 $C$、跳变量 $J$ 和控制身份持续时间 $H$。旧稿提出的 $C\cdot J\cdot H$ 只是一种需要归一化并实验检验的风险代理，不是风险定律。
+把连续选择中 active set 改变的比例称为 route churn；还可分别记录切换频率 $C$、跳变量 $J$ 和控制身份持续时间 $H$。旧稿提出的 $C\cdot J\cdot H$ 只是需要归一化并实验检验的风险代理，不是风险定律。这里的 $H$ 是控制寿命，含义在下一节的信用距离表中给出。
 
 ## 3. 信用分配中的三种距离
 
@@ -65,7 +71,15 @@ $$
 
 Attention logit、SSM 状态谱/范数、低精度溢出、优化器和梯度尺度也能独立导致 loss spike。route churn 与 spike 同时发生只说明相关，不能直接归因。
 
-## 5. 可选训练干预及其代价
+## 5. 粒度、状态负担与训练预算
+
+节点粒度同时影响表达能力、控制开销和可获得的训练信号。节点过粗时，一次换路可能改变很大的表示或状态；节点过细时，selector、消息和状态管理可能占据固定预算，使每个节点得到的有效训练机会减少。未被选中但收到输入的节点还可能执行状态更新、保存反向所需的中间值，并在以后读出时承担长期信用分配。
+
+因此，粒度实验至少应记录：每个节点每个逻辑时间的输入、Full、状态更新和反向覆盖；写入到读出的时间跨度；控制与消息所占的计算和显存；在相同数据暴露和训练预算下的质量。增加私有状态或延长历史可能提高可表达性，也可能扩大长期信用、存储和优化器状态负担。具体 kernel、设备 profiling 和记录格式属于独立实验仓库，不在本备忘中规定。
+
+把粒度选择、状态保留策略和路由机制分开做消融，才能判断收益来自表达能力、路径选择还是仅来自额外容量；固定总参数量也不足以保证控制成本和有效更新次数相同。
+
+## 6. 可选训练干预及其代价
 
 | 干预 | 想改善什么 | 应保留的对照或代价 |
 | --- | --- | --- |
@@ -78,17 +92,22 @@ Attention logit、SSM 状态谱/范数、低精度溢出、优化器和梯度尺
 
 训练数据 replay、旧 route/hidden/logits 的一致性约束可以不改变推理函数。推理时主动重演内部轨迹则增加模型依赖，不能用同一个 replay 名称掩盖。
 
-一个可选训练目标是
+设 $R$ 为有限辅助观测位置集合；在每个 $r\in R$，$h_r$ 是学生的中间表示，$h_r^{\mathrm{teacher}}$ 是停止梯度的教师目标，$P_r$ 是把学生表示映到教师空间的线性或可学习投影。令 $\alpha_r,\beta_r\ge0$ 为损失权重，$\mathcal L_{\mathrm{aux},r}$ 为已定义的辅助任务损失，$\operatorname{stopgrad}$ 表示不沿教师目标反传。一个可选训练目标是
 
 $$
-\mathcal L=\mathcal L_{\mathrm{final}}
-+\sum_r\alpha_r\|P_rh_r-\mathrm{stopgrad}(h_r^{\mathrm{teacher}})\|^2
-+\sum_r\beta_r\mathcal L_{\mathrm{aux},r}.
+\begin{aligned}
+\mathcal L
+  ={}&\mathcal L_{\mathrm{final}}
+  +\sum_{r\in R}\alpha_r
+    \bigl\|P_rh_r-\operatorname{stopgrad}
+    (h_r^{\mathrm{teacher}})\bigr\|_2^2 \\
+  &+\sum_{r\in R}\beta_r\mathcal L_{\mathrm{aux},r}.
+\end{aligned}
 $$
 
-这里 $r$ 索引已声明的辅助观测位置，$P_r$ 把中间表示 $h_r$ 投影到教师表示的空间；$\alpha_r,\beta_r\ge0$ 是损失权重，$\mathrm{stopgrad}$ 表示不沿教师目标反传。中间投影与辅助头可以只在训练时存在；主 loss 仍端到端反传。辅助监督不自动为未选 hard 索引提供反事实梯度。具体权重、衰减及 shadow 路径是否进入某个训练目标，须由实验契约声明。
+中间投影与辅助头可以只在训练时存在；主 loss 仍端到端反传。辅助监督不自动为未选 hard 索引提供反事实梯度。具体权重、衰减及 shadow 路径是否进入某个训练目标，须由实验契约声明。
 
-## 6. 最小诊断账本
+## 7. 最小诊断账本
 
 1. **语义**：同一输入/边界下 chunk、decode、不同 batch 的输出、状态、选择及消息是否一致。
 2. **机制使用**：Receive/Update/Read/Emit 覆盖；写到读的延迟；freeze、clear、shuffle、no-read 对照。
@@ -99,7 +118,7 @@ $$
 
 参数量、训练 token、FLOPs、墙钟和显存通常无法同时严格匹配，应给互补比较。机制 knockout 也可能改变分布；应说明对照是否重新训练、预算是否匹配，而不是把一次清零后的退化直接当作收益证明。
 
-## 7. 外部研究如何使用
+## 8. 外部研究如何使用
 
 [StableMoE](https://arxiv.org/abs/2204.08396) 研究 checkpoint 间路由变化；[ST-MoE](https://arxiv.org/abs/2202.08906)、[OLMoE](https://arxiv.org/abs/2409.02060) 展示专门化及训练稳定性的具体条件；[DeepSeekMoE](https://arxiv.org/abs/2401.06066) 与 [loss-free balancing](https://arxiv.org/abs/2408.15664) 提供粒度和负载机制；[EvoMoE](https://arxiv.org/abs/2112.14397) 提供 dense-to-sparse 思路。
 
