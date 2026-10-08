@@ -2,7 +2,7 @@
 type: semantic-anchor
 status: active
 semantic-version: tide-core-3
-as-of: 2026-09-14
+as-of: 2026-10-08
 tags:
   - tide
   - semantic-anchor
@@ -24,6 +24,8 @@ tags:
 | [[settlegraph-learning-note]] | 单次结算受限实例、前向序列组合、向 TimedDAG 的时间与边界编码 |
 
 在明确编码与投影下，SettleGraph 核心属于 TimedDAG 的受限类；TimedDAG 是 PositiveDelayGraph 的无环、有限输入特例。入门顺序不要求从最一般对象开始。
+
+[接收驱动的带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 是共同接口下的数学特例，分别说明三层限制、连续性条件与批量契约；不新增语义层级或改变本版本定义。它与执行基座的对应固定引用下游源码，具体训练结果仍由实验维护。
 
 ## 共同语义边界
 

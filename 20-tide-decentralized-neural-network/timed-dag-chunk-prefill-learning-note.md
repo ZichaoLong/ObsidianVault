@@ -1,7 +1,7 @@
 ---
 type: mathematical-learning-note
 status: active-learning
-as-of: 2026-09-17
+as-of: 2026-10-08
 cssclasses:
   - textbook-math
 tags:
@@ -749,6 +749,8 @@ $$
 式 (14) 可以把这条链及其中尚未由边界给出的节点局部 $P/S$ 收进一个因果状态块；跨节点共同选择则使用式 (16) 的区域块。规范顺序由联合函数内部保持，块外只提供进入边界并接收完整轨迹与右边界。
 
 对于 Attention，可令状态保存键值前缀。整段输入的键值追加形成一个因果状态块，完整输出使用各逻辑时间对应的前缀；一个状态—输出联合契约可以用因果遮罩共同给出所有坐标。
+
+[带权 KV 与稀疏 Full 特例](weighted-kv-sparse-activation-example.md#62-本例提供什么批量契约) 进一步区分接收驱动的 KV 追加、供 selector 使用的廉价摘要及仅激活时执行的 Attention。其 BO 与默认 Next 使写入不依赖本地选择；完整输入已知时可先构造前缀，再收集所选查询执行 Full 时间批。精确契约与高效并行实现仍需分别给出。
 
 对于仿射 SSM：
 

@@ -13,6 +13,7 @@ semantic-baseline: tide-core-3
 
 ## 数学补充
 
+- [带权 KV 与稀疏 Full 数学特例](../weighted-kv-sparse-activation-example.md)：三层共同的接收记忆与门控输出、零极限、时间批契约和执行基座映射；完整公式单独维护。
 - [函数保持生长](mathematics/function-preserving-growth.md)：投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包。
 - [来源、聚合与读出](mathematics/provenance-and-readout.md)：安全商、保守依赖集合与未来可观察行为。
 - [自适应路由下界](mathematics/adaptive-routing-prefill-lower-bound.md)：自足的 deterministic exact 黑盒查询模型与证明；不能直接当作任意具体 selector 的下界。
@@ -20,7 +21,7 @@ semantic-baseline: tide-core-3
 ## 机制与学习风险
 
 - [Selector 与局部记忆](architecture/selector-and-memory.md)：评分、历史、衰减、恢复和清理的机制动机与设计风险。
-- [学习风险与诊断](learning-systems/learning-risks-and-diagnostics.md)：路径漂移、信用距离、粒度与状态负担、饥饿、辅助监督和机制对照。内容是实验前假设与诊断建议。
+- [学习风险与诊断](learning-systems/learning-risks-and-diagnostics.md)：路径漂移、信用距离、粒度与状态负担、饥饿、辅助监督、带权 KV 的退火实验和机制对照。内容是实验前假设与诊断建议。
 
 ## 外部背景
 
