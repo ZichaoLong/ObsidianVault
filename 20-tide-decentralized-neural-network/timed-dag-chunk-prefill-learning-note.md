@@ -750,7 +750,7 @@ $$
 
 对于 Attention，可令状态保存键值前缀。整段输入的键值追加形成一个因果状态块，完整输出使用各逻辑时间对应的前缀；一个状态—输出联合契约可以用因果遮罩共同给出所有坐标。
 
-[带权 KV 与稀疏 Full 特例](weighted-kv-sparse-activation-example.md#62-本例提供什么批量契约) 进一步区分接收驱动的 KV 追加、供 selector 使用的廉价摘要及仅激活时执行的 Attention。其 BO 与默认 Next 使写入不依赖本地选择；完整输入已知时可先构造前缀，再收集所选查询执行 Full 时间批。精确契约与高效并行实现仍需分别给出。
+[带权 KV 与稀疏 Full 特例](weighted-kv-sparse-activation-example.md#62-本例提供什么批量契约) 进一步区分接收驱动的 KV 追加、供 selector 使用的廉价摘要及 Full 中的 Attention。其 BO 与默认 Next 使写入不依赖本地选择；完整输入已知时可先构造前缀，再按节点收集正式 Full 坐标，对零门控直接返回、对正门控查询批量计算。精确契约与高效并行实现仍需分别给出。
 
 对于仿射 SSM：
 

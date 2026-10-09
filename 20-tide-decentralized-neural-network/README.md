@@ -44,7 +44,7 @@ SettleGraph 是可选入门层级。分块预填充教材与正时延 Graph 教�
 
 ## 数学特例
 
-[接收驱动的带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 给出一个三层共同的局部函数族：收到消息就更新并保留 KV，selector 根据候选记忆返回控制，只有激活节点执行昂贵 Full。文档包括手算、零权重与退火连续性的适用条件、三类图的时间批能力，以及公共执行基座的固定源码映射。
+[接收驱动的带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 给出一个三层共同的局部函数族：按接收强度写入并保留 KV，selector 根据候选记忆分配带上界的发送门控，Full 的精确零分支可省去昂贵 Attention／前馈计算。文档先定义内容、强度、预算和正式激活，再给出局部手算、零权重删除与硬化连续性的条件、三类图的时间批能力，以及公共执行基座的固定源码映射。
 
 这个特例沿用 `tide-core-3`，不改变核心定义。可在读完 SettleGraph 第 5 节后阅读局部公式，再结合分块教材阅读时间批部分；训练日程与待验证假设另见 [学习风险与诊断](memos/learning-systems/learning-risks-and-diagnostics.md#61-带权-kv-特例的退火实验)。
 
