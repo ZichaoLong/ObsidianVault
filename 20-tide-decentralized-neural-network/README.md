@@ -1,7 +1,7 @@
 ---
 type: index
 status: active
-as-of: 2026-10-08
+as-of: 2026-10-09
 tags:
   - tide
   - mathematics
@@ -26,7 +26,7 @@ tags:
 
 “Graph”在当前框架中指 PositiveDelayGraph，不表示任意带副作用程序。零时延边不在设计范围内。
 
-[[timed-dag-chunk-prefill-learning-note|TimedDAG 分块预填充教材]] 是执行专题。它从 $P/S/U/F$ 作用 DAG 出发，分别定义因果状态块、完整输出时间批、联合节点块与最大前沿递归，并把外层块数、块内并行性和硬件效果分开。
+[[timed-dag-chunk-prefill-learning-note|TimedDAG 分块预填充教材]] 是执行专题。它从 $P/S/U/F$ 作用 DAG 出发，分别定义因果状态块、完整输出时间批、联合节点块与最大前沿递归，并把外层块数、块内并行性和硬件效果分开。[静态分量窗口算法](timed-dag-chunk-prefill-learning-note.md#65-保留完整区域的静态分量) 适用于一般区域划分，在严格分层时自动采用每区域整窗口、每节点至多一个 Full 时间批的形状；[PDG 的默认分量递归](positive-delay-graph-finite-cut-learning-note.md#95-默认静态分量的窗口调度) 给出正时延有环图上的对应。
 
 ## 阅读路线
 
