@@ -42,9 +42,9 @@ SettleGraph 是可选入门层级。分块预填充教材与正时延 Graph 教�
 
 当前共同接口区分候选新状态、本次计算快照与下一持久状态；也区分区域激活集合、各节点局部控制量与区域选择历史。状态可按统一逻辑时间衰减，或依激活结果清理。下一状态不读取完整计算结果；没有输入的时刻不自主激活或发送。时间衰减可由“保存值＋时间戳”在下一次读取时解码。
 
-## 数学特例
+## 数学特例与语义锚点
 
-[接收驱动的带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 给出一个三层共同的局部函数族：按接收强度写入并保留 KV，selector 根据候选记忆分配带上界的发送门控，Full 的精确零分支可省去昂贵 Attention／前馈计算。文档先定义内容、强度、预算和正式激活，再给出局部手算、零权重删除与硬化连续性的条件、三类图的时间批能力，以及公共执行基座的固定源码映射。
+[接收驱动的带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 是该特例的上游语义锚点，定义一个三层共同的局部函数族：按接收强度写入并保留 KV，selector 根据候选记忆分配带上界的发送门控，Full 的精确零分支可省去昂贵 Attention／前馈计算。文档先定义内容、强度、预算和正式激活，再给出局部手算、零权重删除与硬化连续性的条件、三类图的时间批能力及下游继承约定。
 
 这个特例沿用 `tide-core-3`，不改变核心定义。可在读完 SettleGraph 第 5 节后阅读局部公式，再结合分块教材阅读时间批部分；训练日程与待验证假设另见 [学习风险与诊断](memos/learning-systems/learning-risks-and-diagnostics.md#61-带权-kv-特例的退火实验)。
 
@@ -54,7 +54,7 @@ Graph 理论研究与 checkpoint 生长已在 SettleGraph 核心前向语义处�
 
 fractal-latcarf 是 SettleGraph 的实验平台。它维护实际模块公式与选择空间、模型接入位置、初始化、训练设置、实现、测试和实测结果；上游维护抽象契约、教材与一般证明。当前对应与待下游单独对齐的接口见 [[semantics-anchor#下游如何引用|下游如何引用]]。
 
-[graph-execution-foundation](https://github.com/ZichaoLong/tide/tree/graph-execution-foundation) 是三类图的公共执行与等价性验证基座，提供局部模块接口、continuation、通用调度与执行器对照。它与具体训练实验分别维护；[特例中的基座映射](weighted-kv-sparse-activation-example.md#7-公共执行与等价性验证基座的映射) 固定引用源码与证据范围，并列出本例尚需实现的局部模块。
+[graph-execution-foundation](https://github.com/ZichaoLong/tide/tree/graph-execution-foundation) 是三类图的公共执行与等价性验证基座，提供局部模块接口、continuation、通用调度与执行器对照。它与具体训练实验分别维护；采用某个上游特例时，由下游记录所引用的语义版本、具体配置及验证结果。
 
 一般等价性定理可以留在上游，具体实现是否满足其前提由下游验证。旧 LH 的实现快照不代表 fractal-latcarf 当前状态，本仓库也不持续镜像下游“最新通过状态”。
 

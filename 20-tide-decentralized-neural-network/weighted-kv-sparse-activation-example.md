@@ -6,15 +6,16 @@ as-of: 2026-10-09
 tags:
   - tide
   - mathematics
+  - semantic-anchor
   - memory
   - sparse-activation
 ---
 
 # 接收驱动的带权 KV 与稀疏 Full：三类图的共同特例
 
-本文给出一组具体局部函数：节点按收到的信息及其强度更新私有 KV，廉价 Read 根据候选记忆给出评分，selector 分配发送门控，Full 用已确定的快照产生内容。门控为零时，Full 可以走一个不调用昂贵 Attention／前馈网络的分支；硬化后，还可以缩小正式激活集合。
+本文是接收驱动的带权 KV 与稀疏 Full 特例的**上游语义锚点**，固定一组共同局部函数：节点按收到的信息及其强度更新私有 KV，廉价 Read 根据候选记忆给出评分，selector 分配发送门控，Full 用已确定的快照产生内容。门控为零时，Full 可以走一个不调用昂贵 Attention／前馈网络的分支；硬化后，还可以缩小正式激活集合。
 
-函数类型与事件次序继承 [tide-core-3](semantics-anchor.md)。本例适用于 [PositiveDelayGraph](positive-delay-graph-finite-cut-learning-note.md)，限制消息图后也适用于 TimedDAG，再加上区域次序和时间编码后得到 SettleGraph 实例。它保留 SettleGraph 的选满要求，不改变核心语义。本文依次定义函数、手算局部流程、证明指定数值投影的连续性，再讨论稀疏执行与时间批。
+函数类型与事件次序继承 [tide-core-3](semantics-anchor.md)。本例适用于 [PositiveDelayGraph](positive-delay-graph-finite-cut-learning-note.md)，限制消息图后也适用于 TimedDAG，再加上区域次序和时间编码后得到 SettleGraph 实例。它保留 SettleGraph 的选满要求，不改变核心语义。本文依次定义函数、手算局部流程、证明指定数值投影的连续性，再讨论稀疏执行与时间批。采用本特例的模型与执行器应从本文继承定义，并按第 7 节声明具体配置及变式。
 
 这里证明的是固定函数族的前向性质。训练能否获得有效分工，以及哪种退火日程更好，仍由实验检验；方案与诊断另见 [学习风险与诊断](memos/learning-systems/learning-risks-and-diagnostics.md#61-带权-kv-特例的退火实验)。
 
@@ -378,32 +379,27 @@ SettleGraph 的完整输入位置窗口在规范编码下满足严格区域分�
 
 未激活节点仍可能更新 KV。减少上游 Full 后，只有下游整个输入纤维消失时才省掉一次节点准备事件；若留下零消息，候选事件仍可能发生，但式 (4) 不写 KV；若还有其他正消息，则仍写一次。消息减少、状态更新减少、昂贵计算减少和缓存存储减少不能互相替代。
 
-## 7. 公共执行与等价性验证基座的映射
+## 7. 语义锚点与继承约定
 
-本节是 **2026-10-09 对固定源码的映射记录**。参考仓库为 `ZichaoLong/tide` 的 `graph-execution-foundation` 分支，阅读提交为 [`e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0`](https://github.com/ZichaoLong/tide/tree/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0)。其上游锁定为 `tide-core-3`、ObsidianVault `bd7483b927e047bf17fd4ba52278d20bc67f999e`。本例与新增窗口算法不会因此成为该提交已实现的能力。
+### 7.1 本文固定什么
 
-| 本文对象 | 可复用基座位置 | 尚需实现或核验 |
-| --- | --- | --- |
-| 三类图、输入与续接 | `GraphConfig → GraphRuntime → Session`、Settle 编码与 continuation | 本例的载荷、KV 槽、配置与规格身份 |
-| 接收、状态与 Read | Aggregate/Content、StateProgram、ReadProgram | 归一化内容、带权 KV、廉价摘要与零槽投影 |
-| BO 与默认 Next | `observe_all`、`adopt-v1`、comparison-identity 能力 | 收信保留，不引入依赖本地选择的写入或清空 |
-| selector 与 Full | RegionProgram、FullProgram、完整候选控制量 | 带上界预算分配、硬端点、零分支及正查询批量 Attention |
-| 窗口执行 | 区域块与执行器对照 | 默认静态分量窗口入口、局部精确序列与批量能力 |
+本文固定第 1--2 节的消息与状态空间、局部函数族、软选择和硬选择规格，以及第 4--6 节的数值比较、连续性条件与批量契约。三类图的事件存在性、先后依赖和 continuation 仍继承核心教材。具体模型采用本例时，需要进一步选定函数族中的参数与配置。
 
-固定源码的三种策略不能统称为同一种通用贪心：
+引用本例应记录本文所在的上游提交、文档路径、核心版本 `tide-core-3`，以及以下选择：
 
-| 执行器 | 方法 | 分块教材 §6.7 的 Settle 例子 |
-| --- | --- | --- |
-| [`greedy`](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/python/tidegraph/greedy_plan.py) | 从实际待处理纤维与正时延下界证明安全前缀，立即消费 | $X$ 的两个实际坐标分成两批 |
-| [`frontier`](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/python/tidegraph/frontier.py) | 沿节点拓扑预展开潜在事件时间，利用空坐标的不存在性证据 | 两个 $X$ 坐标同批；空坐标不执行 Full |
-| [`settle`](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/python/tidegraph/settle.py) | 按区域次序处理整个输入位置窗口 | 两个 $X$ 坐标同批 |
+| 项目 | 需要固定的内容 |
+| --- | --- |
+| 图与边界 | 采用的图层级、拓扑、区域、端口、正时延和输入日程；SettleGraph 使用的时间与边界编码 |
+| 局部函数 | 内容及 KV 宽度，$K_v,V_v,Q_v,\operatorname{Score}_v,H_v$ 与位置函数的具体取值 |
+| 选择规格 | 各区域的目标预算 $k_j$、正式容量 $K_j$、软阶段的 $\tau$ 与激活集合规则，或 §2.5 的硬端点规则；固定的平票次序 |
+| 状态与读出 | 空初态、单点区域历史、$+$ Read、BO、默认 Next，以及采用的终端数值读出 |
 
-[greedy 契约](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/docs/greedy-scheduler.md)的最大性相对于其保守区域证据；[区域块](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/python/tidegraph/blocks.py)先处理状态与选择，再按节点收集 Full。新增静态分量算法在严格分层时与 `settle` 的整窗口形状对应，不能直接归为该固定提交的 `greedy` 已有行为。
+这些配置在一次前向内固定。训练日程、替代反向规则和有限精度近似应另行声明。更换聚合、记忆权重、门控分配或状态规则时，应明确标为本例的变式，并重新检查受影响的结论；若变式还改变核心函数类型、事件规则或依赖边界，须另行登记核心语义扩展。
 
-状态序列快速路径还要求精确序列能力、`observe_all`、无选后清空及 comparison-identity Next。本例满足状态采用条件，新函数仍须实现相应能力。现有 [事件 Attention](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/python/tidegraph/attention.py)在候选状态准备中已计算 Attention，不能当作本例“廉价 Read、昂贵 Attention 位于 Full”的实现。
+### 7.2 等价性比较的边界
 
-[已有 greedy 测试](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/tests/test_greedy.py)、[CPU 证据](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/docs/evidence/integrated-cpu-20261004.md)与 [NPU 证据](https://github.com/ZichaoLong/tide/blob/e1d8c5f8c60a86925607110c9d0f41e0aa9a1af0/docs/evidence/integrated-npu-consumers-20261004.md)限定各自源码、模块与精度，并保留近似平票和性能覆盖边界。它们提供验证设施，不是新特例的训练或性能结果。
+同一固定规格的不同求值方式，应精化到相同的规范记录：候选与激活集合、控制量、四种状态、选择历史、原消息身份、输出和完整切面。改变物理批次或缓存布局，不改变这些数学对象。梯度比较还须固定相同的反向契约，不能仅由前向等价推出。
 
-落地时须分别比较：同一固定规格在不同执行器上的完整候选、路由、状态、消息身份、输出、在途消息及梯度；不同退火规格之间的指定数值投影、读出误差与实际成本。后者不要求原始事件记录相同。
+不同软硬规格之间，按式 (1)、(14) 的数值投影及指定读出比较；命题 2--3 分别给出相应连续性条件。这种比较允许原始事件数和缓存长度不同，不把近零门控认作已省计算，也不把数值极限当作训练收敛保证。
 
-最小对照包含单位残差链、重复父消息、弱写入、最后一条记忆、候选消失、高分零强度候选、小数预算、平票、零分支和未激活保留；执行对照再覆盖严格分层整批、区域回返、正时延反馈、切分继续与恢复。具体 kernel、训练配置和实测结果由实现与实验仓库维护。
+语义核验应覆盖单位残差链、重复父消息、弱写入、最后一条记忆、候选消失、高分零强度候选、小数预算、平票、零分支及未激活保留。分块求值还应覆盖严格分层整批、区域回返、正时延反馈、切分继续与恢复。具体实现、验证结果与训练测量由下游记录，并明确其采用的上游定义与条件。
