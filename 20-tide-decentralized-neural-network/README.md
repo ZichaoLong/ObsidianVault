@@ -22,7 +22,7 @@ tags:
 |---|---|---|
 | Graph | 有限固定消息图，可有环；边时延为正整数；每个有限逻辑时间切面具有确定记录 | [正时延 Graph 的有限切面语义](positive-delay-graph-finite-cut-learning-note.md) |
 | TimedDAG | 固定消息图进一步要求无环；保留多端口、不等长路径与一般区域划分 | [带区域选择的 TimedDAG](timed-dag-region-selector-learning-note.md) |
-| SettleGraph | 区域依赖严格有序，每个输入位置单次结算，具有单输入与单输出；通过明确时间与边界编码嵌入 TimedDAG | [单次结算图 SettleGraph](settlegraph-learning-note.md) |
+| SettleGraph | 区域依赖严格有序，每个输入位置单次结算；具有单输入边界与单输出边界，每位置至多一个有值输出；通过明确时间与边界编码嵌入 TimedDAG | [单次结算图 SettleGraph](settlegraph-learning-note.md) |
 
 “Graph”在当前框架中指 PositiveDelayGraph，不表示任意带副作用程序。零时延边不在设计范围内。
 
@@ -44,9 +44,9 @@ SettleGraph 是可选入门层级。分块预填充教材与正时延 Graph 教�
 
 ## 数学特例与语义锚点
 
-[接收驱动的带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 是该特例的上游语义锚点，定义一个三层共同的局部函数族：按接收强度写入并保留 KV，selector 根据候选记忆分配带上界的发送门控，Full 的精确零分支可省去昂贵 Attention／前馈计算。文档先定义内容、强度、预算和正式激活，再给出局部手算、零权重删除与硬化连续性的条件、三类图的时间批能力及下游继承约定。
+[接收驱动的带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 是该特例的上游语义锚点，定义接收驱动的 KV、候选评分与发送门控，给出局部手算、零权重删除、硬化连续性、计算次数及批量契约。通用事件语义、执行算法与引用约定沿用正典。
 
-这个特例沿用 `tide-core-3`，不改变核心定义。可在读完 SettleGraph 第 5 节后阅读局部公式，再结合分块教材阅读时间批部分；训练日程与待验证假设另见 [学习风险与诊断](memos/learning-systems/learning-risks-and-diagnostics.md#61-带权-kv-特例的退火实验)。
+这个特例沿用 `tide-core-4`，在三个层级都可按正门控支持集激活，不要求选满容量。可在读完 SettleGraph 第 5 节后阅读局部公式，再结合分块教材阅读时间批部分；训练日程与待验证假设另见 [学习风险与诊断](memos/learning-systems/learning-risks-and-diagnostics.md#61-带权-kv-特例的退火实验)。
 
 ## 上游与实验平台
 

@@ -4,7 +4,7 @@ status: active-index
 tags:
   - tide
   - index
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-4
 ---
 
 # Tide 研究备忘
@@ -13,7 +13,7 @@ semantic-baseline: tide-core-3
 
 ## 数学补充
 
-- [带权 KV 与稀疏 Full 数学特例](../weighted-kv-sparse-activation-example.md)：三层共同的归一化内容、带权记忆与预算门控，含完整局部流程、零极限与硬化条件、时间批契约及继承约定；作为该特例的上游语义锚点单独维护。
+- [带权 KV 与稀疏 Full 数学特例](../weighted-kv-sparse-activation-example.md)：三层共同的归一化内容、带权记忆与预算门控，含局部流程、零极限、硬化条件、计算次数及批量契约；作为该特例的上游语义锚点单独维护。
 - [函数保持生长](mathematics/function-preserving-growth.md)：投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包。
 - [来源、聚合与读出](mathematics/provenance-and-readout.md)：安全商、保守依赖集合与未来可观察行为。
 - [自适应路由下界](mathematics/adaptive-routing-prefill-lower-bound.md)：自足的 deterministic exact 黑盒查询模型与证明；不能直接当作任意具体 selector 的下界。

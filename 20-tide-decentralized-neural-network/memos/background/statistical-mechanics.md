@@ -5,7 +5,7 @@ tags:
   - tide
   - physics
   - statistical-mechanics
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-4
 ---
 
 # 统计力学与信息动力学：保留问题，不预设物理结论

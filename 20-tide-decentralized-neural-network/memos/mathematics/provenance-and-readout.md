@@ -5,7 +5,7 @@ tags:
   - tide
   - mathematics
   - provenance
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-4
 ---
 
 # 来源、聚合与读出：压缩以后还必须知道什么

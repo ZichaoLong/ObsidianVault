@@ -5,7 +5,7 @@ tags:
   - tide
   - mathematics
   - architecture
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-4
 ---
 
 # 函数保持生长：哪些条件足以保持原模型
@@ -25,6 +25,8 @@ T:X\times S\to Y\times S,
 $$
 
 扩展模型为 $\widehat T:X\times\widehat S\to Y\times\widehat S$。这里参数已固定；$S,\widehat S$ 是一次前向运行的状态集合，不包括优化器。
+
+应用于允许空选择的 SettleGraph 时，一步输出槽属于 $P_\bot$，其中 $\bot$ 表示本位置没有有值输出。可取共同输出空间 $Y=P_\bot$，也可先明确一个向量读出，再比较读出后的函数。若原模型每位置返回 $P$ 中的值，要求原始输出保持就必须保证新图实际产生该值；仅验证已有 Full 与聚合调用的恒等等式还不够。相应输出存在条件见 [SettleGraph §12](../../settlegraph-learning-note.md#12-接入已有模型时的函数保持)；声明空输出回退的方案则须连同回退规则一起验证。
 
 选定扩展模型的允许状态集合 $Z\subseteq\widehat S$，投影 $\pi:Z\to S$，以及初态装载函数 $\iota:S\to Z$，满足 $\pi\circ\iota=\mathrm{id}_S$。要求对任意 $x\in X,z\in Z$，若
 

@@ -5,7 +5,7 @@ tags:
   - tide
   - compiler
   - dataflow
-semantic-baseline: tide-core-3
+semantic-baseline: tide-core-4
 ---
 
 # 编译器与 dataflow：对 Tide 有用的研究谱系
