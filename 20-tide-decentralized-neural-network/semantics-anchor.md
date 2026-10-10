@@ -21,7 +21,7 @@ tags:
 
 SettleGraph 经编码和记录投影成为 TimedDAG 的受限实例；TimedDAG 是 PositiveDelayGraph 的无环、有限输入实例。各篇按自身阅读路线重述所需定义，嵌入处明确对象之间的对应。
 
-[带权 KV 与稀疏 Full](weighted-kv-sparse-activation-example.md) 定义一组共同接口下的局部函数，证明其数值性质并给出联合求值见证。其他局部函数族可采用同样的实例化方式。
+[[weighted-kv-sparse-activation-example|带权 KV 与稀疏 Full]] 在共同接口下定义具体神经模块与分层架构，证明其数值性质并给出联合求值见证。它的有界记忆、可弃权选择与训练目标是该函数族的局部设计，不增加共同语义约束。
 
 ## 共同语义边界
 

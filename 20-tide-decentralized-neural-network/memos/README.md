@@ -8,11 +8,11 @@ tags:
 
 # Tide 研究备忘
 
-这里保存核心教材之外的数学补充、机制与学习风险、外部背景和 LH 历史。数学入口见 [Tide 主入口](../README.md)，版本差异见 [独立说明](../semantic-versions.md)；备忘中的候选不会自动修改 Graph、TimedDAG 或 SettleGraph 的定义。具体模块配置、实现等价性、训练和性能结果由实验仓库维护。
+这里保存核心教材之外的数学补充、机制与学习风险、外部背景和 LH 历史。数学入口见 [Tide 主入口](../README.md)，版本差异见 [独立说明](../semantic-versions.md)；备忘中的候选不会自动修改 Graph、TimedDAG 或 SettleGraph 的定义。选定的模块、架构与训练机制可在上游局部实例中给出完整函数定义；具体实验配置、实现等价性、训练和性能结果由下游维护。
 
 ## 数学补充
 
-- [带权 KV 与稀疏 Full 数学特例](../weighted-kv-sparse-activation-example.md)：三层共同的归一化内容、带权记忆与预算门控，含局部流程、零极限、硬化条件、计算次数及批量契约；作为该特例的上游语义锚点单独维护。
+- [[weighted-kv-sparse-activation-example|带权 KV 与稀疏 Full 模块及架构]]：三层共同的来源聚合、有界记忆、多尺度评分与可弃权门控，含训练目标、零极限、硬化条件、成本及批量契约；作为该函数族的上游语义锚点单独维护。
 - [函数保持生长](mathematics/function-preserving-growth.md)：投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包。
 - [来源、聚合与读出](mathematics/provenance-and-readout.md)：安全商、保守依赖集合与未来可观察行为。
 - [自适应路由下界](mathematics/adaptive-routing-prefill-lower-bound.md)：自足的 deterministic exact 黑盒查询模型与证明；不能直接当作任意具体 selector 的下界。
