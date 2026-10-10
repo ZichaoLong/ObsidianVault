@@ -5,7 +5,6 @@ tags:
   - tide
   - neuroscience
   - architecture
-semantic-baseline: tide-core-4
 ---
 
 # 脑科学给数字模型的启发，以及它不能证明的事

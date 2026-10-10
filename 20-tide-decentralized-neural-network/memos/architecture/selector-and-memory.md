@@ -5,7 +5,6 @@ tags:
   - tide
   - architecture
   - memory
-semantic-baseline: tide-core-4
 ---
 
 # Selector 与局部记忆：机制动机与设计风险

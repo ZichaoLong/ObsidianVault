@@ -4,12 +4,11 @@ status: active-index
 tags:
   - tide
   - index
-semantic-baseline: tide-core-4
 ---
 
 # Tide 研究备忘
 
-这里保存核心教材之外的数学补充、机制与学习风险、外部背景和 LH 历史。数学入口见 [Tide 主入口](../README.md)；备忘中的候选不会自动修改 Graph、TimedDAG 或 SettleGraph 的定义。具体模块配置、实现等价性、训练和性能结果由实验仓库维护。
+这里保存核心教材之外的数学补充、机制与学习风险、外部背景和 LH 历史。数学入口见 [Tide 主入口](../README.md)，版本差异见 [独立说明](../semantic-versions.md)；备忘中的候选不会自动修改 Graph、TimedDAG 或 SettleGraph 的定义。具体模块配置、实现等价性、训练和性能结果由实验仓库维护。
 
 ## 数学补充
 
@@ -32,9 +31,9 @@ semantic-baseline: tide-core-4
 
 ## LH 历史与资源
 
-- [LH 历史位置](history/lh-history.md)：带日期的早期实现与语义设计来源，不是当前能力声明。
+- [LH 历史位置](history/lh-history.md)：带日期的早期实现与语义设计来源。
 - [按问题选读的资源](../resources/learning-resources.md)：书目与小练习，无强制课程门槛。
 
 ## 使用与维护
 
-对象定义、证明和正式能力声明以正典教材为准；备忘只提供局部推导、机制假设、背景调查和历史线索。阅读时区分教材实例、有前提的局部推导、核心之外的扩展问题、经验假设与外部类比。旧内容的去向和 Git 追溯方法见 [迁移索引](history/migration-map.md)；它是维护资料，不属于主要阅读路线。
+对象定义、证明和正式能力声明以正典教材为准；备忘只提供局部推导、机制假设、背景调查和历史线索。阅读时区分教材实例、有前提的局部推导、核心之外的扩展问题、经验假设与外部类比。历史来源与追溯入口见 [版本与采用说明](../semantic-versions.md)。

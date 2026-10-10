@@ -5,7 +5,6 @@ tags:
   - tide
   - training
   - diagnostics
-semantic-baseline: tide-core-4
 ---
 
 # 学习风险与诊断：稀疏路径究竟增加了什么困难
