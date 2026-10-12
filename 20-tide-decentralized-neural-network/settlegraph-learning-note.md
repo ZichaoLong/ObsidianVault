@@ -377,7 +377,7 @@ $$
 q^{\mathrm{cmp}}_{v,t}=\widetilde q_{v,t}=q_v^{[t+1]}.
 $$
 
-未激活候选同样保留接收更新。[[weighted-kv-sparse-activation-example|带权 KV 与稀疏 Full]] 给出此实例的完整函数、训练目标及联合求值见证；它在各层级都使用式 (15)，并局部选取 $X_v=P=\mathbb R^{1+d}$。
+未激活候选同样保留接收更新。[[weighted-kv-sparse-activation-example|带权 KV 局部教材]] 给出此函数族的完整定义、退火性质及联合求值见证；它在各层级都使用式 (15)，并局部选取 $X_v=P=\mathbb R^{1+d}$。[[weighted-kv-layered-example|分层架构实例]] 另行给出拓扑、时间与边界绑定。
 
 ## 6. 一个输入的完整结算
 

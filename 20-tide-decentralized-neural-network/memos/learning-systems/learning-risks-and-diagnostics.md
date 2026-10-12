@@ -108,7 +108,7 @@ $$
 
 ### 6.1 带权 KV 特例的退火实验
 
-[[weighted-kv-sparse-activation-example|接收驱动的带权 KV 与稀疏 Full]] 已定义具体架构、完整前向、稠密控制、任务与成本目标。本节补充观测与对照，不重复训练公式。沿用平滑参数 $\tau_{\mathrm{soft}}$、质量预算上限 $k_j$、正式容量 $K_j$、发送门控 $c_v$ 与弃权阈值 $\eta_j$；它们与实际 Full 数分别计量。
+[[weighted-kv-sparse-activation-example|带权 KV 局部教材]] 定义完整局部前向、稠密控制与退火性质；[[weighted-kv-layered-example|分层架构实例]] 定义拓扑、时间与边界绑定，以及任务和成本目标。本节补充观测与对照，训练公式沿用架构实例。沿用平滑参数 $\tau_{\mathrm{soft}}$、质量预算上限 $k_j$、正式容量 $K_j$、发送门控 $c_v$ 与弃权阈值 $\eta_j$；它们与实际 Full 数分别计量。
 
 | 对照或观测 | 要区分的问题 | 需要保留的证据 |
 | --- | --- | --- |

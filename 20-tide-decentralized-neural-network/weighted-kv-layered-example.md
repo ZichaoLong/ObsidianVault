@@ -1,0 +1,225 @@
+---
+type: mathematical-architecture-example
+status: active
+cssclasses:
+  - textbook-math
+tags:
+  - tide
+  - mathematics
+  - semantic-anchor
+  - architecture
+  - weighted-kv
+---
+
+# 带权 KV 的分层架构实例
+
+本文将 [[weighted-kv-sparse-activation-example|带权 KV 与稀疏 Full 的局部计算语义]] 与相邻层全连接、按输入位置对齐的结构组合。局部教材给出计算函数、连续性条件和联合求值见证；本文固定图、时间、来源与输出绑定，并给出语言模型接入、训练目标及架构成本。
+
+阅读需掌握 [[settlegraph-learning-note|SettleGraph]] 的单次结算与上述局部函数。各尺寸和数值参数取自声明的配置；给定配置、输入和初态以后，全部前向值唯一确定。
+
+## 1. 分层拓扑与时间
+
+### 1.1 节点、区域与消息边
+
+取正整数深度 $L$、区域宽度 $n$，定义
+
+$$
+\begin{aligned}
+J&=\{1,\ldots,L\},\\
+V&=\{v_{\ell,s}:1\le\ell\le L,\ 1\le s\le n\},\\
+\rho(v_{\ell,s})&=\ell,\qquad
+\mathcal R_\ell=\{v_{\ell,1},\ldots,v_{\ell,n}\}.
+\end{aligned}
+\tag{1}
+$$
+
+对 $1\le\ell<L$ 和 $1\le s,r\le n$，设边 $a_{\ell,s,r}$ 从 $v_{\ell,s}$ 指向 $v_{\ell+1,r}$，时延为 $1$。这些边组成全部消息边。固定按 $(\ell,s)$ 字典序排列的节点全序，用于选择平票。$L=1$ 时消息边集为空。
+
+每个第一层节点具有输入端口 $i_s$，每个最后一层节点具有输出端口 $o_s$：
+
+$$
+\mathsf I=\{i_1,\ldots,i_n\},\quad
+\mathsf O=\{o_1,\ldots,o_n\},\qquad
+\gamma(i_s)=v_{1,s},\quad \varepsilon(o_s)=v_{L,s}.
+$$
+
+### 1.2 输入位置与处理时间
+
+固定输入长度 $N\ge1$，位置范围为 $[N]=\{0,\ldots,N-1\}$。第 $\ell$ 个区域的秩为 $\ell$，令 $D=L+2$，并定义
+
+$$
+\theta_{v_{\ell,s},t}=Dt+\ell,\qquad
+\iota_{i_s}(t)=Dt+1,\qquad t\in[N].
+\tag{2}
+$$
+
+相邻层消息在 $Dt+\ell+1$ 到达，恰为下一层的处理时间。严格区域秩、边时延与端口日程满足 SettleGraph 的合法时间编码，每节点每位置至多处理一次。各位置的图内作用均落在 $[Dt,D(t+1))$，位置边界没有跨界消息。
+
+### 1.3 时间窗口的尺度
+
+局部教材的记忆窗口 $T$ 按逻辑时间计量。同节点在位置 $s$ 写入的条目，到位置 $t$ 时可读，当且仅当
+
+$$
+0\le D(t-s)<T.
+$$
+
+因此每次读取至多覆盖 $\lceil T/D\rceil$ 个输入位置。要覆盖含当前位置在内的最近 $H$ 个位置，可取 $T=DH$；没有正接收的位置不写入。空档保留的过期条目仍按局部教材的遮罩读取。
+
+改变深度会改变这里的 $D$。窗口、摘要衰减率与 Attention 位置斜率都使用同一逻辑时间，比较不同深度时须声明它们与输入位置尺度的对应。
+
+## 2. 局部函数与边界绑定
+
+### 2.1 函数、初态与来源类别
+
+所有节点和区域采用 [局部教材 §2.9](weighted-kv-sparse-activation-example.md#29-局部绑定与组合条件) 的空间、函数及参数次序，包括空缓存初态、单点选择历史、$\tau_j=+$、$\kappa_j=1$、默认 Next，以及 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。各区域声明 $1\le k_j\le n$；软支持集规格取 $K_j=n$，硬规格取 $K_j=k_j$。稠密训练控制沿用局部教材 §5.5。
+
+来源类别按区域定义。第一层只使用入口类别 $\mathrm{in}$，令 $\operatorname{SrcClass}_{v_{1,s}}(\mathrm{ext},i_s)=\mathrm{in}$。对 $\ell>1$，类别为上一层节点身份，令
+
+$$
+\operatorname{SrcClass}_{v_{\ell,r}}(\mathrm{msg},a_{\ell-1,s,r})
+=v_{\ell-1,s}.
+$$
+
+同一父节点通向不同接收者的消息因此具有相同类别；原始原子仍保留各自的边身份与时间。区域内共享聚合参数和 KV 基座，各节点分别具有适配器、摘要、评分与 Full 参数，私有状态分别保存。
+
+### 2.2 输入与连续读出
+
+设 $h_t\in\mathbb R^d$ 是只依赖输入前缀的表示序列。全部输入端口在位置 $t$ 接收相同单位强度载荷：
+
+$$
+x_{i_s}(t)=(1,h_t),\qquad 1\le s\le n.
+\tag{3}
+$$
+
+完整输出记录记为 $Z$。采用局部教材 §2.8 的同一个 $\operatorname{ReadOut}$，固定
+
+$$
+\begin{aligned}
+\Lambda_t&=\{(Dt+L,o_s):1\le s\le n\},\\
+O_t&=\operatorname{ReadOut}_{\Lambda_t}(Z),\\
+y_t&=h_t+\alpha_{\mathrm{out}}W_{\mathrm{out}}O_t,
+\qquad W_{\mathrm{out}}\in\mathbb R^{d\times d},\quad
+\alpha_{\mathrm{out}}\ge0.
+\end{aligned}
+\tag{4}
+$$
+
+终端端口记录的时间为 $Dt+L$。在 $Dt+L+1$ 比较这组已经确定的槽，取得图外读出 $O_t$；该读出不产生新的图内作用或输出记录。全部终端缺席时 $O_t=0$，外部残差保留 $h_t$。
+
+若采用 SettleGraph §6.4 的派生单槽记法，可在 $Z_{\Lambda_t}$ 非空时令 $b_t=(1,O_t)$，为空时令 $b_t=\bot$，并取 $\pi_{\mathrm{out}}(1,z)=z,\pi_{\mathrm{out}}(\bot)=0$。这个派生读出由端口记录确定。
+
+式 (4) 可以接入已有因果主干。独立语言模型可令 $h_t$ 为 token 嵌入，并采用第 4 节的词表读出。由位置顺序与私有状态递归，$y_t$ 只依赖截至位置 $t$ 的输入。
+
+## 3. 组合成立的条件
+
+| 对象或性质 | 本实例的绑定与依据 |
+|---|---|
+| 承载值与本地内容 | $P=X_v=\mathbb R^{1+d}$；图传递局部教材定义的带强度载荷 |
+| 区域容量 | $1\le k_j\le n$；软、硬及稠密控制分别使用声明的 $K_j$ |
+| 来源与共享 | §2.1 覆盖全部输入端口和入边，参数宽度按局部教材给定 |
+| 单次结算 | §1 的严格分层、正时延与注入日程满足 SettleGraph 条件 |
+| 状态与时间 | 空初态、单点历史；窗口和衰减均使用式 (2) 的逻辑时间 |
+| 输出比较 | §2.2 声明有限槽集合和连续数值读出，缺席组读出零 |
+| 正温度连续性 | 固定图、参数、时间配置与有限切面，采用局部教材 §5.1 的有界输入条件 |
+| 硬化连续性 | 单位强度输入满足局部教材 §5.2 的二元端点归纳；每次选择还需阈值间隔及超预算时的严格排序间隔 |
+
+给定上述配置即可直接应用共同的 P/S/U/F 递归。硬化所需的评分间隔取决于参数与输入，须在所考察硬端点运行上核对。拓扑允许相同局部函数在不同尺寸下组合，各性质按自己的前提使用。
+
+## 4. 训练目标与使用阶段
+
+### 4.1 任务与教师
+
+对语言模型，令词表大小为 $n_{\mathrm{vocab}}$，词表矩阵为 $W_{\mathrm{vocab}}\in\mathbb R^{n_{\mathrm{vocab}}\times d}$。用局部教材的归一化函数定义
+
+$$
+\begin{aligned}
+p_t&=\operatorname{softmax}(W_{\mathrm{vocab}}\mathcal N_d(y_t)),\\
+\mathcal L_{\mathrm{task}}
+&=-\frac1{N_{\mathrm{tok}}}
+\sum_{t\in\mathcal T_{\mathrm{sup}}}\log p_t(x_{t+1}^{\mathrm{tok}}),
+\qquad N_{\mathrm{tok}}=|\mathcal T_{\mathrm{sup}}|\ge1.
+\end{aligned}
+\tag{5}
+$$
+
+其中 $\mathcal T_{\mathrm{sup}}\subseteq[N]$ 是监督位置集，$x_{t+1}^{\mathrm{tok}}$ 是下一 token 标签。其他任务可替换这一任务读出及损失。
+
+可选稠密教师采用局部教材 §5.5 的稠密控制，在同一外部序列上运行自己的完整轨迹和缓存，产生 $p_t^{\mathrm{teach}}$。学生运行自己的轨迹与缓存。教师可先按任务损失训练并固定；蒸馏时停止教师目标的梯度。
+
+### 4.2 成本目标
+
+记 $\mathcal E_C$ 为学生训练序列中全部候选的 $(v,\theta)$ 坐标，给每节点声明固定参考成本 $C_v^{\mathrm{ref}}>0$。固定 $\epsilon_{\mathrm{cost}}>0$ 和非负系数 $\lambda_{\mathrm{cost}},\lambda_{\mathrm{dist}}$，定义
+
+$$
+\begin{aligned}
+\mathcal L_{\mathrm{cost}}
+ &=\frac1{N_{\mathrm{tok}}}
+   \sum_{(v,\theta)\in\mathcal E_C}
+   C_v^{\mathrm{ref}}\frac{c_{v,\theta}}{c_{v,\theta}+\epsilon_{\mathrm{cost}}},\\
+\mathcal L
+ &=\mathcal L_{\mathrm{task}}
+   +\lambda_{\mathrm{cost}}\mathcal L_{\mathrm{cost}}\\
+ &\quad+\frac{\lambda_{\mathrm{dist}}}{N_{\mathrm{tok}}}
+   \sum_{t\in\mathcal T_{\mathrm{sup}}}
+   \operatorname{KL}\bigl(
+     \operatorname{stopgrad}(p_t^{\mathrm{teach}})\,\|\,p_t\bigr).
+\end{aligned}
+\tag{6}
+$$
+
+stopgrad 前向为恒等函数，反向对其自变量贡献为零。不用教师时取 $\lambda_{\mathrm{dist}}=0$ 并省略蒸馏项。
+
+成本代理对远大于 $\epsilon_{\mathrm{cost}}$ 的门控近似计一次，对趋零门控连续归零。它偏好较少的正门控，实际工作还包括全部候选的准备、写入及消息传递。已经饱和为零的门控也可能没有恢复分支的梯度。参考成本属于目标定义，在单次前向期间固定。
+
+### 4.3 初始化、软训练与硬部署
+
+取非零小残差尺度及近似同尺度、带小差异的节点初始化。可从 $\alpha_{\mathrm{att}},\alpha_{\mathrm{ff}}$ 约为 $(2L)^{-1/2}$ 的尺度开始探索，$\alpha_{\mathrm{out}}$ 取小正值。精确取 $\alpha_{\mathrm{out}}=0$ 会使式 (4) 保持输入，同时暂时切断内部任务梯度。门控自由区和 KV 适配器初始化的条件见局部教材 §5.5。
+
+训练可按以下阶段使用同一组函数：
+
+1. 采用稠密控制预训练 Full 与记忆或作稠密校准，再转软选择训练评分；也可直接从多个候选具有正自由门控的软配置开始。
+2. 逐步降低温度，结合阈值与成本系数控制支持数量，保留间歇稠密校准或教师监督以观察遗漏分支。各项变化分别记录。
+3. 在验证序列上检查软硬输出误差、阈值和排序间隔，再采用硬规格。继续硬训练时另行声明替代梯度或探索规则。
+
+温度降低期间评分与记忆也在变化，支持数量可以增减。每次前向仍使用固定配置；参数收敛与硬端点条件按局部教材 §5.2、§5.6 检查。
+
+每条有状态序列沿自身历史继续，不同序列分别初始化或显式传递缓存。训练配置还声明打包边界、重置、反向截断，以及参数更新后旧缓存是否重算；这些选择决定写入到未来读出的信用距离。
+
+## 5. 整窗口求值与架构成本
+
+### 5.1 从局部契约到整段求值
+
+局部教材第 6 节构造 $\operatorname{BatchRegionState}^{\mathrm{KV}}_{j,I}$ 与 $\operatorname{BatchFull}^{\mathrm{KV}}_{v,\Theta}$，前提是目标窗口的完整驱动纤维已经给定。
+
+取 $0\le p\le q\le N$，输入位置区间 $[p,q)$ 对应逻辑时间窗口 $I=[Dp,Dq)$。给定其完整端口输入及左切面，第一层的窗口纤维已确定；其状态块给出全部快照和选择，逐节点 Full 批给出发往第二层的全部消息。依次沿区域顺序处理，就能为下一层提供完整窗口纤维。局部写入不依赖本节点选择或 Full，区域内部也没有消息边，因此可以直接应用 [分块教材 §6](timed-dag-chunk-prefill-learning-note.md#6-严格分层区域的整块定理)。
+
+所得策略每区域至多使用一个状态块，每节点至多使用一个额外 Full 时间批。这个结论计量外层调用；块内投影、摘要和 Attention 的工作仍随窗口长度增长。位于位置内部的一般切面可沿正典区间接口继续，边界须保留跨界消息。
+
+### 5.2 共享计算与宽度成本
+
+相邻层全连接与广播 Full 使同一区域的节点面对相同上游载荷；§2.1 的来源绑定使其类别也一致。因此区域聚合与共享 KV 基座投影可各计算一次，节点继续分别计算适配器、摘要、评分及被选择的 Full。不同节点保有自己的 KV 和参数。
+
+硬端点每个输入位置满足
+
+$$
+\begin{aligned}
+\#\mathrm{Full}&\le\sum_{j=1}^{L}k_j,\\
+\#\mathrm{candidate}&\le Ln,\\
+\#\mathrm{internal\ message}&\le n\sum_{j=1}^{L-1}k_j.
+\end{aligned}
+\tag{7}
+$$
+
+只要上一层有正门控发送，下一层全部 $n$ 个节点就会成为候选并写入。区域宽度增加时，准备、缓存与消息成本仍可能增长。每节点的参数和运算量采用局部教材第 7 节的估计，缓存窗口按 §1.3 换算。
+
+整段求值可以共同计算前缀投影、窗口摘要与查询；逐位置继续仍承担候选准备、KV 读取和消息开销。设备上的收益取决于批量形状、缓存带宽、选择求解及通信。实际计量分别记录 Full、候选、消息、KV 写入与读取、有效缓存长度和时间。
+
+## 6. 分工与实验比较
+
+同一区域的节点收到相同上游内容，私有投影、摘要和 Full 提供分化条件；相同参数与历史也可能形成冗余。节点互补性和不同深度的分工，需要结合任务表现与消融判断。
+
+至少比较全程稠密、从头稀疏和退火稀疏，并分别报告相同数据暴露、相同计算预算下的质量。观察有效梯度覆盖、软硬误差、全区弃权率、分支替换后的质量，以及来源项和记忆摘要的消融。均衡、噪声探索或辅助反事实评分可作为后续变式，其损失、随机性及状态依赖需另行定义。
+
+一次具体实验固定 $L,n$、局部教材 §2.9 的全部数值配置、任务读出、训练阶段与状态管理方式。比较窗口、适配秩、摘要宽度和参数共享时，同时记录准备成本与节点分化；比较拓扑时保留相同局部函数，明确更新端口、来源和输出槽的绑定。
+
+更详细的观测项目见 [[memos/learning-systems/learning-risks-and-diagnostics#6.1 带权 KV 特例的退火实验|退火实验备忘]]。

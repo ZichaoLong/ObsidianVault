@@ -795,7 +795,7 @@ $$
 
 对于 Attention，可令状态保存键值前缀。整段输入的键值追加形成一个因果状态块，完整输出使用各逻辑时间对应的前缀；一个状态—输出联合契约可以用因果遮罩共同给出所有坐标。
 
-[带权 KV 与稀疏 Full 特例](weighted-kv-sparse-activation-example.md#6-本例的批量契约) 给出接收驱动的 KV 前缀、廉价摘要与带权 Attention 的具体定义，并构造区域控制—状态及逐节点 Full 契约的精确见证。
+[带权 KV 局部教材](weighted-kv-sparse-activation-example.md#6-局部批量契约) 给出接收驱动的 KV 前缀、廉价摘要与带权 Attention 的具体定义，并构造区域控制—状态及逐节点 Full 契约的精确见证。[分层组合](weighted-kv-layered-example.md#5-整窗口求值与架构成本) 再利用结构条件取得各区域的完整窗口输入。
 
 对于仿射 SSM：
 

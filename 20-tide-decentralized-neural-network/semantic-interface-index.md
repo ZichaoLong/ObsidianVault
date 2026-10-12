@@ -9,7 +9,7 @@ tags:
 
 # 数学符号与函数对应索引
 
-本页汇集四篇教材和带权 KV 实例的共同名称。相同名称使用相同数学类型；特例通过选择空间、函数和附加条件进入框架。各定义的推导与证明由所列教材给出。
+本页汇集四篇正典、带权 KV 局部教材及其组合实例的共同名称。相同名称使用相同数学类型；局部特化选择空间与函数，组合实例另给结构、时间与边界绑定。各定义的推导与证明由所列教材给出。
 
 ## 基础对象与时间
 
@@ -46,7 +46,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 $\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}$。空候选返回 $(\varnothing,(),y)$。Next 的调用为 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$；Full 的调用为 $\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$。
 
-三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV §2.9](weighted-kv-sparse-activation-example.md#29-实例化配置) 给出其全部绑定；外部数值汇集使用 $\operatorname{ReadOut}_\Lambda$。
+三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV 局部教材 §2.9](weighted-kv-sparse-activation-example.md#29-局部绑定与组合条件) 给出函数绑定；$\operatorname{ReadOut}_\Lambda$ 的数值定义见其 §2.8。[分层实例 §1--3](weighted-kv-layered-example.md#1-分层拓扑与时间) 给出图、日程、来源映射和输出槽集合 $\Lambda_t$ 的具体绑定。
 
 ## 作用、结果与调用标签
 
