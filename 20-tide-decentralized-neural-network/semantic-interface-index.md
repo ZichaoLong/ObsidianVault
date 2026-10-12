@@ -9,28 +9,32 @@ tags:
 
 # 数学符号与函数对应索引
 
-本页汇集四篇教材和局部函数实例的共同名称。定义与证明分别位于所链接教材；各篇的教学重述沿用这些数学对象。
+本页汇集四篇教材和带权 KV 实例的共同名称。相同名称使用相同数学类型；特例通过选择空间、函数和附加条件进入框架。各定义的推导与证明由所列教材给出。
 
-## 基础对象
+## 基础对象与时间
 
 | 符号 | 含义 |
 |---|---|
-| $V,A,J,\rho,\mathcal R_j$ | 节点、消息边、区域标识、区域归属、区域 |
-| $\theta,t,\delta$ | 逻辑时间、输入位置、正边时延 |
-| $P,P_\bot$ | 消息值空间及增加缺席标记后的空间 |
-| $B_{v,\theta},\mathcal C_{j,\theta},\mathcal A_{j,\theta}$ | 完整输入纤维、候选集合、激活集合 |
-| $S_v,X_v,D_v,\mathsf C_v,Y_j$ | 节点状态、本地内容、描述量、局部控制、区域选择历史空间 |
+| $V,A,\operatorname{src},\operatorname{dst},\delta$ | 节点、独立消息边身份、端点与正整数时延 |
+| $\mathsf I,\mathsf O,\gamma,\varepsilon$ | 输入／输出端口及其所属节点 |
+| $J,\rho,\mathcal R_j$ | 区域标识、节点归属与区域成员 |
+| $\theta,t,\iota_i(k)$ | 逻辑时间、输入位置、端口位置的注入时间 |
+| $P,P_\bot$ | 消息承载值空间及增加缺席标记后的空间 |
+| $\mathsf{Atom}_v,B_{v,\theta}$ | 可到达节点的带来源原子、完整时间纤维 |
+| $\mathcal C_{j,\theta},\mathcal A_{j,\theta}$ | 候选集合、激活集合 |
+| $S_v,X_v,D_v,\mathsf C_v,Y_j$ | 节点状态、本地内容、描述量、局部控制、选择历史空间 |
 | $q,\widetilde q,q^{\mathrm{cmp}},q^{\mathrm{next}}$ | 旧状态、候选状态、计算快照、下一持久状态 |
-| $\tau_j,\kappa_j,K_j$ | 描述量模式、状态采用模式、激活容量上界 |
-| $Q_b=(b,(q_v^b)_v,(y_j^b)_j,W_b)$ | 完整切面的继续状态 |
+| $\tau_j,\kappa_j,K_j$ | 描述模式、状态采用模式、激活数上界 |
 
-SettleGraph 的 $q_v^t$ 按输入位置索引。时间编码 $\theta_{v,t}=Dt+r_v$ 将其对应到一般图的逻辑时间坐标。分块输入步长记为 $\Delta_{\mathrm{in}}$，带权 KV 的平滑参数记为 $\tau_{\mathrm{soft}}$。
+SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt}$、$y_j^{[t]}=y_j^{Dt}$ 是位置边界状态。其简写 $h_{v,t}$ 等均表示时间 $\theta_{v,t}$ 的同名坐标。一般图的状态上标 $\theta$ 始终为逻辑时间。
+
+带权 KV 的 $k_j$ 是门控质量预算，$K_j$ 是正式激活数上界；选择平滑参数 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
 
 ## 局部函数
 
-以下类型见 [TimedDAG §4--5](timed-dag-region-selector-learning-note.md#4-节点的局部函数) 与 [PDG §1](positive-delay-graph-finite-cut-learning-note.md#14-内部消息输出和局部函数)。
+类型定义见 [TimedDAG §4--5](timed-dag-region-selector-learning-note.md#4-节点的局部函数)、[SettleGraph §3--5](settlegraph-learning-note.md#3-来源原子与时间纤维) 与 [正时延图 §1](positive-delay-graph-finite-cut-learning-note.md#14-内部消息输出和局部函数)。
 
-| 函数 | 定义域与值域 |
+| 名称 | 定义域与值域 |
 |---|---|
 | $\operatorname{Agg}_v$ | $\mathbb N\times\mathcal P_{\mathrm{fin}}(\mathsf{Atom}_v)\to X_v$ |
 | $\operatorname{Upd}_v$ | $S_v\times\mathbb N\times X_v\to S_v$ |
@@ -40,37 +44,77 @@ SettleGraph 的 $q_v^t$ 按输入位置索引。时间编码 $\theta_{v,t}=Dt+r_
 | $\operatorname{Next}_v$ | $S_v\times S_v\times\mathbb N\times X_v\times\{0,1\}\times\mathsf C_v\to S_v$ |
 | $\operatorname{Full}_v$ | $S_v\times\mathbb N\times X_v\times\mathsf C_v\to(P_\bot)^{\operatorname{Out}(v)}\times(P_\bot)^{\operatorname{OutPort}(v)}$ |
 
-其中 $\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}$。Next 的两个状态参数依次为旧状态与计算快照。Full 的值经固定边和端口身份展开为消息与输出记录。
+$\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}$。空候选返回 $(\varnothing,(),y)$。Next 的调用为 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$；Full 的调用为 $\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$。
 
-[SettleGraph §3--5](settlegraph-learning-note.md#3-每条边的一次结果) 取 $X_v=P$，聚合输入为带来源标签的非空序列，Full 返回单个 $P$ 值。[§10](settlegraph-learning-note.md#10-嵌入-timeddag) 用标签还原与广播提升 $\Delta_v$ 给出一般图中的对应函数。
+三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV §2.9](weighted-kv-sparse-activation-example.md#29-实例化配置) 给出其全部绑定；外部数值汇集使用 $\operatorname{ReadOut}_\Lambda$。
 
-[带权 KV §2.9](weighted-kv-sparse-activation-example.md#29-实例化配置) 列出该特例的全部绑定；其载荷函数名为 $\operatorname{EmitValue}_v$，一般图中 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。
+## 作用、结果与调用标签
 
-## 作用、边界与联合求值
+定义见 [TimedDAG §6.4](timed-dag-region-selector-learning-note.md#64-节点事件区域选择事件与四类作用)。
 
-| 名称 | 数学含义 | 定义位置 |
+| 作用坐标 | 规范结果 $\mathcal T_x^{\mathrm{act}}$ | 调用标签 |
 |---|---|---|
-| $P,S,U,F$ | 准备、选择、状态采用、完整输出四类作用及其规范值 | [TimedDAG §6.4](timed-dag-region-selector-learning-note.md#64-节点事件区域选择事件与四类作用) |
-| $\operatorname{DoneTo}$ | 输入前缀关闭、相关状态与完整输出作用完成 | [TimedDAG §9.6](timed-dag-region-selector-learning-note.md#96-边下界怎样由上游完成推出) |
-| $\operatorname{PublishedDoneTo}$ | 进一步包含相应内部消息已经纳入的条件 | 同上；[PDG §5.3](positive-delay-graph-finite-cut-learning-note.md#53-节点完成怎样推出出边封闭下界) |
-| $\mathsf{AdmIn}(K),\mathsf{BlockOut}(K)$ | 作用范围的合法外部自变量与完整返回记录 | [分块 §2](timed-dag-chunk-prefill-learning-note.md#2-作用块外部边界与精确联合求值) |
-| $\operatorname{ExpandFull}_{v,\Theta}$ | 将 Full 值族展开为作用、消息与输出记录 | [分块 §3.2](timed-dag-chunk-prefill-learning-note.md#32-逐坐标完整输出契约) |
-| $\operatorname{RefBlock}_K$ | 边界唯一确定的参考联合函数 | 同上 |
-| $\mathsf{ContractOwner},\operatorname{cown}$ | 联合契约的节点或区域归属 | [分块 §2.3](timed-dag-chunk-prefill-learning-note.md#23-精确联合求值与精化) |
-| $\operatorname{Acts}(B,z)$ | 一次契约调用返回的实际作用支持集 | 同上 |
-| $\operatorname{BatchFull},\operatorname{BatchState},\operatorname{BatchNode},\operatorname{BatchRegionState}$ | 完整输出、因果状态、节点联合、区域状态的精确见证 | [分块 §3](timed-dag-chunk-prefill-learning-note.md#3-三类节点契约与一种区域契约) |
+| $P_{v,\theta}=(\mathrm{prep},v,\theta)$ | $(h,\widetilde q,d)$ | $\operatorname{Lab}_P=(B,q,h,\widetilde q,d)$ |
+| $S_{j,\theta}=(\mathrm{select},j,\theta)$ | $(\mathcal A,(c_v)_{v\in\mathcal C},y')$ | $\operatorname{Lab}_S=(\mathcal C,y,(d_v)_{v\in\mathcal C},\mathcal A,(c_v)_{v\in\mathcal C},y')$ |
+| $U_{v,\theta}=(\mathrm{adopt},v,\theta)$ | $(q^{\mathrm{cmp}},q^{\mathrm{next}})$ | 同规范结果 |
+| $F_{v,\theta}=(\mathrm{full},v,\theta)$ | $(f^A,f^O)$ | 同规范结果 |
 
-PDG §10 对相同对象增加函数解释参数 $\mathbf F$。固定参数时，两篇采用相同的边界、支持集和精确性含义。TimedDAG §12.4 的 StatePath 给出一般状态递归的轨迹；BatchState 保留完整规范标签，其状态投影满足该递归。各项批次数同时依赖求值策略与契约族。
+$\operatorname{res}_P,\operatorname{res}_S$ 取标签的结果三元组。Next 所需旧状态来自显式状态边界或完整 Lab_P，准备结果三元组一般不包含可恢复的旧状态。
+
+事件图统一记为 $\mathscr G_x^{\mathrm{ev}}=(\mathscr V_x^{\mathrm{ev}},\mathscr A_x^{\mathrm{ev}})$；有限切面在各符号增加 $<b$ 限制。$\operatorname{own}$ 映射作用到节点或选择历史归属，用于静态依赖图；$\operatorname{cown}$ 映射联合契约到 $(\mathrm{node},v)$ 或 $(\mathrm{region},j)$。两者定义域不同，其归属值通过 $v\leftrightarrow(\mathrm{node},v)$、$s_j\leftrightarrow(\mathrm{region},j)$ 对应。
+
+## 封闭、切面与区间
+
+| 名称 | 数学含义 |
+|---|---|
+| $\operatorname{ValidSeal},\sigma^{\mathrm{in}},\sigma^A$ | 当前集合覆盖所有时间严格小于相应下界的输入／到达消息 |
+| $\lambda(v),\lambda(\mathcal R_j)$ | 节点全部输入下界的最小值、区域成员前沿的最小值 |
+| $\operatorname{DoneTo}(v,b)$ | 输入前缀关闭，时间小于 $b$ 的状态与完整输出作用完成 |
+| $\operatorname{PublishedDoneTo}(v,b)$ | 进一步要求相应源消息全部纳入当前记录 |
+| $M_{<b}^{\mathrm{send}}$ | 发送时间小于 $b$ 的消息；其中可含尚未到达的消息 |
+| $W_b$ | $\operatorname{send}(m)<b\le\operatorname{time}(m)$ 的跨界消息 |
+| $Q_b$ | $(b,(q_v^b)_v,(y_j^b)_j,W_b)$ |
+| $\Phi_{a,b}$ | $(Q_a,E_{[a,b)})\mapsto(\mathcal U_{[a,b)},Q_b)$，定义在可达且相容的输入域 $\operatorname{Adm}_{a,b}$ |
+| $\odot_b$ | 两段记录粘合；共享状态边界识别一次，新消息按发送区间归属 |
+
+纤维关闭要求 $\lambda(v)>\theta$。Completed 只要求作用完成，PublishedDone 还要求消息齐备；PDG 的强部分截面与 TimedDAG 的细粒度暴露通过这些条件对应。
+
+区间接口在 [TimedDAG §11.5](timed-dag-region-selector-learning-note.md#115-区间转导与记录粘合)、[分块 §8.1](timed-dag-chunk-prefill-learning-note.md#81-输入分块组合) 与 [PDG §7](positive-delay-graph-finite-cut-learning-note.md#7-区间转导与复合) 同义。关闭证据与数值输入分别给出。空区间记录只含共同边界状态，是粘合的单位元。
+
+## 联合求值
+
+定义见 [分块 §2--3](timed-dag-chunk-prefill-learning-note.md#2-作用块外部边界与精确联合求值) 与 [PDG §10.2](positive-delay-graph-finite-cut-learning-note.md#102-有限区间的联合求值契约)。
+
+| 名称 | 数学含义 |
+|---|---|
+| $K,K(\omega)$ | 潜在作用范围、某次实例的实际作用支持 |
+| $\mathsf{AdmIn}(K),\mathsf{BlockOut}(K)$ | 全部合法外部自变量、包含实际支持集的完整返回记录 |
+| $\operatorname{RefBlock}_K$ | 该边界唯一确定的参考联合函数 |
+| $\operatorname{ExpandFull}_{v,\Theta}$ | 将 Full 值族按作用、边与端口展开成规范记录 |
+| $\operatorname{BatchFull}_{v,\Theta}$ | 已知 $(q^{\mathrm{cmp}},\theta,h,c)$ 族上的 Full 见证 |
+| $\operatorname{BatchState}_{K^U_{v,\Theta}}=\operatorname{BatchState}_{v,\Theta}$ | 节点状态轨迹及范围中实际 $P/U$、允许的局部 $S$ |
+| $\operatorname{BatchNode}_{K^{UF}_{v,\Theta}}=\operatorname{BatchNode}_{v,\Theta}$ | 节点状态与完整输出 |
+| $\operatorname{BatchRegionState}_{K^R_{j,I}}=\operatorname{BatchRegionState}_{j,I}$ | 区域 $P/S/U$、状态与历史轨迹 |
+| $\operatorname{BatchRegion}_{K^{RF}_{j,I}}=\operatorname{BatchRegion}_{j,I}$ | 区域 $P/S/U/F$ 及其消息与输出 |
+| $\operatorname{Acts}(B,z)$ | 契约调用在边界 $z$ 上返回的实际作用支持 |
+| $\Lambda_v^U(I;\cdot),\Lambda_v^F(I;\cdot)$ | 实际状态作用时间、实际完整输出时间 |
+| $R,m_v^U,m_v^F,m_v^{UF},m_j^R$ | 自适应阶段数、各类节点批数与区域块数 |
+
+各见证均满足 $\mathcal K(z)=\operatorname{RefBlock}_K(z)$，并遵守范围的进入依赖与关闭条件。范围包含未发生坐标时，返回的实际支持集明确给出缺席。区域状态与区域状态加输出契约都可属于成本种类 $R$，覆盖范围区分二者。
+
+PDG 增加 Full 解释参数 $\mathbf F$，写作 $\operatorname{RefBlock}_K^{\mathbf F}$ 等；固定解释后省略上标。$\Lambda_v^F(I;\mathbf F,\omega)$ 的上标 $F$ 始终表示作用种类。PDG 的性能比较固定其余局部函数，属于分块教材共同规格族的特例。批数和阶段数同时依赖规格、输入、策略和契约族。
+
+TimedDAG §10.7、§12.4 的 StatePath 只返回一般递归的状态轨迹；BatchState 返回完整规范块，其状态投影才是该轨迹。
 
 ## 附录：实现对应的验证关系
 
-实现可直接沿用上述函数名称，并记录相应数学对象及参数对应。具体数据表示通过固定解码取得数学值；联合求值通过精化取得规范作用记录。
+实现可沿用上述名称与参数次序。具体表示通过固定解码取得数学值，再通过遗忘投影取得规范记录：
 
-- 局部函数：在声明的定义域上，解码后的结果等于对应函数值。
-- 联合求值：实际作用支持集、各作用值、消息、输出与右边界状态等于参考记录。
-- 层级嵌入：按已定义的时间、标签与输出映射比较记录。
-- 切面继续：相同切面状态和后续输入产生相同后续记录。
-- 特例比较：使用该特例明确指定的投影及其证明条件。
-- 指定反向规则：另行比较声明的反向关系。
+$$
+\text{实现表示}\xrightarrow{\operatorname{Decode}}
+\text{数学值及辅助字段}\xrightarrow{\Pi}\text{规范记录}.
+$$
 
-函数合并与不同存储表示均可通过这些关系说明其对应。具体检查、数值容差与验证结果由下游实现记录。
+Decode 忠实恢复所表示的原子、状态、控制和快照；Pi 只删除辅助坐标。两者都不调用参考递归来补写或修正结果。局部函数核对解码后函数值，联合求值核对实际支持集及全部返回坐标，层级嵌入按明确的限制与重索引比较。
+
+切面继续比较同一 $Q_b$ 与后续输入所得记录；KV 的有效状态投影 $\pi_{\mathrm{KV},\theta}$、外部读出及指定反向规则分别采用自身证明条件。有效投影可以丢弃原始状态细节，不能代替无损解码。浮点容差和有限验证结果由具体实现声明。

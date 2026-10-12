@@ -1,8 +1,8 @@
 ---
 type: semantic-version-record
 status: active
-semantic-version: tide-core-4
-as-of: 2026-10-10
+semantic-version: tide-core-5
+as-of: 2026-10-12
 tags:
   - tide
   - semantic-version
@@ -16,12 +16,19 @@ tags:
 
 | 版本或修订 | 变化 | 下游核对事项 |
 |---|---|---|
+| tide-core-5（2026-10-12） | SettleGraph 完整沿用 TimedDAG 的空间、原子集合、局部签名及逐边／逐端口返回族；单次结算由严格分层和时间对齐给出。共同输入、广播和终端读出归为局部实例 | SettleGraph 绑定独立 $X_v$；单一载荷函数命名 EmitValue，Full 取广播提升或直接返回两个值族；保留平行边及一般端口。旧记录须按声明的边界映射比较 |
+| 2026-10-12 教材重整 | 保留 TimedDAG 的 P/S/U/F 结果元组，区分调用标签与结果；统一区间转导 Phi、记录粘合、块名称与表示解码 | Next 的旧状态须显式保留；区间数值输入不含关闭证明，共享边界只识别一次；BatchRegionState 只含 P/S/U，含 Full 时为 BatchRegion；Decode 后再作遗忘投影 |
 | tide-core-3 | 聚合输入保留入口、父边、终端或端口的来源标签 | 聚合参数保留来源；裸值聚合通过忽略标签表达 |
 | tide-core-4 | SettleGraph 激活容量取上界，允许少选与空选择；无激活终端时输出槽为 $\bot$ | 覆盖非空候选但空选择、未激活候选状态更新、缺席输出及编码恢复。旧选满规则仍是具体选择函数 |
 | 2026-10-10 教材修订，沿用 tide-core-4 | 统一局部函数与块接口；补齐变化支持集、普通作用覆盖及关闭依赖 | 核对边界、返回记录、调用条件及下述名称对应；核心局部递归与切面状态定义保持 |
 | 2026-10-10 带权 KV 架构修订，沿用 tide-core-4 | 特例具体化为来源聚合、时间窗口 KV、多尺度评分、可弃权预算选择与 Attention／前馈残差；补充训练目标与成本分析 | 局部函数已有变化，旧特例的数值不能直接沿用；连续性按有效时间窗口状态比较，硬化条件增加弃权阈值间隔。本次仅修订上游设计，未验证下游采用 |
 
-名称对应：Choose 统一为 Allowed；块输出与参考函数统一为 BlockOut、RefBlock；联合契约归属为 ContractOwner/cown，作用归属仍为 own。PublishedDoneTo 明确包含消息已纳入的条件。BatchFull 经 ExpandFull 返回规范块记录；带权 KV 通过 EmitValue 与广播提升绑定 Full。
+tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺序和作用结果不变，扩大 SettleGraph 可表达的实例范围。KV 局部数值公式沿用现有架构；三个层级统一使用 Full = Delta ∘ EmitValue 和端口记录读出。分层基线直接在终端端口产生记录，外部汇集不另造图内输出事件。旧输入／输出适配节点可以显式保留为一种边界配置，但不能据新旧原始记录的无映射比较宣称一致。
+
+名称对应按修订列出：
+
+- 2026-10-12：事件边统一为 $\mathscr A^{\mathrm{ev}}$，发送前缀为 $M_{<b}^{\mathrm{send}}$；单步下一状态为 $q^{\mathrm{next}}$，位置边界状态为 $q_v^{[t]}$；阶段数统一为 $R$。旧 Run 区间函数对应 Phi；StatePath 仍只返回状态轨迹。
+- 2026-10-10：Choose 统一为 Allowed；块输出与参考函数统一为 BlockOut、RefBlock；联合契约归属为 ContractOwner/cown，作用归属仍为 own。PublishedDoneTo 包含消息已纳入的条件。BatchFull 经 ExpandFull 返回规范块记录。
 
 tide-core-4 的引入提交为 [d60d1cf](https://github.com/ZichaoLong/ObsidianVault/commit/d60d1cf)。教材勘误及符号整理由采用的不可变提交精确定位；涉及允许的核心行为变化时另记语义版本。新增特例可以在同一核心版本下独立演进。
 

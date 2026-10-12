@@ -28,7 +28,7 @@ tags:
 
 ## 2. 已有本地书籍
 
-个人阅读用 PDF 位于本目录的 `appendices/books/`。
+个人阅读用 PDF 位于 `20-tide-decentralized-neural-network/appendices/books/`。
 
 已有目录涵盖 CPS、计算模型、并行处理器、结构化并行、编译器、静态分析、流系统与数据系统。相同书名的不同文件可能是不同版本或加工本；按实际阅读需要选择，不凭名称推断内容相同。
 

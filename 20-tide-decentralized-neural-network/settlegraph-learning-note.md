@@ -12,19 +12,15 @@ tags:
 
 # 单次结算图 SettleGraph：从一次输入到有状态序列
 
-> [!summary] 本文的阅读前提
-> 本文面向第一次接触 SettleGraph 的数学读者，只假设读者熟悉集合、函数、实向量、有限求和与数学归纳法。有向图、区域、逻辑时间、候选、激活、计算快照与状态延续都会在本文中定义。理解前九节不需要先读其他教材；系统用语集中在附录 A。
+本文面向第一次接触 TIDE 的数学读者，只需集合、函数、有限求和与数学归纳法。我们从一次输入出发，定义消息、记忆、共同选择和输出，再将多次结算连接成有状态序列。
 
-本文的 SettleGraph 是一种受限的有状态图：固定节点图无环，区域配有使每条节点边严格向前的次序；每个输入位置上，每条边只确定一次结果，每个节点至多做一次完整计算。本文从一次输入的结算出发，逐步区分输入、记忆、共同选择和完整输出，再把一次次结算连接成有状态序列。符号与 [[timed-dag-region-selector-learning-note|TimedDAG 教材]] 保持一致，第 10 节给出两种对象之间的明确编码。
+SettleGraph 的消息边严格通向更高区域，边时延与输入日程共同使同一位置的消息在目标节点对齐。因此每个节点对每个输入位置至多处理一次。局部函数、参数顺序和返回值族与 [[timed-dag-region-selector-learning-note|TimedDAG]] 相同；第 10 节证明这是一项结构限制与时间重索引。
 
-全文依次回答三个数学问题：一次输入能否得到唯一结算结果（包括确定无输出），保存什么可以继续下一段输入，以及这种计算如何成为 TimedDAG 的受限实例。第 11 节再解释节点级时间批需要哪些额外条件。
+第 1--7 节给出定义和手算，第 8--10 节讨论衰减、继续与嵌入，第 11--12 节讨论联合求值和函数保持。系统术语与计算表示集中在附录 A。
 
-> [!tip] 分三次阅读
-> 第一次读第 1--7 节，手算两个连续输入；第二次读第 8--9 节，理解逻辑时间衰减与分段继续；第三次结合 TimedDAG 教材读第 10--12 节，研究嵌入、节点级时间批与函数保持接入。附录 B 另用微分记号讨论指定的反向规则。
+## 1. 从一次共同选择开始
 
-## 1. 先看一个问题
-
-设输入是一个实数 $x$，有两个节点 $a,b$ 都接收它。我们希望根据它们各自产生的简单描述，选择一个做完整计算。第三个节点 $c$ 接收被选节点的结果并输出。
+设两个节点 $a,b$ 都收到实数 $x$。它们各自产生描述量，一个区域据此选择至多一个节点做完整计算；节点 $c$ 接收其结果。
 
 ```text
          a ──┐
@@ -32,951 +28,662 @@ tags:
          b ──┘
 ```
 
-图中的两条内部边 $a\to c,b\to c$ 始终存在。某次只选择 $b$，表示第一条边本次无值，第二条边本次有值；不表示把第一条边从固定图中删去。
+两条边 $a\to c,b\to c$ 始终属于固定图。一次只选择 $b$ 时，$a\to c$ 在该位置确定无值，$b\to c$ 的值由 $b$ 的完整输出函数决定。$c$ 收集两条边上实际存在的值；两条边的有值或无值结果都确定后，这组输入才完整。
 
-节点 $c$ 必须知道两条父边的最终结果，才能确定自己的输入。仅仅“暂时没有看见 $a$ 的值”不够；必须已经确定它本次不会产生值。第 3 节用一个额外符号表示这种结果。
-
-这个例子还留下三个问题：节点没被选中时是否记忆输入，选择依据是否读取记忆，以及被选中后是否清理记忆。下面把它们分别定义。
+节点还可以保存记忆。收到输入、采用新记忆、被选择做完整计算、留下下一次记忆，是分别定义的动作。下面沿这条顺序建立模型。
 
 ## 2. 固定集合、图与逻辑时间
 
-### 2.1 数、函数与有限序列
+### 2.1 值与带名字的坐标族
 
-定义 $\mathbb N=\{0,1,2,\ldots\}$，$\mathbb N_{>0}=\mathbb N\setminus\{0\}$。对 $L\in\mathbb N_{>0}$ 以及 $b,c\in\mathbb N$、$b\le c$，写
-
-$$
-[L]=\{0,\ldots,L-1\},\qquad
-[b,c)=\{\theta\in\mathbb N:b\le\theta<c\}.
-$$
-
-固定整数 $d\ge1$，令 $P=\mathbb R^d$ 为输入与有值输出的值空间。标量例子取 $d=1$。
-
-一个全函数 $f:X\to Y$ 为每个 $x\in X$ 恰好指定一个 $f(x)\in Y$；它不保证这个值容易计算。若 $C$ 是有限集合、每个 $v\in C$ 有一个集合 $D_v$，则
+令 $\mathbb N=\{0,1,2,\ldots\}$，$[L]=\{0,\ldots,L-1\}$，并用 $[b,c)$ 表示满足 $b\le\theta<c$ 的自然数集合。固定非空承载值空间 $P$，另取 $\bot\notin P$，令
 
 $$
-\prod_{v\in C}D_v
-=\{f:f\text{ 是定义在 }C\text{ 上的函数，且 }f(v)\in D_v\}.
+P_\bot=P\cup\{\bot\}.
 $$
 
-记 $(d_v)_{v\in C}$ 为这种按 $v$ 标记的坐标族，其身份由标签确定。$C$ 为空时只有唯一空函数，记为 $()$。对命题 $Q$，指示值 $\mathbf1[Q]$ 在 $Q$ 成立时为 $1$，否则为 $0$。
+$\bot$ 表示某个输出坐标确定不产生值。标量和向量教材例子分别取 $P=\mathbb R$ 和 $P=\mathbb R^d$。
 
-对任意集合 $X$，$X^n$ 是长度为 $n$ 的序列所成的集合。先定义下式使用的不交并。
+全函数 $f:X\to Y$ 对每个 $x\in X$ 恰好给出一个值。若 $C$ 为有限集合，则 $\prod_{v\in C}D_v$ 是所有按名字 $v$ 索引的坐标族 $(d_v)_{v\in C}$；空积只含唯一空族 $()$。$Y^E$ 表示所有函数 $E\to Y$，$\mathcal P_{\mathrm{fin}}(X)$ 表示 $X$ 的有限子集。不同名字即使携带相同数值，仍是不同坐标。
 
-对带标号集合族 $(X_i)_{i\in I}$，记：
+### 2.2 消息图与端口
 
-$$
-\bigsqcup_{i\in I}X_i
-=\{(i,x)\mid i\in I,\ x\in X_i\}
-$$
-
-为它们的**不交并**。若元素自身已经唯一携带标号 $i$，便省略外层二元组的书写。长度为 $n$ 的序列自身确定 $n$，所以所有有限非空序列的集合可以定义为：
+给定有限非空节点集 $V$、有限边集 $A$ 及函数
 
 $$
-\operatorname{Seq}^{+}(X)=\bigsqcup_{n\ge1}X^n.
+G=(V,A,\operatorname{src},\operatorname{dst},\delta),
+\qquad \operatorname{src},\operatorname{dst}:A\to V,
+\qquad \delta:A\to\mathbb N_{>0}.
 $$
 
-这里的不交并保留序列长度；两个数值相同的项仍可占据不同位置。空序列也写作 $()$，但不属于 $\operatorname{Seq}^{+}(X)$。
-
-若 $I$ 是带全序的有限标签集合，定义由互异、递增标签标记的非空序列：
+边 $a$ 把源节点在时间 $\eta$ 产生的值送到目标节点的时间 $\eta+\delta(a)$。边的身份由 $a\in A$ 给出；允许不同边具有相同起点和终点。定义
 
 $$
-\begin{aligned}
-&\operatorname{LSeq}^{+}(I,P)\\
-&\quad=
-\bigsqcup_{n\ge1}
-\left\{
-\begin{aligned}
-&((i_1,p_1),\ldots,(i_n,p_n))\in(I\times P)^n:\\
-&i_1<\cdots<i_n
-\end{aligned}
-\right\}.
-\end{aligned}
+\operatorname{In}(v)=\{a:\operatorname{dst}(a)=v\},\qquad
+\operatorname{Out}(v)=\{a:\operatorname{src}(a)=v\}.
 $$
 
-标签区分来源，全序给这些二元组一个规范排列；后文的聚合接收整个二元组序列。
+首尾相接的有限边列称为有向游走，允许停在一个节点的零长度游走。无重复节点的游走称为路径。非空闭游走含有有向环；没有有向环的图称为有向无环图，简称 DAG。
 
-### 2.2 固定节点图
-
-给定有限非空节点集 $V$、有限边集 $A$，以及函数
+给定有限非空输入、输出端口集合 $\mathsf I,\mathsf O$，以及
 
 $$
-\operatorname{src},\operatorname{dst}:A\to V.
+\gamma:\mathsf I\to V,\qquad \varepsilon:\mathsf O\to V.
 $$
 
-把
+端口 $i$ 向 $\gamma(i)$ 提供外部输入，端口 $o$ 接收 $\varepsilon(o)$ 的外部输出。写
 
 $$
-G=(V,A,\operatorname{src},\operatorname{dst})
+\operatorname{InPort}(v)=\gamma^{-1}(\{v\}),\qquad
+\operatorname{OutPort}(v)=\varepsilon^{-1}(\{v\}).
 $$
 
-称为固定节点图。
-
-一列首尾相接的有向边称为有向游走；若它回到出发节点且至少含一条边，其中就含有有向环。本文要求不存在这样的游走，即图是有向无环图，简称 DAG；还要求不同边不具有同一对起终点。没有重复节点的游走称为路径，并允许只含一个节点的零长度路径。对 $v\in V$，定义
-
-$$
-\begin{aligned}
-\operatorname{In}(v)
-&=\{a\in A:\operatorname{dst}(a)=v\},\\
-\operatorname{Out}(v)
-&=\{a\in A:\operatorname{src}(a)=v\}.
-\end{aligned}
-$$
-
-入口与终端节点分别是
-
-$$
-V_{\mathrm{in}}=\{v:\operatorname{In}(v)=\varnothing\},\qquad
-V_{\mathrm{out}}=\{v:\operatorname{Out}(v)=\varnothing\}.
-$$
-
-有限 DAG 的入口、终端均非空。事实上，从任一节点反复向父节点走，必在入口停止，否则有限集合中会出现重复节点并形成环；沿子节点方向同理。因此每个节点都位于某条入口到终端的路径上。单个无边节点同时是入口和终端。
-
-给 $V,A$ 分别固定全序，也就是为任意两个不同元素规定相容的先后顺序，用于确定聚合序列及选择平票结果。
+端口可以属于任意节点；一个节点可以同时具有入边、输入端口、出边和输出端口。
 
 ### 2.3 区域划分与严格次序
 
-给定有限非空集合 $J$ 和满射 $\rho:V\to J$。“满射”表示 $J$ 中每个元素至少对应一个节点。定义逆像 $\rho^{-1}(\{j\})=\{v\in V:\rho(v)=j\}$，并令
+固定有限非空集合 $J$ 与满射 $\rho:V\to J$。区域为
 
 $$
 \mathcal R_j=\rho^{-1}(\{j\}).
 $$
 
-这些集合把节点划分成互不相交的区域。区域负责在成员节点之间共同选择；消息沿节点之间的边传递。节点各自保存记忆，区域另有一份用于选择的历史，第 4 节将分别定义它们。
+各区域非空、两两不交且并为 $V$。节点各有私有状态；区域另有一份选择历史。
 
-固定函数 $\ell:J\to\mathbb N_{>0}$，要求
+固定区域秩 $\ell:J\to\mathbb N_{>0}$，要求
 
 $$
-a\in A\Longrightarrow
-\ell(\rho(\operatorname{src}(a)))<
-\ell(\rho(\operatorname{dst}(a))).
+\operatorname{LegalRegionRank}_{G,\rho}(\ell)
+\quad\Longleftrightarrow\quad
+\forall a\in A:\quad
+\ell(\rho(\operatorname{src}(a)))<\ell(\rho(\operatorname{dst}(a))).
 \tag{1}
 $$
 
-把式 (1) 命名为关系：
+于是区域内没有消息边，区域之间和节点图都无环。按秩递增排列区域，就得到每条边都向前的区域拓扑序。同秩区域可任意排序。
+
+节点图无环还允许更一般的区域划分。例如路径 $u\to v\to w$ 中把 $u,w$ 放在同一区域，便不满足式 (1)。
+
+### 2.4 输入位置与到达时间对齐
+
+固定有限位置范围 $[L]$，$L\ge1$。对每个输入端口 $i$，固定 $L_i\ge1$ 和严格递增的位置映射
+
+$$
+t_i:[L_i]\to[L].
+$$
+
+端口可跳过某些位置；第 $k$ 个端口输入属于全局位置 $t_i(k)$。一次输入是 $x=(x_i)_{i\in\mathsf I}$，其中 $x_i:[L_i]\to P$。
+
+令 $r_v=\ell(\rho(v))$，固定整数 $D>\max_v r_v$，并要求
 
 $$
 \begin{aligned}
-&\operatorname{LegalRegionRank}_{G,\rho}(\ell)\\
-&\quad\Longleftrightarrow
-\forall a\in A:\quad
-\ell(\rho(\operatorname{src}(a)))
-<\ell(\rho(\operatorname{dst}(a))).
+\theta_{v,t}&=Dt+r_v,\qquad \theta_{j,t}=Dt+\ell(j),\\
+\delta(a)&=r_{\operatorname{dst}(a)}-r_{\operatorname{src}(a)},\\
+\iota_i(k)&=Dt_i(k)+r_{\gamma(i)}.
 \end{aligned}
-$$
-
-因此同一区域内没有边，区域之间也没有有向环。节点图无环本身还不足以推出式 (1)：例如 $u\to v\to w$，把 $u,w$ 放在一个区域、$v$ 放在另一个区域，就不满足式 (1)。本教材显式采用这一较强限制。
-
-区域拓扑次序是把所有区域排成一列，并让每条跨区域边的起点区域排在终点以前。按 $\ell$ 从小到大排列、相同层级任意排序，就得到这样的次序。这个构造也直接证明所需次序存在。
-
-### 2.4 输入位置与统一逻辑时间
-
-固定有限输入 $x:[L]\to P$，其中 $L\ge1$。$t\in[L]$ 表示输入位置。令
-
-$$
-r_v=\ell(\rho(v)),\qquad
-r_{\mathrm{out}}=1+\max_{v\in V}r_v,
-$$
-
-并固定整数 $D>r_{\mathrm{out}}$。为节点与边界规定统一逻辑时间：
-
-$$
-\theta_{v,t}=Dt+r_v,\qquad
-\theta_{\mathrm{in},t}=Dt,\qquad
-\theta_{\mathrm{out},t}=Dt+r_{\mathrm{out}}.
 \tag{2}
 $$
 
-称 $(\ell,D)$ 是图与区域划分的一组**合法时间编码**，记作：
+式 (1)--(2) 合称合法时间编码，记为 $\operatorname{LegalTimeCode}_{G,\rho}(\ell,D)$，其中端口日程也须满足式 (2)。边时延为正。同一区域的节点具有相同处理时间；同一位置的全部处理时间落在 $[Dt,D(t+1))$ 内。
+
+对边 $a:u\to v$，有
 
 $$
-\begin{aligned}
-\operatorname{LegalTimeCode}_{G,\rho}(\ell,D)
-\Longleftrightarrow {}&
-\operatorname{LegalRegionRank}_{G,\rho}(\ell)
-\\
-&{}\land D>1+\max_{v\in V}\ell(\rho(v)).
-\end{aligned}
-$$
-
-同一区域的节点具有相同的 $\theta_{v,t}$，记为 $\theta_{j,t}$。式 (2) 为每个输入位置留出一个区间 $[Dt,D(t+1))$：输入在左端进入，各区域位于中间，输出坐标也在右端以前。它给可能发生的计算指定时间；没有输入的节点在这个坐标上仍不计算。
-
-$D$ 与 $\ell$ 给出该规格的逻辑时间编码。例如，把第 1 节的 $a,b$ 放在层级 $1$ 的区域，把 $c$ 单独放在层级 $2$ 的区域，再取 $D=4$；第一个输入对应时间 $0,1,2,3$，第二个对应 $4,5,6,7$。
-
-若局部函数忽略时间，不同满足 $\operatorname{LegalTimeCode}_{G,\rho}(\ell,D)$ 的编码可以给出相同数值；若状态按时间衰减，改变这些坐标就可能改变数值，不能再把这种变化视为纯调度重排。本文所有时间衰减均按式 (2) 的统一逻辑时间，不按“访问了几次节点”计时。
-
-## 3. 每条边的一次结果
-
-取 $\bot\notin P$，令 $P_\bot=P\cup\{\bot\}$。对输入位置 $t$，每条边 $a$ 的最终结果是
-
-$$
-z_{a,t}\in P_\bot.
-$$
-
-$z_{a,t}=\bot$ 表示已经确定这条边在本位置无值。求值途中尚未确定的坐标则缺席于部分记录。
-
-为每个入口节点 $v$ 固定一个形式标签 $\mathrm{in}_v\notin A$；这些标签两两不同。定义节点 $v$ 的输入标签集合
-
-$$
-I_v=
-\begin{cases}
-\{\mathrm{in}_v\},&v\in V_{\mathrm{in}},\\
-\operatorname{In}(v),&v\notin V_{\mathrm{in}}.
-\end{cases}
-$$
-
-入口标签集合只有一个元素；非入口标签集合继承固定边序。入口节点只接收图输入，其他节点收集有值的父边：
-
-$$
-\mathcal M_{v,t}=
-\begin{cases}
-((\mathrm{in}_v,x(t))),&v\in V_{\mathrm{in}},\\
-((a,z_{a,t}):a\in\operatorname{In}(v),\ z_{a,t}\ne\bot)_{\text{按边序}},&\text{其余情形}.
-\end{cases}
+\theta_{u,t}+\delta(a)=\theta_{v,t}.
 \tag{3}
 $$
 
-因此 $\mathcal M_{v,t}$ 要么是空序列，要么属于 $\operatorname{LSeq}^{+}(I_v,P)$；只有后一种情形才会把它交给聚合函数。
+沿路径相加，中间秩抵消。因此从同一位置出发、到达同一节点的消息具有相同到达时间。这个等式是单次结算的时间条件。严格分层而时延任意时，两条路径可能在不同时刻到达，形成多次处理。
 
-定义候选集合
+逻辑时间是函数自变量。改变 $D$ 或区域秩可能改变衰减、位置函数等数值；固定编码以后，求值次序可以改变，函数接收的时间保持不变。
 
-$$
-\mathcal C_{j,t}=\{v\in\mathcal R_j:\mathcal M_{v,t}\ne()\}.
-\tag{4}
-$$
+## 3. 来源原子与时间纤维
 
-只对候选节点定义本地内容。给每个节点固定全函数
+### 3.1 三类带标签记录
 
-$$
-\operatorname{Agg}_v:
-\mathbb N\times\operatorname{LSeq}^{+}(I_v,P)\to P,
-$$
-
-并令 $h_{v,t}=\operatorname{Agg}_v(\theta_{v,t},\mathcal M_{v,t})$。常见实例是均值：
-
-$$
-\operatorname{Agg}_v
-(\theta,((i_1,m_1),\ldots,(i_n,m_n)))
-=\frac1n\sum_{k=1}^n m_k.
-\tag{5}
-$$
-
-这里 $i_k\in I_v$ 是入口或父边标签，$m_k\in P$ 是数值。式 (5) 忽略标签；一般聚合则可同时使用标签与数值。任意裸值聚合 $F_v:\mathbb N\times\operatorname{Seq}^{+}(P)\to P$ 都可提升为
-
-$$
-\operatorname{Agg}_v
-(\theta,((i_1,m_1),\ldots,(i_n,m_n)))
-=F_v(\theta,(m_1,\ldots,m_n)).
-$$
-
-所以原有的裸值聚合仍是新接口的实例。
-
-一个简单的身份感知实例是给每个 $i\in I_v$ 固定标量 $\eta_{v,i}$，只在本次实际出现的标签上归一化：
+取不同形式标签 $\mathrm{ext},\mathrm{msg},\mathrm{out}$，定义
 
 $$
 \begin{aligned}
-\alpha_k
-&=\frac{\exp(\eta_{v,i_k})}
-{\sum_{r=1}^n\exp(\eta_{v,i_r})},\\
-\operatorname{Agg}_v
-(\theta,((i_1,m_1),\ldots,(i_n,m_n)))
-&=\sum_{k=1}^n\alpha_km_k.
+\mathsf{Ext}&=\{(\mathrm{ext},i,k,p):i\in\mathsf I,k\in[L_i],p\in P\},\\
+\mathsf{Msg}&=\{(\mathrm{msg},\eta,a,p):\eta\in\mathbb N,a\in A,p\in P\},\\
+\mathsf{OutRec}&=\{(\mathrm{out},\theta,o,p):\theta\in\mathbb N,o\in\mathsf O,p\in P\}.
 \end{aligned}
 $$
 
-这里 $\exp$ 是自然指数函数；权重随标签而变。
+外部记录 $e=(\mathrm{ext},i,k,p)$ 的目标、时间和值分别为 $\gamma(i),\iota_i(k),p$。内部消息 $m=(\mathrm{msg},\eta,a,p)$ 的发送时间、边、目标、到达时间和值分别为
 
-例如，把第 1 节的两条父边记为 $e_a:a\to c$ 与 $e_b:b\to c$。若结果分别为 $\bot,5$，则 $\mathcal M_{c,t}=((e_b,5))$，式 (5) 的均值为 $5$；$e_a$ 的缺席通过省略该项表示。
+$$
+\operatorname{send}(m)=\eta,\quad \operatorname{edge}(m)=a,\quad
+\operatorname{target}(m)=\operatorname{dst}(a),\quad
+\operatorname{time}(m)=\eta+\delta(a),\quad \operatorname{value}(m)=p.
+$$
+
+输出记录的时间、端口和值由其后三个坐标给出，记为 $\operatorname{outtime},\operatorname{outport},\operatorname{outvalue}$。输出记录终止于图的外部。
+
+令 $\mathsf{Atom}=\mathsf{Ext}\cup\mathsf{Msg}$，$\mathsf{Atom}_v=\{z\in\mathsf{Atom}:\operatorname{target}(z)=v\}$。实际外部输入为
+
+$$
+E_x=\{(\mathrm{ext},i,k,x_i(k)):i\in\mathsf I,k\in[L_i]\}.
+$$
+
+### 3.2 完整输入与聚合
+
+给定已确定的消息集合 $M$，定义时间纤维
+
+$$
+B_{v,\theta}(E_x,M)
+=\{z\in E_x\cup M:\operatorname{target}(z)=v,\ \operatorname{time}(z)=\theta\}.
+\tag{4}
+$$
+
+它保留原子的端口或边身份以及时间。平行边上的相同值仍贡献两个不同原子。集合本身无排列次序；具体聚合可以按固定标签序读取它。
+
+为每个节点固定独立的非空本地内容空间 $X_v$，以及全函数
+
+$$
+\operatorname{Agg}_v:\mathbb N\times\mathcal P_{\mathrm{fin}}(\mathsf{Atom}_v)\to X_v.
+\tag{5}
+$$
+
+它在实际非空纤维上给出 $h_{v,\theta}=\operatorname{Agg}_v(\theta,B_{v,\theta})$。例如取 $P=\mathbb R$、$X_v=\mathbb R^2$，定义
+
+$$
+\operatorname{Agg}_v(\theta,B)
+=\left(\sum_{z\in B}\operatorname{value}(z),\ |B|\right).
+$$
+
+节点同时取得值的和与来源数，后续函数可分别使用它们。若取 $X_v=P=\mathbb R^d$，则非空纤维的均值也是一个实例；令空集处返回零向量即得到全函数。空集处的补全值不产生节点事件。
+
+在处理位置 $t$ 时，简写 $B_{v,t}=B_{v,\theta_{v,t}}$。定义
+
+$$
+\mathcal C_{j,t}=\{v\in\mathcal R_j:B_{v,t}\ne\varnothing\}.
+\tag{6}
+$$
+
+它是区域的候选集合。一个纤维含多个原子时，该节点仍只出现一次。
 
 ## 4. 节点状态、描述量与区域选择
 
 ### 4.1 旧状态与候选新状态
 
-对每个节点固定非空集合 $S_v,D_v,\mathsf C_v$，分别作为状态、选择描述量、局部控制量的取值空间。初态为 $q_v^{\mathrm{init}}\in S_v$。
+每个节点另有非空空间 $S_v,D_v,\mathsf C_v$，分别表示节点状态、选择描述量与局部控制；初态为 $q_v^{\mathrm{init}}$。用方括号区分位置边界与逻辑时间：$q_v^{[t]}$ 是位置 $t$ 开始前的持久状态，$q_v^{[0]}=q_v^{\mathrm{init}}$。
 
-记 $q_v^t\in S_v$ 为处理输入位置 $t$ 以前的持久状态；令 $q_v^0=q_v^{\mathrm{init}}$。这里上标 $t$ 是输入位置；第 10 节将它映射到 TimedDAG 的逻辑时间。
-
-给定全函数
+固定
 
 $$
-\operatorname{Upd}_v:S_v\times\mathbb N\times P\to S_v.
+\operatorname{Upd}_v:S_v\times\mathbb N\times X_v\to S_v.
 $$
 
-对候选节点，定义
+对候选 $v$ 定义
 
 $$
-\widetilde q_{v,t}=\operatorname{Upd}_v(q_v^t,\theta_{v,t},h_{v,t}).
-\tag{6}
+h_{v,t}=\operatorname{Agg}_v(\theta_{v,t},B_{v,t}),\qquad
+\widetilde q_{v,t}=\operatorname{Upd}_v(q_v^{[t]},\theta_{v,t},h_{v,t}).
+\tag{7}
 $$
 
-它只是候选值，不表示已经改变持久状态。无状态节点可取单点集 $S_v=\{*\}$，并让所有状态函数返回 $*$。
+候选新状态 $\widetilde q$ 是待采用的函数值。状态空间可取单点集 $\{*\}$，使节点不携带有效记忆。
 
-### 4.2 三种描述量
+### 4.2 描述量读取
 
 固定全函数
 
 $$
 \begin{aligned}
-\operatorname{Read}_v^0&:\mathbb N\times P\to D_v,\\
-\operatorname{Read}_v^-&:S_v\times\mathbb N\times P\to D_v,\\
-\operatorname{Read}_v^+&:S_v\times\mathbb N\times P\to D_v.
+\operatorname{Read}_v^0&:\mathbb N\times X_v\to D_v,\\
+\operatorname{Read}_v^-,\operatorname{Read}_v^+&:S_v\times\mathbb N\times X_v\to D_v.
 \end{aligned}
 $$
 
-分别得到
+区域选择模式 $\tau_j\in\{0,-,+\}$，并令
 
 $$
-\begin{aligned}
-d_{v,t}^0
-&=\operatorname{Read}_v^0(\theta_{v,t},h_{v,t}),\\
-d_{v,t}^-
-&=\operatorname{Read}_v^-(q_v^t,\theta_{v,t},h_{v,t}),\\
-d_{v,t}^+
-&=\operatorname{Read}_v^+(\widetilde q_{v,t},\theta_{v,t},h_{v,t}).
-\end{aligned}
-\tag{7}
-$$
-
-每个区域固定模式 $\tau_j\in\{0,-,+\}$，使用 $d_{v,t}^{\tau_j}$。模式 $0$ 只读取当前内容，模式 $-$ 读取旧记忆，模式 $+$ 读取包含本次更新的候选记忆。这里的读取只产生选择依据；候选新状态是否用于本次计算，将由第 5 节决定。
-
-### 4.3 选择结果与局部控制量
-
-给每个区域固定非空历史空间 $Y_j$、初态 $y_j^0\in Y_j$，以及整数 $1\le K_j\le|\mathcal R_j|$。记 $y_j^t$ 为处理位置 $t$ 以前的选择历史。对 $C\subseteq\mathcal R_j$，定义
-
-$$
-\mathsf{Allowed}_{j,C}
-=\{A'\subseteq C:|A'|\le K_j\}.
-$$
-
-固定全函数族
-
-$$
-\operatorname{SelStep}_{j,C}:
-Y_j\times\mathbb N\times\prod_{v\in C}D_v
-\to
-\mathsf{Allowed}_{j,C}\times\prod_{v\in C}\mathsf C_v\times Y_j.
+d_{v,t}=\begin{cases}
+\operatorname{Read}_v^0(\theta_{v,t},h_{v,t}),&\tau_j=0,\\
+\operatorname{Read}_v^-(q_v^{[t]},\theta_{v,t},h_{v,t}),&\tau_j=-,\\
+\operatorname{Read}_v^+(\widetilde q_{v,t},\theta_{v,t},h_{v,t}),&\tau_j=+.
+\end{cases}
 \tag{8}
 $$
 
-空积是只含空元组的集合；要求空候选时返回 $(\varnothing,(),y)$。实际选择定义为
+三种模式依次读取当前内容、旧记忆、包含本次更新的候选记忆。$+$ 模式本身只选择描述量的自变量。
+
+### 4.3 选择返回的三个坐标
+
+每个区域固定非空历史空间 $Y_j$、初态 $y_j^{\mathrm{init}}$、容量 $1\le K_j\le|\mathcal R_j|$。令 $y_j^{[0]}=y_j^{\mathrm{init}}$，并对 $C\subseteq\mathcal R_j$ 定义
 
 $$
-(\mathcal A_{j,t},(c_{v,t})_{v\in\mathcal C_{j,t}},y_j^{t+1})
-=\operatorname{SelStep}_{j,\mathcal C_{j,t}}
-\left(y_j^t,\theta_{j,t},(d_{v,t}^{\tau_j})_{v\in\mathcal C_{j,t}}\right).
+\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}.
+$$
+
+选择全函数族为
+
+$$
+\operatorname{SelStep}_{j,C}:Y_j\times\mathbb N\times\prod_{v\in C}D_v
+\to\mathsf{Allowed}_{j,C}\times\prod_{v\in C}\mathsf C_v\times Y_j.
 \tag{9}
 $$
 
-$\mathcal A_{j,t}$ 是激活集合，$K_j$ 是其容量上界。非空候选也可以少选或一个都不选；选满只是具体选择函数可以采用的一种规则。空候选必须保持历史，非空候选但激活集合为空时，仍由 SelStep 返回每个候选的控制量和下一历史，候选节点也仍按第 5 节处理状态。
+空候选规定 $\operatorname{SelStep}_{j,\varnothing}(y,\theta,())=(\varnothing,(),y)$。实际选择为
 
-$c_{v,t}$ 可以是实数权重，也可以是有限元组。它只交给节点 $v$。新的选择历史可以记录本次候选、激活集合和权重，但不能读取本次尚未计算的完整输出。
+$$
+(\mathcal A_{j,t},(c_{v,t})_{v\in\mathcal C_{j,t}},y_j^{[t+1]})
+=\operatorname{SelStep}_{j,\mathcal C_{j,t}}
+\left(y_j^{[t]},\theta_{j,t},(d_{v,t})_{v\in\mathcal C_{j,t}}\right).
+\tag{10}
+$$
 
-一个选满的具体例子是按实数描述量从大到小取前 $\min(K_j,|C|)$ 个，平票按节点全序处理；也可先按固定阈值筛选，再在通过者中取至多 $K_j$ 个。先让控制和历史空间都取单点集，就得到不带额外权重和历史的选择；第 5.4 节再给出实数控制量怎样影响完整输出的例子。
+激活集合 $\mathcal A$ 是候选子集，大小至多为 $K_j$，允许为空。每个候选都得到自己的控制 $c_v$，包括未激活候选。下一历史可以记录本次选择及控制摘要；它由旧历史、时间和描述量族确定。
+
+例如 $D_v=\mathbb R$ 时，可在正描述量中选至多 $K_j$ 个最大者，平票按固定节点全序。取 $Y_j=\mathsf C_v=\{*\}$ 就得到无历史、无额外控制的例子。每项具体规则都须对整个声明定义域给出唯一结果。
 
 ## 5. 本次计算与下一次记忆
 
 ### 5.1 状态采用
 
-每个区域固定 $\kappa_j\in\{0,1\}$。定义采用集合
+区域固定 $\kappa_j\in\{0,1\}$，定义
 
 $$
-O_j(C,A')=
-\begin{cases}
-A',&\kappa_j=0,\\
-C,&\kappa_j=1.
-\end{cases}
+O_j(C,A')=\begin{cases}A',&\kappa_j=0,\\C,&\kappa_j=1.\end{cases}
 $$
 
-固定区域 $j$，对其中的候选节点 $v$，定义本次计算快照：
+对候选 $v\in\mathcal R_j$，计算快照为
 
 $$
-q_{v,t}^{\mathrm{cmp}}=
-\begin{cases}
+q^{\mathrm{cmp}}_{v,t}=\begin{cases}
 \widetilde q_{v,t},&v\in O_j(\mathcal C_{j,t},\mathcal A_{j,t}),\\
-q_v^t,&\text{其余情形}.
+q_v^{[t]},&\text{其余候选}.
 \end{cases}
-\tag{10}
-$$
-
-“快照”在这里就是本次完整计算将读取的那个状态值。$\kappa_j=0$ 时只有激活者采用候选新状态，$\kappa_j=1$ 时全部候选都采用。采用后的值和下一次留下的记忆还需分开：后者由下面的延续函数决定。
-
-### 5.2 状态延续
-
-固定全函数
-
-$$
-\operatorname{Next}_v:
-S_v\times S_v\times\mathbb N\times P\times\{0,1\}\times\mathsf C_v
-\to S_v.
 \tag{11}
 $$
 
-令 $a_{v,t}=\mathbf1[v\in\mathcal A_{j,t}]$。候选节点的下一状态是
+$\kappa_j=0$ 让激活者采用更新，$\kappa_j=1$ 让全部候选采用更新。完整输出读取这份快照。
 
-$$
-q_v^{t+1}
-=\operatorname{Next}_v(q_v^t,q_{v,t}^{\mathrm{cmp}},
-\theta_{v,t},h_{v,t},a_{v,t},c_{v,t}).
-\tag{12}
-$$
-
-非候选节点规定 $q_v^{t+1}=q_v^t$。默认延续返回第二个自变量 $q^{\mathrm{cmp}}$。如果要求激活后清理某份记忆，可以给定重置函数 $\operatorname{Reset}_v:S_v\times\mathbb N\to S_v$，并在激活时返回 $\operatorname{Reset}_v(q^{\mathrm{cmp}},\theta)$，否则返回 $q^{\mathrm{cmp}}$。重置哪些坐标必须写明；清理内容记忆并不自动清理选择历史。
-
-这些值都不读取完整计算结果，$\operatorname{Next}$ 的定义和求值也不得调用或重算 Full。因此，即使下一状态被清零，本次完整计算仍使用清理前的快照。在默认延续下，快照与下一持久状态相同；其他延续规则必须单独说明保留哪些坐标。
-
-### 5.3 完整计算与发送
+### 5.2 下一持久状态
 
 固定全函数
 
 $$
-\operatorname{Full}_v:S_v\times\mathbb N\times P\times\mathsf C_v\to P.
+\operatorname{Next}_v:S_v\times S_v\times\mathbb N\times X_v\times\{0,1\}\times\mathsf C_v\to S_v.
+$$
+
+前两个参数依次为旧状态与计算快照。对候选令 $a_{v,t}=\mathbf1[v\in\mathcal A_{j,t}]$，并定义
+
+$$
+q^{\mathrm{next}}_{v,t}
+=\operatorname{Next}_v(q_v^{[t]},q^{\mathrm{cmp}}_{v,t},\theta_{v,t},h_{v,t},a_{v,t},c_{v,t}),
+\qquad q_v^{[t+1]}=q^{\mathrm{next}}_{v,t}.
+\tag{12}
+$$
+
+非候选保持 $q_v^{[t+1]}=q_v^{[t]}$，没有本次 Next 作用。默认延续为
+
+$$
+\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)=q^{\mathrm{cmp}}.
+$$
+
+也可在 $a=1$ 时返回声明的重置值，其他情形保留快照。本次完整计算仍读取重置前的 $q^{\mathrm{cmp}}$。Next 的定义与求值只使用已声明自变量，不调用或重算 Full。
+
+### 5.3 完整输出族
+
+固定全函数
+
+$$
+\operatorname{Full}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v
+\to(P_\bot)^{\operatorname{Out}(v)}\times(P_\bot)^{\operatorname{OutPort}(v)}.
 \tag{13}
 $$
 
-只有激活节点应用它，得到
+只有激活节点应用它：
 
 $$
-g_{v,t}=\operatorname{Full}_v(q_{v,t}^{\mathrm{cmp}},\theta_{v,t},h_{v,t},c_{v,t}).
+(f^A_{v,t},f^O_{v,t})
+=\operatorname{Full}_v(q^{\mathrm{cmp}}_{v,t},\theta_{v,t},h_{v,t},c_{v,t}).
 \tag{14}
 $$
 
-该节点所有出边都取同一值 $g_{v,t}$；未激活或非候选节点的所有出边都取 $\bot$。终端节点没有出边，但其 $g_{v,t}$ 仍供下一节的输出聚合读取。
+每条出边和输出端口具有独立坐标，可以取不同值，也可以取 $\bot$。若 $f^A_{v,t}(a)=p\in P$，产生 $(\mathrm{msg},\theta_{v,t},a,p)$；若 $f^O_{v,t}(o)=p\in P$，产生 $(\mathrm{out},\theta_{v,t},o,p)$。$\bot$ 坐标不产生记录。
 
-至此，节点记忆与计算的分工完整了：Upd 给出候选记忆，Read 给出选择依据，Next 决定后续记忆，Full 产生本次输出。选择先确定激活集合与局部控制，再分别确定下一状态与完整输出。
+因此某节点可以激活却不发送任何消息，也可以只输出到某个端口。Full 只给出这两个值族；节点下一状态和区域下一历史已在此前确定。
 
-### 5.4 一个带权输出的实例
+### 5.4 广播是一个局部实例
 
-取 $D_v=\mathbb R$、$\mathsf C_v=[0,1]=\{p\in\mathbb R:0\le p\le1\}$，历史空间取单点集并保持不变。选择时记 $d_{v,t}=d_{v,t}^{\tau_j}$，按这些实数描述量选出前 $\min(K_j,|\mathcal C_{j,t}|)$ 个，平票按节点全序处理；同时向每个候选节点传入
-
-$$
-c_{v,t}=p_{v,t}
-=\frac{\exp(d_{v,t})}{\sum_{w\in\mathcal C_{j,t}}\exp(d_{w,t})}.
-$$
-
-这里 $\exp$ 是自然指数函数。非空候选时分母严格为正，权重之和为 $1$。选择仍按确定的排序规则进行，这些权重只作为后续函数的数值输入。
-
-给定全函数 $G_v:S_v\times\mathbb N\times P\to P$，记 $g=G_v(q^{\mathrm{cmp}},\theta,h)$。可以把 Full 定义为 $g$，也可以定义为
+给定载荷函数 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，定义
 
 $$
-\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,p)=h+p(g-h).
-$$
-
-后一个式子按 $p$ 在当前内容 $h$ 和完整结果 $g$ 之间取值：$p=0$ 时返回 $h$，$p=1$ 时返回 $g$。只有激活节点才应用 Full；未激活者即使有控制量，也不发送这个式子的值。两种输出形式与系统中的发送名称见附录 B。
-
-### 5.5 接收驱动的 KV 与稀疏 Full
-
-状态空间 $S_v$ 也可以取带原始逻辑时间及非负权重的有限键值序列，即可增长的 KV cache。选择 $\kappa_j=1$ 与默认 Next 后，每个候选都有
-
-$$
-q_{v,t}^{\mathrm{cmp}}=\widetilde q_{v,t},\qquad
-q_v^{t+1}=q_{v,t}^{\mathrm{cmp}}.
-$$
-
-Upd 根据收到的归一化内容及强度写入 KV；Read 从候选缓存取得较廉价的描述量；选择函数返回激活集合与控制量。激活者应用 Full，其中零门控分支可以直接返回零强度值，正门控分支才调用昂贵 Attention／前馈网络。收到输入但未激活的节点仍保留本次写入。本节点控制量调节发送强度，不决定已收到的信息是否进入记忆。
-
-[[weighted-kv-sparse-activation-example|接收驱动的带权 KV 与稀疏 Full]] 给出具体模块与分层架构、跨位置记忆的手算、零消息删除性质，以及单位输入、弃权阈值间隔和严格选择间隔下的硬化连续性。其软规格直接选择正门控支持集，门控精确到零时便省去相应 Full 及发送；硬规格再使用目标容量，二者均允许空选。全选并保留零分支也可作为另一合法规格。它通过已有编码也适用于 TimedDAG 和 PositiveDelayGraph。零强度值仍是存在的消息，数值等价不等于规范事件相同。上一节的 $h+p(g-h)$ 在 $p=0$ 时仍返回 $h$，本身不提供这种零输出性质。
-
-相应时间批仍使用第 11 节的契约与条件。退火过程分别计量正式 Full 事件与昂贵分支次数；是否学到有效分工及实际加速多少，另由训练方案与实现验证。
-
-## 6. 一个输入的完整结算
-
-### 6.1 按区域次序定义
-
-给定位置 $t$ 的输入 $x(t)$、全部 $q_v^t,y_j^t$。按任何符合式 (1) 的区域拓扑次序，依次做以下数学构造：
-
-1. 已确定父边结果后，由式 (3)--(5) 得到输入序列、候选集合与本地内容。
-2. 对候选节点用式 (6)--(7) 定义候选新状态与描述量。
-3. 用式 (9) 定义激活集合、局部控制量与下一选择历史。
-4. 用式 (10)--(12) 定义本次快照与下一持久状态。
-5. 对激活节点用式 (14) 计算；把本区域全部出边确定为其值或 $\bot$。
-
-空候选区域不应用节点函数，激活集合与控制族为空，选择历史保持。非空候选但空选择的区域仍完成第 1--4 步，只是不执行 Full，全部出边结果为 $\bot$。非候选节点在记录中没有本次 $h,\widetilde q,q^{\mathrm{cmp}},c,g$ 坐标；不能以伪造的零向量代替。
-
-给定输出聚合全函数
-
-$$
-\operatorname{Agg}_{\mathrm{out}}:
-\mathbb N\times
-\operatorname{LSeq}^{+}(V_{\mathrm{out}},P)
-\to P.
-$$
-
-等全部终端节点的角色确定后，取激活终端的身份和值，按节点序排列：
-
-$$
-\mathcal M_{\mathrm{out},t}
-=((v,g_{v,t}):v\in V_{\mathrm{out}}\cap\bigcup_j\mathcal A_{j,t})_{\text{按节点序}},
-$$
-
-并定义输出
-
-$$
-b_t=\begin{cases}
-\operatorname{Agg}_{\mathrm{out}}(Dt+r_{\mathrm{out}},\mathcal M_{\mathrm{out},t}),
-&\mathcal M_{\mathrm{out},t}\ne(),\\
-\bot,&\mathcal M_{\mathrm{out},t}=().
-\end{cases}
+\begin{aligned}
+\Delta_v(p)&=\big((p)_{a\in\operatorname{Out}(v)},(p)_{o\in\operatorname{OutPort}(v)}\big),\\
+\operatorname{Full}_v&=\Delta_v\circ\operatorname{EmitValue}_v.
+\end{aligned}
 \tag{15}
 $$
 
-输出槽 $b_t\in P_\bot$ 始终有唯一结果。没有激活终端时，不调用输出聚合，$b_t=\bot$ 表示本位置已确定无输出。单输出指唯一输出边界，每个输入位置至多产生一个有值输出。需要每位置向量的应用，可另行声明对 $\bot$ 的读出规则。与第 3 节相同，聚合忽略来源标签便得到只读取终端值的形式。
+该节点激活后向每个去向发送同一载荷。例如在 $P=X_v=\mathbb R^d$、$\mathsf C_v=[0,1]$ 时，可以取
 
-第 2 节的固定图、区域、顺序和逻辑时间规则，连同第 3--6 节的空间、初态与全部函数，构成一个 **SettleGraph 规格**。输入长度 $L$ 与值序列 $x$ 是给定规格以后另选的数据；改变输入不改变这些函数或固定边。
+$$
+\operatorname{EmitValue}_v(q,\theta,h,c)=h+c(G_v(q,\theta,h)-h).
+$$
+
+未激活候选保有控制量，但不应用 Full。
+
+### 5.5 接收驱动的记忆实例
+
+令状态保存带时间戳的有限键值序列，取 $\kappa_j=1$ 与默认 Next。每个候选先由 Upd 形成记忆，Read 从候选记忆给出描述量，选择决定哪些节点应用 Full。于是
+
+$$
+q^{\mathrm{cmp}}_{v,t}=\widetilde q_{v,t}=q_v^{[t+1]}.
+$$
+
+未激活候选同样保留接收更新。[[weighted-kv-sparse-activation-example|带权 KV 与稀疏 Full]] 给出此实例的完整函数、训练目标及联合求值见证；它在各层级都使用式 (15)，并局部选取 $X_v=P=\mathbb R^{1+d}$。
+
+## 6. 一个输入的完整结算
+
+### 6.1 区域递归与边、端口结果
+
+给定位置 $t$ 的外部记录与旧状态 $(q_v^{[t]})_v,(y_j^{[t]})_j$。按区域拓扑序依次：
+
+1. 汇集本区域在 $\theta_{j,t}$ 的外部记录与已由父区域产生的消息，形成完整纤维及候选集合。
+2. 对候选应用 Agg、Upd 和所选 Read，得到 $(h,\widetilde q,d)$。
+3. 应用 SelStep，得到 $(\mathcal A,(c_v)_{v\in\mathcal C},y^{[t+1]})$。
+4. 对候选确定 $(q^{\mathrm{cmp}},q^{\mathrm{next}})$；非候选状态保持。
+5. 对激活节点求 Full，展开消息与输出记录。
+
+空候选区域保持历史。非空候选但空激活时，准备、选择及状态作用仍然发生。
+
+对每条边与每个端口定义总有值的结果槽
+
+$$
+\begin{aligned}
+z_{a,t}&=\begin{cases}
+f^A_{v,t}(a),&v=\operatorname{src}(a)\text{ 激活},\\
+\bot,&\text{其余情形},
+\end{cases}\\
+b_{o,t}&=\begin{cases}
+f^O_{v,t}(o),&v=\varepsilon(o)\text{ 激活},\\
+\bot,&\text{其余情形}.
+\end{cases}
+\end{aligned}
+\tag{16}
+$$
+
+它们完整记录本位置每个去向的有值或无值结果。应用可以另选读出函数 $\operatorname{ReadOut}_t:(P_\bot)^{\mathsf O}\to Y$，从这些端口结果得到任务输出。
 
 ### 6.2 有限性与唯一性
 
-有限区域可以按拓扑次序依次处理，所以全部区域角色与边结果都能确定；式 (15) 随后按终端序列是否为空给出输出槽结果。某些具体规格还可保证每个位置都有有值输出。为此定义附加的**非空选择条件**：对每个区域、每个非空候选集及其全部合法自变量，SelStep 返回的激活集合都非空。该条件允许少选，是本推论的附加前提。
+> [!theorem] 定理 1：单次结算
+> 固定第 2--5 节的规格、一次输入及初态。每个位置经过有限次函数作用得到唯一记录；每节点每位置至多有一个准备、状态作用及完整输出作用，每区域每位置至多有一个选择作用。任何区域拓扑序得到相同结果。
 
-> [!lemma] 引理 1：非空选择条件下的输出存在
-> 若满足非空选择条件，每个输入位置至少有一个激活终端节点，故 $b_t\in P$。
+**证明。** 按区域顺序归纳。式 (1) 使当前区域的全部父边来自先前区域，式 (3) 使这些消息恰在本位置的处理时间到达，外部记录也按式 (2) 对齐。当前完整纤维和旧状态因此已确定，全部局部全函数依次给出唯一结果。一个区域只处理一次，节点和区域有限，函数作用总数有限。换用另一拓扑序时，逐区域的自变量与既定记录相同，函数值因而相同。对位置继续归纳即得到整个序列。$\square$
 
-**证明。** 入口非空且都获得输入，所以至少一个区域有非空候选；由附加条件，从中必选出节点。在全部激活节点中，取区域层级最大的一个 $v$。若 $\operatorname{Out}(v)\ne\varnothing$，它会沿某条出边向更高区域发送值；那个区域因而有非空候选，并必选出一个节点。这与 $v$ 的层级最大矛盾。因此 $v$ 是激活终端。$\square$
+这里的有限性计量抽象函数作用。函数的实际工作量由具体算法决定。
 
-一般规格可以不满足这个附加条件。例如第 1 节的首区域一个节点也不选，终端便没有输入，式 (15) 给出 $b_t=\bot$。这仍是完整且合法的一次结算。
+### 6.3 规范作用结果与调用标签
 
-> [!theorem] 定理 2：有限性与唯一性
-> 对每个输入位置及给定旧状态，第 6.1 节在有限次函数作用后确定所有边结果、候选与激活集合、控制量、状态及输出；任何符合依赖的区域次序得到相同结果。
+在位置 $t$，候选节点具有作用 $P_{v,\theta_{v,t}}=(\mathrm{prep},v,\theta_{v,t})$、$U_{v,\theta_{v,t}}=(\mathrm{adopt},v,\theta_{v,t})$；非空候选区域具有 $S_{j,\theta_{j,t}}=(\mathrm{select},j,\theta_{j,t})$；激活节点另有 $F_{v,\theta_{v,t}}=(\mathrm{full},v,\theta_{v,t})$。其规范结果为
 
-**证明。** 某区域的全部父边来自更前区域；按拓扑次序归纳，每一步的函数自变量都已唯一确定。每区域只处理一次，区域和节点有限，每个被调用函数均为全函数，故函数作用数有限。最终终端序列非空时应用全函数 $\operatorname{Agg}_{\mathrm{out}}$，为空时取 $\bot$，两种情形都由式 (15) 唯一确定。此证明不依赖引理 1 的附加条件。
+| 作用 | 返回值 |
+|---|---|
+| $P_{v,\theta_{v,t}}$ | $(h_{v,t},\widetilde q_{v,t},d_{v,t})$ |
+| $S_{j,\theta_{j,t}}$ | $(\mathcal A_{j,t},(c_{v,t})_{v\in\mathcal C_{j,t}},y_j^{[t+1]})$ |
+| $U_{v,\theta_{v,t}}$ | $(q^{\mathrm{cmp}}_{v,t},q_v^{[t+1]})$ |
+| $F_{v,\theta_{v,t}}$ | $(f^A_{v,t},f^O_{v,t})$ |
 
-再固定任一拓扑序得到的记录。对另一合法次序中的区域归纳，它的输入父边来自已经完成的前驱，而这些前驱按归纳假设与固定记录相同。其旧节点状态和旧选择历史也相同，所有确定函数因而给出同一结果。于是全部区域结果及最终输出都与固定记录相同。$\square$
+记录一次准备调用的输入和输出，得到
 
-“有限次函数作用”是抽象数学结论；若每个局部函数另有终止的实现，才相应得到有限实现工作。
+$$
+\operatorname{Lab}_P(v,\theta_{v,t})
+=(B_{v,t},q_v^{[t]},h_{v,t},\widetilde q_{v,t},d_{v,t}).
+$$
 
-### 6.3 完整记录包含哪些坐标
+其后三项是 $P$ 的结果；旧状态是调用输入，供后续 Next 再次读取。仅保存三项结果一般无法恢复旧状态。选择调用标签同样保留 $(\mathcal C,y^{[t]},(d_v))$ 与三项结果。$U,F$ 的标签直接使用上表结果。
 
-给定整个输入 $x:[L]\to P$，定义完整记录 $\mathcal T_x^{\mathrm S}$ 为下列坐标族组成的有序元组：
+完整记录 $\mathcal T_x^{\mathrm S}$ 包含全部纤维、候选与激活集合、这四类实际作用及其结果、各位置边界状态和历史、全部消息、输出记录及式 (16) 的槽。未发生作用由支持集的缺席表示。由定理 1，这份记录唯一。
 
-1. 每个 $t\in[L]$、$v\in V$ 的输入序列 $\mathcal M_{v,t}$，以及每条 $a\in A$ 的边结果 $z_{a,t}$；
-2. 每个 $t\in[L]$、$j\in J$ 的候选集合与激活集合；
-3. 每个 $t\in[L]$、$v\in\mathcal C_{\rho(v),t}$ 的 $h_{v,t},\widetilde q_{v,t},d_{v,t}^{\tau_{\rho(v)}},c_{v,t},q_{v,t}^{\mathrm{cmp}}$；
-4. 每个 $t\in[L]$、$v\in\mathcal A_{\rho(v),t}$ 的完整输出值 $g_{v,t}$；
-5. 每个 $0\le t\le L$ 的全部持久节点状态 $q_v^t$ 与选择历史 $y_j^t$；
-6. 每个 $t\in[L]$ 的终端序列 $\mathcal M_{\mathrm{out},t}$ 与最终输出槽 $b_t\in P_\bot$。
+### 6.4 单输入与终端读出的边界实例
 
-第三、四项的定义域不同：未激活候选有本次快照和下一状态，却没有完整输出值。固定这些定义域以后，定理 2 按输入位置递推，唯一确定整份有限记录。后面说“记录对应”，比较的是这些全部坐标，而不只是最后一项中的数值。
+令 $V_{\mathrm{in}}=\{v:\operatorname{In}(v)=\varnothing\}$、$V_{\mathrm{out}}=\{v:\operatorname{Out}(v)=\varnothing\}$。有限 DAG 中每个节点都位于某条入口至终端的路径上：不断向前或向后走，有限性与无环性保证在相应边界停止。
+
+为每个入口设输入端口 $i_v$，各端口都在位置 $t$ 注入同一个 $x(t)$；为每个终端设输出端口 $o_v$。取广播式 (15)，令
+
+$$
+\mathcal M_{\mathrm{out},t}
+=\{(\mathrm{out},\theta_{v,t},o_v,b_{o_v,t}):v\in V_{\mathrm{out}},\ b_{o_v,t}\ne\bot\}.
+$$
+
+给定全函数 $\operatorname{Agg}_{\mathrm{out}}:\mathbb N\times\mathcal P_{\mathrm{fin}}(\mathsf{OutRec})\to P$。选择读出时间 $\theta_{\mathrm{out},t}=Dt+r_{\mathrm{out}}$，其中 $r_{\mathrm{out}}=1+\max_v r_v$，并在这个实例中取 $D>r_{\mathrm{out}}$。定义外部读出槽
+
+$$
+b_t=\begin{cases}
+\operatorname{Agg}_{\mathrm{out}}(\theta_{\mathrm{out},t},\mathcal M_{\mathrm{out},t}),&\mathcal M_{\mathrm{out},t}\ne\varnothing,\\
+\bot,&\mathcal M_{\mathrm{out},t}=\varnothing.
+\end{cases}
+\tag{17}
+$$
+
+这是端口记录的一个读出，读出时间指定何时比较这组结果。图内输出仍保留各自的端口与逻辑时间。需要把聚合本身作为节点作用时，可以显式增加一个输出节点及相应正时延边。
+
+> [!corollary] 推论 2：有值输出的充分条件
+> 在本边界实例中，若每个非空候选集合都选择至少一个节点，则每个位置至少有一个激活终端，因而 $b_t\in P$。
+
+**证明。** 入口均收到输入，因此存在激活节点。取区域秩最大的激活节点 $v$。若它有出边，广播会使更高区域有候选，该区域也会激活某节点，与最大性矛盾。因此 $v$ 是终端，广播也向其端口输出有值载荷。$\square$
+
+这个证明使用了广播的有值发送。对一般 Full，同样结论需另假设激活者在每条出边有值发送（TotalEmit），且激活终端至少在一个端口输出有值。定理 1 的有限性与唯一性无需这些附加条件。
 
 ## 7. 两个输入的手算
 
-取标量情形 $P=\mathbb R$，以及第 1 节的节点 $V=\{a,b,c\}$。给两条边命名为 $e_a:a\to c$、$e_b:b\to c$，边序为 $e_a$ 在 $e_b$ 前，节点序为 $a,b,c$。区域 $j_0$ 为 $\{a,b\}$，区域 $j_1$ 为 $\{c\}$，两者都取 $K=1$。令 $\ell(j_0)=1,\ell(j_1)=2,D=4$。所有节点和输出聚合均采用与式 (5) 同形的规则，也就是忽略标签并对值取均值。
+取第 1 节的图，区域为 $\mathcal R_0=\{a,b\}$、$\mathcal R_1=\{c\}$，秩为 $1,2$，$D=4$。按第 6.4 节配置入口和终端；输入为 $x(0)=2,x(1)=1$。取 $P=X_v=\mathbb R$，Agg 对非空纤维取均值、空集返回 $0$，输出读出同样取均值。
 
-全部局部控制空间和两区域的历史空间都是单点集 $\{*\}$，历史初态为 $*$，每次选择返回各候选的单点控制量并保持历史。区域 $j_0$ 取 $\tau_{j_0}=+$、$\kappa_{j_0}=1$。节点 $a,b$ 的状态与描述量空间都是 $\mathbb R$，状态初值分别为 $0,1$，函数为
+节点 $a,b$ 的状态、描述量空间为 $\mathbb R$，初态为 $0,1$。控制和区域历史空间均为 $\{*\}$，初始历史为 $*$。取
 
 $$
 \begin{aligned}
 \operatorname{Upd}(q,\theta,h)&=q+h,\\
-\operatorname{Read}^0(\theta,h)&=h,\\
-\operatorname{Read}^-(q,\theta,h)&=q,\\
-\operatorname{Read}^+(q,\theta,h)&=q.
+\operatorname{Read}^0(\theta,h)&=h,\qquad
+\operatorname{Read}^-(q,\theta,h)=\operatorname{Read}^+(q,\theta,h)=q,\\
+\operatorname{Next}(q,q^{\mathrm{cmp}},\theta,h,a,*)&=
+\begin{cases}0,&a=1,\\q^{\mathrm{cmp}},&a=0,\end{cases}\\
+\operatorname{EmitValue}(q^{\mathrm{cmp}},\theta,h,*)&=h+q^{\mathrm{cmp}}.
 \end{aligned}
 $$
 
-所以本次使用的 $+$ 描述量就是候选新状态。对任意非空候选集合，选择描述量较大的一个，平票按节点序；空候选按第 4.3 节的恒等规则。两个候选均采用更新，完整计算为
+首区域取 $\tau_0=+,\kappa_0=1,K_0=1$，总选最大描述量，平票按 $a,b$ 的顺序。所有候选均得到控制 $*$，历史保持。节点 $c$ 的状态和描述量均为单点集，其状态与读取函数恒返回 $*$，$\operatorname{EmitValue}_c(*,\theta,h,*)=h$；区域容量为 $1$，有候选时总选中，取 $\tau_1=0,\kappa_1=0$。各节点 Full 都由式 (15) 给出。
 
-$$
-\operatorname{Full}(q^{\mathrm{cmp}},\theta,h,*)=h+q^{\mathrm{cmp}}.
-$$
-
-节点 $a,b$ 的 Next 在激活时返回 $0$，否则返回本次快照。这样所有模式的读取函数都有定义，实际求值只采用声明的 $+$ 模式。
-
-节点 $c$ 的状态和描述量空间也取单点集 $\{*\}$，状态初值为 $*$，Upd、Next 和三种 Read 恒返回 $*$；完整计算为 $\operatorname{Full}_c(*,\theta,h,*)=h$。其区域取 $\tau_{j_1}=0,\kappa_{j_1}=0$，有候选时总选中 $c$。至此，例子的全部集合、初态与局部函数均已指定。
-
-输入序列是 $x(0)=2,x(1)=1$。
-
-| 输入位置 | 旧状态 $(q_a^t,q_b^t)$ | 两个计算快照 | 激活节点 | 下一状态 | 输出 |
+| 位置 | 旧状态 $(q_a^{[t]},q_b^{[t]})$ | 快照 | 激活者 | 下一状态 | 读出 $b_t$ |
 |---|---|---|---|---|---|
-| $t=0$ | $(0,1)$ | $(2,3)$ | $b$ | $(2,0)$ | $2+3=5$ |
-| $t=1$ | $(2,0)$ | $(3,1)$ | $a$ | $(0,1)$ | $1+3=4$ |
+| $0$ | $(0,1)$ | $(2,3)$ | $b$ | $(2,0)$ | $5$ |
+| $1$ | $(2,0)$ | $(3,1)$ | $a$ | $(0,1)$ | $4$ |
 
-在第一个位置，$z_{e_a,0}=\bot$，$z_{e_b,0}=5$。所以 $c$ 的聚合输入是单项序列 $((e_b,5))$，其均值为 $5$。第二个位置两条边的角色相反。
+第一个位置，$b$ 在时间 $1$ 沿边 $e_b:b\to c$ 发送 $5$，消息在时间 $2$ 到达；$c$ 的完整纤维是 $\{(\mathrm{msg},1,e_b,5)\}$，输出记录为 $(\mathrm{out},2,o_c,5)$。外部读出在时间 $3$ 得到 $b_0=5$。
 
-这个例子同时区分了四件事：两个节点都有输入；两个节点都接纳输入；只有一个做完整计算；被选节点本次读取旧记忆与新输入共同形成的快照，却不把它留到下一位置。
+首区域两个节点都收到并采用输入，只有一个做 Full；被选节点读取清理前的快照，下一状态为零。若 Next 始终保留快照，第二个位置仍会选择 $b$，说明清理直接参与模型数值。
 
-若把延续函数改成始终保留快照，第一步之后状态变成 $(2,3)$，第二步会再次选择 $b$。因此清理是模型语义，而不仅是临时存储回收。
+再把首区域在 $\theta=1$ 的选择改为空集。第一次快照仍为 $(2,3)$，下一状态也为 $(2,3)$，两条边均无消息，$c$ 无候选，$b_0=\bot$。第二次快照为 $(3,4)$，选择 $b$，得到 $b_1=5$。输出槽序列是 $(\bot,5)$。
 
-作为空选择的手算变式，只修改 $j_0$ 的选择函数：当 $\theta=1$ 时返回空激活集合及原单点控制、历史，其他时刻沿用上述规则。这是一个对所有自变量都有定义的选择函数。第一次仍形成快照 $(2,3)$，两节点因未激活而把它们保留为下一状态；两条父边均为 $\bot$，$c$ 没有候选作用，故 $b_0=\bot$。第二次快照为 $(3,4)$，选择 $b$，得到输出 $1+4=5$ 与下一状态 $(3,0)$。输出槽序列是 $(\bot,5)$；若只保存有值输出，还须保留其位置 $t=1$。
-
-**练习。** 每次从本节原设定出发，分别计算以下三个变式。
-
-1. 将区域 $j_0$ 的描述量模式改为 $\tau_{j_0}=-$，重新计算两行表格。
-2. 将区域 $j_0$ 的采用模式改为 $\kappa_{j_0}=0$，重新计算两行表格。
-3. 将节点 $a,b$ 的控制空间改为 $[0,1]$，按第 5.4 节产生 $p_v$，并把它们的 Full 改为 $h+p_vq^{\mathrm{cmp}}$；Next 保持本例的清理规则并忽略控制量。节点 $c$ 的全部定义保持不变。计算输出如何变化；权重只在 $a,b$ 的完整输出公式中使用。
+**练习。** 分别把首区域改成 $\tau_0=-$、$\kappa_0=0$，重算原表；再让激活节点的 Full 在所有坐标取 $\bot$，检查哪些状态作用仍然存在。
 
 ## 8. 按统一逻辑时间衰减
 
-固定正整数 $k$。一种状态表示是 $q=(z,s)\in\mathbb R^k\times\mathbb N$：保存值 $z$ 和该值对应的逻辑时间 $s$。本节取已声明初始值 $z_0\in\mathbb R^k$，初态为 $(z_0,0)$。固定 $0<\alpha\le1$，在 $\theta\ges$ 时定义有效值
+取 $S_v=\mathbb R^k\times\mathbb N$，状态 $(z,s)$ 保存值与时间戳。固定 $0<\alpha\le1$，定义全函数
 
 $$
-\operatorname{Eff}(q,\theta)=\alpha^{\theta-s}z.
-\tag{16}
-$$
-
-为使函数在整个声明定义域上为全函数，以下统一把指数写为 $\max(0,\theta-s)$。固定全函数 $H:P\to\mathbb R^k$，取
-
-$$
-\operatorname{Upd}((z,s),\theta,h)
-=(\operatorname{Eff}((z,s),\theta)+H(h),\theta).
-$$
-
-本节的 Next 只采用第 5.2 节的两种形式：保留本次快照，或在激活时重置为 $(0,\theta)$。初始时间戳为零，更新和重置只写当前逻辑时间，未采用时保留原时间戳；由于同节点后续输入的逻辑时间递增，归纳得到每次实际读取都有 $\theta\ges$。若另允许写入未来时间戳，就不能援用这个结论。
-
-本例的旧状态描述量通过 $\operatorname{Eff}(q,\theta)$ 读取衰减后的内容；候选新状态已经标记为当前时间，读取它时不会重复衰减。
-
-空档期间保存的 $(z,s)$ 保持不变；下一次读取才计算经过了多少逻辑时间。这与每步衰减给出相同有效值，因为
-
-$$
-\alpha^{a+b}z=\alpha^b(\alpha^az).
-$$
-
-空档保持保存坐标。逐时间比较使用式 (16) 解码所得的有效量。
-
-同一区域的选择历史也可以保存值与上次更新时间，在下一次候选非空的选择作用中补算衰减，再根据激活集合增加恢复惩罚或扣减积累值。这仍不依赖 Full。
-
-式 (2) 中同节点相邻输入位置相隔 $D$，所以这种例子的相邻位置衰减因子是 $\alpha^D$。若一个节点从逻辑时间 $2$ 到 $10$ 才再次收到输入，即使它们在压紧列表中相邻，也必须使用间隔 $8$。
-
-## 9. 整段输入与分段继续
-
-定义全部持久状态的乘积空间及位置 $t$ 以前的状态值：
-
-$$
-\mathsf S=\left(\prod_{v\in V}S_v\right)\times
-\left(\prod_{j\in J}Y_j\right),\qquad
-S_t=((q_v^t)_{v\in V},(y_j^t)_{j\in J})\in\mathsf S.
-$$
-
-定理 2 定义了一个带绝对输入位置的转移：
-
-$$
-T:\mathbb N\times\mathsf S\times P\to P_\bot\times\mathsf S,\qquad
-T(t,S_t,x(t))=(b_t,S_{t+1}).
-$$
-
-对 $0\le p\le q\le L$，用 $T$ 依次计算位置 $p,\ldots,q-1$，得到区间转移 $T_{p:q}$，返回保留全部位置的 $P_\bot$ 输出槽序列和右边界状态。空区间返回空序列与原状态；有输入但无输出的位置仍保留 $\bot$，不能把它当成没有处理该输入。
-
-> [!theorem] 定理 3：分段继续
-> 若 $p\le m\le q$，先执行 $T_{p:m}$，再以其右状态执行 $T_{m:q}$，拼接输出，结果恰等于 $T_{p:q}$。
-
-**证明。** 第一段与整段在每一步使用同一绝对位置、同一输入和同一旧状态，归纳得到相同输出和 $S_m$。第二段于是具有同样的初态；对余下位置继续归纳即可。$\square$
-
-因此在输入位置边界停止时，保存 $t,S_t$ 足以继续；状态中记录的逻辑时间戳也必须保留。不能在每个新块把 $t$ 重置为零。若在一个输入的内部停止，还需要保存尚未完成的局部记录，不能只用这个较小边界。
-
-这证明前向分段语义，不证明梯度相同。若人为截断段间反向传播，训练梯度可以改变，而这里的前向等式仍成立。
-
-## 10. 嵌入 TimedDAG
-
-本节使用 TimedDAG 教材已经定义的带标记原子、时间纤维和记录坐标。证明的思路是：给入口和输出各加一个边界节点，用区域层级之差作为边时延，再逐项比较两边的记录。前九节已经独立定义了 SettleGraph，本节只建立它与更一般对象的关系。
-
-### 10.1 增加边界适配节点
-
-本节用帽子标记 TimedDAG 的对象，以区别它们与 SettleGraph 的坐标。取两个不属于 $V$ 的节点 $s,o$，以及不属于 $J$ 的两个区域标记 $j_s,j_o$。增加边
-
-$$
-a_v^{\mathrm{in}}:s\to v\quad(v\in V_{\mathrm{in}}),
-\qquad
-a_v^{\mathrm{out}}:v\to o\quad(v\in V_{\mathrm{out}}),
-$$
-
-并规定这些新边身份彼此不同，也不属于原边集 $A$。扩展后的节点集为 $\widehat V=V\cup\{s,o\}$；保留原区域划分，并把 $s,o$ 各放入独立单节点区域。
-
-令 $r_s=0,r_o=r_{\mathrm{out}}$。对新旧全部边定义
-
-$$
-\widehat\delta(a)
-=r_{\widehat{\operatorname{dst}}(a)}
--r_{\widehat{\operatorname{src}}(a)}>0.
-\tag{17}
-$$
-
-因此扩展图也无环。唯一外部输入端口 $i_\star$ 进入 $s$，位置 $t$ 在时间 $Dt$ 注入 $x(t)$；唯一外部输出端口 $o_\star$ 由节点 $o$ 持有。所有节点的本地内容空间均取 $P$。
-
-原节点保留自己的状态、描述量、控制空间、初态、Upd、Read 与 Next；原区域保留历史、初态和选择函数，并令
-
-$$
-\widehat\tau_j=\tau_j,\qquad
-\widehat\kappa_j=\kappa_j,\qquad
-\widehat K_j=K_j.
-$$
-
-因此描述量模式、状态采用模式与选择容量也逐项相同。式 (8) 与 TimedDAG 都只要求激活集合是候选子集且不超过容量，空选择也直接对应。
-
-对两个适配节点 $u\in\{s,o\}$，把状态、描述量、局部控制和所属区域的历史空间全部取为单点集 $\{*\}$，初态均为 $*$。Upd、Next 和三种 Read 都恒返回 $*$；区域模式取 $\tau=0,\kappa=0,K=1$。对任意 $C\subseteq\{u\}$，选择函数完整定义为
-
-$$
-\widehat{\operatorname{SelStep}}_{j_u,C}
-(*,\theta,(*)_{v\in C})
-=(C,(*)_{v\in C},*).
-$$
-
-这也包括空候选的恒等情形。输入聚合 $\widehat{\operatorname{Agg}}_s(\theta,B)$ 定义为有限原子集合 $B$ 中全部数值的和，空和为零向量；实际非空纤维只有唯一外部输入，所以它返回 $x(t)$。其 Full 在每条出边上返回本地内容 $h$，外部输出端口族为空。
-
-输出节点的聚合把入边 $a_v^{\mathrm{out}}$ 还原为终端节点 $v$，按节点序将 $(v,m_v)$ 交给 $\operatorname{Agg}_{\mathrm{out}}$。这个定义在非空、每条入边至多一个原子且所有原子的到达时间均为 $\theta$ 时使用；其他自变量统一返回零向量，使聚合在 TimedDAG 要求的整个定义域上为全函数。输出节点的 Full 在唯一端口 $o_\star$ 返回 $h$，内部出边族为空。若本位置没有激活终端，输出节点的纤维为空，不成为候选，也不执行 Full 或产生输出记录；聚合函数在空集合上的补全值不会被实际调用。
-
-两个新节点只是编码中的边界适配对象，不能算作原 SettleGraph 新增的可训练层。入口、终端宽度仍属于需要核算的边界成本。
-
-### 10.2 消息与聚合如何对齐
-
-对原边 $a:u\to v$，有
-
-$$
-(Dt+r_u)+\widehat\delta(a)=Dt+r_v.
+\operatorname{Eff}((z,s),\theta)=\alpha^{\max(0,\theta-s)}z.
 \tag{18}
 $$
 
-新输入边同样把 $Dt$ 的值送至 $Dt+r_v$，新输出边把终端值送至 $Dt+r_o$。沿路径相加时中间秩抵消，所以任意从 $s$ 到同一节点的路径都落到同一个坐标。不同输入位置在该节点具有不同坐标；同一区域的候选具有相同坐标。
-
-原节点的 TimedDAG 聚合先把入口消息映成 $(\mathrm{in}_v,m)$，或把内部消息映成 $(a,m)$，按原顺序排列后应用 $\operatorname{Agg}_v$。在空集合、同一边多次出现、原子到达时间不全等于 $\theta$ 等其他自变量上，统一返回零向量。实际计算不会进入这些额外情形；它们只用于补全函数定义域。
-
-对原节点 $v$ 定义广播提升
+给定 $H_v:X_v\to\mathbb R^k$，令
 
 $$
-\Delta_v:P\to
-(P_\bot)^{\widehat{\operatorname{Out}}(v)}
-\times(P_\bot)^{\widehat{\operatorname{OutPort}}(v)},
-\qquad
-\Delta_v(g)=((g)_{a\in\widehat{\operatorname{Out}}(v)},()).
+\operatorname{Upd}_v((z,s),\theta,h)
+=(\operatorname{Eff}((z,s),\theta)+H_v(h),\theta).
 $$
 
-扩展图的原节点没有直接外部输出端口；终端输出经新增边送到 $o$。令
+初态可取 $(z_0,0)$，Next 保留快照或在激活时重置为 $(0,\theta)$。从这个初态出发，每次读取均有 $s\le\theta$，由更新时间递增归纳可得。Read 和 Full 可以通过 Eff 取得衰减后的值。
+
+空档期间保存坐标保持，读取时补算时间差。由于 $\alpha^{a+b}z=\alpha^b(\alpha^az)$，这种表示与逐时衰减具有相同有效值。同节点相邻位置相隔 $D$，对应衰减因子为 $\alpha^D$；从时间 $2$ 到 $10$ 的间隔始终为 $8$。
+
+选择历史也可保存时间戳，在下一次非空候选的选择中读取有效历史。相同保存坐标与相同有效读值是两种比较关系，应用时须指定所比较的对象。
+
+## 9. 整段输入与分段继续
+
+令
 
 $$
-\widehat{\operatorname{Full}}_v
-=\Delta_v\circ\operatorname{Full}_v.
+\mathsf S=\left(\prod_vS_v\right)\times\left(\prod_jY_j\right),\qquad
+S_t=((q_v^{[t]})_v,(y_j^{[t]})_j).
 $$
 
-聚合的标签还原与该广播提升共同给出两层函数的对应。未激活节点保持无消息结果。至此扩展规格的全部局部函数已经确定。
-
-### 10.3 完整记录对应定理
-
-记 TimedDAG 的持久状态与历史为 $\widehat q_v^\theta,\widehat y_j^\theta$。输入位置 $t$ 对应逻辑时间块 $[Dt,D(t+1))$。有限计算最后一个可能非空时刻为 $D(L-1)+r_o$；若它的下一时刻仍小于 $DL$，把状态与历史保持不变、事件与消息保持为空，延拓到 $DL$。这个规范空闲延拓不增加任何实际计算，只使最后一个位置边界也有统一记号。
-
-对原节点与原区域，所要证明的状态映射是
+固定端口日程以后，位置 $t$ 的外部输入坐标集为 $I_t=\{(i,k):t_i(k)=t\}$。定理 1 给出一步函数
 
 $$
-\begin{aligned}
-\widehat q_v^{Dt}
-=\widehat q_v^{Dt+r_v}&=q_v^t,\\
-\widehat q_v^{Dt+r_v+1}&=q_v^{t+1},\\
-\widehat y_j^{Dt}
-=\widehat y_j^{\theta_{j,t}}&=y_j^t,\\
-\widehat y_j^{\theta_{j,t}+1}&=y_j^{t+1}.
-\end{aligned}
-$$
-
-以下三类局部坐标逐项对应；每行只在原记录定义了该坐标时比较：
-
-| SettleGraph 坐标 | TimedDAG 坐标 |
-|---|---|
-| 候选集合、激活集合 $\mathcal C_{j,t},\mathcal A_{j,t}$ | $\widehat{\mathcal C}_{j,\theta_{j,t}},\widehat{\mathcal A}_{j,\theta_{j,t}}$ |
-| 候选节点的 $h,\widetilde q,d^{\tau_j},c,q^{\mathrm{cmp}}$ | 同一原节点在逻辑时间 $Dt+r_v$ 的相应五个坐标 |
-| 激活节点的 $g_{v,t}$ | 本节点 Full 在每条扩展出边上的同一个值 |
-
-此外，若 $z_{a,t}\in P$，则原边槽位对应消息
-
-$$
-(\mathrm{msg},Dt+r_{\operatorname{src}(a)},a,z_{a,t}).
-$$
-
-若 $z_{a,t}=\bot$，则这个边和发送时间的槽位没有消息。有值输出 $b_t\in P$ 对应外部记录
-
-$$
-(\mathrm{out},Dt+r_o,o_\star,b_t).
-$$
-
-当 $b_t=\bot$ 时，时间 $Dt+r_o$ 的唯一输出端口没有记录。由完整消息、输出记录与固定槽位，可以反向恢复每个 $z_{a,t}$ 和 $b_t$，再按式 (3) 恢复全部输入序列；不创建载荷为 $\bot$ 的消息或输出记录。适配节点和它们的边是辅助坐标；删除这些坐标并作上述还原，就得到第 6.3 节的完整记录 $\mathcal T_x^{\mathrm S}$。
-
-> [!theorem] 定理 4：向 TimedDAG 的记录嵌入
-> 上述编码在全部原节点、原区域和输入位置满足上述对应关系；包括本地量、选择、控制、计算快照、持久状态、历史、全部边结果和输出。
-
-**证明。** 对输入位置归纳，并在同一位置内按区域次序归纳。位置 $0$ 的原节点和区域初态按构造相同。输入适配节点把同一值送至各入口。式 (18) 使全部原父消息与目标位置对齐；第 10.2 节的映射给出相同的聚合输入。状态、读取、选择、快照、延续与完整输出函数相同，因而本区域全部相应坐标相同；非候选节点和空候选区域则分别保持状态与历史。若有激活终端，输出适配节点应用同一输出聚合，所得有值输出相同；若没有，则它无候选也无输出事件，恰对应 $b_t=\bot$。
-
-所有消息的发送、到达和输出逻辑坐标均不大于 $Dt+r_o<D(t+1)$。因此规范切面 $D(t+1)$ 处没有本位置遗留的消息，原节点与区域的右状态正好成为下一位置的左状态。这个逻辑时间事实没有规定实际机器上的完成时刻。归纳完成，同时得到原边的有值与无值槽位对应。$\square$
-
-这证明的是按明确映射的完整记录等价，不要求两个模型原始记录具有相同坐标集合。较一般的 TimedDAG 可具有多输入输出、不对齐的路径时间、区域商图有环或每边不同输出，均不必属于本文 SettleGraph。
-
-### 10.4 无值结果、封闭下界与完整切面
-
-SettleGraph 的 $z_{a,t}=\bot$ 只说明本位置的这个边槽位没有消息。TimedDAG 的边封闭下界则表示：该边全部到达时间小于此下界的实际消息已经公开。这是一个关于到达时间前缀的命题。
-
-在此前位置的消息均已公开、本位置的有值结果也已公开或无值结果已确定后，编码中的该边可以把封闭下界推进到严格大于 $Dt+r_{\operatorname{dst}(a)}$。取全部父边下界的最小值，即可证明目标纤维关闭。一次无值结果与整条边永久关闭仍是两个不同命题。输出槽同理：在对应时间的全部终端边关闭且输出纤维为空后，才能确定 $b_t=\bot$；暂时没有输出记录不足以证明无输出。
-
-在完整输入位置边界 $Dt$，编码没有前一位置遗留的在途消息；删除适配节点的单点状态以后，TimedDAG 的切面状态恰对应第 9 节的 $t,S_t$。内部逻辑时间切面仍可能有在途消息，必须保留一般教材规定的全部边界坐标。
-
-## 11. 节点级时间批的含义
-
-本节先固定四个术语。**作用成本标记**是把第 10 节编码中的每个规范函数作用归入一个有限成本种类，并指定其中哪些种类是本次分析的主要作用。一个**精确联合契约**是一个带明确输入、输出类型的全函数；它在整个合法边界域上返回与逐作用参考递归相同的规范坐标。若这个联合函数从左边界节点状态和一段已知驱动量返回整段中间状态及右边界状态，其覆盖集合称为一个**状态块**。状态块数量是外层计数；联合函数内部依赖图的最长路径成本称为**块内跨度**。这些定义与 [[timed-dag-chunk-prefill-learning-note|分块教材]] 的一般定义一致，本节只使用它们的严格分层特例。
-
-固定一个输入位置区间，并假定某区域整段父输入已经由更前区域确定。因为 Next 和选择历史更新都不读取本区域 Full，便可以先沿时间扫描本区域的全部准备、选择与状态处理，得到每次完整计算的四个自变量
-
-$$
-(q_{v,t}^{\mathrm{cmp}},\theta_{v,t},h_{v,t},c_{v,t}).
-$$
-
-随后按节点收集所有激活位置，逐节点成批求值 Full。再把结果交给更后区域。式 (1) 保证不会返回已经扫描的区域。
-
-要得到正式的节点级时间批结论，还需声明作用成本，并为状态递归、完整输出或二者的联合求值给出精确契约。满足这些条件时，[[timed-dag-chunk-prefill-learning-note|分块教材]] 的严格分层证明可用于第 10 节的编码。状态块的外层数量、块内并行深度与具体设备效果分别计量。
-
-这套整区域安排也可以由通用算法自动得到：[分块教材 §6.5--6.6](timed-dag-chunk-prefill-learning-note.md#65-保留完整区域的静态分量) 先构造保留区域内依赖的静态分量，再沿分量拓扑序处理一个封闭窗口。第 10 节编码的区域依赖严格有序，每个分量都只有一个区域且没有内部消息边，故通用算法直接采用上述整段扫描和逐节点 Full 批。
-
-这个结论针对该窗口调度；即时消费安全前缀的通用算法可能提前处理较早位置，后来再为同节点开一批。路径已经对齐也不能排除这种情况，具体例子见 [分块教材 §6.7](timed-dag-chunk-prefill-learning-note.md#67-对齐路径仍可能被即时前缀分开)。这里的“每节点至多一批”是固定窗口中的逻辑 Full 批，块内跨度、物理切分、等待延迟和硬件时间另行计量。
-
-允许少选或空选择只改变实际 Full 坐标集合，不改变严格区域次序和输入关闭证明。没有 Full 坐标的节点无需 Full 时间批；即使整个窗口没有有值输出，也仍需保存候选状态更新与选择历史的右边界。
-
-本节依赖于 Next 和选择历史更新不读取 Full。若下一状态依赖完整输出，后续调用所需的快照就可能无法在本批 Full 以前确定；若该状态还影响共同选择，则选择本身也可能需要等待。这些扩展需要重新定义事件图与批求值次序，不属于本文规格。
-
-## 12. 接入已有模型时的函数保持
-
-若已有模型某处在位置 $t$ 输出 $h_t\in P$，新图有值输出为 $b_t\in P$，则图残差为 $b_t-h_t$。一般 SettleGraph 也允许 $b_t=\bot$，这时不能直接作向量相减。以下分析限定于每位置都有有值输出的接入；若应用另定义空输出时的回退，应把该读出纳入另一个接入契约。函数保持相对于接入范围定义。固定一个非空的**接入实例类** $\varnothing\ne\mathfrak X$。每个 $\chi\in\mathfrak X$ 明确给出：
-
-1. 已有模型输入、所比较的初始化及插入位置；
-2. 某个 $L_\chi\in\mathbb N_{>0}$ 以及一段有限参考值 $(h_{\chi,t})_{t\in[L_\chi]}$；
-3. SettleGraph 的初始节点状态与选择历史；
-4. 以 $h_{\chi,t}$ 为图输入得到的第 6 节完整记录。
-
-下文把该记录中的坐标加上标 $\chi$。这四项使“可达”只表示由某个 $\chi\in\mathfrak X$ 的完整记录实际出现。先定义本节需要的输出存在条件：
-
-$$
-\operatorname{OutputPresent}_{\mathfrak X}
-\Longleftrightarrow
-\forall\chi\in\mathfrak X,\ orall t\in[L_\chi]:
-\quad\mathcal M^\chi_{\mathrm{out},t}\ne().
-$$
-
-引理 1 的非空选择条件是它的一个充分条件；也可直接在声明的接入实例类上证明它。若 $\mathbf m=((i_1,m_1),\ldots,(i_n,m_n))$，记 $\operatorname{lab}(\mathbf m)=(i_1,\ldots,i_n)$。定义节点聚合的可达支持域：
-
-$$
-\begin{aligned}
-\operatorname{AdmAgg}_{\mathfrak X}(v)
-=
-\{(&\theta_{v,t},
-\operatorname{lab}(\mathcal M^\chi_{v,t}),
-h_{\chi,t})
-\mid
-\chi\in\mathfrak X,\ t\in[L_\chi],
-\mathcal M^\chi_{v,t}\ne()\}.
-\end{aligned}
+T_t:\mathsf S\times P^{I_t}\to(P_\bot)^{\mathsf O}\times\mathsf S,
+\qquad T_t(S_t,x|_{I_t})=((b_{o,t})_o,S_{t+1}).
 \tag{19}
 $$
 
-类似地定义实际 Full 调用域：
+函数下标 $t$ 确定绝对逻辑时间。反复应用它得到区间转导 $T_{p:q}$；空区间返回空输出族与原状态。
+
+> [!theorem] 定理 3：位置边界上的继续
+> 对 $p\le m\le q$，从同一 $S_p$ 出发，先求 $T_{p:m}$，再从所得 $S_m$ 求 $T_{m:q}$，拼接输出，结果等于 $T_{p:q}$。
+
+**证明。** 对输入位置归纳，每一步使用同一绝对时间、外部输入和旧状态，故结果相同。$\square$
+
+保存 $(t,S_t)$ 足以从位置边界继续。若需要完整历史，同时保存已产生的记录；相邻段共享的边界状态只识别一次。停在位置内部时，还可能有未到达消息和待用快照，须采用一般逻辑时间切面或阶段记录。
+
+## 10. 嵌入 TimedDAG
+
+### 10.1 同一份规格
+
+取第 2 节的 $G,\mathsf I,\mathsf O,\gamma,\varepsilon,\rho$，式 (2) 的日程与边时延，以及第 3--5 节的全部空间、初态和函数，直接作为 TimedDAG 规格。式 (1) 保证其节点图无环。原子类型、Agg 的集合输入和 Full 的两个返回族都相同。
+
+### 10.2 单位置支撑
+
+> [!lemma] 引理 4：事件时间对齐
+> 在这份 TimedDAG 规格中，每个非空纤维的时间都为某个 $\theta_{v,t}$。该纤维中的外部输入与内部消息都属于同一个位置 $t$。
+
+**证明。** 按节点拓扑序归纳。外部记录已满足式 (2)。父节点从位置 $t$ 产生的消息沿式 (3) 到达当前节点的 $\theta_{v,t}$。不同位置对应不同时间，因此不会混入同一纤维。没有外部或父边输入的坐标为空。$\square$
+
+### 10.3 完整记录对应
+
+用 $q_v^\theta,y_j^\theta$ 表示 TimedDAG 的逻辑时间状态。有限输入之后按空纤维规则延拓至 $DL$。位置边界与局部作用的对应为
 
 $$
 \begin{aligned}
-\operatorname{AdmFull}_{\mathfrak X}(v)
-=
-\{(&q^{\mathrm{cmp},\chi}_{v,t},\theta_{v,t},
-h^\chi_{v,t},c^\chi_{v,t})
-\mid
-\chi\in\mathfrak X,\ t\in[L_\chi],
-v\in\mathcal A^\chi_{\rho(v),t}\},
+q_v^{Dt}=q_v^{\theta_{v,t}}&=q_v^{[t]},&
+q_v^{\theta_{v,t}+1}=q_v^{D(t+1)}&=q_v^{[t+1]},\\
+y_j^{Dt}=y_j^{\theta_{j,t}}&=y_j^{[t]},&
+y_j^{\theta_{j,t}+1}=y_j^{D(t+1)}&=y_j^{[t+1]}.
 \end{aligned}
 \tag{20}
 $$
 
-以及输出聚合的可达支持域：
+$B,h,\widetilde q,d,c,q^{\mathrm{cmp}},\mathcal C,\mathcal A,f^A,f^O$ 按 $t\mapsto\theta_{v,t}$ 或 $\theta_{j,t}$ 重索引，四类作用的返回值保持原样。有值 $z_{a,t}$ 对应唯一消息 $(\mathrm{msg},\theta_{\operatorname{src}(a),t},a,z_{a,t})$，有值 $b_{o,t}$ 对应唯一输出 $(\mathrm{out},\theta_{\varepsilon(o),t},o,b_{o,t})$；无记录的已确定槽取 $\bot$。
+
+> [!theorem] 定理 5：记录嵌入
+> 上述 TimedDAG 的完整记录与 $\mathcal T_x^{\mathrm S}$ 通过式 (20) 及槽的展开一一对应。
+
+**证明。** 引理 4 确定全部可能非空时间。按位置和区域归纳，两边使用相同纤维、旧状态及历史，故每个局部函数的参数和结果相同。空档按恒等规则填充状态。全部消息在本位置区间内到达，位置边界没有遗留消息，于是下一位置的左状态相同。反向限制到这些时间并恢复已确定槽，即得到 $\mathcal T_x^{\mathrm S}$ 的全部坐标。$\square$
+
+本嵌入保留局部函数本身。一般 TimedDAG 可有不对齐路径或交错区域；它们仍使用同一套局部语义。
+
+### 10.4 封闭与切面
+
+单个 $z_{a,t}=\bot$ 表示这个槽无消息。边的封闭下界 $\sigma^A(a)=b$ 表示该边全部到达时间小于 $b$ 的实际消息已经纳入记录。此前位置均已完成、本位置消息均已纳入以后，边的下界可越过 $\theta_{\operatorname{dst}(a),t}$，从而证明目标纤维完整。
+
+一般切面状态为
 
 $$
-\begin{aligned}
-\operatorname{AdmOut}_{\mathfrak X}
-=
-\{(&Dt+r_{\mathrm{out}},
-\operatorname{lab}(\mathcal M^\chi_{\mathrm{out},t}),
-h_{\chi,t})
-\mid
-\chi\in\mathfrak X,\ t\in[L_\chi],\ \mathcal M^\chi_{\mathrm{out},t}\ne()\}.
-\end{aligned}
-\tag{21}
+Q_b=(b,(q_v^b)_v,(y_j^b)_j,W_b),\qquad
+W_b=\{m:\operatorname{send}(m)<b\le\operatorname{time}(m)\}.
 $$
 
-这里式 (19) 与式 (21) 只从实际记录读取标签支持，再把第三坐标 $h_{\chi,t}$ 用作待检查的共同载荷；它们没有预先假定实际消息值已经等于 $h_{\chi,t}$。
+在位置边界 $b=Dt$，$W_{Dt}=\varnothing$，所以 $Q_{Dt}$ 恰由 $(t,S_t)$ 给出。位置内部切面仍可能具有非空 $W_b$。
 
-定义 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，当且仅当 $\operatorname{OutputPresent}_{\mathfrak X}$ 与下列三个全称条件同时成立：
+共同区间接口 $\Phi_{a,b}(Q_a,E_{[a,b)})=(\mathcal U_{[a,b)},Q_b)$ 返回完整区间记录及右切面，见 [分块教材 §8.1](timed-dag-chunk-prefill-learning-note.md#81-输入分块组合)。取 $a=Dp,b=Dq$ 并投影到端口槽，就得到第 9 节的 $T_{p:q}$。
 
-$$
-\begin{aligned}
-&\forall v\in V,
-\forall(\theta,(i_1,\ldots,i_n),h)
-\in\operatorname{AdmAgg}_{\mathfrak X}(v):\\
-&\qquad
-\operatorname{Agg}_v
-(\theta,((i_1,h),\ldots,(i_n,h)))=h,\\[2mm]
-&\forall v\in V,
-\forall(q,\theta,h,c)
-\in\operatorname{AdmFull}_{\mathfrak X}(v):\\
-&\qquad
-\operatorname{Full}_v(q,\theta,h,c)=h,\\[2mm]
-&\forall(\theta,(v_1,\ldots,v_n),h)
-\in\operatorname{AdmOut}_{\mathfrak X}:\\
-&\qquad
-\operatorname{Agg}_{\mathrm{out}}
-(\theta,((v_1,h),\ldots,(v_n,h)))=h.
-\end{aligned}
-\tag{22}
-$$
+## 11. 节点级时间批的含义
 
-若 $\operatorname{FunctionPreserving}_{\mathfrak X}$ 成立，则对每个 $\chi\in\mathfrak X$ 与 $t\in[L_\chi]$，按区域顺序归纳，所有有值消息均等于 $h_{\chi,t}$，最终：
+固定一个位置区间。按区域次序，先取得某区域整段的完整纤维和左状态。由于 Next 与选择历史只依赖 Full 以前的量，可以先按时间产生该区域全部 $P,S,U$，再把每个节点的激活时间收成集合 $\Theta$，共同求其 Full。
+
+相应联合函数使用正典名称
 
 $$
-b_{\chi,t}=h_{\chi,t}.
+\operatorname{BatchRegionState}_{j,I},\qquad
+\operatorname{BatchFull}_{v,\Theta}.
 $$
 
-具体地，入口序列的载荷本来就是 $h_{\chi,t}$。若某个区域以前的全部有值边结果都等于它，则当前节点的实际标签支持属于式 (19)，式 (22) 的第一行使聚合结果仍为 $h_{\chi,t}$；实际激活调用属于式 (20)，第二行又使每条新有值边结果仍为 $h_{\chi,t}$。区域归纳完成后，$\operatorname{OutputPresent}_{\mathfrak X}$ 保证实际终端支持非空且属于式 (21)，第三行给出上述输出等式。若没有输出存在条件，即使入口聚合保持输入，全部节点不激活也会使 Full 与输出聚合的条件真空成立，却不会产生 $h_{\chi,t}$。状态、描述量、选择与控制量可以影响哪些标签实际出现，但不会越出这些可达域。
+前者返回区域全部实际 $P,S,U$、状态和历史轨迹及右边界；后者返回全部 $F$ 值及展开的消息、输出。若将两者合为区域联合函数，记为 $\operatorname{BatchRegion}_{j,I}$。精确性均为 $\mathcal K(z)=\operatorname{RefBlock}_K(z)$，其中 $K$ 指明覆盖范围，$z$ 包含全部块外自变量。
 
-因而图残差在声明的实例类上为零。忽略标签的均值、按标签产生但归一化后权重和为 $1$ 的加权平均，都是满足相应条件的实例；任意身份感知聚合则未必满足。若希望使用比可达域更强、与 $\mathfrak X$ 无关的充分条件，可以把式 (22) 的定义域扩大到全部类型正确的时间、非空标签列、状态、控制量与 $h\in P$，但必须明确写出这个更强量词。
+[分块教材 §6](timed-dag-chunk-prefill-learning-note.md#6-严格分层区域的整块定理) 证明：具有相应精确见证时，整窗口策略每区域至多使用一个状态块，每节点至多使用一个额外 Full 时间批。激活为空时仍保存候选状态与历史；没有 Full 坐标的节点无需 Full 批。
 
-新增私有状态可以在后台演化，只要它在 $\mathfrak X$ 的可达域内不破坏式 (22)。若函数保持声明还比较已有模型状态，则必须另外给出初始化嵌入 $\eta$ 与状态投影 $\pi$。把两边在位置边界的状态轨迹分别记为 $s^{\mathrm{base}}_{\chi,t}$ 与 $s^{\mathrm{grown}}_{\chi,t}$；还必须明确要求：
+这个结论计量外层调用。状态递归可以在块内顺序进行，块内工作量和并行深度由局部代数结构决定。立即处理当前安全前缀的策略也可能把同节点分成多批；[§6.7](timed-dag-chunk-prefill-learning-note.md#67-对齐路径仍可能被即时前缀分开) 给出时间已经对齐的例子。
+
+## 12. 接入已有模型时的函数保持
+
+本节采用第 6.4 节的共同输入与终端读出实例，并取 $X_v=P=\mathbb R^d$。设已有模型在位置 $t$ 给出 $h_t$，把它送入各入口。固定一个接入实例类 $\mathfrak X$；每个实例指定输入序列、参数、初态和所比较的原模型轨迹。
+
+先要求 $\operatorname{OutputPresent}_{\mathfrak X}$：对类中每个实例、每个位置，终端读出集合非空。推论 2 给出一个充分条件。
+
+令 $B[p]$ 表示保留原子集合 $B$ 的所有来源与时间身份、把各载荷换成 $p$；输出集合 $Z[p]$ 同理。以下三个条件仅在 $\mathfrak X$ 的实际支持和调用域上要求：
+
+1. 对实际非空输入纤维的身份集合，$\operatorname{Agg}_v(\theta_{v,t},B[h_t])=h_t$。
+2. 对实际激活调用，$\operatorname{EmitValue}_v(q^{\mathrm{cmp}}_{v,t},\theta_{v,t},h_{v,t},c_{v,t})=h_{v,t}$。
+3. 对实际非空终端集合的身份集合，$\operatorname{Agg}_{\mathrm{out}}(\theta_{\mathrm{out},t},Z[h_t])=h_t$。
+
+> [!proposition] 命题 6：共同载荷保持
+> 在输出存在及上述三个条件下，每个有值消息载荷都为 $h_t$，且 $b_t=h_t$。
+
+**证明。** 各入口获得 $h_t$。按区域归纳，父消息均为 $h_t$ 时，第一项使本地内容为 $h_t$，第二项与广播使所有新消息仍为 $h_t$。最后由输出存在与第三项得到 $b_t=h_t$。$\square$
+
+均值与归一化加权平均满足相应共同载荷条件。条件只要求实际可达域；也可声明在整个类型域成立的更强充分条件。输出存在必须单独保证，否则全部空选择会使激活调用条件真空成立，却没有有值读出。
+
+若比较还包括原模型状态，另给初态嵌入 $\eta$ 与状态投影 $\pi$，要求
 
 $$
-\begin{aligned}
-s^{\mathrm{grown}}_{\chi,0}
-&=\eta(s^{\mathrm{base}}_{\chi,0}),\\
-\pi(s^{\mathrm{grown}}_{\chi,t})
-&=s^{\mathrm{base}}_{\chi,t}
-&&\left(\chi\in\mathfrak X,\ 0\le t\le L_\chi\right).
-\end{aligned}
+s^{\mathrm{grown}}_0=\eta(s^{\mathrm{base}}_0),\qquad
+\pi(s^{\mathrm{grown}}_t)=s^{\mathrm{base}}_t.
 $$
 
-新增坐标可在这一投影条件下演化。进一步推导见 [[memos/mathematics/function-preserving-growth|函数保持生长备忘]]。
+新状态可在该投影条件下演化。外部残差 $h_t+\alpha\Delta_t$ 在 $\alpha=0$ 时提供另一种输出保持方式；其状态保持仍须验证。进一步推导见 [[memos/mathematics/function-preserving-growth|函数保持生长]]。
 
-这里证明的是相对于明示实例类与特定函数选择的输出保持。具体节点算法、插入位置、训练目标和实验结果由实验平台维护；式 (22) 并不保证训练以后仍保持原模型。
+## 附录 A：系统用语与表示
 
-## 附录 A：系统用语对照
-
-| 系统用语 | 本文数学对象 |
+| 系统名称 | 数学对应 |
 |---|---|
-| receiver | 固定节点 $v\in V$ |
-| reached | $\mathcal M_{v,t}\ne()$，即属于候选集合 |
-| active | 属于 $\mathcal A_{j,t}$ |
-| DATA / CLOSED | 已确定的 $z_{a,t}\in P$ / $z_{a,t}=\bot$ |
-| no output | 本位置的输出槽 $b_t=\bot$；对应输出端口没有记录 |
-| seal / continuation | 第 10.4 节的封闭下界／完整切面上的继续状态 |
-| region selector | 由区域索引的函数族 SelStep |
-| proposal | 候选新状态 $\widetilde q_{v,t}$ |
-| Observe | 式 (10) 的输入接纳／计算快照规则 |
-| commit / carry | 显式规定的下一持久状态；不能替代快照与延续的区分 |
-| N / SD / BO | 单点状态；仅激活者采用；全部候选采用。后两者配默认 Next 时分别仅由激活者、全部候选写入候选状态 |
+| receiver / region | $v\in V$ / $\mathcal R_j$ |
+| candidate / active | 非空纤维对应的候选 / 激活集合成员 |
 | content / pre / post | 描述量模式 $0,-,+$ |
-| Plan | 固定集合、函数、初态、时间编码与选择规则的一份具体规格 |
-| prefill / decode | 一段输入的求值／逐输入位置继续；第 9 节给出前向相容性 |
-| checkpoint | 在模型生长语境中指已有模型的权重；运行中断点所需的继续状态另见第 9、10.4 节 |
+| SD / BO | $\kappa_j=0$ / $\kappa_j=1$；默认 Next 时分别由激活者／全部候选保存更新 |
+| proposal / snapshot / carry | $\widetilde q$ / $q^{\mathrm{cmp}}$ / $q^{\mathrm{next}}$ |
+| selector | $\operatorname{SelStep}_{j,C}$，返回激活、控制族与下一历史 |
+| DATA / CLOSED | 单个已确定槽的有值结果 / $\bot$ |
+| seal / continuation | 时间前缀完整性证明 / $Q_b$ |
+| prefill / decode | 整段输入求值 / 逐位置继续 |
+| execution checkpoint | $Q_b$ 的可保存表示 |
+| parameter checkpoint | 模型参数的可保存表示 |
+
+实现可直接采用 Agg、Upd、Read、SelStep、Next、Full 和四类作用名称。表示空间经预先固定的解码函数得到数学值，再通过遗忘投影删去辅助字段。解码保留确切原子身份、快照和状态；它只解释表示，不调用参考递归来修补结果。比如按固定全序排列的原子序列可无损表示纤维集合，带名字的数组可表示 Full 的两个函数坐标族。
+
+保存和读取执行切面至少满足 $\operatorname{load}(\operatorname{save}(Q_b))=Q_b$。仅保留输出投影或有效衰减值时，须另给相应比较关系。
 
 ## 附录 B：发送权重与指定反向规则
 
-本附录另外使用微分与链式法则。以下先固定激活集合，把 $h,g,p$ 视为一个局部函数的独立输入；它们若由共同参数产生，反向贡献还需沿各自依赖汇总。
+本附录使用微分与链式法则。固定激活集合，把 $h,g\in\mathbb R^d,p\in[0,1]$ 视为独立输入。HARD 的载荷为 $g$，SOFTP 为 $h+p(g-h)$，均可经 $\Delta_v$ 形成 Full。
 
-设 $h,g\in\mathbb R^d,p\in[0,1]$。HARD 的前向为 $g$；SOFTP 的前向为 $h+p(g-h)$。两者是不同函数。
-
-HST 的前向也为 $g$，但附加一种指定反向规则。若用符号 $\operatorname{sg}(p)$ 表示前向等于 $p$、反向贡献指定为零的操作，可写
+HST 的前向同为 $g$，另附指定反向规则。令 $\operatorname{sg}(p)$ 前向等于 $p$、反向贡献为零，固定实数 $\zeta$，写
 
 $$
-\eta=1+\zeta\bigl(p-\operatorname{sg}(p)\bigr),\qquad
-\widehat g=h+\eta(g-h),
+\eta=1+\zeta(p-\operatorname{sg}(p)),\qquad
+\widehat g=h+\eta(g-h).
 $$
 
-其中 $\zeta$ 是固定实数。前向有 $\eta=1$。设某个标量损失传到输出的反向信号为向量 $\bar g\in\mathbb R^d$，则指定到 $p$ 的这一条局部反向贡献为
+前向 $\eta=1$。若输出反向信号为 $u\in\mathbb R^d$，规定三条局部贡献
 
 $$
-\bar p=\zeta\langle\bar g,g-h\rangle.
+\bar h=0,\qquad \bar g=u,\qquad
+\bar p=\zeta\langle u,g-h\rangle.
 $$
 
-这里 $\langle u,v\rangle=\sum_{k=1}^d u_kv_k$。对独立输入 $g,h$ 的另外两条局部贡献分别为 $\bar g$ 和零向量。
-
-这是独立指定的训练规则；恒等于 $1$ 的普通函数导数为零。离散激活集合的导数也不由本文自动定义。是否保持这种指定反向规则，需要另外比较训练计算图；前向记录相同不足以证明梯度相同。
+再沿生成 $g,p$ 的依赖传播。$g$ 若依赖 $h$，经 $g$ 的贡献仍须汇总。离散激活、状态展开与梯度截断另行指定。前向记录相等只证明前向关系；反向等价须比较同一指定传播规则。
