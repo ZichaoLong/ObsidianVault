@@ -12,15 +12,16 @@ tags:
 
 ## 数学补充
 
-- [[weighted-kv-sparse-activation-example|带权 KV 局部教材]]：三层共同的来源聚合、有界记忆、多尺度评分与可弃权门控，含零极限、硬化条件、训练信用路径、局部成本及批量契约。
-- [[weighted-kv-layered-example|带权 KV 的分层架构实例]]：拓扑、时间与边界绑定，语言模型接入、训练目标和架构成本。
+- [[weighted-kv-sparse-activation-example|带权 KV 局部教材]]：三层共同的聚合、带权记忆、时间摘要／内容检索及独立／区域 Attention 评分，含预算函数、连续性证明、全图成本与批量契约。
+- [[weighted-kv-layered-example|带权 KV 的全连接分层实例]]：拓扑、时间与边界绑定，语言模型接入、训练目标和架构成本。
+- [[weighted-kv-hb-lattice-example|带权 KV 的 HB-Lattice 实例]]：先展开再收拢的多区域邻域图，局部函数组合、候选传播和成本比较。
 - [函数保持生长](mathematics/function-preserving-growth.md)：投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包。
 - [来源、聚合与读出](mathematics/provenance-and-readout.md)：安全商、保守依赖集合与未来可观察行为。
 - [自适应路由下界](mathematics/adaptive-routing-prefill-lower-bound.md)：自足的 deterministic exact 黑盒查询模型与证明；不能直接当作任意具体 selector 的下界。
 
 ## 机制与学习风险
 
-- [Selector 与局部记忆](architecture/selector-and-memory.md)：评分、历史、衰减、恢复和清理的机制动机与设计风险。
+- [Selector 与局部记忆](architecture/selector-and-memory.md)：聚合共享、记忆检索、区域匹配、动态路径与状态机制的动机和取舍。
 - [学习风险与诊断](learning-systems/learning-risks-and-diagnostics.md)：路径漂移、信用距离、粒度与状态负担、饥饿、辅助监督、带权 KV 的退火实验和机制对照。内容是实验前假设与诊断建议。
 
 ## 外部背景
