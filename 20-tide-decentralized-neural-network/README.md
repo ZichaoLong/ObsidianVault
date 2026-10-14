@@ -42,7 +42,7 @@ SettleGraph 使用严格区域分层、对齐的边时延与输入日程，按�
 
 | 文档 | 内容 |
 |---|---|
-| [带权 KV 与稀疏 Full：局部计算语义与退火](weighted-kv-sparse-activation-example.md) | 聚合共享与特化、时间摘要／内容检索、独立／区域 Attention 评分、有效候选的非空选择与 Full；位置、分段继续、连续性证明与实现验证 |
+| [带权 KV 与稀疏 Full：局部计算语义与退火](weighted-kv-sparse-activation-example.md) | 聚合、KV 与可组合评分；有界发送增益、二次／熵／entmax 非空预算及 Full；连续性证明、求解与反向、位置和分段继续 |
 | [带权 KV 的全连接分层实例](weighted-kv-layered-example.md) | 相邻层全连接、时间对齐、来源与输出绑定；逐区域窗口及位置配置、语言模型接入、训练目标及架构成本 |
 | [带权 KV 的 HB-Lattice 架构实例](weighted-kv-hb-lattice-example.md) | 多区域递归展开与收拢、稀疏邻域和时间绑定；局部函数组合、候选传播及全图成本 |
 

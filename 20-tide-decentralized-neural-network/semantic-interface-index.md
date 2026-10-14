@@ -35,7 +35,11 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | 符号 | 局部含义 |
 |---|---|
 | $\mu_v,c_v$ | 候选的发送强度上界、实际控制强度 |
+| $\mathfrak m_j,\mathfrak f_j,\mathfrak s_j$ | 记忆描述 sum／qry、局部评分 cat／match、区域评分 ind／att |
+| $\mathfrak g_j,\gamma_v^{\mathfrak g_j},\gamma_{\max}$ | fixed／context 增益、其数值及固定有限上界；$\mu_v(q,\theta,r,u)=\min(1,\gamma_v^{\mathfrak g_j}r_+)$ |
+| $\mathfrak b_j,R^{\mathfrak b_j},\alpha_j^{\mathrm{ent}}$ | 预算族 quad／bern／ent、相应正则及 ent 的固定形状参数 |
 | $C_{\mathrm{eff}},M_j,b_j$ | 正上界候选集、可用总质量、软发送质量下限 $\min(1,M_j)$ |
+| $F(\mu),t_v,\lambda_U,\lambda_L$ | 软预算可行域、调整后评分 $s_v-\eta_j$、上下质量界乘子；响应使用 $\lambda=\lambda_U-\lambda_L$ |
 | $\xi_i,T_v,\chi_{v,\theta}(\xi_i)$ | KV 条目的原始写入时间、有限或无限窗口、当前时间遮罩 |
 | $\operatorname{Pos}_v(\theta)$ | 固定位置函数；仿射族为 $(\theta-o_v^{\mathrm{pos}})/s_v^{\mathrm{pos}}$ |
 | $\operatorname{Rot}_{v,h}(p)$ | 对 Q/K 的指定坐标对施加位置旋转；旋转维数为零时取恒等 |
@@ -61,7 +65,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 $\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}$。空候选返回 $(\varnothing,(),y)$。Next 的调用为 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$；Full 的调用为 $\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$。
 
-三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV 局部教材 §2.9](weighted-kv-sparse-activation-example.md#29-局部绑定与组合条件) 给出函数绑定；$\operatorname{ReadOut}_\Lambda$ 的数值定义见其 §2.8。局部教材中 Read 与 SelStep 按描述空间 $D_v$ 成对绑定，时间摘要／内容检索与独立／区域 Attention 评分共用控制空间和预算函数。[全连接实例](weighted-kv-layered-example.md#1-分层拓扑与时间) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md#1-拓扑区域与时间) 给出各自的图、日程、区域、来源映射和输出槽集合 $\Lambda_t$。
+三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV 局部教材 §2.9](weighted-kv-sparse-activation-example.md#29-局部绑定与组合条件) 给出函数绑定；$\operatorname{ReadOut}_\Lambda$ 的数值定义见其 §2.8。Read 与 SelStep 按描述空间 $D_v$ 成对绑定；记忆、局部评分、增益和预算正则在该类型内部组合。其[附录 S.2](weighted-kv-sparse-activation-example.md#s2-配置与数学规格) 给出同名配置键，[附录 S.3](weighted-kv-sparse-activation-example.md#s3-预算分配的求解与反向) 给出统一求解与反向。[全连接实例](weighted-kv-layered-example.md#1-分层拓扑与时间) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md#1-拓扑区域与时间) 给出各自的图、日程、区域、来源映射和输出槽集合 $\Lambda_t$。
 
 ## 作用、结果与调用标签
 
