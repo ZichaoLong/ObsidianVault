@@ -28,12 +28,14 @@ tags:
 
 SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt}$、$y_j^{[t]}=y_j^{Dt}$ 是位置边界状态。其简写 $h_{v,t}$ 等均表示时间 $\theta_{v,t}$ 的同名坐标。一般图的状态上标 $\theta$ 始终为逻辑时间。
 
-带权 KV 的 $k_j$ 是门控质量预算，$K_j$ 是正式激活数上界；选择平滑参数 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T_v$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
+带权 KV 的 $k_j$ 是软门控质量上限及硬激活数上限，$K_j$ 是所用规格的正式激活数上界。软选择满足 $\min(1,\sum_v\mu_v)\le\sum_vc_v\le k_j$，软支持集与硬规格均在有效候选非空时至少激活一个。选择平滑参数 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T_v$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
 
 以下符号由 [KV 局部教材](weighted-kv-sparse-activation-example.md) 定义，在共同函数签名内部使用：
 
 | 符号 | 局部含义 |
 |---|---|
+| $\mu_v,c_v$ | 候选的发送强度上界、实际控制强度 |
+| $C_{\mathrm{eff}},M_j,b_j$ | 正上界候选集、可用总质量、软发送质量下限 $\min(1,M_j)$ |
 | $\xi_i,T_v,\chi_{v,\theta}(\xi_i)$ | KV 条目的原始写入时间、有限或无限窗口、当前时间遮罩 |
 | $\operatorname{Pos}_v(\theta)$ | 固定位置函数；仿射族为 $(\theta-o_v^{\mathrm{pos}})/s_v^{\mathrm{pos}}$ |
 | $\operatorname{Rot}_{v,h}(p)$ | 对 Q/K 的指定坐标对施加位置旋转；旋转维数为零时取恒等 |

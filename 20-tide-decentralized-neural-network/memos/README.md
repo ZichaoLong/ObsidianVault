@@ -12,7 +12,7 @@ tags:
 
 ## 数学补充
 
-- [[weighted-kv-sparse-activation-example|带权 KV 局部教材]]：三层共同的聚合、带权记忆、时间摘要／内容检索及独立／区域 Attention 评分，含预算函数、连续性证明、全图成本与批量契约。
+- [[weighted-kv-sparse-activation-example|带权 KV 局部教材]]：三层共同的聚合、带权记忆、时间摘要／内容检索及独立／区域 Attention 评分，含保证有效候选非空选择的预算函数、连续性证明、全图成本与批量契约。
 - [[weighted-kv-layered-example|带权 KV 的全连接分层实例]]：拓扑、时间与边界绑定，语言模型接入、训练目标和架构成本。
 - [[weighted-kv-hb-lattice-example|带权 KV 的 HB-Lattice 实例]]：先展开再收拢的多区域邻域图，局部函数组合、候选传播和成本比较。
 - [函数保持生长](mathematics/function-preserving-growth.md)：投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包。

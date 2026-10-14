@@ -61,7 +61,7 @@ $$
 
 ## 数学实例与实现对应
 
-[带权 KV 局部教材](weighted-kv-sparse-activation-example.md) 定义聚合绑定、私有 KV、时间摘要／内容检索及独立／区域 Attention 评分，Read 与 SelStep 按描述空间成对选择，共用预算函数和广播 Full。位置配置、联合求值及附录中的连续性证明适用于任意固定有限正时延图。
+[带权 KV 局部教材](weighted-kv-sparse-activation-example.md) 定义聚合绑定、私有 KV、时间摘要／内容检索及独立／区域 Attention 评分，Read 与 SelStep 按描述空间成对选择，共用预算函数和广播 Full。软支持集与硬规格均在有效候选非空时至少激活一个；零上界候选不发送。位置配置、联合求值及附录中的连续性证明适用于任意固定有限正时延图。
 
 [全连接分层实例](weighted-kv-layered-example.md) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md) 分别绑定拓扑、时间、区域、来源及输出槽；后者给出多区域展开与收拢的稀疏邻域。各区域选择局部函数、窗口和位置参数，组合核对容量、类型、时间尺度及证明前提。固定空间图上的局部选择产生随输入和历史变化的实际计算路径。
 
