@@ -42,11 +42,19 @@ SettleGraph 使用严格区域分层、对齐的边时延与输入日程，按�
 
 | 文档 | 内容 |
 |---|---|
-| [带权 KV 与稀疏 Full：局部计算语义与退火](weighted-kv-sparse-activation-example.md) | 聚合、KV 与可组合评分；有界发送增益、二次／熵／entmax 非空预算及 Full；连续性证明、求解与反向、位置和分段继续 |
-| [带权 KV 的全连接分层实例](weighted-kv-layered-example.md) | 相邻层全连接、时间对齐、来源与输出绑定；逐区域窗口及位置配置、语言模型接入、训练目标及架构成本 |
+| [带权 KV 与稀疏 Full：局部计算语义与退火](weighted-kv-sparse-activation-example.md) | 聚合、KV 与可组合评分；有界发送增益、二次／熵／entmax 非空预算及 Full；质量与支持、分配导数、连续性证明、位置和分段继续 |
+| [带权 KV 的全连接分层实例](weighted-kv-layered-example.md) | 相邻层全连接、时间对齐、来源与输出绑定；逐区域窗口及位置配置、因果读出、配置生效条件及架构成本 |
 | [带权 KV 的 HB-Lattice 架构实例](weighted-kv-hb-lattice-example.md) | 多区域递归展开与收拢、稀疏邻域和时间绑定；局部函数组合、候选传播及全图成本 |
 
-局部教材与架构实例通过同一组函数组合。公共执行基座实现图语义、切面继续与精确联合求值，实验平台选择尺寸、训练配置并验证效果。记录相等、指定投影相等和指定反向规则相等分别陈述。
+局部教材与架构实例通过同一组函数组合。定义、推论、教学例子与证明形成数学主线；研究与实现分别沿以下入口继续。
+
+| 文档 | 主要问题 |
+|---|---|
+| [设计分析](memos/architecture/selector-and-memory.md) | 候选的信息、梯度与成本取舍，外部证据和研究假设 |
+| [训练实验与推进](memos/learning-systems/weighted-kv-experiment-plan.md) | 任务与训练目标、对照设置、推进条件及结果解释 |
+| [实现核对](weighted-kv-implementation-checks.md) | 前向、反向、边界、继续及组合与数学定义的对应 |
+
+记录相等、指定投影相等和指定反向规则相等分别陈述。具体训练、实现与测量由下游维护。
 
 ## 延伸阅读
 
