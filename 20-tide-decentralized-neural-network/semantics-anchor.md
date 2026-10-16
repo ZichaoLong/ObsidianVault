@@ -61,7 +61,7 @@ $$
 
 ## 数学实例与实现对应
 
-[带权 KV 局部教材](weighted-kv-sparse-activation-example.md) 分别定义聚合、私有 KV、记忆描述、局部评分、区域匹配、有界发送增益与预算正则。Read 与 SelStep 按描述空间成对选择；二次、二元熵和带上界 entmax 共用质量可行域及广播 Full。软支持集与硬规格均在有效候选非空时至少激活一个；零上界候选不发送。正文区分质量、支持、分配导数与硬化条件；附录给出各组合在固定有限正时延图、有限切面上的连续性证明，以及配置、求解与隐式反向。程序对应见 [实现核对](weighted-kv-implementation-checks.md)，训练目标与比较方案见 [实验与推进](memos/learning-systems/weighted-kv-experiment-plan.md)。
+[带权 KV 局部教材](weighted-kv-sparse-activation-example.md) 从接收消息到广播输出建立完整局部函数，再给出记忆描述、评分、增益、位置与正则的替换方式。发送强度、每节点发送上限、总和约束与激活数量分别定义；软选择和硬选择按共同签名纳入正典。正文给出算例、导数和有条件的整网软硬收敛，附录给出正式证明、配置名称与求解方法。程序对应见 [实现核对](weighted-kv-implementation-checks.md)，训练目标与比较方案见 [实验与推进](memos/learning-systems/weighted-kv-experiment-plan.md)。
 
 [全连接分层实例](weighted-kv-layered-example.md) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md) 分别绑定拓扑、时间、区域、来源及输出槽；后者给出多区域展开与收拢的稀疏邻域。各区域选择局部函数、窗口和位置参数，组合核对容量、类型、时间尺度及证明前提。固定空间图上的局部选择产生随输入和历史变化的实际计算路径。
 
