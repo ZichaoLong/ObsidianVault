@@ -28,19 +28,20 @@ tags:
 
 SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt}$、$y_j^{[t]}=y_j^{Dt}$ 是位置边界状态。其简写 $h_{v,t}$ 等均表示时间 $\theta_{v,t}$ 的同名坐标。一般图的状态上标 $\theta$ 始终为逻辑时间。
 
-带权 KV 的 $k_j$ 是软选择的发送强度总和上限及硬激活数上限，$K_j$ 是正典接口声明的激活数量上限：软选择取区域节点总数，硬选择取 $k_j$。软选择满足 $\min(1,\sum_v\mu_v)\le\sum_vc_v\le k_j$，软选择与硬选择均在有效候选非空时至少激活一个。选择温度 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T_v$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
+带权 KV 的 $K_j$ 是正典接口声明的激活数量上限。约束软选择与直接 Attention 取区域节点总数，硬选择取 $k_j$。$k_j$ 还用作约束软选择的发送强度总和上限，直接 Attention 不使用该参数。三种选择均在有效候选非空时至少激活一个；总和下限 $\min(1,\sum_v\mu_v)$ 属于约束软选择。选择温度 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T_v$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
 
 以下符号由 [KV 局部教材](weighted-kv-sparse-activation-example.md) 定义，在共同函数签名内部使用：
 
 | 符号 | 局部含义 |
 |---|---|
 | $\mu_v,c_v$ | 每个候选的发送上限与本次发送强度；$c_v$ 对应正典控制量 |
+| $Z_j^{\mathrm{sel}},p_v^{\mathrm{sel}}$ | 直接 Attention 的归一化总权重 $\sum_u\mu_u e^{s_u/\tau_{\mathrm{soft}}}$ 与归一化占比；$c_v=\mu_vp_v^{\mathrm{sel}}$，见局部教材 §7.9 |
 | $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}}$ | 区域 query、节点 key、局部评分与区域匹配尺度；见局部教材 §7.6 |
 | $\mathfrak m_j,\mathfrak f_j,\mathfrak s_j$ | 记忆描述 sum／qry、局部评分 cat／match、区域评分 ind／att |
 | $\mathfrak g_j,\gamma_v^{\mathfrak g_j},\gamma_{\max}$ | fixed／context 增益、其数值及固定有限上界；$\mu_v(q,\theta,r,u)=\min(1,\gamma_v^{\mathfrak g_j}r_+)$ |
 | $\mathfrak b_j,R^{\mathfrak b_j},\alpha_j^{\mathrm{ent}}$ | 正则族 quad／bern／ent、相应正则及 ent 的固定形状参数 |
-| $C_{\mathrm{eff}},M_j,b_j$ | 有效候选集 $\{v:\mu_v>0\}$、发送上限之和 $\sum_v\mu_v$、发送强度总和下限 $\min(1,M_j)$ |
-| $F(\mu),t_v,\lambda_U,\lambda_L$ | 软选择可行域、调整后评分 $s_v-\eta_j$、总和上下限乘子；响应使用 $\lambda=\lambda_U-\lambda_L$ |
+| $C_{\mathrm{eff}},M_j,b_j$ | 有效候选集 $\{v:\mu_v>0\}$、发送上限之和 $\sum_v\mu_v$、约束软选择的发送强度总和下限 $\min(1,M_j)$ |
+| $F(\mu),t_v,\lambda_U,\lambda_L$ | 约束软选择可行域、调整后评分 $s_v-\eta_j$、总和上下限乘子；响应使用 $\lambda=\lambda_U-\lambda_L$ |
 | $\xi_i,T_v,\chi_{v,\theta}(\xi_i)$ | KV 条目的原始写入时间、有限或无限窗口、当前时间遮罩 |
 | $\operatorname{Pos}_v(\theta)$ | 固定位置函数；仿射族为 $(\theta-o_v^{\mathrm{pos}})/s_v^{\mathrm{pos}}$ |
 | $\operatorname{Rot}_{v,h}(p)$ | 对 Q/K 的指定坐标对施加位置旋转；旋转维数为零时取恒等 |
@@ -50,7 +51,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 分层组合取 $o_v^{\mathrm{pos}}=r_v,s_v^{\mathrm{pos}}=D$，恢复输入位置 $t$。窗口和摘要衰减按 $T_v=DH_j$、$\beta_{v,a}=\bar\beta_{j,a}/D$ 换算。分段继续保留原始时间及同一位置配置。
 
-固定尺度的稠密 Attention 沿用软选择接口，其普通 softmax 条件见[局部教材 §7.8](weighted-kv-sparse-activation-example.md#78-固定尺度的稠密-attention)，query 导数见[§8.5](weighted-kv-sparse-activation-example.md#85-attention-权重与-query-的导数)。
+两种稠密发送函数沿用 SelStep 接口：[局部教材 §7.8](weighted-kv-sparse-activation-example.md#78-保留发送约束的稠密选择) 保留约束 Shannon 选择，[§7.9](weighted-kv-sparse-activation-example.md#79-直接-attention-发送) 定义无求根的直接 Attention。导数及普通 softmax 的适用条件见 §8.5—8.6。
 
 ## 局部函数
 
@@ -68,7 +69,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 $\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}$。空候选返回 $(\varnothing,(),y)$。Next 的调用为 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$；Full 的调用为 $\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$。
 
-三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV 局部教材 §10.1—10.2](weighted-kv-sparse-activation-example.md#101-函数与参数对应) 给出函数绑定；$\operatorname{ReadOut}_\Lambda$ 的数值定义见其 §5.4。Read 与 SelStep 按描述空间 $D_v$ 成对绑定；记忆、局部评分、增益和预算正则在该类型内部组合。其[附录 S.2](weighted-kv-sparse-activation-example.md#s2-配置与数学函数) 给出同名配置键，[附录 S.3](weighted-kv-sparse-activation-example.md#s3-软选择的求解与反向) 给出统一求解与反向。[全连接实例](weighted-kv-layered-example.md#1-分层拓扑与时间) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md#1-拓扑区域与时间) 给出各自的图、日程、区域、来源映射和输出槽集合 $\Lambda_t$。
+三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV 局部教材 §10.1—10.2](weighted-kv-sparse-activation-example.md#101-函数与参数对应) 给出函数绑定；$\operatorname{ReadOut}_\Lambda$ 的数值定义见其 §5.4。Read 与 SelStep 按描述空间 $D_v$ 成对绑定；记忆、局部评分、增益和选择函数在该类型内部组合。其[附录 S.2](weighted-kv-sparse-activation-example.md#s2-配置与数学函数) 给出同名配置键，[附录 S.3](weighted-kv-sparse-activation-example.md#s3-软选择的求解与反向) 给出约束软选择的求解与反向，[附录 S.5](weighted-kv-sparse-activation-example.md#s5-直接-attention-的求值与反向) 给出直接 Attention 的求值与边界反向。[全连接实例](weighted-kv-layered-example.md#1-分层拓扑与时间) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md#1-拓扑区域与时间) 给出各自的图、日程、区域、来源映射和输出槽集合 $\Lambda_t$。
 
 ## 作用、结果与调用标签
 
