@@ -83,9 +83,9 @@ $$
 
 ### 2.1 函数、初态与来源类别
 
-所有节点和区域采用 [局部教材 §10.1—10.2](weighted-kv-sparse-activation-example.md#101-函数与参数对应) 的空间、函数及参数次序，包括空缓存初态、单点选择历史、$\tau_j=+$、$\kappa_j=1$、默认 Next，以及 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。约束软选择与硬选择声明整数 $1\le k_j\le n$，分别限制发送强度之和与激活数量；直接 Attention 按局部教材 §7.9 归一化发送。约束软选择与直接 Attention 取 $K_j=n$，硬选择取 $K_j=k_j$；三种函数均在有效候选非空时至少激活一个节点。
+所有节点和区域采用 [局部教材 §10.1—10.2](weighted-kv-sparse-activation-example.md#101-函数与参数对应) 的空间、函数及参数次序，包括空缓存初态、单点选择历史、$\tau_j=+$、$\kappa_j=1$、默认 Next，以及 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。约束软选择与硬选择声明整数 $1\le k_j\le n$，分别限制发送强度之和与激活数量；直接 Attention 按局部教材 §7.9 归一化发送。约束软选择与直接 Attention 取 $K_j=n$，硬选择取 $K_j=k_j$；这些函数均在有效候选非空时至少激活一个节点。
 
-基线绑定区域共享 Agg、时间摘要 $\mathfrak m_j=\mathrm{sum}$、拼接局部评分 $\mathfrak f_j=\mathrm{cat}$、独立区域评分 $\mathfrak s_j=\mathrm{ind}$、固定增益 $\mathfrak g_j=\mathrm{fixed}$ 与二次正则 $\mathfrak b_j=\mathrm{quad}$。其他组合逐区域选择局部教材已定义的其他取值，配置键沿用其附录 S.2；Read 的描述空间与 SelStep 按区域评分成对绑定。
+基线绑定区域共享 Agg、时间摘要 $\mathfrak m_j=\mathrm{sum}$、拼接局部评分 $\mathfrak f_j=\mathrm{cat}$、独立区域评分 $\mathfrak s_j=\mathrm{ind}$、固定增益 $\mathfrak g_j=\mathrm{fixed}$ 与二次正则 $\mathfrak b_j=\mathrm{quad}$。其他组合逐区域选择局部教材已定义的其他取值。发送规则的共同性质见[局部教材 §7.10](weighted-kv-sparse-activation-example.md#710-发送规则的比较)，配置键沿用其附录 S.2；Read 的描述空间与 SelStep 按区域评分成对绑定。
 
 来源类别按区域定义。第一层只使用入口类别 $\mathrm{in}$，令 $\operatorname{SrcClass}_{v_{1,s}}(\mathrm{ext},i_s)=\mathrm{in}$。对 $\ell>1$，类别为上一层节点身份，令
 
@@ -173,7 +173,7 @@ $$
 | 规则 | 配置与定义 |
 |---|---|
 | 直接 Attention | selection_mode=direct，采用[局部教材 §7.9](weighted-kv-sparse-activation-example.md#79-直接-attention-发送) |
-| 保留发送约束的 Shannon 选择 | selection_mode=soft、budget_family=ent、ent_alpha=1、k=1，采用局部教材 §7.8 |
+| 约束 Shannon | selection_mode=soft、budget_family=ent、ent_alpha=1、k=1，采用局部教材 §7.8 |
 
 由 §2.4，每次选择的所有发送上限均为 $1$，两种规则均直接得到普通 softmax，具有相同前向。
 
@@ -237,7 +237,7 @@ $$
 
 | 配置与条件 | 数学结果 |
 |---|---|
-| 单位入口及 §2.1 的三种选择 | 每层逐节点 $w=\mu=1$，同层写入时刻相同 |
+| 单位入口，采用约束软选择、直接 Attention 或硬选择 | 每层逐节点 $w=\mu=1$，同层写入时刻相同 |
 | fixed／context 增益 | 上界已为 $1$，改变增益不改变前向 |
 | $k_j=1$ | 发送强度之和恒为 $1$，共同阈值无效 |
 | §2.5 的两种稠密 Attention 规则 | 每层直接以 softmax 分配单位发送强度，全部 $n$ 个节点激活 |

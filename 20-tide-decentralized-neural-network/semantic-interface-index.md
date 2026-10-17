@@ -28,7 +28,7 @@ tags:
 
 SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt}$、$y_j^{[t]}=y_j^{Dt}$ 是位置边界状态。其简写 $h_{v,t}$ 等均表示时间 $\theta_{v,t}$ 的同名坐标。一般图的状态上标 $\theta$ 始终为逻辑时间。
 
-带权 KV 的 $K_j$ 是正典接口声明的激活数量上限。约束软选择与直接 Attention 取区域节点总数，硬选择取 $k_j$。$k_j$ 还用作约束软选择的发送强度总和上限，直接 Attention 不使用该参数。三种选择均在有效候选非空时至少激活一个；总和下限 $\min(1,\sum_v\mu_v)$ 属于约束软选择。选择温度 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T_v$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
+带权 KV 的 $K_j$ 是正典接口声明的激活数量上限。约束软选择与直接 Attention 取区域节点总数，硬选择取 $k_j$。$k_j$ 还用作约束软选择的发送强度总和上限，直接 Attention 不使用该参数。约束软选择、直接 Attention 与硬选择均在有效候选非空时至少激活一个；总和下限 $\min(1,\sum_v\mu_v)$ 属于约束软选择。选择温度 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T_v$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
 
 以下符号由 [KV 局部教材](weighted-kv-sparse-activation-example.md) 定义，在共同函数签名内部使用：
 
@@ -51,7 +51,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 分层组合取 $o_v^{\mathrm{pos}}=r_v,s_v^{\mathrm{pos}}=D$，恢复输入位置 $t$。窗口和摘要衰减按 $T_v=DH_j$、$\beta_{v,a}=\bar\beta_{j,a}/D$ 换算。分段继续保留原始时间及同一位置配置。
 
-两种稠密发送函数沿用 SelStep 接口：[局部教材 §7.8](weighted-kv-sparse-activation-example.md#78-保留发送约束的稠密选择) 保留约束 Shannon 选择，[§7.9](weighted-kv-sparse-activation-example.md#79-直接-attention-发送) 定义无求根的直接 Attention。导数及普通 softmax 的适用条件见 §8.5—8.6。
+发送规则的约束、激活范围与求值方式见[局部教材 §7.10](weighted-kv-sparse-activation-example.md#710-发送规则的比较)，配置映射见其附录 S.2：直接 Attention 使用 direct；约束 Shannon 与可稀疏的约束选择均使用 soft，再由正则区分；hard 对应独立的排序函数。导数见第 8 节。
 
 ## 局部函数
 
