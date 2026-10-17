@@ -13,9 +13,9 @@ tags:
   - sparse-activation
 ---
 
-# 带权 KV 与稀疏 Full：局部计算语义与退火
+# 带权 KV：局部计算与区域选择
 
-本文从节点收到的一组消息出发，依次定义聚合、记忆写入、评分、共同选择和发送。节点保存自己的记忆；同一区域的节点共同决定本次由谁完成内容计算。以下只需向量、函数、有限求和与凸优化的基本知识。
+本文从节点收到的一组消息出发，依次定义聚合、记忆写入、评分、共同选择和发送。节点保存自己的记忆；同一区域共同决定各候选的发送强度。选择函数可以让全部有效候选参与，也可以令部分候选的发送强度精确为零，从而跳过其完整计算。以下只需向量、函数、有限求和与凸优化的基本知识。
 
 第 1—6 节建立一个完整模型并手算其结果；第 7 节给出可替换的局部函数；第 8—9 节讨论导数、连续性和软硬选择的极限关系。第 10 节将这些函数纳入正典接口，说明拓扑组合、联合求值与分段继续。长证明和计算表示分别放在附录 A、S。
 
@@ -770,6 +770,39 @@ $$
 
 用 $\mathfrak b_j\in\{\mathrm{quad},\mathrm{bern},\mathrm{ent}\}$ 指定正则，在式 (12) 中取 $R=R^{\mathfrak b_j}$。三种目标在可改变的分量上严格凹，均有唯一解。约束本身的性质直接沿用第 4.2 节；第 8 节比较正则带来的差异。
 
+### 7.8 固定尺度的稠密 Attention
+
+固定 $\tau_{\mathrm{soft}}>0$，在式 (12) 中取 $\mathfrak b_j=\mathrm{ent}$、$\alpha_j^{\mathrm{ent}}=1$，即 Shannon 熵。训练与推理均可持续使用这一函数和同一个正温度。这里稠密表示每个有效候选均发送，即 $A=C_{\mathrm{eff}}$；图上的边仍由拓扑单独给定。
+
+这一正性可由熵在零处的导数得到。第 4.2 节的强制分配情形已经满足正性。在其余情形，若最优解某个有效分量为零，可从一个正分量移入足够小的 $\varepsilon>0$，保持总和及各节点上限。新分量的熵增量为 $-\varepsilon\log\varepsilon$，评分项及原正分量的变化为 $O(\varepsilon)$，故目标增大，矛盾。没有有效候选时，仍按式 (13) 返回全零控制和空激活集合。
+
+进一步设 $C_{\mathrm{eff}}$ 非空，取 $k_j=1$，且每个有效候选的 $\mu_v=1$。可行分配在 $C_{\mathrm{eff}}$ 上满足 $c_v\ge0,\sum_vc_v=1$，即概率单纯形。解为
+
+$$
+c_v=
+\begin{cases}
+\displaystyle
+\frac{\exp(s_v/\tau_{\mathrm{soft}})}
+     {\sum_{u\in C_{\mathrm{eff}}}\exp(s_u/\tau_{\mathrm{soft}})},
+&v\in C_{\mathrm{eff}},\\
+0,&v\notin C_{\mathrm{eff}}.
+\end{cases}
+$$
+
+这就是 softmax。对正分量写最优性条件，得到 $s_v-\tau_{\mathrm{soft}}(1+\log c_v)$ 为共同常数，再由总和为 $1$ 确定分母；共同阈值的消去已由第 4.2 节说明。发送强度之和为 $1$，激活数量为 $|C_{\mathrm{eff}}|$。
+
+若评分采用式 (26)，取 $\alpha_j^{\mathrm{loc}}=0,\alpha_j^{\mathrm{sel}}=1$，上述控制量恰为区域 query 对节点 keys 的 Attention 权重。SelStep 按式 (13) 返回，Agg、Upd、Read、Next 和广播 Full 均沿用此前定义。固定正温度给出一个完整的计算函数；第 9 节另行讨论改变温度时的极限。
+
+一般图允许 $0<\mu_v<1$。此时 Shannon 选择继续使用式 (12) 的全部约束，其求解见第 8.1 节。例如取 $\mu=(0.2,1)$、$s=(0,0)$、$k=1$，任意正温度下有：
+
+| 分配方法 | 发送强度 | 与当前约束的关系 |
+|---|---|---|
+| 式 (12) 的 Shannon 选择 | $(0.2,0.8)$ | 满足各节点上限与总和下限 |
+| 直接对评分取 softmax | $(0.5,0.5)$ | 第一节点超过发送上限 |
+| 将上述 softmax 分量各乘对应 $\mu_v$ | $(0.1,0.5)$ | 总和 $0.6$ 小于所需下限 $1$ |
+
+因此，普通 softmax 公式适用于上述单纯形条件；固定正温度的 Shannon 选择适用于本文的一般发送约束。后者仍可能达到节点的发送上限，其梯度按第 8 节的约束分支计算。Shannon 熵在此给出正分配；直接删去式 (12) 的正则项则得到线性优化，最优解可位于边界，也可能不唯一。
+
 ## 8. 选择函数的响应与导数
 
 本节固定一次区域选择，省略区域下标，写 $\tau=\tau_{\mathrm{soft}}$、$\mathfrak b=\mathfrak b_j$。先取 $M>1$；$M\le1$ 的解已由第 4.2 节确定。
@@ -839,7 +872,7 @@ quad 对集合 $\mathcal F$ 内评分的 Jacobian 子块为 $\tau^{-1}(I-\mathbf
 
 ### 8.4 与 softmax、entmax 的关系及高温极限
 
-当 $k_j=1$ 且有效候选的发送上限全为 $1$ 时，在有效候选上有 $c_v\ge0,\sum_vc_v=1$，即通常的概率单纯形。此时$\mathrm{ent}$ 正好成为单纯形上的 $\alpha$-entmax：$\alpha=1$ 给出 $\operatorname{softmax}(t/\tau)$，$\alpha=2$ 给出 sparsemax，二次族也给出 sparsemax。唯一最高分下，这些单纯形函数的零温极限均为 Top-1。式 (12) 在 $k_j>1$ 时允许多节点同时发送；它与硬选择的极限关系见第 9 节。
+在第 7.8 节的单纯形条件下，$\mathrm{ent}$ 是 $\alpha$-entmax：$\alpha=1$ 给出该节的 softmax，$\alpha=2$ 给出 sparsemax，二次族也给出 sparsemax。唯一最高分下，这些单纯形函数的零温极限均为 Top-1。固定正温度时，各函数按自己的正分量激活节点。式 (12) 与硬选择的极限关系见第 9 节。
 
 当约束允许不同的发送强度总和时，正则中的线性项会影响最优解：
 
@@ -852,6 +885,36 @@ $$
 因此相同 $t,\tau$ 下，$\alpha=2$ 的解等于二次族在 $t+\tau/2$ 下的解。要恢复同一数值，取 $\eta_j^{\mathrm{ent},2}=\eta_j^{\mathrm{quad}}+\tau/2$。发送强度之和固定时，这项差别消失。ent 在本文的一般可行域上还保留每个候选的发送上限，以及第 4.2 节的总和区间。
 
 固定评分、发送上限和 $k$，令 $\tau\to\infty$，则解趋向可行集上正则的唯一最大值：quad 在 $S=b$ 上取最小范数分配；bern 在 $\mu/2$ 可行时取它；ent 取其受约束的熵最大值。此结论由目标除以 $\tau$、紧性及严格凹性得到。不同正则的高温发送强度之和因而可以不同。
+
+### 8.5 Attention 权重与 query 的导数
+
+在第 7.8 节的 softmax 情形，固定有效候选集合、发送上限与温度。按有效候选编号，评分到发送强度的 Jacobian 为
+
+$$
+J_s=\frac{\operatorname{diag}(c)-cc^\top}{\tau},
+\qquad
+\frac{\partial c_v}{\partial s_u}
+=\frac{c_v}{\tau}\bigl(\mathbf1[v=u]-c_u\bigr).
+$$
+
+该矩阵对称，每行绝对值之和为 $2c_v(1-c_v)/\tau\le1/(2\tau)$，故 $\|J_s\|_2\le1/(2\tau)$。有限评分下，至少两个有效候选时各自的对角导数为正；只有一个有效候选时整个 Jacobian 为零。所有评分同时平移不改变分配。
+
+沿用第 8.3 节的 $g_v=\partial\mathcal L/\partial c_v$，由上述 Jacobian 得
+
+$$
+\frac{\partial\mathcal L}{\partial s_v}
+=\frac{c_v}{\tau}\left(g_v-\sum_u c_u g_u\right).
+$$
+
+固定 keys 与局部评分，仅沿式 (26) 的匹配评分求导，则在选择函数的可微分支内有
+
+$$
+\nabla_{Q_j^{\mathrm{sel}}}\mathcal L
+=\frac{\alpha_j^{\mathrm{sel}}}{\sqrt{d_{\mathrm{sel}}}}
+ \sum_{v\in C}\frac{\partial\mathcal L}{\partial s_v}K_v^{\mathrm{sel}}.
+$$
+
+完整参数导数还需沿 query 的汇集、keys、局部评分、发送上限及记忆依赖回传。在固定发送上限、keys、局部评分和温度的条件下，quad 将调整后评分除以温度，再欧氏投影到固定的多面体 $F(\mu)$，故 $Q_j^{\mathrm{sel}}\mapsto c$ 分段仿射；softmax 则对 query 光滑。这里描述的是局部映射的性质。
 
 ## 9. 数值连续性与软硬极限
 
@@ -999,7 +1062,7 @@ $t_{(i)}$ 表示有效候选按调整后评分降序排列的第 $i$ 项。ent �
 | 软选择 | 约束 $\sum_vc_v\le k_j$ | $\lvert\mathcal R_j\rvert$ |
 | 硬选择 | 约束 $\lvert A\rvert\le k_j$ | $k_j$ |
 
-第 9.3 节的全候选参考计算同样取 $K_j=|\mathcal R_j|$。$K_j$ 声明接口允许的激活数量；实际返回的 $A$ 由所选函数确定。
+第 7.8 节的固定尺度 Attention 属于表中的软选择，取 $K_j=|\mathcal R_j|$。第 9.3 节的全候选参考计算也取这一容量。$K_j$ 声明接口允许的激活数量；实际返回的 $A$ 由所选函数确定。
 
 实际 Read 使用式 (10) 的更新后状态。为使正典的三种读取模式均有定义，另定义
 
@@ -1261,8 +1324,14 @@ $$
 | budget_family | $\mathfrak b_j$ | quad、bern 或 ent：式 (11)、(27) |
 | ent_alpha | $\alpha_j^{\mathrm{ent}}$ | ent 使用的固定形状参数，范围 $[1,2]$ |
 | selection_mode | 所用软／硬函数 | soft：式 (12)、(13)；hard：式 (14)，另声明全候选参考计算时的记录规则 |
+| tau_soft | $\tau_{\mathrm{soft}}$ | soft 使用的正温度；固定尺度选择在训练与推理中保持同一个值 |
+| k | $k_j$ | 软选择的发送强度总和上限、硬选择的激活数量上限 |
+| eta | $\eta_j$ | 调整后评分 $t_v=s_v-\eta_j$ 的共同阈值 |
+| alpha_loc、alpha_sel | $\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}}$ | att 的局部评分与区域匹配尺度，见式 (26) |
 
 基线依次为 sum、cat、ind、fixed、quad。每个配置确定参数空间、状态空间与相应前向函数，各族的反向目标见 S.3。相容组件可通过上述名称组合。
+
+第 7.8 节的固定尺度 Attention 可直接绑定 region_score=att、alpha_loc=0、alpha_sel=1、selection_mode=soft、budget_family=ent、ent_alpha=1，并固定 tau_soft，例如取 $1$。取 k=1 且每次有效候选的发送上限均为 $1$ 时，用普通 softmax 求值；其他发送上限继续求原约束问题。记忆描述、位置与增益独立配置。训练温度日程和推理采用的函数分别由实验配置声明；soft 表示所用数学函数。
 
 更改评分、正则、增益或位置配置，可能改变参数形状、前向函数与历史缓存；形状相同也不保证 checkpoint 的数值兼容。软转硬按第 9.7 节比较；其他切换的状态转换需另行给出。
 
@@ -1271,6 +1340,8 @@ $$
 ### S.3 软选择的求解与反向
 
 **前向。** 输入为按候选编号的向量 $(t,\mu)$、整数 $k\ge1$、温度 $\tau>0$ 及固定正则配置，其中 $0\le\mu_v\le1$，输出为式 (12) 的唯一发送强度分配。先计算 $M=\sum\mu,b=\min(1,M)$，按第 4.2 节的单点可行集情形直接返回相应分配。
+
+ent 的 $\alpha=1$、$k=1$ 且全部有效发送上限为 $1$ 时，第 7.8 节给出直接 softmax 求值，前向与评分反向均为 $O(|C|)$。在有效候选上先减去最大评分再计算指数，零上限坐标置零；这一求值具有第 8.5 节的评分与 query 导数。形状保证或本次输入满足这些条件时即可采用；其他情形使用以下约束求解。
 
 定义 $S(\lambda)=\sum_v g_{\mathfrak b}(t_v-\lambda,\mu_v;\tau)$。$M>1$ 时先求 $\lambda=0$ 的响应。发送强度之和位于 $[b,k]$ 时直接返回；过大或过小时，分别求发送强度之和 $B=k$ 或 $B=b$ 的根。此时必有 $0<B<M$。令 $q=B/M\in(0,1)$，对有效候选定义满足 $g_{\mathfrak b}(x_v,\mu_v;\tau)=q\mu_v$ 的值：
 
@@ -1354,7 +1425,7 @@ $\tau^{-1}(I-\mathbf1\mathbf1^\top/|\mathcal F|)$；只有一个未触及上下�
 | 内容检索 | query 投影 $O(dd_s)$，已投影记忆上的检索 $O(Nd_s)$；直接重投影记忆另需 $O(Ndd_s)$，保存辅助投影则将此工作移到写入并增加存储 |
 | 区域 Attention 描述量 | 每候选约 $O(d_{\mathrm{sel}}(d+d_s))$，局部评分残差按所用配置另计 |
 | 区域 query 与匹配 | 每次选择约 $O(\lvert C\rvert d_{\mathrm{sel}}+d_{\mathrm{sel}}^2)$ |
-| 发送强度分配 | 二次族断点排序为 $O(\lvert C\rvert\log\lvert C\rvert)$；通用标量求根每次 $O(\lvert C\rvert)$，另计迭代与精度；隐式反向为 $O(\lvert C\rvert)$ |
+| 发送强度分配 | 第 7.8 节的 softmax 情形为 $O(\lvert C\rvert)$；二次族断点排序为 $O(\lvert C\rvert\log\lvert C\rvert)$；通用标量求根每次 $O(\lvert C\rvert)$，另计迭代与精度；反向为 $O(\lvert C\rvert)$ |
 | 激活节点的 Full | $O(d^2+dd_f+Nd)$，$N$ 为当前有效 KV 项数 |
 | 每节点缓存 | 有限窗口为 $O(T_v(2d+d_s))$；全历史在切面 $B$ 前至多 $B$ 项，另有时间、权重及可选辅助投影 |
 

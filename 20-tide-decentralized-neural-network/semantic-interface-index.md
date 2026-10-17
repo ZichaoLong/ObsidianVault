@@ -35,6 +35,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | 符号 | 局部含义 |
 |---|---|
 | $\mu_v,c_v$ | 每个候选的发送上限与本次发送强度；$c_v$ 对应正典控制量 |
+| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}}$ | 区域 query、节点 key、局部评分与区域匹配尺度；见局部教材 §7.6 |
 | $\mathfrak m_j,\mathfrak f_j,\mathfrak s_j$ | 记忆描述 sum／qry、局部评分 cat／match、区域评分 ind／att |
 | $\mathfrak g_j,\gamma_v^{\mathfrak g_j},\gamma_{\max}$ | fixed／context 增益、其数值及固定有限上界；$\mu_v(q,\theta,r,u)=\min(1,\gamma_v^{\mathfrak g_j}r_+)$ |
 | $\mathfrak b_j,R^{\mathfrak b_j},\alpha_j^{\mathrm{ent}}$ | 正则族 quad／bern／ent、相应正则及 ent 的固定形状参数 |
@@ -48,6 +49,8 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $\pi_{\mathrm{KV},v,\theta}$ | 按原始时间槽对齐的有效加权状态投影 |
 
 分层组合取 $o_v^{\mathrm{pos}}=r_v,s_v^{\mathrm{pos}}=D$，恢复输入位置 $t$。窗口和摘要衰减按 $T_v=DH_j$、$\beta_{v,a}=\bar\beta_{j,a}/D$ 换算。分段继续保留原始时间及同一位置配置。
+
+固定尺度的稠密 Attention 沿用软选择接口，其普通 softmax 条件见[局部教材 §7.8](weighted-kv-sparse-activation-example.md#78-固定尺度的稠密-attention)，query 导数见[§8.5](weighted-kv-sparse-activation-example.md#85-attention-权重与-query-的导数)。
 
 ## 局部函数
 
