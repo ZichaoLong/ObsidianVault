@@ -61,8 +61,10 @@ $$
 
 ## 数学实例与实现对应
 
-[带权 KV 局部教材](weighted-kv-sparse-activation-example.md) 从接收消息到广播输出建立完整局部函数，再给出记忆描述、评分、增益、位置与选择的替换方式。发送强度、每节点发送上限、总和约束与激活数量分别定义；约束软选择、直接 Attention 与硬选择按共同签名纳入正典。正文给出算例、导数、固定正温连续性及约束软选择的有条件整网硬化，附录给出正式证明、配置名称与求值方法。程序对应见 [实现核对](weighted-kv-implementation-checks.md)，训练目标与比较方案见 [实验与推进](memos/learning-systems/weighted-kv-experiment-plan.md)。
+[局部架构教材](local-architecture-learning-note.md)定义带权消息、有状态接收、描述读取、区域控制与广播的共同构造，复用正典的六个局部函数。[区域分配](region-allocation-learning-note.md)独立定义评分和发送；[KV](weighted-kv-sparse-activation-example.md)与[循环记忆](recurrent-memory-learning-note.md)分别绑定状态、更新、读取和内容函数。函数签名相同，支持、连续性与极限仍按各自条件使用。
 
-[全连接分层实例](weighted-kv-layered-example.md) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md) 分别绑定拓扑、时间、区域、来源及输出槽；后者给出多区域展开与收拢的稀疏邻域。各区域选择局部函数、窗口和位置参数，组合核对容量、类型、时间尺度及证明前提。固定空间图上的局部选择产生随输入和历史变化的实际计算路径。
+[全连接分层实例](weighted-kv-layered-example.md)与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md)绑定图、区域、时间、来源与输出，并给出不同记忆按区域组合的合法例子。共同载荷和描述类型使局部模块相容；联合求值仍要求完整驱动输入和相应精确契约。
+
+[设计总览](memos/architecture/selector-and-memory.md)组织候选能力、依赖与取舍；[可选研究问题](memos/learning-systems/weighted-kv-experiment-plan.md)供后续安排参考；[实现核对](weighted-kv-implementation-checks.md)区分记录相等、数值投影及反向规则。
 
 实现表示先经固定 Decode 得到数学值记录，再经遗忘投影删除辅助坐标。解码恢复确切状态和快照，不重执行参考递归来修补结果。有效记忆等有损投影、输出读出及指定反向规则各有独立比较关系。计算系统用语在教材附录与这些数学对象对应。

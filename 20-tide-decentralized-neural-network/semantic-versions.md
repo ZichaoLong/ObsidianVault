@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-10-17
+as-of: 2026-10-19
 tags:
   - tide
   - semantic-version
@@ -16,6 +16,7 @@ tags:
 
 | 版本或修订 | 变化 | 下游核对事项 |
 |---|---|---|
+| 2026-10-19 局部架构支线与设计总览，沿用 tide-core-5 | 新建共同局部架构、区域分配与完整 affine／delta 循环模块；KV 专注记忆及数值证明。增加 received query／direct 基权重、pooled 总量分配及 Read 模式组合；dense 函数从实验文档移到区域教材。实例增加异构记忆组合，实验改为按需问题库 | 四份正典逐字保持。既有默认组合的数值函数保持；新配置有独立性质范围。配置及描述类型迁移见下文；本次未验证下游采用或训练效果 |
 | 2026-10-17 固定总强度的稠密 Attention，沿用 tide-core-5 | 新增 selection_mode=attention，attention_base=uniform 为普通 softmax，reception 为接收加权 softmax；直接取 $c=p$，有正基权重时总发送强度为 $1$、每节点上限为 $1$。定义固定正温度函数、导数、配置及 HB 传播算例，研究与实验分别比较接收权重、发送上限和总强度 | 四份正典及既有默认函数保持。核对真实候选与填充、零权重分支、完整反向、弱写入与强发送、整段与分段记录；各数值命题按其原函数范围使用。本次未验证下游采用 |
 | 2026-10-17 发送规则比较与配置整理，沿用 tide-core-5 | 局部 §7.10 集中比较直接 Attention、约束 Shannon 与可稀疏的约束选择；附录 S.2 明确后两组同属 soft，hard 单列；实验 §5.1 区分发送规则与约束内分配的对照目的 | 函数、公式、配置取值和四份正典保持；支持记录同时注明 selection_mode 与适用正则，按组解释实验结果。本次未验证下游采用 |
 | 2026-10-17 无求根的直接 Attention，沿用 tide-core-5 | 新增 selection_mode=direct：按发送上限加权归一化，再取 $c_v=\mu_vp_v^{\mathrm{sel}}$；定义导数与弱候选连续性，绑定全连接及 HB，补充强度传播与实验比较 | 四份正典、既有函数及默认配置保持。direct 无区域总和下限，不使用 k、eta 或预算正则；核对上限梯度、零边界、HB 衰减及继续。原硬化定理仅覆盖约束软选择与硬选择；本次未验证下游采用 |
@@ -42,6 +43,19 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 - 2026-10-10：Choose 统一为 Allowed；块输出与参考函数统一为 BlockOut、RefBlock；联合契约归属为 ContractOwner/cown，作用归属仍为 own。PublishedDoneTo 包含消息已纳入的条件。BatchFull 经 ExpandFull 返回规范块记录。
 
 tide-core-4 的引入提交为 [d60d1cf](https://github.com/ZichaoLong/ObsidianVault/commit/d60d1cf)。教材勘误及符号整理由采用的不可变提交精确定位；涉及允许的核心行为变化时另记语义版本。新增特例可以在同一核心版本下独立演进。
+
+## 局部配置迁移（2026-10-19）
+
+| 既有名称或类型 | 当前对应 | 数值与采用说明 |
+|---|---|---|
+| memory=sum／qry | memory_family=kv，memory_read=sum／qry | 区分状态类型与描述读取，保留原读取函数 |
+| attention_base=uniform／reception | selection_mode=attention，allocation_base=uniform／mu | 旧 reception 使用的是 $\mu$，包括增益；数值保持 |
+| direct 未声明基权重 | allocation_base=mu | 保留原直接 Attention；received 是使用 $w$ 的新增分支 |
+| att 未声明 query 权重 | query_weight=mu | 保留原 query；received 为新增分支 |
+| KV 固定 Read$^+$ | read_mode=+ 为默认，可另取 -／0 | 既有默认数值保持；模式改变属于新组合 |
+| $D^{\mathrm{ind}}=(\mu,s)$、$D^{\mathrm{att}}=(\mu,x,K,s)$ | 分别在首位加入 $w$ | 支持 query 与份额读取接收量。只采用 mu 分支的旧表示可保留；适配时 $w$ 从本次聚合取得，不能一般由 $\mu$ 反推 |
+
+共同载荷与六个正典签名保持，局部描述空间的具体绑定扩充。下游兼容解析若同时收到新旧键，须检查对应一致或拒绝冲突；不可把旧 reception 解释成 received。正温度连续性新增覆盖 pooled、dense 及 received 分支，硬化定理仍仅比较约束分配与原硬函数。循环模块采用自己的状态投影与时间规则。
 
 ## 下游采用记录
 

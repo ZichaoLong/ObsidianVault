@@ -9,7 +9,7 @@ tags:
 
 # 数学符号与函数对应索引
 
-本页汇集四篇正典、带权 KV 局部教材及其组合实例的共同名称。相同名称使用相同数学类型；局部特化选择空间与函数，组合实例另给结构、时间与边界绑定。各定义的推导与证明由所列教材给出。
+本页汇集四篇正典、局部架构支线及组合实例的共同名称。相同名称使用相同数学类型；局部特化选择空间与函数，组合实例另给结构、时间与边界绑定。各定义的推导与证明由所列教材给出。
 
 ## 基础对象与时间
 
@@ -28,31 +28,25 @@ tags:
 
 SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt}$、$y_j^{[t]}=y_j^{Dt}$ 是位置边界状态。其简写 $h_{v,t}$ 等均表示时间 $\theta_{v,t}$ 的同名坐标。一般图的状态上标 $\theta$ 始终为逻辑时间。
 
-带权 KV 的 $K_j$ 是正典接口声明的激活数量上限。各正温度选择取区域节点总数，硬选择取 $k_j$。$k_j$ 还用作约束软选择的发送强度总和上限，direct 与 attention 不使用该参数。各规则均在有效候选非空时至少激活一个；总和下限 $\min(1,\sum_v\mu_v)$ 属于约束软选择，固定总强度 Attention 按所选基权重分配总强度 $1$。选择温度 $\tau_{\mathrm{soft}}$ 与描述模式 $\tau_j$ 分别定义。记忆窗口 $T_v$ 和输入步长 $\Delta_{\mathrm{in}}$ 均按逻辑时间计量。
+局部支线的正典容量 $K_j$ 由所选发送函数绑定：硬选择取 $k_j$，其余已定义函数取区域大小。$k_j$ 在约束分配和评分无关稠密分配中限制发送强度之和，在硬选择中限制激活数。选择温度 $\tau_{\mathrm{soft}}$ 与读取模式 $\tau_j$ 分别命名。
 
-以下符号由 [KV 局部教材](weighted-kv-sparse-activation-example.md) 定义，在共同函数签名内部使用：
+## 局部支线的符号与定义归属
 
-| 符号 | 局部含义 |
+| 符号或函数 | 含义与唯一的定义入口 |
 |---|---|
-| $\mu_v,c_v$ | $\mu_v$ 由接收强度与增益给出，在约束选择、direct 和 hard 中作为发送上限；attention 的每节点上限为 $1$。$c_v$ 为本次发送强度，对应正典控制量 |
-| $Z_j^{\mathrm{sel}},p_v^{\mathrm{sel}}$ | 归一化总权重与占比；direct 按 $\mu$ 加权后取 $c_v=\mu_vp_v^{\mathrm{sel}}$，attention 按所选基权重归一化后取 $c_v=p_v^{\mathrm{sel}}$，见局部教材 §7.9—7.10 |
-| $\mathfrak a_j,a_v^{\mathrm{sel}}$ | attention_base：uniform 时基权重为 $1$，reception 时为 $\mu_v$；有正基权重时 $\sum_vc_v=1$ |
-| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}}$ | 区域 query、节点 key、局部评分与区域匹配尺度；见局部教材 §7.6 |
-| $\mathfrak m_j,\mathfrak f_j,\mathfrak s_j$ | 记忆描述 sum／qry、局部评分 cat／match、区域评分 ind／att |
-| $\mathfrak g_j,\gamma_v^{\mathfrak g_j},\gamma_{\max}$ | fixed／context 增益、其数值及固定有限上界；$\mu_v(q,\theta,r,u)=\min(1,\gamma_v^{\mathfrak g_j}r_+)$ |
-| $\mathfrak b_j,R^{\mathfrak b_j},\alpha_j^{\mathrm{ent}}$ | 正则族 quad／bern／ent、相应正则及 ent 的固定形状参数 |
-| $C_{\mathrm{eff}},M_j,b_j$ | 有效候选集 $\{v:\mu_v>0\}$、发送上限之和 $\sum_v\mu_v$、约束软选择的发送强度总和下限 $\min(1,M_j)$ |
-| $F(\mu),t_v,\lambda_U,\lambda_L$ | 约束软选择可行域、调整后评分 $s_v-\eta_j$、总和上下限乘子；响应使用 $\lambda=\lambda_U-\lambda_L$ |
-| $\xi_i,T_v,\chi_{v,\theta}(\xi_i)$ | KV 条目的原始写入时间、有限或无限窗口、当前时间遮罩 |
-| $\operatorname{Pos}_v(\theta)$ | 固定位置函数；仿射族为 $(\theta-o_v^{\mathrm{pos}})/s_v^{\mathrm{pos}}$ |
-| $\operatorname{Rot}_{v,h}(p)$ | 对 Q/K 的指定坐标对施加位置旋转；旋转维数为零时取恒等 |
-| $d^{\mathrm{rot}}_{v,h},\omega^{\mathrm{rot}}_{v,h,a}$ | 每头旋转维数及频率，与评分宽度 $d_r$ 分别定义 |
-| $\beta_{v,a},b^{\mathrm{pos}}_{v,h}$ | 按逻辑时间的摘要衰减率、按位置坐标的可选距离偏置斜率 |
-| $\pi_{\mathrm{KV},v,\theta}$ | 按原始时间槽对齐的有效加权状态投影 |
+| $(m,z),\pi_P,(r,u),\operatorname{Agg}$ | [共同架构 §1—2](local-architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献与接收聚合 |
+| $\operatorname{Mem}_v,p_v,\operatorname{Describe}_v$ | [共同架构 §3](local-architecture-learning-note.md#3-状态与记忆描述)：记忆输入与描述的组合 |
+| $w_v,\gamma_v,\mu_v$ | [区域分配 §1.1](region-allocation-learning-note.md#11-接收量与发送增益)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
+| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v$ | [区域分配 §1.3](region-allocation-learning-note.md#13-描述量与区域评分)：区域 query、节点 key 与评分 |
+| $c_v,A,M,S$ | [区域分配 §2](region-allocation-learning-note.md#2-从评分得到发送强度)：发送控制、激活集合、$\mu$ 总和与实际发送总和 |
+| $F(\mu),b,k,\eta,t,\tau_{\mathrm{soft}}$ | [约束分配](region-allocation-learning-note.md#21-约束分配)：可行域、总和上下限、阈值、调整后评分和温度 |
+| $a_v,Z,p_v$ | [加权 Attention](region-allocation-learning-note.md#22-加权-attention-的共同定义)：基权重、归一化分母和份额 |
+| $\xi_i,T_v,\chi_{v,\theta},\operatorname{Pos},\operatorname{Rot}$ | [KV §1—2](weighted-kv-sparse-activation-example.md#1-状态与接收写入)：原始写入时间、窗口、遮罩、位置与旋转 |
+| $H_a,Z_a,W_a,s$ | [循环模块 §1](recurrent-memory-learning-note.md#1-状态与逻辑时间)：矩阵、摘要、写入量与保存时间 |
+| $\pi_{\mathrm{KV}},\pi_{\mathrm{rec}}$ | 各记忆教材的有效状态投影，用于数值性质比较 |
+| $\operatorname{EmitValue},\Delta,\operatorname{ReadOut}$ | [共同架构 §4](local-architecture-learning-note.md#4-分配完整计算与发送)：载荷、广播与有限输出读出 |
 
-分层组合取 $o_v^{\mathrm{pos}}=r_v,s_v^{\mathrm{pos}}=D$，恢复输入位置 $t$。窗口和摘要衰减按 $T_v=DH_j$、$\beta_{v,a}=\bar\beta_{j,a}/D$ 换算。分段继续保留原始时间及同一位置配置。
-
-发送规则的约束、激活范围与求值方式见[局部教材 §7.11](weighted-kv-sparse-activation-example.md#711-发送规则的比较)，配置映射见其附录 S.2：固定总强度 Attention 使用 attention，另选 attention_base；直接 Attention 使用 direct；约束 Shannon 与可稀疏的约束选择均使用 soft，再由正则区分；hard 对应独立的排序函数。region_score 独立指定评分来源，导数见第 8 节。
+配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 选择状态函数族，memory_read 选择描述读取，region_score 选择评分来源，selection_mode 选择发送函数。相容性由共同架构 §5 检查。
 
 ## 局部函数
 
@@ -70,7 +64,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 $\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}$。空候选返回 $(\varnothing,(),y)$。Next 的调用为 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$；Full 的调用为 $\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$。
 
-三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[KV 局部教材 §10.1—10.2](weighted-kv-sparse-activation-example.md#101-函数与参数对应) 给出函数绑定；$\operatorname{ReadOut}_\Lambda$ 的数值定义见其 §5.4。Read 与 SelStep 按描述空间 $D_v$ 成对绑定；记忆、局部评分、增益和选择函数在该类型内部组合。其[附录 S.2](weighted-kv-sparse-activation-example.md#s2-配置与数学函数) 给出同名配置键，附录 S.3、S.5、S.6 分别给出约束软选择、直接 Attention 和固定总强度 Attention 的求值与反向。[全连接实例](weighted-kv-layered-example.md#1-分层拓扑与时间) 与 [HB-Lattice 实例](weighted-kv-hb-lattice-example.md#1-拓扑区域与时间) 给出各自的图、日程、区域、来源映射和输出槽集合 $\Lambda_t$。
+三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[共同架构 §3—5](local-architecture-learning-note.md#3-状态与记忆描述)给出函数绑定与描述空间相容性，区域分配教材给出 SelStep 的数值函数。记忆模块分别提供状态、Upd、Mem 和 Full 所用的内容函数。
 
 ## 作用、结果与调用标签
 
@@ -141,4 +135,4 @@ $$
 
 Decode 忠实恢复所表示的原子、状态、控制和快照；Pi 只删除辅助坐标。两者都不调用参考递归来补写或修正结果。局部函数核对解码后函数值，联合求值核对实际支持集及全部返回坐标，层级嵌入按明确的限制与重索引比较。
 
-切面继续比较同一 $Q_b$ 与后续输入所得记录；KV 的有效状态投影 $\pi_{\mathrm{KV},v,\theta}$、外部读出及指定反向规则分别采用自身证明条件。有效投影可以丢弃原始状态细节，不能代替无损解码。KV 局部教材附录 A 给出正式连续性证明，附录 S 定义计算表示、求解与反向目标。[实现核对](weighted-kv-implementation-checks.md)整理位置、软硬极限和分段继续的检查范围；浮点容差和有限验证结果由具体实现声明。
+切面继续比较同一 $Q_b$ 与后续输入所得记录；KV 的有效状态投影 $\pi_{\mathrm{KV},v,\theta}$、外部读出及指定反向规则分别采用自身证明条件。有效投影可以丢弃原始状态细节，不能代替无损解码。KV 与循环教材附录给出各自状态证明和表示；区域分配教材给出求解与反向目标。[实现核对](weighted-kv-implementation-checks.md)整理位置、软硬极限和分段继续的检查范围；浮点容差和有限验证结果由具体实现声明。

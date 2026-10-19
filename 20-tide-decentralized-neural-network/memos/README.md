@@ -12,22 +12,23 @@ tags:
 
 ## 数学补充
 
-- [[weighted-kv-sparse-activation-example|带权 KV 局部教材]]：聚合、记忆与可组合评分，有界发送增益及二次／熵／entmax 非空预算；正式证明、求解与隐式反向、全图成本与批量契约。
-- [[weighted-kv-layered-example|带权 KV 的全连接分层实例]]：拓扑、时间与边界绑定，因果读出、配置生效条件和架构成本。
-- [[weighted-kv-hb-lattice-example|带权 KV 的 HB-Lattice 实例]]：先展开再收拢的多区域邻域图，局部函数组合、候选传播和成本比较。
+- [局部架构](../local-architecture-learning-note.md)：共同带权消息、状态与控制的组合定义。
+- [区域分配](../region-allocation-learning-note.md)：评分、发送、梯度及局部连续性与极限。
+- [KV 记忆](../weighted-kv-sparse-activation-example.md)、[循环记忆](../recurrent-memory-learning-note.md)：完整状态模块及证明。
+- [全连接实例](../weighted-kv-layered-example.md)、[HB 实例](../weighted-kv-hb-lattice-example.md)：图与时间绑定、异构记忆组合和成本。
 - [函数保持生长](mathematics/function-preserving-growth.md)：投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包。
 - [来源、聚合与读出](mathematics/provenance-and-readout.md)：安全商、保守依赖集合与未来可观察行为。
 - [自适应路由下界](mathematics/adaptive-routing-prefill-lower-bound.md)：自足的 deterministic exact 黑盒查询模型与证明；不能直接当作任意具体 selector 的下界。
 
 ## 机制与学习风险
 
-- [Selector 与局部记忆](architecture/selector-and-memory.md)：评分结构、预算正则、饱和、有界增益与下限候选的取舍，外部研究证据及适用范围。
+- [局部架构设计总览](architecture/selector-and-memory.md)：整体能力、依赖路径、候选取舍和可修正的研究判断，外部证据及适用范围。
 - [学习风险与诊断](learning-systems/learning-risks-and-diagnostics.md)：跨架构的路径漂移、信用距离、粒度与状态负担、饥饿及辅助监督。
 
 ## 实验与实现对应
 
-- [带权 KV：训练实验与推进](learning-systems/weighted-kv-experiment-plan.md)：任务、成本与教师目标，初始化、温度和部署选择，单项比较及决定条件。
-- [带权 KV：实现核对](../weighted-kv-implementation-checks.md)：数学定义、分段导数、连续性、位置和继续关系的程序证据。
+- [可选研究问题与对照](learning-systems/weighted-kv-experiment-plan.md)：按问题选取的比较、观测和训练目标，具体安排由研究者决定。
+- [局部架构：实现核对](../weighted-kv-implementation-checks.md)：数学定义、分段导数、连续性、位置和继续关系的程序证据。
 
 ## 外部背景
 

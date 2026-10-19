@@ -42,16 +42,19 @@ SettleGraph 使用严格区域分层、对齐的边时延与输入日程，按�
 
 | 文档 | 内容 |
 |---|---|
-| [带权 KV：局部计算与区域选择](weighted-kv-sparse-activation-example.md) | 从消息、记忆、评分到选择与发送；固定总强度 Attention、接收相关上限与约束选择，及各自的导数、位置与分段继续 |
-| [带权 KV 的全连接分层实例](weighted-kv-layered-example.md) | 相邻层全连接、时间对齐、来源与输出绑定；逐区域窗口及位置配置、因果读出、配置生效条件及架构成本 |
-| [带权 KV 的 HB-Lattice 架构实例](weighted-kv-hb-lattice-example.md) | 多区域递归展开与收拢、稀疏邻域和时间绑定；局部函数组合、候选传播及全图成本 |
+| [带权消息的有状态局部架构](local-architecture-learning-note.md) | 共同载荷、接收、状态与读取、区域控制和广播，组合条件及正典对应 |
+| [区域评分与发送分配](region-allocation-learning-note.md) | 评分信息、增益依赖、稠密与稀疏发送函数、导数和局部极限 |
+| [带权 KV](weighted-kv-sparse-activation-example.md) | KV 写入、描述与内容读取、位置、完整例子、联合求值及数值证明 |
+| [循环记忆](recurrent-memory-learning-note.md) | 完整 affine／delta 状态模块，逻辑时间、弱输入、仿射复合与继续 |
+| [全连接分层实例](weighted-kv-layered-example.md) | 相邻层全连接、对齐时间、来源和读出；配置生效条件及异构记忆组合 |
+| [HB-Lattice 实例](weighted-kv-hb-lattice-example.md) | 多区域展开与收拢、稀疏邻域；候选传播、工作量及记忆组合 |
 
 局部教材与架构实例通过同一组函数组合。定义、推论、教学例子与证明形成数学主线；研究与实现分别沿以下入口继续。
 
 | 文档 | 主要问题 |
 |---|---|
-| [设计分析](memos/architecture/selector-and-memory.md) | 候选的信息、梯度与成本取舍，外部证据和研究假设 |
-| [训练实验与推进](memos/learning-systems/weighted-kv-experiment-plan.md) | 任务与训练目标、对照设置、推进条件及结果解释 |
+| [设计分析](memos/architecture/selector-and-memory.md) | 整体设计空间、信息与梯度依赖、成本取舍、外部证据和可修正的研究判断 |
+| [可选研究问题与对照](memos/learning-systems/weighted-kv-experiment-plan.md) | 按问题取用的比较、训练目标及结果解释；具体优先级由研究者安排 |
 | [实现核对](weighted-kv-implementation-checks.md) | 前向、反向、边界、继续及组合与数学定义的对应 |
 
 记录相等、指定投影相等和指定反向规则相等分别陈述。具体训练、实现与测量由下游维护。
