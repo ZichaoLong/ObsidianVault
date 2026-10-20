@@ -15,7 +15,7 @@ tags:
 
 本模块把节点状态定义为带原始时间和写入权重的 KV 序列。接收发生时保存信息，Read 提取候选描述，激活后的 Full 再读取完整内容。聚合、状态采用和广播使用[局部架构教材](architecture-learning-note.md)的共同函数，评分与发送使用[区域分配教材](region-allocation-learning-note.md)。本文定义记忆部分，并给出完整算例、精确继续及局部性质的证明。
 
-固定内容宽度 $d$。消息 $(m,z)$、聚合 $h=(r,u)$、归一化 $\mathcal N$ 及数值投影 $\pi_P(m,z)=(m_+,m_+z)$ 均沿用共同定义。各参数在一次运行中固定。
+固定内容宽度 $d$。消息 $(m,z)$、聚合 $h=(r^{\mathrm{in}},u)$、归一化 $\mathcal N$ 及数值投影 $\pi_P(m,z)=(m_+,m_+z)$ 均沿用共同定义。各参数在一次运行中固定。
 
 ## 1. 状态与接收写入
 
@@ -33,14 +33,14 @@ $$
 
 $k_i$ 是匹配记忆所用的 key，$\nu_i$ 是读取时被加权的 value。它们分别分成 $H_{\mathrm{att}}$ 个 $d_h$ 维子向量，记为 $k_{i,h},\nu_{i,h}$；$p_i$ 是供后续评分使用的摘要特征，$w_i$ 是独立的写入权重，$\xi_i$ 是原始逻辑时间。初态为空；实际运行中每节点每逻辑时间至多写一项。
 
-区域共享基座 $W_j^{\mathrm{KV}}\in\mathbb R^{2d\times d}$，节点各有 $U_v\in\mathbb R^{2d\times r_a}$、$V_v^{\mathrm{ad}}\in\mathbb R^{r_a\times d}$ 与 $W_v^S\in\mathbb R^{d_s\times d}$。定义
+令 $j=\rho(v)$ 为节点所属区域，记 $I_p$ 为 $p$ 维单位矩阵。区域共享基座 $W_j^{\mathrm{KV}}\in\mathbb R^{2d\times d}$，节点各有 $U_v\in\mathbb R^{2d\times r_a}$、$V_v^{\mathrm{ad}}\in\mathbb R^{r_a\times d}$ 与 $W_v^S\in\mathbb R^{d_s\times d}$。定义
 
 $$
 \begin{aligned}
 [k_v(u);\nu_v(u)]
   &=(W_j^{\mathrm{KV}}+U_vV_v^{\mathrm{ad}})\mathcal N_d(u),\\
 p_v(u)&=W_v^S\mathcal N_d(u),
-\qquad w(r)=\min(1,r_+).
+\qquad w(r^{\mathrm{in}})=\min(1,(r^{\mathrm{in}})_+).
 \end{aligned}
 \tag{2}
 $$
@@ -53,19 +53,19 @@ $$
 \chi_{v,\theta}(\xi)=\mathbf1[0\le\theta-\xi<T_v].
 $$
 
-$q|_{v,\theta}$ 表示按原序保留 $\chi_{v,\theta}(\xi_i)=1$ 的条目。接收更新是
+$q|_{v,\theta}$ 表示按原序保留 $\chi_{v,\theta}(\xi_i)=1$ 的条目，$\oplus$ 表示向序列追加一项。接收更新是
 
 $$
-\widetilde q=\operatorname{Upd}_v(q,\theta,(r,u))
+\widetilde q=\operatorname{Upd}_v(q,\theta,(r^{\mathrm{in}},u))
 =\begin{cases}
 q|_{v,\theta}\mathbin{\oplus}
-  (\theta,k_v(u),\nu_v(u),p_v(u),w(r)),&r>0,\\
-q,&r\le0.
+  (\theta,k_v(u),\nu_v(u),p_v(u),w(r^{\mathrm{in}})),&r^{\mathrm{in}}>0,\\
+q,&r^{\mathrm{in}}\le0.
 \end{cases}
 \tag{3}
 $$
 
-$\oplus$ 表示追加。每次正接收只写一条，KV 内容不预乘 $w$；接收强度为零时保留原序列。是否执行本节点 Full 不参与写入决定。
+每次正接收只写一条，KV 内容不预乘 $w$；接收强度为零时保留原序列。是否执行本节点 Full 不参与写入决定。
 
 所有读取同样使用 $\chi_{v,\theta}$。没有候选或只有零强度输入时，保存序列可以含已过期条目，但它们不会再被读出；下一次正接收再清理。有限 $T_v$ 下，由每逻辑时间至多写一项，实际保存序列始终至多含 $T_v$ 项。$T_v=\infty$ 保留全部接收历史，在任意有限时间范围内仍只有有限项。历史覆盖范围取决于该节点实际收到的内容。
 
@@ -91,7 +91,7 @@ $o_v^{\mathrm{pos}}=0,s_v^{\mathrm{pos}}=1$ 直接编码逻辑时间。在 Settl
 
 位置函数在整条继续运行中固定，不随接收次数、激活次数或分段边界改变。更一般的固定实值位置函数也可用于下文定义与有限切面证明；具体组合须给出其完整定义。
 
-固定偶数 $0\le d^{\mathrm{rot}}_{v,h}\le d_h$、坐标配对与有限频率 $\omega^{\mathrm{rot}}_{v,h,a}$，定义
+固定偶数 $0\le d^{\mathrm{rot}}_{v,h}\le d_h$、坐标配对与有限频率 $\omega^{\mathrm{rot}}_{v,h,a}$。矩阵之间的 $\oplus$ 表示直和，定义
 
 $$
 \begin{aligned}
@@ -105,7 +105,7 @@ $$
 \end{aligned}
 $$
 
-这里的 $I_p$ 为 $p$ 维单位矩阵，$\oplus$ 为矩阵直和。旋转维数为零时 $\operatorname{Rot}=I_{d_h}$；旋转全部或部分坐标分别得到完整或部分 RoPE。旋转维数独立于评分网络的宽度。
+旋转维数为零时 $\operatorname{Rot}=I_{d_h}$；旋转全部或部分坐标分别得到完整或部分 RoPE。旋转维数独立于评分网络的宽度。
 
 对每个头固定 $W^Q_{v,h}\in\mathbb R^{d_h\times d}$，定义当前 query 为 $Q_{v,h}(u)=W^Q_{v,h}\mathcal N_d(u)$。另取非负距离偏置斜率 $b^{\mathrm{pos}}_{v,h}$，为下节 Attention 定义匹配分数
 
@@ -230,7 +230,7 @@ $$
 
 选择 sum 或 qry 后，评分中的 $M_a$ 使用相应记忆描述。
 
-两种读取均返回共同的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$，当前特征为 §1 的 $p_v(u)$。时间摘要使用独立的摘要投影；qry 从 Full 的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。memory_family=kv 选择状态类型，memory_read=sum／qry 选择这里的描述读取。
+两种读取均返回共同的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$，当前特征为 §1 的 $p_v(u)$。时间摘要使用独立的摘要投影；qry 从 Full 的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
 
 Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。各区域可分别选择读取模式及区域分配教材中相容的描述、评分与发送函数。
 
@@ -240,17 +240,17 @@ Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当
 
 取共享聚合、Read$^+$、时间摘要、拼接独立评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
 
-评分网络输出常数 $s=(2,1,100)$，可由零输出权重与相应偏置实现。取 $\eta_j=0,k_j=1,\tau_{\mathrm{soft}}=2$。
+评分网络输出常数 $s=(2,1,100)$，可由零输出权重与相应偏置实现。取 $\eta_j=0,k_j=1,\tau_{\mathrm{sel}}=2$。
 
-| 节点 | 聚合 $(r,u)$ | 新写入 $(k,\nu,p,w)$ | 上界 $\mu$ | 评分 $s$ | 发送强度 $c$ |
+| 节点 | 聚合 $(r^{\mathrm{in}},u)$ | 新写入 $(k,\nu,p,w)$ | 上界 $\mu$ | 评分 $s$ | 发送强度 $c$ |
 |---|---|---|---|---|---|
 | $a$ | $(1,1)$ | $(0,1,1,1)$ | $1$ | $2$ | $0.75$ |
 | $b$ | $(1,-1)$ | $(0,-1,-1,1)$ | $1$ | $1$ | $0.25$ |
 | $c$ | $(0,0)$ | 不追加 | $0$ | $100$ | $0$ |
 
-节点 $c$ 的发送上限为零，其高分不影响选择。$a,b$ 的分配由[区域分配 §3.1](region-allocation-learning-note.md#31-分配与饱和)的两节点公式得到。三者均保留接收后的状态，随后计算激活者的 Full。
+节点 $c$ 的发送上限为零，其高分不影响选择。$a,b$ 的分配由[区域分配 §2.1](region-allocation-learning-note.md#21-约束分配)的两节点公式得到。三者均保留接收后的状态，随后计算激活者的 Full。
 
-令 $W_v^O=1,\alpha_{\mathrm{att}}=1,\alpha_{\mathrm{ff}}=0$。$a,b$ 的 Attention 分别读出 $1,-1$，Full 内容为 $2,-2$，发送 $(0.75,2),(0.25,-2)$。若直接作为终端，$O=1$；若共同到达采用[共同聚合](architecture-learning-note.md#2-接收聚合) 且 $\alpha_{\mathrm{agg}}=0$ 的下游，则下游得到 $(r,u)=(1,1)$，再开始自己的接收流程。
+令 $W_v^O=1,\alpha_{\mathrm{att}}=1,\alpha_{\mathrm{ff}}=0$，记同刻端口的 ReadOut 为 $O$。$a,b$ 的 Attention 分别读出 $1,-1$，Full 内容为 $2,-2$，发送 $(0.75,2),(0.25,-2)$。若直接作为终端，$O=1$；若共同到达采用[共同聚合](architecture-learning-note.md#2-接收聚合) 且 $\alpha_{\mathrm{agg}}=0$ 的下游，则下游得到 $(r^{\mathrm{in}},u)=(1,1)$，再开始自己的接收流程。
 
 保持评分不变，将温度降到 $0.5$，发送强度已经是 $(1,0,0)$，只执行 $a$ 的 Full，终端 $O=2$。共同阈值的作用已由[区域分配 §2.1](region-allocation-learning-note.md#21-约束分配)确定。采用硬选择时，有效候选中最高分的 $a$ 激活，节点 $c$ 始终因发送上限为零而排除。
 
@@ -283,6 +283,8 @@ $$
 3. 按所选读取模式取得旧状态、新状态或空状态的 Mem，形成描述与区域分配，返回各候选的计算状态和下一状态。
 4. 收集每节点正式激活时刻 $\Theta$，在对应快照上联合求 Full，再按边和端口展开结果。
 
+记上述状态联合函数为 $\operatorname{BatchRegionState}^{\mathrm{KV}}_{j,I}$，完整计算联合函数为 $\operatorname{BatchFull}^{\mathrm{KV}}_{v,\Theta}$。前者返回实际 P/S/U 作用、全部值及右边界，后者返回全部正式 Full 值与消息、输出记录。参考函数 $\operatorname{RefRegionState}_{j,I}$ 和 $\operatorname{RefBlock}_{K^F_{v,\Theta}}$ 沿用[分块教材](../../timed-dag-chunk-prefill-learning-note.md)，其中 $K^F_{v,\Theta}$ 是节点 $v$ 在时刻集 $\Theta$ 上的 Full 作用块。
+
 写入不依赖本地选择或 Full，因此第 2 步等于逐次递归；第 3 步在相同输入上求同一函数；第 4 步使用同一快照。由此得到
 
 $$
@@ -291,13 +293,13 @@ $$
 \tag{9}
 $$
 
-前者返回实际 P/S/U 作用、全部值及右边界，后者返回全部正式 Full 值与消息、输出记录。时间摘要可用窗口和及衰减累计，Read 与 Full 的查询在各自因果窗口上求值。调用条件与类型沿用[分块教材](../../timed-dag-chunk-prefill-learning-note.md)。输入窗口已知和各计算可并行是分别判断的条件。
+时间摘要可用窗口和及衰减累计，Read 与 Full 的查询在各自因果窗口上求值。输入窗口已知和各计算可并行是分别判断的条件。
 
 分段继续保存共同切面 $Q_b=(b,(q_v^b)_v,(y_j^b)_j,W_b)$。KV 保留原始写入时间，后续查询沿用全局逻辑时间与固定位置函数。任意有限切分均恢复同一记录；位置内部切面还保留在途消息。SettleGraph 对齐的位置边界没有在途消息。
 
 ## 7. 有效状态与局部性质
 
-固定有限切面 $B$，按原始写入时间对齐状态条目；未写入的槽补零。在比较时刻 $\theta$ 使用
+固定有限切面 $B$，按原始写入时间对齐可达状态中的条目，记时间 $\xi$ 的条目为 $(\xi,k_\xi,\nu_\xi,p_\xi,w_\xi)$；未写入的槽各分量补零。在比较时刻 $\theta$ 使用
 
 $$
 \pi_{\mathrm{KV},v,\theta}(q)=
@@ -323,7 +325,7 @@ $\|\mathcal N_p(x)\|\le\sqrt p$，故写入的 K/V 与摘要特征有界；有�
 
 ### A.2 更新与时间推进
 
-零接收保留原序列。正接收处，$r,u$ 收敛使本次写入的加权坐标连续；接收趋零时，$w(r)\to0$，即使 $u$ 只保持有界，新条目的 $(w,wk,w\nu,wp)$ 也趋零。旧条目按固定时间遮罩读取；清理只删除当前及未来均不可读的项。因此更新后的有效状态连续，且在以后各个固定时刻继续成立。
+零接收保留原序列。正接收处，$r^{\mathrm{in}},u$ 收敛使本次写入的加权坐标连续；接收趋零时，$w(r^{\mathrm{in}})\to0$，即使 $u$ 只保持有界，新条目的 $(w,wk,w\nu,wp)$ 也趋零。旧条目按固定时间遮罩读取；清理只删除当前及未来均不可读的项。因此更新后的有效状态连续，且在以后各个固定时刻继续成立。
 
 ### A.3 描述与内容读取
 
@@ -332,6 +334,8 @@ $\|\mathcal N_p(x)\|\le\sqrt p$，故写入的 K/V 与摘要特征有界；有�
 所以有效状态与当前内容收敛时，Mem、当前特征和 $G_v$ 收敛。Read$^-$ 在当前时间遮罩下读旧状态，Read$^0$ 读空状态，Read$^+$ 读更新后的状态，均满足同一条件。结合 A.1—A.2，局部引理成立。$\square$
 
 ## 附录 S：状态表示与工作量
+
+memory_family=kv 绑定本模块的状态、Upd、Mem、当前特征和默认内容函数；memory_read=sum／qry 分别选择 §4 的时间摘要与内容检索。读取模式、区域评分和发送函数使用共同配置名称。
 
 每个保存状态和 Full 快照须能解码为定义的有限序列。共享存储和不可变窗口视图可以减少复制；解码须恢复尚未触发清理的过期条目身份。有效状态投影相等不能替代原始记录相等。
 

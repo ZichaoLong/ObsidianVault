@@ -43,7 +43,7 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 | [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
 | [循环记忆](local-semantics/weighted-message/recurrent-memory-learning-note.md) | affine／delta 状态模块，逻辑时间、读取与局部状态性质 |
 
-从共同架构出发，选读区域分配和一种记忆。各模块的函数定义与局部证明在此集中维护。
+第一次阅读可依次学习共同架构 §1—4、区域分配 §1 与 §2.1，再读 KV §1—5.1。这样先定义接收、写入、描述、评分、分配和发送，再完成一次从输入到输出的计算。其余发送函数、循环记忆和数值证明可按问题继续阅读。各函数的定义与证明由对应教材集中维护。
 
 ## 具体拓扑与完整实例
 

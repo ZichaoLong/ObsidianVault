@@ -47,7 +47,7 @@ git show 133d638:20-tide-decentralized-neural-network/tide-mathematical-foundati
 - “stateful 但无负载历史就是 token-local”、全项目强制生长阶梯、已完成语义仍称待定义等表述删除。
 - 旧单位时延窗口边界、显式 allocator 与固定 phase 只按原受限范围追溯，不覆盖一般正时延教材。
 
-旧架构图、toy 代码与运行时计划不再作为当前目录内容；需要追溯时使用 Git 历史。当前正时延 Graph 教学 reference 由教材直接维护。
+旧架构图、toy 代码与运行时计划不再作为当前目录内容；需要追溯时使用 Git 历史。当前正时延图的教学参考程序由[实现核对文档](../../reference/weighted-message-implementation-checks.md)定位。
 
 书籍目录保持为本地阅读资源，不纳入本次数学语义提交；不根据文件名判断或删除 PDF。
 
@@ -61,7 +61,7 @@ git show 133d638:20-tide-decentralized-neural-network/tide-mathematical-foundati
 | `weighted-kv-implementation-checks.md` | [带权消息实现核对](../../reference/weighted-message-implementation-checks.md)，覆盖整条局部支线 |
 | `memos/architecture/selector-and-memory.md` | [带权消息设计总览](../../memos/design/weighted-message-design.md)，整体候选与依赖分析 |
 | `memos/learning-systems/weighted-kv-experiment-plan.md` | [可选研究问题](../../memos/training/weighted-message-research-questions.md)，按需问题与对照 |
-| `semantics-anchor.md` 的共同定义汇总 | [接口索引](../../reference/semantic-interface-index.md)；原路径保留为入口 |
+| `semantics-anchor.md` 的共同定义汇总 | [接口索引](../../reference/semantic-interface-index.md)；原路径当时保留为入口，现已删除 |
 | KV 与循环教材的整网性质 | [共同架构 §6](../../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)及附录 A；两种记忆各证局部条件 |
 | 版本页的详细修订表 | [文档修订记录](document-revisions.md) |
 
@@ -95,7 +95,19 @@ git show 133d638:20-tide-decentralized-neural-network/tide-mathematical-foundati
 
 [全连接分层拓扑](../../topologies/fully-connected-layered.md)与 [HB-Lattice 拓扑](../../topologies/hb-lattice.md)分别接收两份原实例中的节点、区域、边、端口与时间定义。位置编码、记忆配置、输入强度、传播和实际工作量保留在完整实例中。两篇实例的混合记忆绑定移到 §3，联合求值及成本覆盖各自声明的 KV 与循环模块。
 
-根目录的 `weighted-kv-sparse-activation-example.md`、`weighted-kv-layered-example.md` 与 `semantics-anchor.md` 保留为简短入口。前两者分别保留正典引用的 `6-局部批量契约` 与 `5-整窗口求值与架构成本` 锚点；当前导航直接指向正文。数学备忘和正时延图教学程序的正典引用路径保持。
+该次整理曾为正典引用保留根目录的 `weighted-kv-sparse-activation-example.md`、`weighted-kv-layered-example.md` 与 `semantics-anchor.md`，并保留数学备忘和教学程序的正典链接。随后按下节清除向下引用和转向入口。
+
+## 2026-10-20 移除转向入口
+
+以 [e6f5513](https://github.com/ZichaoLong/ObsidianVault/commit/e6f5513) 为基线，四份正典清除对局部语义、实例、索引、备忘和程序的引用，数学内容保持。三个旧入口直接删除：
+
+| 已删除入口 | 当前正文 |
+|---|---|
+| `semantics-anchor.md` | [数学符号与函数对应索引](../../reference/semantic-interface-index.md) |
+| `weighted-kv-sparse-activation-example.md` | [带权 KV 教材](../../local-semantics/weighted-message/kv-memory-learning-note.md) |
+| `weighted-kv-layered-example.md` | [全连接分层的带权消息实例](../../instances/fully-connected-layered-weighted-message.md) |
+
+仓库内入口已直接引用上表正文。外部旧链接按表迁移；正典的逐篇改动和引用引入时间见[修订记录](document-revisions.md#2026-10-20定义顺序与正典引用边界)。
 
 ## 背景与补充推导的来源
 

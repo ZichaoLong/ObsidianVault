@@ -19,7 +19,7 @@ tags:
 
 ## 1. 状态与逻辑时间
 
-固定正整数 $d_k,d_m,d_s$，为节点保存
+固定内容宽度 $d$ 和正整数 $d_k,d_m,d_s$，为节点保存
 
 $$
 q=\bigl(s,(H_a,Z_a,W_a)_{a\in\{\mathrm{short},\mathrm{long}\}}\bigr),
@@ -40,7 +40,7 @@ $$
 
 ## 2. 接收更新
 
-当前聚合为 $(r,u)$，令 $w=\min(1,r_+)$。用共同归一化定义
+当前聚合为 $(r^{\mathrm{in}},u)$，令 $w=\min(1,(r^{\mathrm{in}})_+)$，并定义 $\operatorname{softplus}(x)=\log(1+e^x)$。取矩阵 $K_v\in\mathbb R^{d_k\times d}$、$V_v\in\mathbb R^{d_m\times d}$、$P_v\in\mathbb R^{d_s\times d}$，向量 $a_v^{\mathrm{retain}},a_v^{\mathrm{write}}\in\mathbb R^d$ 和标量 $b_v^{\mathrm{retain}},b_v^{\mathrm{write}}$。用共同归一化定义
 
 $$
 \begin{aligned}
@@ -53,9 +53,9 @@ g&=\exp[-w\operatorname{softplus}((a_v^{\mathrm{retain}})^\top\mathcal N_d(u)+b_
 \tag{3}
 $$
 
-其中 $I$ 表示 $d_k$ 维单位矩阵，$\operatorname{softplus}(x)=\log(1+e^x)$，投影输出宽度分别为 $d_k,d_m,d_s$。全部参数有限，$\|k\|\le1$、$0<g\le1$、$0\le\beta\le w$。$g$ 与 $\beta$ 依赖当前已知接收，不读取旧状态或区域选择。
+全部参数有限，$\|k\|\le1$、$0<g\le1$、$0\le\beta\le w$。$g$ 与 $\beta$ 依赖当前已知接收，不读取旧状态或区域选择。
 
-当 $r>0$ 时，选择下述一种更新，对两个时间尺度分别作用：
+记 $I$ 为 $d_k$ 维单位矩阵。当 $r^{\mathrm{in}}>0$ 时，选择下述一种更新，对两个时间尺度分别作用：
 
 $$
 \begin{array}{ll}
@@ -71,36 +71,35 @@ Delta 形式也写作 $\widetilde H_a=gH_a^-+\beta(\nu-gH_a^-k)k^\top$：先预�
 
 $$
 \widetilde Z_a=Z_a^-+wp_v(u),\qquad \widetilde W_a=W_a^-+w,\qquad
-\operatorname{Upd}_v(q,\theta,(r,u))=
+\operatorname{Upd}_v(q,\theta,(r^{\mathrm{in}},u))=
  \bigl(\theta,(\widetilde H_a,\widetilde Z_a,\widetilde W_a)_a\bigr).
 \tag{5}
 $$
 
-$r\le0$ 时直接定义 Upd 返回原 $q$。正接收后的状态由所有候选保留，未激活也写入。弱接收时 $g\to1,\beta\to0,w\to0$，所以遗忘和写入共同趋于中性；只缩小新 value 而保持固定遗忘比例通常不具备这一性质。
+$r^{\mathrm{in}}\le0$ 时直接定义 Upd 返回原 $q$。正接收后的状态由所有候选保留，未激活也写入。弱接收时 $g\to1,\beta\to0,w\to0$，所以遗忘和写入共同趋于中性；只缩小新 value 而保持固定遗忘比例通常不具备这一性质。
 
 ## 3. 描述与完整内容
 
 ### 3.1 两种记忆描述
 
-在任意可读状态与时间上，令 $W_{v,a}=W_a^-(q,\theta)$。两种描述分别为
+取 $Q_v^r\in\mathbb R^{d_k\times d}$、$L_{v,a}\in\mathbb R^{d_s\times d_m}$，定义 $Q_v^{\mathrm{read}}(u)=Q_v^r\mathcal N_d(u)$。在任意可读状态与时间上，令 $W_{v,a}=W_a^-(q,\theta)$。两种描述分别为
 
 $$
 \begin{aligned}
 M_a^{\mathrm{sum}}(q,\theta,u)&=\frac{Z_a^-(q,\theta)}{\max(1,W_a^-(q,\theta))},\\
 M_a^{\mathrm{state}}(q,\theta,u)&=
- L_{v,a}H_a^-(q,\theta)Q_v^{\mathrm{read}}(u),\qquad
- Q_v^{\mathrm{read}}(u)=Q_v^r\mathcal N_d(u).
+ L_{v,a}H_a^-(q,\theta)Q_v^{\mathrm{read}}(u).
 \end{aligned}
 \tag{6}
 $$
 
-$Q_v^r\in\mathbb R^{d_k\times d}$、$L_{v,a}\in\mathbb R^{d_s\times d_m}$。前者按时间汇集独立摘要，后者让当前内容直接查询矩阵状态。Mem 返回所选两个 $M_a$ 和两个 $W_a$，当前特征为式 (3) 的 $p_v(u)$，可以直接接区域分配教材的 cat／match、ind／att 与增益头。
+前者按时间汇集独立摘要，后者让当前内容直接查询矩阵状态。Mem 返回所选两个 $M_a$ 和两个 $W_a$，当前特征为式 (3) 的 $p_v(u)$，可以直接接区域分配教材的评分与增益函数。
 
 这里 $W_a$ 是衰减后的接收写入量之和；Delta 会覆盖或抵消矩阵中的部分内容，故 $W_a$ 不表示可恢复的记忆条数，也不度量矩阵存储的精确信息量。
 
 ### 3.2 内容函数
 
-固定 $Q_v^F\in\mathbb R^{d_k\times d}$、$O_{v,a}\in\mathbb R^{d\times d_m}$、非负残差尺度，以及相容的前馈矩阵，令
+固定前馈宽度 $d_f$，取 $Q_v^F\in\mathbb R^{d_k\times d}$、$O_{v,a}\in\mathbb R^{d\times d_m}$、$W_v^{\mathrm{gate}},W_v^{\mathrm{up}}\in\mathbb R^{d_f\times d}$、$W_v^{\mathrm{down}}\in\mathbb R^{d\times d_f}$ 及非负残差尺度 $\alpha_{\mathrm{mem}},\alpha_{\mathrm{ff}}$，令
 
 $$
 \begin{aligned}
@@ -173,7 +172,7 @@ $$
 
 **有界性。** 归一化使 $k,\nu,p,Q$ 有界。$\|I-\beta kk^\top\|_2\le1$，因为 $\|k\|\le1$、$0\le\beta\le1$；$g$ 和逻辑衰减均至多为 $1$。两种更新均有 $\|\widetilde H_a\|_F\le\|H_a^-\|_F+Cw$。摘要和权重也每次增加有界量。有限时域只含有限次接收，故状态、描述与内容有界。此界与区域选择温度无关。
 
-**零与弱接收。** 零接收不改保存状态。$r\to0$ 时，$w\to0,g\to1,\beta\to0$，即使 $u$ 只保持有界，新的有效矩阵、摘要和权重都趋于旧状态在当前时刻的有效值。把时间戳改为当前时刻后再向未来读取，与保留旧时间戳的极限一致，依据指数衰减的半群律。因此插入微弱事件的影响在任意固定未来时刻趋零，插入零事件无数值影响。
+**零与弱接收。** 零接收不改保存状态。$r^{\mathrm{in}}\to0$ 时，$w\to0,g\to1,\beta\to0$，即使 $u$ 只保持有界，新的有效矩阵、摘要和权重都趋于旧状态在当前时刻的有效值。把时间戳改为当前时刻后再向未来读取，与保留旧时间戳的极限一致，依据指数衰减的半群律。因此插入微弱事件的影响在任意固定未来时刻趋零，插入零事件无数值影响。
 
 **读取。** 有效状态与当前内容收敛时，式 (3)—(7) 的连续函数给出 Mem、当前特征与完整内容的收敛。正接收处更新连续，零接收处由前段得到中性极限；旧状态、新状态和零初态按相同逻辑时间读取，三种 Read 模式均满足共同条件。局部引理成立。$\square$
 

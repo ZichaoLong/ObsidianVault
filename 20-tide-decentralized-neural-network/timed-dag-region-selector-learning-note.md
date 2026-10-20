@@ -2920,8 +2920,7 @@ $$
 
 - [[timed-dag-chunk-prefill-learning-note|以本文为唯一前置的分块预填充、时间块与严格分层区域续篇]]；
 - [[positive-delay-graph-finite-cut-learning-note|以本文为唯一前置的正时延有环图、有限切面与强连通分量续篇]]；
-- [[settlegraph-learning-note|单次结算 SettleGraph 入门与向本文的受限嵌入]]；
-- [[semantics-anchor|TIDE 语义锚点]]。
+- [[settlegraph-learning-note|单次结算 SettleGraph 入门与向本文的受限嵌入]]。
 
 各教材通过共同局部函数、规范结果和明确的记录限制建立对应；具体实例再给出自己的附加条件。
 

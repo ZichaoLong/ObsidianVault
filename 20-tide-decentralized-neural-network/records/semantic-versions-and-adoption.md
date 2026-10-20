@@ -32,12 +32,35 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-20 定理整理与勘误 | 既有函数及默认数值保持。整网定理移到共同架构 §6 和附录 A，记忆模块验证局部条件；修正区域分配 §5.3／附录 A.2 中应使用第二名评分 $t_{(2)}$ 的有限温度条件，旧 $t_{(4)}$ 条件不足 |
 | 2026-10-20 反向与零消息条件勘误 | 函数定义保持。quad 总和松弛时使用独立响应导数；固定总强度 mu 支持零消息删除，uniform 须区分缺席与零消息；softmax 的前向等值与边界反向分别判定。下游核对范围见实现检查 §3、§5 |
 | 2026-10-20 目录分层与拓扑拆分 | 核心版本、局部函数与配置取值保持。拓扑定义独立，实例引用图和函数形成完整绑定；下游更新正文路径，并区分通用图结论与依赖局部绑定的性质 |
+| 2026-10-20 定义顺序与正典引用边界 | 局部函数及默认数值保持，配置名称和局部符号按下表迁移。共同架构补入有限正温度精确运行推论。四份正典清除向下引用，PDG 的有限检验段落改为自足说明；其数学定义、公式、命题与证明保持 |
 
-2026-10-20 的四份正典逐字保持。局部 Attention 份额统一写作 $p_v^{\mathrm{sel}}$，标量响应及导数使用 resp 上标，避免与记忆描述和评分向量混用。文件更名与兼容入口见[迁移索引](history/migration-map.md#2026-10-20-目录分层与拓扑拆分)。
+此前截至 [e6f5513](https://github.com/ZichaoLong/ObsidianVault/commit/e6f5513) 的目录与局部整理保持四份正典原文；本次引用清理的逐篇差异见[修订记录](history/document-revisions.md#2026-10-20定义顺序与正典引用边界)。局部 Attention 份额使用 $p_v^{\mathrm{sel}}$，标量响应及导数使用 resp 上标。旧路径的直接落点见[迁移索引](history/migration-map.md#2026-10-20-移除转向入口)。
+
+## 局部名称迁移（2026-10-20）
+
+以下名称替换保留原来的数值函数、参数值及默认选择；核心版本仍为 tide-core-5。
+
+| 旧名称 | 当前名称 | 所指函数或参数 |
+|---|---|---|
+| selection_mode=soft | selection_mode=constrained | 约束分配，包含稠密与可稀疏的正则族 |
+| selection_mode=direct | selection_mode=direct_attention | 直接 Attention |
+| selection_mode=attention | selection_mode=unit_attention | 固定总强度 Attention |
+| selection_mode=pooled | selection_mode=pooled_attention | 区域总量分配 |
+| selection_mode=dense | selection_mode=proportional | 按比例分配 |
+| selection_mode=hard | selection_mode=hard_selection | 硬选择 |
+| budget_family | regularizer | 约束分配的正则函数 |
+| tau_soft | allocation_temperature | 发送分配的温度 |
+| 局部接收强度 $r,r_v$ | $r^{\mathrm{in}},r_v^{\mathrm{in}}$ | 与正典的节点秩 $r_v$ 分开 |
+| 局部激活集合 $A$ | $\mathcal A$ | 与图的边集 $A$ 分开 |
+| 分配温度 $\tau_{\mathrm{soft}}$ | $\tau_{\mathrm{sel}}$ | 与正典读取模式 $\tau_j$ 分开 |
+
+下游旧配置按表映射；新旧键同时出现时检查数值一致或拒绝冲突。函数完整定义及参数适用范围见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。有限正温度推论只覆盖满足条件的 quad 与固定 $\alpha>1$ 的 ent；它补充已定义函数的性质，未改变任何分配规则。
 
 ## 局部配置迁移（2026-10-19）
 
-| 既有名称或类型 | 当前对应 | 数值与采用说明 |
+下表保留该次修订的名称；其中的发送模式再按上节迁移为当前名称。
+
+| 既有名称或类型 | 该次修订的对应 | 数值与采用说明 |
 |---|---|---|
 | memory=sum／qry | memory_family=kv，memory_read=sum／qry | 区分状态类型与描述读取，保留原读取函数 |
 | attention_base=uniform／reception | selection_mode=attention，allocation_base=uniform／mu | 旧 reception 使用的是 $\mu$，包括增益；数值保持 |

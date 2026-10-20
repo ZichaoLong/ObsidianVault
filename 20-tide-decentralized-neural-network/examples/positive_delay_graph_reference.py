@@ -93,7 +93,7 @@ def keep_comparison_state(
     _active: bool,
     _control: Control,
 ) -> NodeState:
-    """Default Next: preserve the former SD/BO state-adoption behavior."""
+    """Default Next: retain the state chosen by the candidate-adoption rule."""
     return comparison
 
 
@@ -1197,7 +1197,7 @@ def check_controls_and_state_snapshots(trials: int) -> None:
     if trace.comparison_states[("u", 0)] != 8 or trace.states[("u", 1)] != 0:
         raise AssertionError("comparison snapshot and persistent reset were mixed")
     if trace.states[("v", 1)] != 3 or trace.comparison_states[("u", 4)] != 7:
-        raise AssertionError("an inactive BO candidate lost its adopted state")
+        raise AssertionError("all-candidate adoption lost an inactive candidate's state")
     if trace.controls[("u", 0)] != Fraction(1, 2):
         raise AssertionError("the soft gate was not recorded")
     if trace.controls[("v", 0)] != 0 or ("v", 0) in trace.full_values:
@@ -1230,7 +1230,7 @@ def check_controls_and_state_snapshots(trials: int) -> None:
         old_behavior.states[("u", 1)] != 8
         or old_behavior.states[("v", 1)] != 3
     ):
-        raise AssertionError("default Next changed the former BO adoption rule")
+        raise AssertionError("default Next changed all-candidate adoption")
 
     for observe_all in (True, False):
         variant = gated_reset_spec(observe_all)
@@ -1238,12 +1238,12 @@ def check_controls_and_state_snapshots(trials: int) -> None:
         assert_random_ready_schedules(
             variant, external, 6, trials, seed=1301 + observe_all
         )
-    sd_trace, _ = run_partitioned(gated_reset_spec(False), external, (0, 6))
+    selected_only_trace, _ = run_partitioned(gated_reset_spec(False), external, (0, 6))
     if (
-        sd_trace.comparison_states[("v", 0)] != 0
-        or sd_trace.states[("v", 1)] != 0
+        selected_only_trace.comparison_states[("v", 0)] != 0
+        or selected_only_trace.states[("v", 1)] != 0
     ):
-        raise AssertionError("an inactive SD candidate adopted its proposal")
+        raise AssertionError("selected-only adoption changed an inactive candidate's state")
 
 
 def run_checks(trials: int) -> None:
@@ -1310,7 +1310,7 @@ def main() -> None:
         "and continuations "
         f"across {4 * args.trials} random cut partitions and "
         f"{4 * args.trials} random ready-event schedules; "
-        "soft controls, pre-reset snapshots, SD/BO Next, and empty fibers agree"
+        "soft controls, pre-reset snapshots, both adoption modes, and empty fibers agree"
     )
 
 

@@ -30,7 +30,7 @@ tags:
 ## TIDE
 
 - [[20-tide-decentralized-neural-network/README|TIDE 数学教材与语义总览]]
-- [[20-tide-decentralized-neural-network/semantics-anchor|语义锚点与仓库分工]]
+- [[20-tide-decentralized-neural-network/reference/semantic-interface-index|数学符号与函数对应索引]]
 - [[20-tide-decentralized-neural-network/settlegraph-learning-note|SettleGraph 入门教材]]
 - [[20-tide-decentralized-neural-network/timed-dag-region-selector-learning-note|TimedDAG 数学教材]]
 - [[20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note|TimedDAG chunk-prefill 教材]]

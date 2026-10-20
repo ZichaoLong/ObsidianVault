@@ -46,18 +46,18 @@ SettleGraph 向 TimedDAG 保留图对象、端口和局部函数，重索引位�
 
 SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt}$、$y_j^{[t]}=y_j^{Dt}$ 是位置边界状态。其简写 $h_{v,t}$ 等均表示时间 $\theta_{v,t}$ 的同名坐标。一般图的状态上标 $\theta$ 始终为逻辑时间。
 
-局部支线的正典容量 $K_j$ 由所选发送函数绑定：硬选择取 $k_j$，其余已定义函数取区域大小。$k_j$ 在约束分配和评分无关稠密分配中限制发送强度之和，在硬选择中限制激活数。选择温度 $\tau_{\mathrm{soft}}$ 与读取模式 $\tau_j$ 分别命名。
+局部支线的正典容量 $K_j$ 由所选发送函数绑定：硬选择取 $k_j$，其余已定义函数取区域大小。$k_j$ 在约束分配和按比例分配中限制发送强度之和，在硬选择中限制激活数。选择温度 $\tau_{\mathrm{sel}}$ 与读取模式 $\tau_j$ 分别命名。
 
 ## 局部支线的符号与定义归属
 
 | 符号或函数 | 含义与唯一的定义入口 |
 |---|---|
-| $(m,z),\pi_P,(r,u),\operatorname{Agg}$ | [共同架构 §1—2](../local-semantics/weighted-message/architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献与接收聚合 |
+| $(m,z),\pi_P,(r^{\mathrm{in}},u),\operatorname{Agg},\operatorname{SrcClass}_v$ | [共同架构 §1—2](../local-semantics/weighted-message/architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献、接收聚合及从带标签端口／入边到有限类别的映射 |
 | $\operatorname{Mem}_v,p_v,\operatorname{Describe}_v$ | [共同架构 §3](../local-semantics/weighted-message/architecture-learning-note.md#3-状态与记忆描述)：记忆描述、当前特征与选择描述的组合 |
 | $w_v,\gamma_v,\mu_v$ | [区域分配 §1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#11-接收量与发送增益)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
 | $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v$ | [区域分配 §1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#13-描述量与区域评分)：区域 query、节点 key 与评分 |
-| $c_v,A,M,S$ | [区域分配 §2](../local-semantics/weighted-message/region-allocation-learning-note.md#2-从评分得到发送强度)：发送控制、激活集合、$\mu$ 总和与实际发送总和 |
-| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{soft}}$ | [约束分配](../local-semantics/weighted-message/region-allocation-learning-note.md#21-约束分配)：可行域、总和上下限、阈值、调整后评分和温度 |
+| $c_v,\mathcal A,M,S$ | [区域分配 §2](../local-semantics/weighted-message/region-allocation-learning-note.md#2-从评分得到发送强度)：发送控制、激活集合、$\mu$ 总和与实际发送总和 |
+| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [约束分配](../local-semantics/weighted-message/region-allocation-learning-note.md#21-约束分配)：可行域、总和上下限、阈值、调整后评分和温度 |
 | $a_v,Z,p_v^{\mathrm{sel}}$ | [加权 Attention](../local-semantics/weighted-message/region-allocation-learning-note.md#22-加权-attention-的共同定义)：基权重、归一化分母和份额 |
 | $G_v$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：激活后的内容变换，由具体模块绑定 |
 | $a_v^{\mathrm{resp}},e_v^{\mathrm{resp}},x_v^{\mathrm{resp}}$ | [区域分配 §4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-求解与导数)：响应的自变量及其对评分差、发送上限的导数 |
@@ -67,6 +67,8 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $\operatorname{EmitValue},\Delta,\operatorname{ReadOut}$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：载荷、广播与有限输出读出 |
 
 配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 选择状态函数族，memory_read 选择描述读取，region_score 选择评分来源，selection_mode 选择发送函数。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
+
+SettleGraph 的 $r_v$ 保持节点秩的含义；带权消息的接收强度统一记为 $r_v^{\mathrm{in}}$。边集沿用 $A$，激活集合沿用 $\mathcal A$。
 
 ## 局部函数
 

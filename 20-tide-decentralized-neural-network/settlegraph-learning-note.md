@@ -377,7 +377,7 @@ $$
 q^{\mathrm{cmp}}_{v,t}=\widetilde q_{v,t}=q_v^{[t+1]}.
 $$
 
-未激活候选同样保留接收更新。[[weighted-kv-sparse-activation-example|带权 KV 局部教材]] 给出此函数族的完整定义、退火性质及联合求值见证；它在各层级都使用式 (15)，并局部选取 $X_v=P=\mathbb R^{1+d}$。[[weighted-kv-layered-example|分层架构实例]] 另行给出拓扑、时间与边界绑定。
+未激活候选同样保留接收更新。
 
 ## 6. 一个输入的完整结算
 
@@ -646,7 +646,7 @@ s^{\mathrm{grown}}_0=\eta(s^{\mathrm{base}}_0),\qquad
 \pi(s^{\mathrm{grown}}_t)=s^{\mathrm{base}}_t.
 $$
 
-新状态可在该投影条件下演化。外部残差 $h_t+\alpha\Delta_t$ 在 $\alpha=0$ 时提供另一种输出保持方式；其状态保持仍须验证。进一步推导见 [[memos/mathematics/function-preserving-growth|函数保持生长]]。
+新状态可在该投影条件下演化。外部残差 $h_t+\alpha\Delta_t$ 在 $\alpha=0$ 时提供另一种输出保持方式；其状态保持仍须验证。
 
 ## 附录 A：系统用语与表示
 
