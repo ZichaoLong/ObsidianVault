@@ -36,20 +36,19 @@ tags:
 
 ### 2.1 语言模型接入
 
-两个架构实例均给出因果表示 $y_t\in\mathbb R^d$。独立语言模型可用 token 嵌入作为入口内容 $h_t$，声明词表大小 $n_{\mathrm{vocab}}$ 和矩阵 $W_{\mathrm{vocab}}\in\mathbb R^{n_{\mathrm{vocab}}\times d}$。沿用局部教材的归一化函数，定义
+两个架构实例均给出因果表示 $y_t\in\mathbb R^d$。独立语言模型可用 token 嵌入作为入口内容 $h_t$，声明词表大小 $n_{\mathrm{vocab}}$ 和矩阵 $W_{\mathrm{vocab}}\in\mathbb R^{n_{\mathrm{vocab}}\times d}$。令 $\mathcal T_{\mathrm{sup}}$ 为有限非空监督位置集，$N_{\mathrm{tok}}=|\mathcal T_{\mathrm{sup}}|$，$x_{t+1}^{\mathrm{tok}}\in\{1,\ldots,n_{\mathrm{vocab}}\}$ 为位置 $t$ 的下一 token 标签。沿用局部教材的归一化函数，定义
 
 $$
 \begin{aligned}
 p_t&=\operatorname{softmax}(W_{\mathrm{vocab}}\mathcal N_d(y_t)),\\
 \mathcal L_{\mathrm{task}}
 &=-\frac1{N_{\mathrm{tok}}}\sum_{t\in\mathcal T_{\mathrm{sup}}}
-  \log p_t(x_{t+1}^{\mathrm{tok}}),\qquad
-N_{\mathrm{tok}}=|\mathcal T_{\mathrm{sup}}|\ge1.
+  \log p_t(x_{t+1}^{\mathrm{tok}}).
 \end{aligned}
 \tag{1}
 $$
 
-$\mathcal T_{\mathrm{sup}}$ 是监督位置集，$x_{t+1}^{\mathrm{tok}}$ 是下一 token 标签。其他任务独立声明读出、监督位置与损失。
+其他任务独立声明读出、监督位置与损失。
 
 ### 2.2 稠密暴露与教师
 
@@ -76,7 +75,7 @@ $$
 \tag{2}
 $$
 
-stopgrad 的前向为恒等，反向对其输入贡献为零。无教师时取 $\lambda_{\mathrm{dist}}=0$ 并省去教师计算。该成本代理对较大门控近似计一次，对趋零发送强度连续归零。它的导数为
+stopgrad 的前向为恒等，反向对其输入贡献为零。无教师时取 $\lambda_{\mathrm{dist}}=0$ 并省去教师计算。发送强度 $c$ 远大于 $\epsilon_{\mathrm{cost}}$ 时，该成本代理近似计一次；$c$ 趋零时连续归零。它的导数为
 
 $$
 \phi'(c)=\frac{\epsilon_{\mathrm{cost}}}{(c+\epsilon_{\mathrm{cost}})^2},\qquad
@@ -121,7 +120,7 @@ $$
 | 观测 | 能帮助判断什么 |
 |---|---|
 | 任务质量，按类别和长度分组 | 某组合是否解决当前任务；极差结果是否值得继续定位 |
-| $r,w,\gamma,\mu,c,S,\lvert C\rvert,\lvert A\rvert$ | 幅度放大、传播衰减、约束饱和及实际支持 |
+| $r^{\mathrm{in}},w,\gamma,\mu,c,S,\lvert C\rvert,\lvert\mathcal A\rvert$ | 幅度放大、传播衰减、约束饱和及实际支持 |
 | 模块梯度与更新量 | 参数是否生效、控制是否获得反馈；非零导数与有效更新分别解释 |
 | query/key 范数与评分差相对温度 | 固定温度下的集中、低温尖峰或长期饱和 |
 | 写入到读取的时间与反向截断 | 私有记忆是否被使用、是否保留所需信用链 |

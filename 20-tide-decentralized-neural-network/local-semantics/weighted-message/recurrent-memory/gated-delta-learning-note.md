@@ -60,7 +60,7 @@ W_a^-=e^{-\lambda_a(\theta-s)_+}W_a.
 \tag{4}
 $$
 
-后文的上标 $-$ 总指当前查询时间的有效值。默认 $\lambda_h=0$：矩阵只在正接收时由输入门控制遗忘。正的 $\lambda_h$ 另提供按逻辑时间流逝的遗忘。空档不产生额外事件，保存状态不变。
+这里 $H_h^-,Z_a^-,W_a^-$ 表示当前查询时间的有效值。默认 $\lambda_h=0$：矩阵的保留与误差修正只在正接收时发生，具体门由 §2.2 定义。正的 $\lambda_h$ 另提供按逻辑时间流逝的遗忘。空档不产生额外事件，保存状态不变。
 
 ## 2. 投影与接收更新
 
@@ -97,7 +97,7 @@ $$
 
 $g_h$ 为保留比例，$\beta_h$ 为误差写入比例；$0<g_h\le1$、$0\le\beta_h\le w$。$\Delta_h$ 是输入决定的门参数，逻辑时间差已经由式 (4) 单独定义。两者均不使用区域控制 $c_v$，也不读取旧矩阵。
 
-当 $r^{\mathrm{in}}>0$ 时，定义
+记 $I$ 为 $d_k$ 维单位矩阵。当 $r^{\mathrm{in}}>0$ 时，定义
 
 $$
 \begin{aligned}
@@ -114,7 +114,7 @@ $$
 \tag{7}
 $$
 
-$I$ 是 $d_k$ 维单位矩阵。$r^{\mathrm{in}}\le0$ 时 Upd 返回原 $q$。全部正接收候选保留矩阵、卷积和摘要更新，未激活者也保留。当前 key 所对应的旧预测为 $\bar H_hk_h$，写入修正其与 $\nu_h$ 的差；其他 key 的关联随方向重叠而受影响。
+$r^{\mathrm{in}}\le0$ 时 Upd 返回原 $q$。全部正接收候选保留矩阵、卷积和摘要更新，未激活者也保留。当前 key 所对应的旧预测为 $\bar H_hk_h$，写入修正其与 $\nu_h$ 的差；其他 key 的关联随方向重叠而受影响。
 
 ## 3. 描述、内容与发送
 
@@ -170,7 +170,7 @@ G_v(q,\theta,u)&=x_F+\alpha_{\mathrm{ff}}W^{\mathrm{down}}
 \tag{11}
 $$
 
-Full 在本次新状态上求 $G_v$，正控制时向每条出边与输出端口发送 $(c_v,G_v)$。记忆门 $g_h,\beta_h$、内容门 $\operatorname{SiLU}(U_h^ox)$、发送增益 $\gamma_v$ 与控制 $c_v$ 分别承担遗忘、写入、内容变换和传播职责。
+Full 在本次新状态上求 $G_v$，正控制时向每条出边与输出端口发送 $(c_v,G_v)$。保留门 $g_h$、误差写入门 $\beta_h$ 和输出门 $\operatorname{SiLU}(U_h^ox)$ 分别控制旧矩阵保留、关联修正和输出内容；发送增益 $\gamma_v$ 与发送强度 $c_v$ 使用共同区域规则。
 
 ### 3.3 一个标量例子
 
@@ -192,7 +192,7 @@ B_{h,i}=\beta_{h,i}\nu_{h,i}k_{h,i}^\top.
 \tag{12}
 $$
 
-$s_{i-1}$ 为此前保存时间。每头的系数代入[基础教材 §4.1 的仿射复合](affine-delta-learning-note.md#41-仿射复合)，即可按其结合律求得全部中间矩阵；摘要同样为仿射更新。再按读取模式形成描述、区域选择和 Full，构成共同架构 §7 的联合契约。实际的高效分块算法还需利用 $I-\beta kk^\top$ 的结构；显式形成并乘稠密转移矩阵可能更昂贵。
+$s_{i-1}$ 为此前保存时间。每头的系数代入[基础教材 §4.1 的仿射复合](affine-delta-learning-note.md#41-仿射复合)，即可按其结合律求得全部中间矩阵；摘要同样为仿射更新。再按描述模式形成描述、区域选择和 Full，构成共同架构 §7 的联合契约。实际的高效分块算法还需利用 $I-\beta kk^\top$ 的结构；显式形成并乘稠密转移矩阵可能更昂贵。
 
 继续保存式 (3) 的完整状态，以及正典切面中的区域历史和在途消息。卷积保持原始时间，矩阵与摘要保持上次写入时间。位置空档、切分长度或延后求 Full 都不重置这些量。每个 Full 使用自己的计算快照。
 
@@ -229,7 +229,7 @@ $$
 
 memory_family=gated_delta 选择本文完整函数；memory_read=sum／state 选择式 (9)。配置还给出 num_heads、head_k_dim、head_v_dim、描述及前馈宽度、conv_size、conv_stride、归一化常数、被动衰减率、全部参数与残差尺度。两种归一化的常数分别为 qk_eps、output_norm_eps；共同输入归一化沿用架构的 $\epsilon$。
 
-[Gated DeltaNet 论文 §3.4](https://arxiv.org/html/2412.06464v2#S3.SS4)给出投影、短卷积、L2 归一化、门控 Delta 及输出门的构成。对单位权重、等间隔连续接收、空初态、$\lambda_h=0$，本文的 Mix 恢复相应的普通序列记忆混合器：对照采用相同的归一化输入 $x$、投影、卷积、门、缩放和头排列。$w$ 对门与历史写入的调制、逻辑时间空档、selector 摘要和式 (11) 的外部内容绑定是这里明确给出的 Tide 选择。
+[Gated DeltaNet 论文 §3.4](https://arxiv.org/html/2412.06464v2#S3.SS4)给出投影、短卷积、L2 归一化、门控 Delta 及输出门的构成。从零矩阵与空缓存开始，在时间 $\theta_i=\theta_0+i\delta_{\mathrm{conv}}$ 连续接收、每次权重为 $1$、$\lambda_h=0$ 时，本文的 Mix 恢复相应的普通序列记忆混合器：对照采用相同的归一化输入 $x$、投影、卷积系数与偏置、门、缩放和头排列。$w$ 对门与历史写入的调制、逻辑时间空档、selector 摘要和式 (11) 的外部内容绑定是这里明确给出的 Tide 选择。
 
 一个具体实现对应为 [FLA GatedDeltaNet](https://github.com/fla-org/flash-linear-attention/blob/9d478facb282410dc150051d5f57205cd3812f31/fla/layers/gated_deltanet.py)，取相同 Q/K/V 头数、开启短卷积与 SiLU 输出门、allow_neg_eigval=False。对照时 $b_h^\beta=0$，输出 RMS 的缩放向量在各头共享，卷积偏置按同一 conv_bias 开关取值。其[循环核](https://github.com/fla-org/flash-linear-attention/blob/9d478facb282410dc150051d5f57205cd3812f31/fla/ops/gated_delta_rule/fused_recurrent.py)取 $\epsilon_{\mathrm{qk}}=10^{-6}$ 和 query 缩放 $d_k^{-1/2}$；输出 RMS 常数取 $10^{-5}$。本对应限定这些开关和实数公式，浮点内核的容差另验。整个外部语言模型的嵌入、层排列、训练配方和任务读出由其架构另行定义。
 

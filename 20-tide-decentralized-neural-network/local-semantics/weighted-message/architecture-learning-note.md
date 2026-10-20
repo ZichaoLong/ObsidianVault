@@ -23,7 +23,7 @@ tags:
 
 ## 1. 消息、输入与候选
 
-固定有限节点集 $V$、区域划分 $V=\bigsqcup_j\mathcal R_j$、有限输入端口集 $\mathsf I$ 与输出端口集 $\mathsf O$，以及具有独立身份和正整数时延的有向边。记 $\rho(v)$ 为节点所属区域，$\operatorname{In}(v),\operatorname{Out}(v)$ 为入边与出边集合，$\mathsf I_v,\operatorname{OutPort}(v)$ 为归属该节点的输入与输出端口集合。逻辑时间为 $\theta\in\mathbb N$。边 $a$ 在时间 $\eta$ 发出的消息于 $\eta+\delta(a)$ 到达。
+固定有限节点集 $V$、区域划分 $V=\bigsqcup_j\mathcal R_j$、有限输入端口集 $\mathsf I$ 与输出端口集 $\mathsf O$，以及具有独立身份和正整数时延的有向边。记 $\rho(v)$ 为节点所属区域，$\operatorname{In}(v),\operatorname{Out}(v)$ 为入边与出边集合，$\operatorname{InPort}(v),\operatorname{OutPort}(v)$ 为归属该节点的输入与输出端口集合。逻辑时间为 $\theta\in\mathbb N$。边 $a$ 在时间 $\eta$ 发出的消息于 $\eta+\delta(a)$ 到达。
 
 每个输入原子保留来源身份和载荷。外部原子写作 $(\mathrm{ext},i,k,p)$，其中 $i$ 是输入端口、$k$ 是该端口的输入序号、$p$ 是载荷；内部原子写作 $(\mathrm{msg},\eta,a,p)$，其中 $\eta$ 是发送时间、$a$ 是边。节点 $v$ 在 $\theta$ 的完整原子集合记为 $B_{v,\theta}$，称为输入纤维。只有 $B_{v,\theta}\ne\varnothing$ 时产生节点作用；区域的候选集合为
 
@@ -56,7 +56,7 @@ $$
 
 $$
 \operatorname{SrcClass}_v:
- (\{\mathrm{ext}\}\times\mathsf I_v)
+ (\{\mathrm{ext}\}\times\operatorname{InPort}(v))
  \sqcup(\{\mathrm{msg}\}\times\operatorname{In}(v))\longrightarrow\mathsf L_v.
 $$
 
@@ -125,7 +125,7 @@ $$
 
 模块另提供当前内容特征 $p_v(u)\in\mathbb R^{d_s}$。KV 中 $M$ 是时间摘要或内容检索结果，$W$ 是相应有效写入权重之和。循环模块可提供衰减摘要或矩阵查询；Gated DeltaNet 与 SSD 的 state 描述用短期摘要和矩阵读出分别占据两个通道。$W$ 的含义由各模块定义，循环的接收写入量不表示矩阵中的可恢复信息量。
 
-为每个节点指定描述空间 $D_v$ 和函数 $\operatorname{Describe}_v:S_v\times\mathbb N\times X_v\to D_v$。[区域分配教材](region-allocation-learning-note.md#1-节点向区域提供什么)用上述记忆描述与当前内容定义两组具体的 $D_v$ 和 Describe。给定其中一组，三种正典读取为
+为每个节点指定描述空间 $D_v$ 和函数 $\operatorname{Describe}_v:S_v\times\mathbb N\times X_v\to D_v$。[区域分配教材](region-allocation-learning-note.md#1-节点向区域提供什么)用上述记忆描述与当前内容定义两组具体的 $D_v$ 和 Describe。给定其中一组，正典描述模式 $\tau_j\in\{0,-,+\}$ 使用
 
 $$
 \begin{aligned}
@@ -188,7 +188,7 @@ $$
 | 接收 | 内容宽度、来源分类与 Agg 参数 |
 | 记忆 | 状态、初态、Upd、Mem、当前特征 $p_v$ |
 | 完整内容 | 历史读取及随后变换组成的 $G_v$，与记忆模块的参数共享关系 |
-| 描述与评分 | 读取模式、Describe 与 SelStep 使用的共同 $D_v$，局部和区域评分 |
+| 描述与评分 | 描述模式、Describe 与 SelStep 使用的共同 $D_v$，局部和区域评分 |
 | 发送 | 所选分配函数及其参数、正典容量 $K_j$ |
 | 延续 | 本文 Next 与广播 Full，状态的时钟、窗口及边界恢复 |
 
@@ -310,7 +310,7 @@ $$
 |---|---|
 | memory_family | kv、affine、delta、gated_delta、ssd：选择各模块已给出的状态、读取与默认内容函数绑定；各职责见 §3—5 |
 | memory_read | KV 的 sum、qry；各循环模块的 sum、state。state 的具体查询与通道含义由所选模块定义 |
-| read_mode | 正典 $\tau_j\in\{0,-,+\}$；本文完整例子默认 $+$ |
+| read_mode | 正典描述模式 $\tau_j\in\{0,-,+\}$；[KV 完整例子](kv-memory-learning-note.md#5-完整例子)取 $+$ |
 | local_score、region_score | 区域分配教材的 cat／match、ind／att |
 | send_gain、query_weight | 发送增益与区域 query 的汇集权重，分别指定 |
 | selection_mode | 区域分配教材附录 S.1 所列发送函数 |

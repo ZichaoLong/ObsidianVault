@@ -15,7 +15,7 @@ tags:
 
 处理器可以乱序执行，但必须保持 ISA 声明的可观察行为。编译器可以融合、重排和消除中间表示，但必须保持源程序或 IR 的契约。对 Tide 有用的是同一个问题：哪些状态与输出属于模型，哪些只是运行时安排？
 
-一个 pack/reorder 实现不必保留每个临时 buffer，却必须保持以后还会读取的节点状态、selector-history、消息及读出。只比较一次最终 logits，可能漏掉后续继续时的差异。
+一个 pack/reorder 实现不必保留每个临时 buffer，却必须保持以后还会读取的节点状态、选择历史、消息及读出。只比较一次最终 logits，可能漏掉后续继续时的差异。
 
 参考：[Tomasulo 1967](https://doi.org/10.1147/rd.111.0025)；Hennessy 与 Patterson 的 *Computer Architecture: A Quantitative Approach*。
 

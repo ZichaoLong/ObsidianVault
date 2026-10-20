@@ -15,7 +15,7 @@ tags:
 
 本模块用固定大小的矩阵与摘要保存历史。每次接收对状态作一次仿射更新，当前内容再查询该状态。它与[带权 KV](../kv-memory-learning-note.md)共用[局部架构](../architecture-learning-note.md)的载荷、聚合、描述、区域分配、Next 和广播 Full。
 
-下面完整定义两种接收更新：门控仿射写入，以及带衰减的 Delta 写入。它们给出可组合的基础局部函数。仿射写入的系数由输入决定，Delta 写入进一步按关联预测的误差修正矩阵。[Gated DeltaNet](gated-delta-learning-note.md)与 [Mamba-2／SSD](ssd-learning-note.md)分别定义包含短卷积、多头、具体门和输出归一化的完整候选；它们使用独立的 memory_family 名称。
+下面完整定义两种接收更新，配置名为 affine 和 delta。固定当前输入时，两者都对旧矩阵作仿射变换；affine 衰减旧矩阵后累加当前写入，delta 按当前关联预测的误差修正矩阵。[Gated DeltaNet](gated-delta-learning-note.md)与 [Mamba-2／SSD](ssd-learning-note.md)分别定义包含短卷积、多头、具体门和输出归一化的完整候选；它们使用独立的 memory_family 名称。
 
 ## 1. 状态与逻辑时间
 
@@ -112,7 +112,7 @@ G_v(q,\theta,u)&=x+\alpha_{\mathrm{ff}}W_v^{\mathrm{down}}
 \tag{7}
 $$
 
-空初态读出为零。Full 在新状态 $\widetilde q$ 上使用此 $G_v$，经共同 EmitValue 和广播返回。选择读取模式可为 $+$、$-$ 或 $0$；分别使用新、旧或初始状态取得描述。单点区域历史和默认 Next 与 KV 相同。
+空初态读出为零。Full 在新状态 $\widetilde q$ 上使用此 $G_v$，经共同 EmitValue 和广播返回。描述模式可为 $+$、$-$ 或 $0$；分别使用新、旧或初始状态取得描述。单点区域历史和默认 Next 与 KV 相同。
 
 ### 3.3 一个完整单节点例子
 
@@ -197,7 +197,7 @@ $$
 
 ## 附录 S：配置与实现对应
 
-memory_family=affine／delta 分别绑定式 (4)；memory_read=sum／state 绑定式 (6)。配置另给 $d_k,d_m,d_s$、衰减率、投影、门控与 Full 参数，读取模式与区域分配沿用共同名称。默认描述读取为 sum，默认 Read 模式为 $+$。
+memory_family=affine／delta 分别绑定式 (4)；memory_read=sum／state 绑定式 (6)。配置另给 $d_k,d_m,d_s$、衰减率、投影、门控与 Full 参数，描述模式与区域分配沿用共同名称。默认 memory_read=sum、read_mode=+。
 
 每节点保存两个 $d_m\times d_k$ 矩阵及摘要、权重和时间戳，大小与接收次数无关。单次矩阵更新和读取的主要工作为 $O(d_md_k)$，投影与前馈另计。显式复合稠密 $A$ 可能比顺序更新昂贵；Delta 的低秩结构可用于专门联合算法。结合律提供精确重排依据，实际工作量、存储和并行收益由具体算法给出。
 

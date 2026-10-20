@@ -33,7 +33,7 @@ $w_v$ 描述本次接收，$\mu_v$ 允许有界放大。在约束分配、直接
 
 固定增益直接给定，或取 $\gamma_v=1+(\gamma_{\max}-1)\sigma(\zeta_v)$。上下文增益可由当前内容与记忆计算，具体参数化见下节。
 
-### 1.2 独立局部评分
+### 1.2 局部评分
 
 为简洁省略节点下标，所有记忆量均在所选 Read 状态、当前 $\theta,u$ 上求值。取正整数隐藏宽度 $d_r$、矩阵 $W_v^r\in\mathbb R^{d_r\times(d+4d_s+3)}$、向量 $b_v^r,a_v^{\mathrm{cat}}\in\mathbb R^{d_r}$ 和标量 $b_v$。拼接评分（cat）定义为
 
@@ -94,7 +94,7 @@ $$
 D_v^{\mathrm{ind}}=\{(w,\mu,s):0\le w\le\mu\le1,\ \mu\le\gamma_{\max}w,\ s\in\mathbb R\}.
 $$
 
-节点传递 $(w_v,\mu_v,s_v^{\mathrm{loc}})$，最终评分 $s_v=s_v^{\mathrm{loc}}$。
+节点传递 $(w_v,\mu_v,s_v^{\mathrm{loc}})$，最终评分 $s_v=s_v^{\mathrm{loc}}$。这里的独立指最终评分只使用本节点的描述；局部评分仍可选 cat 或 match。例如 cat 与 ind 组合时，拼接网络的输出直接成为最终评分。
 
 区域 Attention 评分 att 另传递当前特征和记忆 key。取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$ 及两个 $d_{\mathrm{sel}}$ 维偏置，定义
 
@@ -138,7 +138,7 @@ $$
 
 $C_{\mathrm{eff}}$ 是有正接收的候选，$M$ 是接收相关量 $\mu$ 的总和，$S$ 是本次实际发送强度之和。每个节点在这两个和中分别计一次。
 
-需要温度的函数取 $\tau_{\mathrm{sel}}>0$，单次选择中简写为 $\tau$。温度调节评分差异对分配的影响；它与正典的读取模式 $\tau_j$ 是不同参数。
+需要温度的函数取 $\tau_{\mathrm{sel}}>0$，单次选择中简写为 $\tau$。温度调节评分差异对分配的影响；正典的描述模式 $\tau_j$ 指定 Read 使用的状态快照。
 
 ### 2.1 约束分配
 
@@ -405,7 +405,7 @@ $$
  =\frac{p_v^{\mathrm{sel}}}{\tau}\left(g_v^{\mathcal L}-\sum_up_u^{\mathrm{sel}}g_u^{\mathcal L}\right).
 $$
 
-这些局部公式还须沿评分、基权重与增益的真实依赖回传。全零权重处，固定总强度的 $a=\mu$ 不连续；直接与区域总量函数连续但一般不可微。例如原直接函数沿 $\mu=\varepsilon\delta$ 的方向导数为
+这些局部公式还须沿评分、基权重与增益的真实依赖回传。全零权重处，固定总强度的 $a=\mu$ 不连续；直接与区域总量函数连续但一般不可微。例如直接 Attention 的 $a=\mu$ 分支沿 $\mu=\varepsilon\delta$ 的方向导数为
 $\delta_v^2e^{s_v/\tau}/\sum_u\delta_ue^{s_u/\tau}$，一般不关于方向 $\delta$ 线性。
 
 ### 4.4 评分与记忆的依赖
@@ -528,7 +528,7 @@ selection_mode 指定发送函数：
 | query_weight | mu、received：式 (6) 分别使用 $\mu_v,w_v$；默认 mu |
 | allocation_base | direct_attention 使用 mu 或 received，默认 mu；unit_attention 使用 uniform 或 mu，默认 uniform；pooled_attention 固定 mu |
 | regularizer、ent_alpha | constrained 的 quad／bern／ent；ent 另指定固定 $\alpha\in[1,2]$ |
-| allocation_temperature | constrained、direct_attention、unit_attention、pooled_attention 使用的正温度，与正典读取模式 $\tau_j$ 分别命名 |
+| allocation_temperature | constrained、direct_attention、unit_attention、pooled_attention 使用的正温度，与正典描述模式 $\tau_j$ 分别命名 |
 | k | constrained、proportional 的总发送强度上限；hard_selection 的激活数量上限 |
 | eta | constrained、hard_selection 的共同评分阈值；其余规则不使用 |
 | alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度 |
@@ -537,20 +537,20 @@ constrained 是约束优化函数的配置名称，包含持续稠密和可精�
 
 ### S.2 标量求解与隐式反向
 
-对 §4.1 中需要取边界总和 $B$ 的情形，有 $0<B<M$。令 $q=B/M\in(0,1)$，对有效候选取满足 $g(x_v^{\mathrm{resp}},\mu_v;\tau)=q\mu_v$ 的逆响应：
+对 §4.1 中需要取边界总和 $B$ 的情形，有 $0<B<M$。令 $q=B/M\in(0,1)$，对有效候选定义逆响应点 $x_v^{\mathrm{bracket}}$，使 $g(x_v^{\mathrm{bracket}},\mu_v;\tau)=q\mu_v$：
 
-| 正则 | $x_v^{\mathrm{resp}}$ |
+| 正则 | $x_v^{\mathrm{bracket}}$ |
 |---|---|
 | quad | $\tau q\mu_v$ |
 | bern | $\tau\log(q/(1-q))$ |
 | Shannon | $\tau[1+\log(q\mu_v)]$ |
 | ent，$\alpha>1$ | $\tau[(q\mu_v)^{\alpha-1}-1/\alpha]/(\alpha-1)$ |
 
-令 $\lambda_{\mathrm{lo}}=\min_v(t_v-x_v^{\mathrm{resp}})$、$\lambda_{\mathrm{hi}}=\max_v(t_v-x_v^{\mathrm{resp}})$。单调性给出 $S(\lambda_{\mathrm{lo}})\ge B\ge S(\lambda_{\mathrm{hi}})$。二分维持此区间；Newton 候选步为 $\lambda+(S(\lambda)-B)/\sum_va_v^{\mathrm{resp}}$，仅在斜率非零且落入保留区间时使用。根区间可与乘子的对应半轴相交。
+令 $\lambda_{\mathrm{lo}}=\min_v(t_v-x_v^{\mathrm{bracket}})$、$\lambda_{\mathrm{hi}}=\max_v(t_v-x_v^{\mathrm{bracket}})$。单调性给出 $S(\lambda_{\mathrm{lo}})\ge B\ge S(\lambda_{\mathrm{hi}})$。二分维持此区间；Newton 候选步为 $\lambda+(S(\lambda)-B)/\sum_va_v^{\mathrm{resp}}$，其中导数在本轮的 $t_v-\lambda$ 处求值，仅在斜率非零且候选步落入保留区间时使用。根区间可与乘子的对应半轴相交。
 
 每轮工作量为 $O(|C|)$。初始区间宽度 $D$ 到精度 $\varepsilon_\lambda$ 所需轮数为 $O(\max(1,\log_2(D/\varepsilon_\lambda)))$；同宽零区间直接求值。终止同时检查坐标误差、可行性及最优性残差，低温时相同乘子误差可造成更大坐标误差。quad 可排序 $t_v-\tau\mu_v,t_v$ 后扫描断点，工作量 $O(|C|\log|C|)$；ent 的 $\alpha=2$ 先按式 (15) 移位。
 
-反向使用 §4.2 的最优解映射导数，只保存分配、分支及响应统计，工作量 $O(|C|)$。对有限次迭代自动求导定义了另一种反向目标。$M=1$、精确断点、总和约束松紧交界和增益截断均需声明边界约定。若训练温度，固定 $x,\mu$ 时 $\partial g/\partial\tau=-a_v^{\mathrm{resp}}x_v^{\mathrm{resp}}/\tau$，再按总和约束修正；可训练 $\alpha$ 的反向须另行定义。
+反向使用 §4.2 的最优解映射导数，在求得的最优乘子处取 $x_v^{\mathrm{resp}}=t_v-\lambda$，保存分配、分支及响应统计，工作量 $O(|C|)$。对有限次迭代自动求导定义了另一种反向目标。$M=1$、精确断点、总和约束松紧交界和增益截断均需声明边界约定。若训练温度，在光滑分支上固定 $x,\mu$ 时有 $\partial g/\partial\tau=-a_v^{\mathrm{resp}}x_v^{\mathrm{resp}}/\tau$，再按总和约束修正；可训练 $\alpha$ 的反向须另行定义。
 
 ### S.3 稳定求值与支持
 

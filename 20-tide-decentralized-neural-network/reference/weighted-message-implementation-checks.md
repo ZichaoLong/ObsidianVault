@@ -48,7 +48,7 @@ tags:
 
 对实现支持的 quad、bern、Shannon 与固定形状 ent，检查节点上限、总和范围、互补条件和最优性；小规模可与独立求解或断点算法比较。覆盖单点可行集、$M=1$ 两侧、全低分、总和上下界、松弛总和、零个或一个未饱和分量。
 
-求根区间、乘子符号、残差与误差分别报告。softmax 等值按[区域分配 §3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#32-与-softmaxsparsemaxentmax-的关系)核对：区分对任意评分成立的单位上限条件与给定评分的可行性判定。覆盖非单位上限但 softmax 可行的算例，以及触及、超过上限时的前向与边界反向。ent 的 $\alpha=2$ 在总和可变时核对阈值移位。
+求根区间、乘子符号、残差与误差分别报告。区间构造使用 $x_v^{\mathrm{bracket}}$；Newton 导数在当前迭代点求值，精确解映射的反向在最优响应点 $x_v^{\mathrm{resp}}=t_v-\lambda$ 求值。softmax 等值按[区域分配 §3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#32-与-softmaxsparsemaxentmax-的关系)核对：区分对任意评分成立的单位上限条件与给定评分的可行性判定。覆盖非单位上限但 softmax 可行的算例，以及触及、超过上限时的前向与边界反向。ent 的 $\alpha=2$ 在总和可变时核对阈值移位。
 
 硬选择核对稳定平票顺序、零接收排除、全非正时最高分保留与激活上限。硬函数的训练替代梯度属于独立声明。
 
@@ -67,7 +67,9 @@ tags:
 
 约束分配使用区域教材 §4.2 的隐式反向，或者明确声明有限迭代映射。光滑分支内用不跨界的扰动比较评分、上限和温度；总和固定在上下界时核对加权中心化，总和上下界都松弛时核对独立响应导数。复现该节 quad 的共同评分平移算例；$\sum_v a_v^{\mathrm{resp}}=0$ 单独处理。不可微点用声明的单侧或广义导数核对。
 
-Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则。对原 direct_attention 基权重 mu，验证两条直接上限依赖；received 只在固定接收和评分时移除基权重中的增益通路。pooled_attention 在 $M<1$ 有总量导数，$M>1$ 无该项，$M=1$ 声明边界约定。
+一个响应点核对例子是 quad、$\mu=(1,1),k=1,t=(0.6,0.4),\tau=1$。此时 $\lambda=0,c=(0.6,0.4)$，实际响应点为 $(0.6,0.4)$，区间构造点为 $(0.5,0.5)$。固定评分和上限，精确解的温度导数为 $dc/d\tau=(-0.1,0.1)$。
+
+Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则。对 direct_attention 的 allocation_base=mu，验证两条直接上限依赖；received 只在固定接收和评分时移除基权重中的增益通路。pooled_attention 在 $M<1$ 有总量导数，$M>1$ 无该项，$M=1$ 声明边界约定。
 
 完整链路检查 query、key、评分头、增益头、记忆描述及写入。全零基权重处一般没有通常 Jacobian，遮罩自动微分与方向导数分别记录。跳过零 Full 和求内容后乘零的边界反向分别说明。
 
@@ -87,12 +89,12 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 | gated_delta | Q/K/V 的投影、卷积、SiLU、稳定 L2 与 query 缩放；先保留再修正；每头先 RMS 后输出门 |
 | ssd | z/x/B/C/dt 的投影拆分及头组映射；只对 x/B/C 卷积；dt 写入系数、D 直通；整内部宽度先输出门后 RMS |
 | 完整循环描述 | sum 的两个摘要；state 的短期摘要和矩阵读出；$W$ 为接收统计；SSD 描述不包含 D 直通项 |
-| 短卷积 | 当前项取显式投影，历史写入 $wz$；固定时间槽、缺失补零；旧／新快照的当前卷积相等 |
+| 短卷积 | 当前项取显式投影，历史写入 $wz$；固定时间槽、缺失补零；旧／新快照的当前卷积相等；原始缓存解码与有效投影分别核对 |
 | 异构组合 | 相同消息宽度、区域描述相容；每模块使用自己的状态、时间与表示解码 |
 
 ### 4.2 原模型的对应范围
 
-[Gated DeltaNet 附录 S](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md#附录-s配置原模型对应与工作量)与 [SSD 附录 S](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md#附录-s配置原模型对应与工作量)固定参考实现及开关。以相同归一化输入、单位接收、等间隔时间、零初态和零矩阵被动衰减进行对照。逐步比较投影、卷积、门、矩阵、读取、输出门与 Mix；先恢复普通序列混合器，再核对 Tide 的描述和外部内容函数。
+[Gated DeltaNet 附录 S](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md#附录-s配置原模型对应与工作量)与 [SSD 附录 S](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md#附录-s配置原模型对应与工作量)固定参考实现及开关。以相同归一化输入、单位接收、零矩阵与空缓存、零矩阵被动衰减进行对照，接收时间满足 $\theta_i=\theta_0+i\delta_{\mathrm{conv}}$。逐步比较投影、卷积、门、矩阵、读取、输出门与 Mix；先恢复普通序列混合器，再核对 Tide 的描述和外部内容函数。
 
 GDN 核对 $\epsilon$ 所在位置、query 的 $d_k^{-1/2}$、每头 RMS 与门的顺序、矩阵采用 value-first 的轴排列。原实现对应还要求 RMS 缩放跨头共享、beta 投影无偏置，卷积偏置匹配。beta 取 sigmoid 范围，不能默用允许负特征值的其他开关。SSD 核对组数整除头数、B/C 共享映射、写入系数为 $d_h$、直通参数的逐头广播、norm_before_gate=False。参考卷积权重若按从旧到新排列，与教材按滞后 $0,1,\ldots$ 的顺序互相反转。
 
@@ -100,7 +102,7 @@ GDN 核对 $\epsilon$ 所在位置、query 的 $d_k^{-1/2}$、每头 RMS 与门�
 
 ### 4.3 带权、时间与反向
 
-覆盖不等间隔、长空档、conv_size=1、不同 conv_stride、快照延后读取，以及在原本空槽插入零或逐渐变弱的事件。比较新增事件之后的多次有效缓存、矩阵和读出，不能只看插入当步。复现[短卷积教材 §3](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#3-弱接收与固定时间)的按事件移位反例；切分继续同时保留卷积与矩阵状态。
+覆盖不等间隔、长空档、conv_size=1、不同 conv_stride、快照延后读取，以及在原本空槽插入零或逐渐变弱的事件。conv_stride 按逻辑时间确定抽头间距，与框架输出采样 stride 分别对应；实例取 conv_stride=$D$ 后应逐输入位置读取历史。比较新增事件之后的多次有效缓存、矩阵和读出，不能只看插入当步。复现[短卷积教材 §3](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#3-弱接收与固定时间)的按事件移位反例；切分继续同时保留卷积与矩阵状态。
 
 GDN 与 SSD 的正接收全候选都执行 Upd。测试本次未激活、下次激活且读取既有记忆的轨迹；本次发送控制不得改变本次缓存写入。给定完整驱动后，核对短卷积的预计算、仿射复合和逐步递归的所有中间结果，SSD 另与其历史展开式比较。缺失位置不能通过压紧序列后调用普通短卷积而隐式改变距离。
 
@@ -122,7 +124,7 @@ GDN 与 SSD 的正接收全候选都执行 Upd。测试本次未激活、下次�
 
 ## 6. 仓库文档检查
 
-[check_documents.py](../tools/check_documents.py)核对本地链接与锚点、全部局部教材的公式编号与 TeX 分组、空目录、正典版本及引用方向。局部教材检查递归覆盖 weighted-message/ 的子目录。正典的仓库内链接只指向四份正典之一，局部教材、实例与检索文档向上引用。脚本从自身位置定位仓库，可在任意工作目录执行；在仓库根目录使用：
+[check_documents.py](../tools/check_documents.py)核对本地链接与锚点、全部局部教材的公式编号与 TeX 分组、空目录、正典版本及引用方向。现行非正典文档另检查已迁移的发送模式、正则和温度配置名，名称映射由版本记录维护；历史记录保留当时名称。普通 Markdown 链接按源文件目录解析，wiki 链接另支持仓库根目录和唯一文件名。局部教材检查递归覆盖 weighted-message/ 的子目录。正典的仓库内链接只指向四份正典之一，局部教材、实例与检索文档向上引用。脚本从自身位置定位仓库，可在任意工作目录执行；在仓库根目录使用：
 
 ```bash
 python -B 20-tide-decentralized-neural-network/tools/check_documents.py

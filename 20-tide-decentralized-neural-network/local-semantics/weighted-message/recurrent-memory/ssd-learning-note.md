@@ -125,7 +125,7 @@ M_a^{\mathrm{sum}}&=Z_a^-/\max(1,W_a^-),\\
 \tag{9}
 $$
 
-sum 使用两种时间尺度的接收摘要；state 使用短期摘要与矩阵查询。long 通道的矩阵受输入门和被动衰减控制。$W_a$ 统计接收写入量，矩阵的遗忘、相消和压缩并不由它精确计量。
+sum 使用两种时间尺度的接收摘要；state 使用短期摘要与矩阵查询。long 通道的矩阵按保留比例 $g_h$、有效步长 $d_h$ 和被动衰减更新。$W_a$ 统计接收写入量，矩阵的遗忘、相消和压缩并不由它精确计量。
 
 默认 memory_read=state、read_mode=+。Read$^+$／$^-$／$^0$ 分别在新、旧和初始状态上调用共同 Describe；本次卷积可以从旧缓存或新缓存得到相同值，矩阵读取仍按指定快照进行。
 
@@ -227,7 +227,7 @@ memory_family=ssd 选择本文函数，memory_read=sum／state 选择式 (9)。�
 
 [Mamba-2 论文](https://arxiv.org/abs/2405.21060)研究此类标量转移与结构化历史计算的联系。本文具体对照 [Mamba2Simple](https://github.com/state-spaces/mamba/blob/e9594ce1c732d97440f0332fdc43170a2294dbfa/mamba_ssm/modules/mamba2_simple.py)：相同归一化输入 $x_0$，输入投影按 z、x、B、C、dt 拆分，卷积作用于 x/B/C，标量 dt 使用 softplus，写入为 dt 乘外积，输出含逐头 D 直通。参考实现中的 x 对应本文 $\nu$。
 
-单位权重、等间隔连续接收、空初态、$\lambda_h=0$，并匹配参数、头分组、卷积偏置、$\epsilon_{\mathrm{out}}=10^{-5}$ 时，Mix 恢复该参考混合器的实数公式。对应选择 bias=False、learnable_init_states=False、无 dt 额外裁剪；其 norm_before_gate=False 对应式 (10) 的先门控后归一化。内部宽度满足参考 expand 与 d_model 的乘积关系。其他 Mamba 变式可另作完整绑定。
+从零矩阵与空缓存开始，在时间 $\theta_i=\theta_0+i\delta_{\mathrm{conv}}$ 连续接收、每次权重为 $1$、$\lambda_h=0$，并匹配参数、头分组、卷积系数与偏置、$\epsilon_{\mathrm{out}}=10^{-5}$ 时，Mix 恢复该参考混合器的实数公式。对应选择 bias=False、learnable_init_states=False、无 dt 额外裁剪；其 norm_before_gate=False 对应式 (10) 的先门控后归一化。内部宽度满足参考 expand 与 d_model 的乘积关系。其他 Mamba 变式可另作完整绑定。
 
 Tide 增加接收权重对步长和卷积历史的调制、逻辑时钟、描述摘要与外部内容残差；式 (11) 选择了供节点使用的前馈组合。原模型的整网结构与训练结果由其独立架构决定。
 

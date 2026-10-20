@@ -34,6 +34,11 @@ REMOVED_ENTRIES = {
     "weighted-kv-sparse-activation-example",
     "weighted-kv-layered-example",
 }
+# Historical records keep the names used in their respective editions.
+RETIRED_CONFIG_NAMES = re.compile(
+    r"\b(?:budget_family|tau_soft)\b"
+    r"|\bselection_mode\s*=\s*(?:soft|direct|attention|pooled|dense|hard)\b"
+)
 
 
 def prose_lines(text):
@@ -88,9 +93,11 @@ def resolve(source, target, wiki, by_name):
     if not target:
         return source
     relative = Path(target)
-    candidates = [source.parent / relative, ROOT / relative]
-    if wiki and relative.suffix != ".md":
-        candidates += [path.with_suffix(".md") for path in candidates]
+    candidates = [source.parent / relative]
+    if wiki:
+        candidates.append(ROOT / relative)
+        if relative.suffix != ".md":
+            candidates += [path.with_suffix(".md") for path in candidates]
     for path in candidates:
         if path.exists():
             return path.resolve()
@@ -151,6 +158,12 @@ def main():
         inside = source.is_relative_to(BASE)
         if inside and any(ord(char) < 32 and char not in "\n\t\r" for char in text):
             errors.append(f"{source.relative_to(ROOT)}: unexpected control character")
+        if inside and source not in canonical and not source.is_relative_to(BASE / "records"):
+            for number, line in enumerate(text.splitlines(), 1):
+                for match in RETIRED_CONFIG_NAMES.finditer(line):
+                    errors.append(
+                        f"{source.relative_to(ROOT)}:{number}: retired configuration name: {match[0]}"
+                    )
         for number, raw, wiki in references(text):
             target = unquote(raw.strip().strip("<>"))
             if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target) or target.startswith("//"):
@@ -184,6 +197,7 @@ def main():
     print("PASS: four canonical editions match; canonical local references stay within the four textbooks")
     print(f"PASS: {links} local Markdown/wiki links ({inbound} incoming) across {documents} Tide documents")
     print(f"PASS: numbered equations and TeX grouping in {len(local_notes)} local textbooks; no empty directories")
+    print("PASS: no retired sending configuration names in current noncanonical documents")
     return 0
 
 

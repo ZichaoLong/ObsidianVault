@@ -87,7 +87,7 @@ $$
 \qquad o_v^{\mathrm{pos}}\in\mathbb R,\quad s_v^{\mathrm{pos}}>0.
 $$
 
-$o_v^{\mathrm{pos}}=0,s_v^{\mathrm{pos}}=1$ 直接编码逻辑时间。在 SettleGraph 中，令 $\ell(j)$ 为区域的秩、$t$ 为输入位置，取位置间隔 $D>\max_j\ell(j)$。时间安排为 $\theta_{v,t}=Dt+\ell(\rho(v))$ 时，可取 $o_v^{\mathrm{pos}}=\ell(\rho(v)),s_v^{\mathrm{pos}}=D$，于是 $\operatorname{Pos}_v(\theta_{v,t})=t$，恢复通常的输入位置。一般图中，同一次接收可以汇合不同输入位置的消息；这里编码当前聚合的处理时间和历史条目的写入时间，无需给混合内容指定唯一来源位置。
+$o_v^{\mathrm{pos}}=0,s_v^{\mathrm{pos}}=1$ 直接编码逻辑时间。按输入位置换算的固定时间网格见附录 B。一般图中，同一次接收可以汇合不同输入位置的消息；这里编码当前聚合的处理时间和历史条目的写入时间，无需给混合内容指定唯一来源位置。
 
 位置函数在整条继续运行中固定，不随接收次数、激活次数或分段边界改变。更一般的固定实值位置函数也可用于下文定义与有限切面证明；具体组合须给出其完整定义。
 
@@ -232,13 +232,13 @@ $$
 
 两种读取均返回共同的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$，当前特征为 §1 的 $p_v(u)$。时间摘要使用独立的摘要投影；qry 从 Full 的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
 
-Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。各区域可分别选择读取模式及区域分配教材中相容的描述、评分与发送函数。
+Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。各区域可分别选择描述模式及区域分配教材中相容的描述、评分与发送函数。
 
 ## 5. 完整例子
 
 ### 5.1 从接收到输出
 
-取共享聚合、Read$^+$、时间摘要、拼接独立评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
+取共享聚合、Read$^+$、时间摘要、cat 局部评分、ind 区域评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
 
 评分网络输出常数 $s=(2,1,100)$，可由零输出权重与相应偏置实现。取 $\eta_j=0,k_j=1,\tau_{\mathrm{sel}}=2$。
 
@@ -263,7 +263,7 @@ s_a=0.5,\qquad
 s_b=0.75-M_{\mathrm{long}}^{\mathrm{sum}}(\widetilde q_b,\theta).
 $$
 
-这属于[拼接评分](region-allocation-learning-note.md#12-独立局部评分) 的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
+这属于[拼接评分](region-allocation-learning-note.md#12-局部评分)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
 
 | 位置 | 两节点新写入的 $(\xi,\nu,p,w)$ | $M_{\mathrm{long}}$ | $(s_a,s_b)$ | 激活者 | 终端 $O$ |
 |---|---|---|---|---|---|
@@ -280,7 +280,7 @@ $$
 
 1. 对非空纤维应用 Agg，对正接收计算 K/V、摘要特征和写入权重。
 2. 按原始时间构造条目前缀。正接收时过滤并追加，零接收或空纤维时保留原序列，恢复每个时刻的精确状态。
-3. 按所选读取模式取得旧状态、新状态或空状态的 Mem，形成描述与区域分配，返回各候选的计算状态和下一状态。
+3. 按所选描述模式取得旧状态、新状态或空状态的 Mem，形成描述与区域分配，返回各候选的计算状态和下一状态。
 4. 收集每节点正式激活时刻 $\Theta$，在对应快照上联合求 Full，再按边和端口展开结果。
 
 记上述状态联合函数为 $\operatorname{BatchRegionState}^{\mathrm{KV}}_{j,I}$，完整计算联合函数为 $\operatorname{BatchFull}^{\mathrm{KV}}_{v,\Theta}$。前者返回实际 P/S/U 作用、全部值及右边界，后者返回全部正式 Full 值与消息、输出记录。参考函数 $\operatorname{RefRegionState}_{j,I}$ 和 $\operatorname{RefBlock}_{K^F_{v,\Theta}}$ 沿用[分块教材](../../timed-dag-chunk-prefill-learning-note.md)，其中 $K^F_{v,\Theta}$ 是节点 $v$ 在时刻集 $\Theta$ 上的 Full 作用块。
@@ -333,9 +333,33 @@ $\|\mathcal N_p(x)\|\le\sqrt p$，故写入的 K/V 与摘要特征有界；有�
 
 所以有效状态与当前内容收敛时，Mem、当前特征和 $G_v$ 收敛。Read$^-$ 在当前时间遮罩下读旧状态，Read$^0$ 读空状态，Read$^+$ 读更新后的状态，均满足同一条件。结合 A.1—A.2，局部引理成立。$\square$
 
+## 附录 B：输入位置与逻辑时间的换算
+
+设节点 $v$ 可能接收的时间位于固定网格 $\theta_t=Dt+o_v^{\mathrm{pos}}$，其中 $t\in\mathbb N$ 表示输入位置，$D\ge1$ 为整数，$o_v^{\mathrm{pos}}\in\mathbb N$。取 $s_v^{\mathrm{pos}}=D$，则 $\operatorname{Pos}_v(\theta_t)=t$；在位置 $t'$ 写入的 key 使用位置 $t'$。SettleGraph 的分层日程可令 $o_v^{\mathrm{pos}}$ 等于节点所在区域的秩。
+
+在该网格的查询时间上，有限逻辑窗口 $T_v$ 至多覆盖 $\lceil T_v/D\rceil$ 个输入位置。为该节点选择输入位置窗口 $H\in\mathbb N_{\ge1}\cup\{\infty\}$ 和按输入位置计量的短期衰减率 $\bar\beta_{\mathrm{short}}>0$，绑定
+
+$$
+T_v=DH,\qquad
+\beta_{v,\mathrm{short}}=\bar\beta_{\mathrm{short}}/D.
+$$
+
+于是窗口条件与短期衰减分别为
+
+$$
+\begin{aligned}
+0\le\theta_t-\theta_{t'}<T_v
+ &\iff 0\le t-t'<H,\\
+e^{-\beta_{v,\mathrm{short}}(\theta_t-\theta_{t'})_+}
+ &=e^{-\bar\beta_{\mathrm{short}}(t-t')_+}.
+\end{aligned}
+$$
+
+有限 $H$ 覆盖含当前位置的最近 $H$ 个输入位置，$H=\infty$ 覆盖全部接收历史。某位置没有接收时不写入，后续条目仍使用原始位置。距离偏置的斜率按 Pos 的输入位置单位给定。改变日程间隔 $D$ 时，同步调整位置尺度、逻辑窗口和衰减率即可保持这些输入位置尺度；分段继续保持原有 $t,\theta$。
+
 ## 附录 S：状态表示与工作量
 
-memory_family=kv 绑定本模块的状态、Upd、Mem、当前特征和默认内容函数；memory_read=sum／qry 分别选择 §4 的时间摘要与内容检索。读取模式、区域评分和发送函数使用共同配置名称。
+memory_family=kv 绑定本模块的状态、Upd、Mem、当前特征和默认内容函数；memory_read=sum／qry 分别选择 §4 的时间摘要与内容检索。描述模式、区域评分和发送函数使用共同配置名称。
 
 每个保存状态和 Full 快照须能解码为定义的有限序列。共享存储和不可变窗口视图可以减少复制；解码须恢复尚未触发清理的过期条目身份。有效状态投影相等不能替代原始记录相等。
 

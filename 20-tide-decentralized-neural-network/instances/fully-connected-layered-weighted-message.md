@@ -27,7 +27,7 @@ tags:
 | 图与时间 | 本节的全连接分层拓扑 | 全图的 $L,n,N$ |
 | 载荷与聚合 | $P=X_v=\mathbb R^{1+d}$，区域共享 Agg | 全图宽度 $d$；逐区域的聚合宽度、矩阵、来源嵌入与残差尺度；来源映射见 §2.1 |
 | 记忆与内容 | KV 空缓存初态、时间摘要、KV 内容函数 | 同区域的状态宽度与共享 KV 基座；逐节点的适配器、摘要与 Full 参数 |
-| 描述与选择 | Read$^+$、拼接独立评分、固定增益、约束 quad | 逐节点评分参数及固定增益；逐区域的 $k_j,\eta_j,\tau_{\mathrm{sel},j}$，其中 $1\le k_j\le n$；增益满足共同有限上界 |
+| 描述与选择 | Read$^+$、cat 局部评分、ind 区域评分、固定增益、约束 quad | 逐节点评分参数及固定增益；逐区域的 $k_j,\eta_j,\tau_{\mathrm{sel},j}$，其中 $1\le k_j\le n$；增益满足共同有限上界 |
 | 状态采用与发送 | 全部候选保留更新、单点区域历史、广播 Full、$K_j=n$ | 使用共同 Next，无额外状态采用参数 |
 | 窗口与位置 | §1.2 的位置尺度与衰减换算 | 逐区域的窗口、短期衰减与旋转参数，见 §2.3 |
 | 外部边界 | §2.2 的单位入口和残差读出 | 内容序列 $h_t$、读出矩阵与尺度 |
@@ -36,25 +36,13 @@ tags:
 
 ### 1.2 KV 的位置、窗口与衰减
 
-对区域 $\ell$ 中的节点固定
+采用 [KV 教材的时间换算](../local-semantics/weighted-message/kv-memory-learning-note.md#附录-b输入位置与逻辑时间的换算)。对区域 $\ell$ 中的节点取 $o_v^{\mathrm{pos}}=\ell,s_v^{\mathrm{pos}}=D$，即
 
 $$
 \operatorname{Pos}_{v_{\ell,s}}(\theta)=\frac{\theta-\ell}{D}.
 $$
 
-于是当前查询位置为 $\operatorname{Pos}_{v_{\ell,s}}(Dt+\ell)=t$，在输入位置 $t'$ 写入的 key 位置为 $t'$。局部 RoPE 自动成为按输入位置定义的 RoPE；稀疏写入仍使用原始位置，有空档时保留相应距离。
-
-KV 教材的窗口 $T_v$ 按逻辑时间计量。同节点在位置 $t'$ 写入的条目，到位置 $t$ 时可读，当且仅当
-
-$$
-0\le D(t-t')<T_v.
-$$
-
-有限窗口每次读取至多覆盖 $\lceil T_v/D\rceil$ 个输入位置。为区域 $\ell$ 选择 $H_\ell\in\mathbb N_{\ge1}\cup\{\infty\}$，令 $T_v=DH_\ell$。有限 $H_\ell$ 覆盖含当前位置的最近 $H_\ell$ 个位置，$H_\ell=\infty$ 保留全部接收历史。没有正接收的位置不写入；过期条目仍按原始时间遮罩读取。
-
-若短期摘要按输入位置使用衰减率 $\bar\beta_{\ell,\mathrm{short}}>0$，则设 $\beta_{v,\mathrm{short}}=\bar\beta_{\ell,\mathrm{short}}/D$，得到 $e^{-\bar\beta_{\ell,\mathrm{short}}(t-t')}$。长期率为零。可选 Attention 距离偏置按 $\operatorname{Pos}$ 计算，斜率直接按输入位置声明。
-
-改变深度时，$D$ 随之变化，按以上关系同步改变位置尺度、逻辑窗口和摘要衰减，即可保持相同的输入位置尺度。每条序列的后续分段继续使用该序列原有的 $t$ 与 $\theta$。
+为区域 $\ell$ 选择输入位置窗口 $H_\ell\in\mathbb N_{\ge1}\cup\{\infty\}$ 和短期率 $\bar\beta_{\ell,\mathrm{short}}>0$，绑定 $T_v=DH_\ell$、$\beta_{v,\mathrm{short}}=\bar\beta_{\ell,\mathrm{short}}/D$，长期率为零。于是查询和 key 按输入位置编码，窗口覆盖最近 $H_\ell$ 个位置或全部接收历史。Read、Full 的旋转及可选距离偏置逐区域声明，见 §2.3。
 
 ## 2. KV 基线与发送变式
 
@@ -163,7 +151,7 @@ $$
 | [gated_delta](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md) | $4$ 头，$d_k=64,d_m=128$ | 矩阵被动率为零，qk_eps=$10^{-6}$，output_norm_eps=$10^{-5}$ |
 | [ssd](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | $4$ 头、$1$ 组，$d_k=64,d_m=128$ | 矩阵被动率为零，output_norm_eps=$10^{-5}$ |
 
-后两者摘要的短期率取 $\log2/D$、长期率为零，conv_size=4、conv_stride=$D$。在节点时间 $Dt+\ell$，卷积依次读取输入位置 $t,t-1,t-2,t-3$；因此每位置均接收时恢复普通因果卷积。它们的输入门步长依各自教材定义，不再乘逻辑时间间隔 $D$。循环区域不使用 KV 窗口和 RoPE，时间作用由衰减、卷积与接收次序给出。
+后两者摘要的短期率取 $\log2/D$、长期率为零，conv_size=4、conv_stride=$D$。在节点时间 $Dt+\ell$，卷积依次读取输入位置 $t,t-1,t-2,t-3$；每位置均有单位接收且从空缓存开始时，得到普通因果卷积。GDN 的保留门 $g_h$、误差写入门 $\beta_h$ 与 SSD 的有效步长 $d_h$ 依各自教材计算，不另乘逻辑时间间隔 $D$。循环区域不使用 KV 窗口和 RoPE，时间作用由衰减、卷积与接收次序给出。
 
 各矩阵、偏置、卷积系数、缩放和残差尺度按所选模块形状给定有限值；聚合、评分和发送保持原绑定，描述宽度与区域评分匹配。这些选择确定一族完整模型，可把两个替换区域选为同一模块，也可分别使用 Gated DeltaNet 与 SSD。
 

@@ -120,7 +120,7 @@ git show 133d638:20-tide-decentralized-neural-network/tide-mathematical-foundati
 | `ssd-memory-learning-note.md` | [recurrent-memory/ssd-learning-note.md](../../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) |
 | `causal-convolution-learning-note.md` | [recurrent-memory/causal-convolution-learning-note.md](../../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) |
 
-目录汇集并列的循环记忆候选与短卷积部件。基础教材 §4.1 集中仿射复合定义和证明，Gated DeltaNet 与 SSD 各自给出系数并引用该节。局部数值函数、配置名称及四份正典保持。
+本次目录整理及共同推导的正文调整见[修订记录](document-revisions.md#2026-10-20循环记忆目录与共同推导)。
 
 ## 背景与补充推导的来源
 

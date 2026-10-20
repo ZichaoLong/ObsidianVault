@@ -25,14 +25,14 @@ $$
 q_{t+1}=q_t\mathbin{\mathrm{xor}}b_t
 $$
 
-的全部状态是异或前缀。对结合运算 $\otimes$，前缀扫描同时计算 $a_0,a_0\otimes a_1,\ldots$，平衡树括号可降低依赖深度。另一个例子是输入已确定系数的仿射递推
+的全部状态是异或前缀。对结合运算 $\otimes$，前缀扫描同时计算 $a_0,a_0\otimes a_1,\ldots$，平衡树括号可降低依赖深度。另一个例子沿用[循环教材的仿射复合](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md#41-仿射复合)：给定矩阵状态 $H_t$ 及形状相容、由输入确定的系数 $A_t,B_t$，有
 
 $$
-q_{t+1}=A_tq_t+b_t,\qquad
-(A_2,b_2)\otimes(A_1,b_1)=(A_2A_1,A_2b_1+b_2).
+H_{t+1}=H_tA_t+B_t,\qquad
+(A_1,B_1)\circledast(A_2,B_2)=(A_1A_2,B_1A_2+B_2).
 $$
 
-此组合满足结合律，摘要的构造、复合和应用成本另行计量。
+复合按先第一对、再第二对的顺序书写，结合律与前缀公式见上述教材。摘要的构造、复合和应用成本另行计量。
 
 本文研究任意函数 $F_t$。算法通过查询获得 $F_t(q)$；下一实际地址为该返回值，函数族没有额外提供可直接复合的摘要。这类地址追逐通常称为 pointer chasing。
 
