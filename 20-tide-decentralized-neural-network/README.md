@@ -63,6 +63,8 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 
 选择一种拓扑和相容的局部函数即可形成新的绑定。单位强度传播、输入连续性、软硬极限与联合求值分别使用各自的前提。
 
+两份实例均从小图上的两个连续输入位置展开计算：[全连接例子](instances/fully-connected-layered-weighted-message.md#23-两层图上的两次输入)展示接收、状态、选择及下一层聚合；[HB 例子](instances/hb-lattice-weighted-message.md#23-三层图上的分叉汇合与记忆)展示多区域分叉、稀疏邻域与汇合。随后给出更大形状及记忆替换。
+
 ## 研究与实现
 
 | 入口 | 用途 |
