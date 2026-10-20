@@ -10,7 +10,7 @@ tags:
 
 # 语义版本差异与下游采用
 
-本页记录影响采用的语义差异、配置迁移与有来源的采用声明。数学定义见[接口索引](semantic-interface-index.md)所列教材；编辑历程见[文档修订记录](memos/history/document-revisions.md)。
+本页记录影响采用的语义差异、配置迁移与有来源的采用声明。数学定义见[接口索引](../reference/semantic-interface-index.md)所列教材；编辑历程见[文档修订记录](history/document-revisions.md)。
 
 ## 核心语义
 
@@ -31,8 +31,9 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-19 模块组合 | 分开 memory_family、memory_read、region_score 与 selection_mode；增加循环模块、received 权重、pooled 和 Read 模式组合。既有默认数值保持，迁移见下表 |
 | 2026-10-20 定理整理与勘误 | 既有函数及默认数值保持。整网定理移到共同架构 §6 和附录 A，记忆模块验证局部条件；修正区域分配 §5.3／附录 A.2 中应使用第二名评分 $t_{(2)}$ 的有限温度条件，旧 $t_{(4)}$ 条件不足 |
 | 2026-10-20 反向与零消息条件勘误 | 函数定义保持。quad 总和松弛时使用独立响应导数；固定总强度 mu 支持零消息删除，uniform 须区分缺席与零消息；softmax 的前向等值与边界反向分别判定。下游核对范围见实现检查 §3、§5 |
+| 2026-10-20 目录分层与拓扑拆分 | 核心版本、局部函数与配置取值保持。拓扑定义独立，实例引用图和函数形成完整绑定；下游更新正文路径，并区分通用图结论与依赖局部绑定的性质 |
 
-2026-10-20 的四份正典逐字保持。局部 Attention 份额统一写作 $p_v^{\mathrm{sel}}$，标量响应及导数使用 resp 上标，避免与记忆描述和评分向量混用。文件更名与兼容入口见[迁移索引](memos/history/migration-map.md#2026-10-20-路径与内容归属)。
+2026-10-20 的四份正典逐字保持。局部 Attention 份额统一写作 $p_v^{\mathrm{sel}}$，标量响应及导数使用 resp 上标，避免与记忆描述和评分向量混用。文件更名与兼容入口见[迁移索引](history/migration-map.md#2026-10-20-目录分层与拓扑拆分)。
 
 ## 局部配置迁移（2026-10-19）
 
@@ -74,4 +75,4 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 
 ## 来源
 
-SettleGraph 的早期定义参考了 fractal-latcarf 的实验语义文档。早期材料与来源见[迁移索引](memos/history/migration-map.md)、[LH 历史](memos/history/lh-history.md)和[文档修订记录](memos/history/document-revisions.md)。TIDE 的历史全称为 Topology-Invariant Degree-bounded Expansion Architecture for Autoregressive Token Inference。
+SettleGraph 的早期定义参考了 fractal-latcarf 的实验语义文档。早期材料与来源见[迁移索引](history/migration-map.md)、[LH 历史](history/lh-design-origins.md)和[文档修订记录](history/document-revisions.md)。TIDE 的历史全称为 Topology-Invariant Degree-bounded Expansion Architecture for Autoregressive Token Inference。

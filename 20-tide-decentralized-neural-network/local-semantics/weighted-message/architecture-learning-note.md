@@ -15,9 +15,9 @@ tags:
 
 节点收到消息后，先保存本次信息，再描述当前内容与已有记忆。区域依据这些描述分配发送强度；获得正发送强度的节点计算完整内容，并向下游发送。本文给出这一类局部架构的共同定义。
 
-图、区域和逻辑时间沿用 [SettleGraph](settlegraph-learning-note.md)、[TimedDAG](timed-dag-region-selector-learning-note.md) 与 [PositiveDelayGraph](positive-delay-graph-finite-cut-learning-note.md)。这里选择它们允许的局部函数。读者只需有限集合、向量、函数与归纳法。
+图、区域和逻辑时间沿用 [SettleGraph](../../settlegraph-learning-note.md)、[TimedDAG](../../timed-dag-region-selector-learning-note.md) 与 [PositiveDelayGraph](../../positive-delay-graph-finite-cut-learning-note.md)。这里选择它们允许的局部函数。读者只需有限集合、向量、函数与归纳法。
 
-[区域分配](region-allocation-learning-note.md)定义评分与发送函数；[带权 KV](weighted-kv-sparse-activation-example.md)和[循环记忆](recurrent-memory-learning-note.md)分别给出完整的状态、更新与读取。选定这些函数，再绑定图和时间，就得到一个确定的模型。设计取舍集中在[设计总览](memos/architecture/local-architecture-design.md)。
+[区域分配](region-allocation-learning-note.md)定义评分与发送函数；[带权 KV](kv-memory-learning-note.md)和[循环记忆](recurrent-memory-learning-note.md)分别给出完整的状态、更新与读取。选定这些函数，再绑定图和时间，就得到一个确定的模型。设计取舍集中在[设计总览](../../memos/design/weighted-message-design.md)。
 
 本支线采用接收驱动的状态更新：全部候选保留更新，区域选择历史为单点，发送控制为 $[0,1]$ 中的标量，正控制触发沿全部出边的广播。第 3—4 节给出这些选择的完整公式。它们在正典允许的函数中确定本支线的范围；稠密与稀疏发送均可在此范围内组成模型。
 
@@ -185,7 +185,7 @@ $$
 
 相连节点共用载荷宽度；同一区域的描述须能进入同一个区域评分函数。不同状态宽度可先映到共同描述宽度 $d_s$。本文已定义的 KV 与循环模块可在不同区域组合；同一区域异构时还须统一描述和匹配宽度。所有函数对其声明空间都是确定的全函数。
 
-三个图层级使用同一组 Agg、Upd、Read、SelStep、Next、Full。正时延图允许反馈；图无环时得到 TimedDAG；进一步满足区域严格分层和到达对齐时得到 SettleGraph。各图的条件由对应正典和[全连接](weighted-kv-layered-example.md)、[HB](hb-lattice-example.md)实例给出。
+三个图层级使用同一组 Agg、Upd、Read、SelStep、Next、Full。正时延图允许反馈；图无环时得到 TimedDAG；进一步满足区域严格分层和到达对齐时得到 SettleGraph。[全连接分层](../../topologies/fully-connected-layered.md)与 [HB-Lattice](../../topologies/hb-lattice.md)分别给出独立的图与时间定义；[完整实例](../../README.md#具体拓扑与完整实例)将它们与本支线的局部函数绑定。
 
 ## 6. 数值性质的组合
 
@@ -206,7 +206,7 @@ $$
 3. **更新连续性。** 旧有效状态收敛、$r^{(n)}\to r$、$u^{(n)}$ 有界，且在 $r>0$ 时 $u^{(n)}\to u$，则更新后的有效状态及其随后按固定时间推进的投影收敛。$r=0$ 时极限为该槽不发生接收的状态。
 4. **读取连续性。** 有效状态与当前内容收敛时，Mem、当前特征和 $G_v$ 收敛；Read 的旧状态、新状态和初态分别按第 3 节使用。正极限接收处因而具有连续的描述与增益。
 
-[KV 附录 A](weighted-kv-sparse-activation-example.md#附录-a局部性质的证明)与[循环附录 A](recurrent-memory-learning-note.md#附录-a状态性质的证明)分别验证这些条件。各节点可使用不同模块，只需第 5 节的类型相容。
+[KV 附录 A](kv-memory-learning-note.md#附录-a局部性质的证明)与[循环附录 A](recurrent-memory-learning-note.md#附录-a状态性质的证明)分别验证这些条件。各节点可使用不同模块，只需第 5 节的类型相容。
 
 ### 6.2 零消息与正温度输入
 
@@ -259,7 +259,7 @@ $$
 
 其中 $W_b$ 保存此前发出、在 $b$ 或以后到达的消息。下一段沿用全局时间与同一位置函数。精确继续保存原始状态；用于连续性比较的有效状态投影可能遗忘过期条目或等价表示，两种比较关系各有用途。
 
-给定窗口内区域全部节点、全部时刻的完整输入纤维，包括确定为空的纤维，各模块可构造 BatchRegionState 与逐节点 BatchFull。前者返回实际 P/S/U 作用、全部值与右边界状态，后者返回全部正式 Full 值及展开的边消息和端口记录。KV 前缀与循环仿射复合分别给出这种契约的见证。输入完整性何时成立，由图和[分块预填充教材](timed-dag-chunk-prefill-learning-note.md)确定。
+给定窗口内区域全部节点、全部时刻的完整输入纤维，包括确定为空的纤维，各模块可构造 BatchRegionState 与逐节点 BatchFull。前者返回实际 P/S/U 作用、全部值与右边界状态，后者返回全部正式 Full 值及展开的边消息和端口记录。KV 前缀与循环仿射复合分别给出这种契约的见证。输入完整性何时成立，由图和[分块预填充教材](../../timed-dag-chunk-prefill-learning-note.md)确定。
 
 ## 附录 A：组合定理的证明
 

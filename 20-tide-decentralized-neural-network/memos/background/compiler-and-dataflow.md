@@ -7,9 +7,9 @@ tags:
   - dataflow
 ---
 
-# 编译器与 dataflow：对 Tide 有用的研究谱系
+# 编译器与 dataflow 的相关概念
 
-本页介绍外部思想，不从它们导入 Tide 的定义或定理。当前语义以核心 [教材](../../README.md) 为准；原始综述见 Git `133d638` 的 `tide-background-history-and-references.md` 第一部分。
+本文介绍编译器、数据流与流处理中的相关概念，并讨论它们对状态表示、执行重排和实现验证的用途。Tide 的对象与函数定义见[数学教材](../../README.md)。
 
 ## 1. 为什么区分参考语义与执行顺序
 

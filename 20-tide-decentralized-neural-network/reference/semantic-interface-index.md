@@ -9,24 +9,25 @@ tags:
 
 # 数学符号与函数对应索引
 
-本页汇集四篇正典、局部架构支线及组合实例的共同名称。相同名称使用相同数学类型；局部特化选择空间与函数，组合实例另给结构、时间与边界绑定。各定义的推导与证明由所列教材给出。
+本页汇集四篇正典、局部函数、拓扑与完整实例的共同名称。局部特化选择空间与函数，拓扑文档定义图与时间，实例引用这些定义并给定边界与参数。各定义的推导与证明由所列教材给出。
 
 ## 定义归属与适用条件
 
 | 教材 | 结构或函数条件 | 所承担的定义与结论 |
 |---|---|---|
-| [SettleGraph](settlegraph-learning-note.md) | 严格区域分层，$\theta_{v,t}=Dt+r_v$，$\delta(a)=r_{\mathrm{dst}(a)}-r_{\mathrm{src}(a)}$，端口日程对齐 | 单次结算、位置继续与记录嵌入 |
-| [TimedDAG](timed-dag-region-selector-learning-note.md) | 有限无环消息图、有限输入及严格递增端口日程 | 唯一有限记录、规范作用、合法暴露、关闭与切面继续 |
-| [PositiveDelayGraph](positive-delay-graph-finite-cut-learning-note.md) | 有限正时延消息图，输入局部有限，允许空间有环 | 相容有限切面、区间组合与强连通分量求值 |
-| [分块求值](timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
-| [共同局部架构](local-architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 共同接口、模块组合、零消息与正温度性质、单位输入的整网软硬极限 |
-| [区域分配](region-allocation-learning-note.md) | 选定增益、评分和发送函数 | 求解、导数、单次分配的连续性与温度极限 |
-| [KV](weighted-kv-sparse-activation-example.md)、[循环记忆](recurrent-memory-learning-note.md) | 各自的状态、更新、描述与内容函数 | 局部状态性质及共同组合定理所需的假设 |
-| [全连接](weighted-kv-layered-example.md)、[HB-Lattice](hb-lattice-example.md) | 具体图、区域、时间、来源与读出 | 完整模型绑定、拓扑相关传播与工作量 |
+| [SettleGraph](../settlegraph-learning-note.md) | 严格区域分层，$\theta_{v,t}=Dt+r_v$，$\delta(a)=r_{\mathrm{dst}(a)}-r_{\mathrm{src}(a)}$，端口日程对齐 | 单次结算、位置继续与记录嵌入 |
+| [TimedDAG](../timed-dag-region-selector-learning-note.md) | 有限无环消息图、有限输入及严格递增端口日程 | 唯一有限记录、规范作用、合法暴露、关闭与切面继续 |
+| [PositiveDelayGraph](../positive-delay-graph-finite-cut-learning-note.md) | 有限正时延消息图，输入局部有限，允许空间有环 | 相容有限切面、区间组合与强连通分量求值 |
+| [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
+| [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 共同接口、模块组合、零消息与正温度性质、单位输入的整网软硬极限 |
+| [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定增益、评分和发送函数 | 求解、导数、单次分配的连续性与温度极限 |
+| [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[循环记忆](../local-semantics/weighted-message/recurrent-memory-learning-note.md) | 各自的状态、更新、描述与内容函数 | 局部状态性质及共同组合定理所需的假设 |
+| [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
+| [全连接实例](../instances/fully-connected-layered-weighted-message.md)、[HB-Lattice 实例](../instances/hb-lattice-weighted-message.md) | 所选拓扑、局部函数、参数、初态与输入读出 | 完整模型绑定、条件性的传播保障、联合求值与实际工作量 |
 
 SettleGraph 向 TimedDAG 保留图对象、端口和局部函数，重索引位置坐标并补齐空档状态；TimedDAG 记录逐切面限制后得到 PositiveDelayGraph 的相容记录族。分块求值研究固定语义下的联合函数。
 
-局部架构是这些正典允许的一条特化支线。零消息删除、正温度连续性和单位输入软硬极限各有明确的函数范围与条件，集中见[共同架构 §6](local-architecture-learning-note.md#6-数值性质的组合)。
+局部架构是这些正典允许的一条特化支线。零消息删除、正温度连续性和单位输入软硬极限各有明确的函数范围与条件，集中见[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。
 
 ## 基础对象与时间
 
@@ -51,25 +52,25 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 | 符号或函数 | 含义与唯一的定义入口 |
 |---|---|
-| $(m,z),\pi_P,(r,u),\operatorname{Agg}$ | [共同架构 §1—2](local-architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献与接收聚合 |
-| $\operatorname{Mem}_v,p_v,\operatorname{Describe}_v$ | [共同架构 §3](local-architecture-learning-note.md#3-状态与记忆描述)：记忆描述、当前特征与选择描述的组合 |
-| $w_v,\gamma_v,\mu_v$ | [区域分配 §1.1](region-allocation-learning-note.md#11-接收量与发送增益)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
-| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v$ | [区域分配 §1.3](region-allocation-learning-note.md#13-描述量与区域评分)：区域 query、节点 key 与评分 |
-| $c_v,A,M,S$ | [区域分配 §2](region-allocation-learning-note.md#2-从评分得到发送强度)：发送控制、激活集合、$\mu$ 总和与实际发送总和 |
-| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{soft}}$ | [约束分配](region-allocation-learning-note.md#21-约束分配)：可行域、总和上下限、阈值、调整后评分和温度 |
-| $a_v,Z,p_v^{\mathrm{sel}}$ | [加权 Attention](region-allocation-learning-note.md#22-加权-attention-的共同定义)：基权重、归一化分母和份额 |
-| $G_v$ | [共同架构 §4](local-architecture-learning-note.md#4-分配完整计算与发送)：激活后的内容变换，由具体模块绑定 |
-| $a_v^{\mathrm{resp}},e_v^{\mathrm{resp}},x_v^{\mathrm{resp}}$ | [区域分配 §4](region-allocation-learning-note.md#4-求解与导数)：响应的自变量及其对评分差、发送上限的导数 |
-| $\xi_i,T_v,\chi_{v,\theta},\operatorname{Pos},\operatorname{Rot}$ | [KV §1—2](weighted-kv-sparse-activation-example.md#1-状态与接收写入)：原始写入时间、窗口、遮罩、位置与旋转 |
-| $H_a,Z_a,W_a,s$ | [循环模块 §1](recurrent-memory-learning-note.md#1-状态与逻辑时间)：矩阵、摘要、写入量与保存时间 |
+| $(m,z),\pi_P,(r,u),\operatorname{Agg}$ | [共同架构 §1—2](../local-semantics/weighted-message/architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献与接收聚合 |
+| $\operatorname{Mem}_v,p_v,\operatorname{Describe}_v$ | [共同架构 §3](../local-semantics/weighted-message/architecture-learning-note.md#3-状态与记忆描述)：记忆描述、当前特征与选择描述的组合 |
+| $w_v,\gamma_v,\mu_v$ | [区域分配 §1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#11-接收量与发送增益)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
+| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v$ | [区域分配 §1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#13-描述量与区域评分)：区域 query、节点 key 与评分 |
+| $c_v,A,M,S$ | [区域分配 §2](../local-semantics/weighted-message/region-allocation-learning-note.md#2-从评分得到发送强度)：发送控制、激活集合、$\mu$ 总和与实际发送总和 |
+| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{soft}}$ | [约束分配](../local-semantics/weighted-message/region-allocation-learning-note.md#21-约束分配)：可行域、总和上下限、阈值、调整后评分和温度 |
+| $a_v,Z,p_v^{\mathrm{sel}}$ | [加权 Attention](../local-semantics/weighted-message/region-allocation-learning-note.md#22-加权-attention-的共同定义)：基权重、归一化分母和份额 |
+| $G_v$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：激活后的内容变换，由具体模块绑定 |
+| $a_v^{\mathrm{resp}},e_v^{\mathrm{resp}},x_v^{\mathrm{resp}}$ | [区域分配 §4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-求解与导数)：响应的自变量及其对评分差、发送上限的导数 |
+| $\xi_i,T_v,\chi_{v,\theta},\operatorname{Pos},\operatorname{Rot}$ | [KV §1—2](../local-semantics/weighted-message/kv-memory-learning-note.md#1-状态与接收写入)：原始写入时间、窗口、遮罩、位置与旋转 |
+| $H_a,Z_a,W_a,s$ | [循环模块 §1](../local-semantics/weighted-message/recurrent-memory-learning-note.md#1-状态与逻辑时间)：矩阵、摘要、写入量与保存时间 |
 | $\pi_{\mathrm{KV}},\pi_{\mathrm{rec}}$ | 各记忆教材的有效状态投影，用于数值性质比较 |
-| $\operatorname{EmitValue},\Delta,\operatorname{ReadOut}$ | [共同架构 §4](local-architecture-learning-note.md#4-分配完整计算与发送)：载荷、广播与有限输出读出 |
+| $\operatorname{EmitValue},\Delta,\operatorname{ReadOut}$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：载荷、广播与有限输出读出 |
 
 配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 选择状态函数族，memory_read 选择描述读取，region_score 选择评分来源，selection_mode 选择发送函数。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
 
 ## 局部函数
 
-类型定义见 [TimedDAG §4--5](timed-dag-region-selector-learning-note.md#4-节点的局部函数)、[SettleGraph §3--5](settlegraph-learning-note.md#3-来源原子与时间纤维) 与 [正时延图 §1](positive-delay-graph-finite-cut-learning-note.md#14-内部消息输出和局部函数)。
+类型定义见 [TimedDAG §4--5](../timed-dag-region-selector-learning-note.md#4-节点的局部函数)、[SettleGraph §3--5](../settlegraph-learning-note.md#3-来源原子与时间纤维) 与 [正时延图 §1](../positive-delay-graph-finite-cut-learning-note.md#14-内部消息输出和局部函数)。
 
 | 名称 | 定义域与值域 |
 |---|---|
@@ -85,11 +86,11 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 $\mathsf{Allowed}_{j,C}=\{A'\subseteq C:|A'|\le K_j\}$。空候选返回 $(\varnothing,(),y)$。Next 的调用为 $\operatorname{Next}_v(q,q^{\mathrm{cmp}},\theta,h,a,c)$；Full 的调用为 $\operatorname{Full}_v(q^{\mathrm{cmp}},\theta,h,c)$。Next 与下一选择历史只使用 Full 以前确定的量，不调用或重算 Full。节点状态与区域历史分别归属，固定参数可以共享。
 
-三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[共同架构 §3—5](local-architecture-learning-note.md#3-状态与记忆描述)给出函数绑定与描述空间相容性，区域分配教材给出 SelStep 的数值函数。记忆模块分别提供状态、Upd、Mem 和 Full 所用的内容函数。
+三层均保留上述类型。广播实例另选 $\operatorname{EmitValue}_v:S_v\times\mathbb N\times X_v\times\mathsf C_v\to P$，并取 $\operatorname{Full}_v=\Delta_v\circ\operatorname{EmitValue}_v$。[共同架构 §3—5](../local-semantics/weighted-message/architecture-learning-note.md#3-状态与记忆描述)给出函数绑定与描述空间相容性，区域分配教材给出 SelStep 的数值函数。记忆模块分别提供状态、Upd、Mem 和 Full 所用的内容函数。
 
 ## 作用、结果与调用标签
 
-定义见 [TimedDAG §6.4](timed-dag-region-selector-learning-note.md#64-节点事件区域选择事件与四类作用)。
+定义见 [TimedDAG §6.4](../timed-dag-region-selector-learning-note.md#64-节点事件区域选择事件与四类作用)。
 
 | 作用坐标 | 规范结果 $\mathcal T_x^{\mathrm{act}}$ | 调用标签 |
 |---|---|---|
@@ -118,11 +119,11 @@ $\operatorname{res}_P,\operatorname{res}_S$ 取标签的结果三元组。Next �
 
 纤维关闭要求 $\lambda(v)>\theta$。Completed 只要求作用完成，PublishedDone 还要求消息齐备；PDG 的强部分截面与 TimedDAG 的细粒度暴露通过这些条件对应。
 
-区间接口在 [TimedDAG §11.5](timed-dag-region-selector-learning-note.md#115-区间转导与记录粘合)、[分块 §8.1](timed-dag-chunk-prefill-learning-note.md#81-输入分块组合) 与 [PDG §7](positive-delay-graph-finite-cut-learning-note.md#7-区间转导与复合) 同义。关闭证据与数值输入分别给出。空区间记录只含共同边界状态，是粘合的单位元。
+区间接口在 [TimedDAG §11.5](../timed-dag-region-selector-learning-note.md#115-区间转导与记录粘合)、[分块 §8.1](../timed-dag-chunk-prefill-learning-note.md#81-输入分块组合) 与 [PDG §7](../positive-delay-graph-finite-cut-learning-note.md#7-区间转导与复合) 同义。关闭证据与数值输入分别给出。空区间记录只含共同边界状态，是粘合的单位元。
 
 ## 联合求值
 
-定义见 [分块 §2--3](timed-dag-chunk-prefill-learning-note.md#2-作用块外部边界与精确联合求值) 与 [PDG §10.2](positive-delay-graph-finite-cut-learning-note.md#102-有限区间的联合求值契约)。
+定义见 [分块 §2--3](../timed-dag-chunk-prefill-learning-note.md#2-作用块外部边界与精确联合求值) 与 [PDG §10.2](../positive-delay-graph-finite-cut-learning-note.md#102-有限区间的联合求值契约)。
 
 | 名称 | 数学含义 |
 |---|---|
@@ -156,4 +157,4 @@ $$
 
 Decode 忠实恢复所表示的原子、状态、控制和快照；Pi 只删除辅助坐标。两者都不调用参考递归来补写或修正结果。局部函数核对解码后函数值，联合求值核对实际支持集及全部返回坐标，层级嵌入按明确的限制与重索引比较。
 
-切面继续比较同一 $Q_b$ 与后续输入所得记录；有效状态投影 $\pi_{\mathrm{KV},v,\theta}$、$\pi_{\mathrm{rec},v,\theta}$，外部读出及指定反向规则分别采用自身证明条件。有效投影可以丢弃原始状态细节，不能代替无损解码。KV 与循环教材附录给出各自状态证明和表示；区域分配教材给出求解与反向目标。[实现核对](local-architecture-implementation-checks.md)整理位置、软硬极限和分段继续的检查范围；浮点容差和有限验证结果由具体实现声明。
+切面继续比较同一 $Q_b$ 与后续输入所得记录；有效状态投影 $\pi_{\mathrm{KV},v,\theta}$、$\pi_{\mathrm{rec},v,\theta}$，外部读出及指定反向规则分别采用自身证明条件。有效投影可以丢弃原始状态细节，不能代替无损解码。KV 与循环教材附录给出各自状态证明和表示；区域分配教材给出求解与反向目标。[实现核对](weighted-message-implementation-checks.md)整理位置、软硬极限和分段继续的检查范围；浮点容差和有限验证结果由具体实现声明。

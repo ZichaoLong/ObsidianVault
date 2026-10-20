@@ -30,32 +30,41 @@ $$
 | [正时延图的有限切面语义](positive-delay-graph-finite-cut-learning-note.md) | 空间有环时的有限记录、区间组合与强连通分量 | TimedDAG |
 | [TimedDAG 的分块预填充](timed-dag-chunk-prefill-learning-note.md) | 因果状态块、完整输出时间批与求值阶段 | TimedDAG |
 
-SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问题选择有环图或分块求值续篇。[符号与函数索引](semantic-interface-index.md)用于查阅共同名称、类型与定义位置。
+SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问题选择有环图或分块求值续篇。[符号与函数索引](reference/semantic-interface-index.md)用于查阅共同名称、类型与定义位置。
 
 ## 带权消息的局部架构
 
-这条支线选定正典允许的一组局部空间与函数。共同架构说明如何组合，模块教材定义具体函数，实例绑定图与时间。
+局部函数教材位于 local-semantics/。带权消息支线选定正典允许的一组局部空间与函数；共同架构给出组合条件，模块教材定义状态、读取、评分与发送。
 
 | 文档 | 定义与证明的分工 |
 |---|---|
-| [共同局部架构](local-architecture-learning-note.md) | 载荷、接收、状态与控制接口，组合条件，整网数值性质 |
-| [区域评分与发送分配](region-allocation-learning-note.md) | 增益、评分、稠密与稀疏发送，求解、导数与局部温度极限 |
-| [带权 KV](weighted-kv-sparse-activation-example.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
-| [循环记忆](recurrent-memory-learning-note.md) | affine／delta 状态模块，逻辑时间、读取与局部状态性质 |
-| [全连接分层实例](weighted-kv-layered-example.md) | 每层一个区域、相邻层全连接；完整绑定、传播与工作量 |
-| [HB-Lattice 实例](hb-lattice-example.md) | 多区域展开收拢、稀疏邻域；完整绑定、传播与工作量 |
+| [共同局部架构](local-semantics/weighted-message/architecture-learning-note.md) | 载荷、接收、状态与控制接口，组合条件，整网数值性质 |
+| [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 增益、评分、稠密与稀疏发送，求解、导数与局部温度极限 |
+| [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
+| [循环记忆](local-semantics/weighted-message/recurrent-memory-learning-note.md) | affine／delta 状态模块，逻辑时间、读取与局部状态性质 |
 
-从共同架构出发，选读区域分配和一种记忆，再读组合实例。两种实例均允许按区域组合不同记忆；其数值结论按所选函数和拓扑条件使用。
+从共同架构出发，选读区域分配和一种记忆。各模块的函数定义与局部证明在此集中维护。
+
+## 具体拓扑与完整实例
+
+topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓扑与局部函数，给定初态、参数及输入读出，形成完整模型，并推导传播与计算量。
+
+| 图 | 拓扑定义 | 完整绑定 |
+|---|---|---|
+| 全连接分层 | [每层一个区域、相邻层全连接](topologies/fully-connected-layered.md) | [KV、稠密 Attention 与混合记忆实例](instances/fully-connected-layered-weighted-message.md) |
+| HB-Lattice | [多区域展开收拢与稀疏邻域](topologies/hb-lattice.md) | [KV、发送规则比较与混合记忆实例](instances/hb-lattice-weighted-message.md) |
+
+选择一种拓扑和相容的局部函数即可形成新的绑定。单位强度传播、输入连续性、软硬极限与联合求值分别使用各自的前提。
 
 ## 研究与实现
 
 | 入口 | 用途 |
 |---|---|
-| [局部架构设计总览](memos/architecture/local-architecture-design.md) | 理解整体设计空间、信息与梯度依赖、候选取舍及外部证据 |
-| [可选研究问题与对照](memos/learning-systems/local-architecture-research-questions.md) | 按需选择目标、比较和观测；优先级由研究者安排 |
-| [局部架构实现核对](local-architecture-implementation-checks.md) | 核对函数值、反向规则、数值边界、组合与切面继续 |
-| [研究备忘](memos/README.md) | 数学补充、学习风险、外部背景与历史材料 |
+| [局部架构设计总览](memos/design/weighted-message-design.md) | 理解整体设计空间、信息与梯度依赖、候选取舍及外部证据 |
+| [可选研究问题与对照](memos/training/weighted-message-research-questions.md) | 按需选择目标、比较和观测；优先级由研究者安排 |
+| [局部架构实现核对](reference/weighted-message-implementation-checks.md) | 核对函数值、反向规则、数值边界、组合与切面继续 |
+| [研究备忘](memos/README.md) | 设计分析、学习问题、数学补充与外部背景 |
 | [学习资源](resources/learning-resources.md) | 按问题选读的书目和练习 |
 | [教学参考程序](examples/positive_delay_graph_reference.py) | 正时延图有限切面、分段继续与规范记录的可执行例子 |
 
-版本与采用信息见[独立记录](semantic-versions.md)。
+reference/ 提供名称检索与实现核对；memos/ 提供研究参考；examples/ 保存教学程序，resources/ 汇集学习材料。版本、下游采用和修订历史集中在 records/，入口为[版本与采用记录](records/semantic-versions-and-adoption.md)。

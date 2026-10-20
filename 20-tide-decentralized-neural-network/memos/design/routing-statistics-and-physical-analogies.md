@@ -7,9 +7,9 @@ tags:
   - statistical-mechanics
 ---
 
-# 统计力学与信息动力学：保留问题，不预设物理结论
+# 路由统计与物理类比
 
-本页由 Git `133d638` 的 `tide-statistical-mechanics-and-information-dynamics.md` 重写。原问题入口是 [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|希尔伯特第六问题与 AI 熵类比]]。它不向核心教材导入物理公理，也不主张 Tide 已有 kinetic limit 或耗散结构定理。
+本文讨论状态经验分布、路径相关性与路由占用熵，并给出研究宏观极限所需的额外条件。物理类比提供候选问题，数学结论依赖具体的随机模型、尺度与收敛定义。相关问题入口见 [[30-technical-notes/hilbert-sixth-problem-and-ai-entropy|希尔伯特第六问题与 AI 熵类比]]。
 
 ## 1. 值得保留的三个问题
 
@@ -50,8 +50,8 @@ $$
 - 每个 merge 的有效来源数、共同祖先比例及来源集合重叠。
 - 分支 delta 的范数、夹角、抵消程度。
 - 不同来源对输出/loss 的梯度贡献及 checkpoint 间变化。
-- Receive/Update/Read/Emit 覆盖、状态写到读的时间差。
-- BO 与 SD 在匹配结构和计算预算下的状态使用差异。
+- 接收候选、Upd、Read、Full 的覆盖，状态写到读的时间差。
+- 在 Next 保留计算状态时，全部候选采用更新与仅激活候选采用更新，在匹配结构和计算预算下的状态使用差异。
 
 路径边数、实际消息 hop 数、昂贵模块数、私有状态写到读的时间差是不同量。仅统计无向 cycle 数或 attention 非零项数量，忽略了权重、符号、非线性和后续读出，不能直接解释训练或生成质量。
 

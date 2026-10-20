@@ -7,9 +7,9 @@ tags:
   - architecture
 ---
 
-# 函数保持生长：哪些条件足以保持原模型
+# 函数保持生长的条件
 
-本页保留 checkpoint 生长中可独立使用的数学推导，不规定实验顺序。Graph、TimedDAG 与 SettleGraph 的定义由上游教材负责；这里研究两个已定义模型之间的关系。原始材料见 Git `133d638` 的 `tide-mathematical-foundations.md` 第五部分及 `tide-model-architecture-and-training.md` 第一部分。
+本文研究增加节点、分支或状态后保持原模型行为的条件。图与递归沿用正典教材；以下推导比较两份已经完整定义的模型及其状态投影。
 
 先用状态投影回答“增加内部结构后，怎样保持任意未来输入上的行为”，再讨论两个不同的结构问题：替换节点能否保持 DAG，以及固定汇合（fixed-merge）模块在什么条件下能够按 chunk 组合。这三类结论各有前提，不能互相替代。
 

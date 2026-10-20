@@ -7,9 +7,9 @@ tags:
   - experiments
 ---
 
-# 局部架构：可选研究问题与对照
+# 带权消息架构：可选研究问题与对照
 
-本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../architecture/local-architecture-design.md)；函数以[局部架构](../../local-architecture-learning-note.md)、[区域分配](../../region-allocation-learning-note.md)、[KV](../../weighted-kv-sparse-activation-example.md)与[循环记忆](../../recurrent-memory-learning-note.md)教材为准。实现与定义的对应见[实现核对](../../local-architecture-implementation-checks.md)。
+本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../design/weighted-message-design.md)；函数以[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)、[区域分配](../../local-semantics/weighted-message/region-allocation-learning-note.md)、[KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)与[循环记忆](../../local-semantics/weighted-message/recurrent-memory-learning-note.md)教材为准。实现与定义的对应见[实现核对](../../reference/weighted-message-implementation-checks.md)。
 
 以下条目没有预设执行顺序，也不要求全部实施。研究者掌握设计空间后，根据当前问题、已有结果和资源选择优先级。一个配置失败、难以训练或过于昂贵，本身可成为缩小探索范围的依据；复杂耦合可能使某些机制判断长期只有间接支持。
 
@@ -29,7 +29,7 @@ tags:
 
 比较以明确的问题为单位。局部分配实验可以固定同一 $(s,\mu,w)$；完整训练会改变消息与历史，结果应按整体方案解释。数据暴露、参数量、总算术工作和设备时间通常无法同时匹配，可给互补比较并记录剩余差别。
 
-准备比较前，先查[全连接实例的单位接收与等值结论](../../weighted-kv-layered-example.md#24-每层的接收写入与输出)以及 [HB 的弱接收算例](../../hb-lattice-example.md#25-稠密发送的强度传播)，确定所选形状能否区分这些函数。
+准备比较前，先查[全连接实例的单位接收与等值结论](../../instances/fully-connected-layered-weighted-message.md#24-每层的接收写入与输出)以及 [HB 的弱接收算例](../../instances/hb-lattice-weighted-message.md#25-稠密发送的强度传播)，确定所选形状能否区分这些函数。
 
 ## 2. 可选的任务与训练目标
 
@@ -52,7 +52,7 @@ $\mathcal T_{\mathrm{sup}}$ 是监督位置集，$x_{t+1}^{\mathrm{tok}}$ 是下
 
 ### 2.2 稠密暴露与教师
 
-持续稠密的各发送函数可独立训练、推理，也可以作为教师。[与评分无关的稠密分配](../../region-allocation-learning-note.md#26-与评分无关的稠密分配)是另一个已定义参照；它没有分配到评分的直接梯度。是否使用教师取决于当前研究问题。
+持续稠密的各发送函数可独立训练、推理，也可以作为教师。[与评分无关的稠密分配](../../local-semantics/weighted-message/region-allocation-learning-note.md#26-与评分无关的稠密分配)是另一个已定义参照；它没有分配到评分的直接梯度。是否使用教师取决于当前研究问题。
 
 稠密教师在同一外部序列上运行自己的轨迹与缓存，产生 $p_t^{\mathrm{teach}}$；学生运行自己的轨迹。可先训练并固定教师，蒸馏时停止教师目标的梯度。教师、间歇稠密校准或 shadow Full 的额外工作均计入训练预算，注明参数共享、状态写入和梯度归属。
 
@@ -101,7 +101,7 @@ $$
 \tag{4}
 $$
 
-教师生成方式、观测位置及额外工作由所选比较明确给出；没有教师时省去相应项。辅助头可以只在训练时存在。它可能缩短监督距离，也可能限制层间分工；未选硬分支的具体反事实输出仍须额外计算。跨架构的反馈覆盖和干预代价见[学习风险](learning-risks-and-diagnostics.md#6-可选训练干预及其代价)。
+教师生成方式、观测位置及额外工作由所选比较明确给出；没有教师时省去相应项。辅助头可以只在训练时存在。它可能缩短监督距离，也可能限制层间分工；未选硬分支的具体反事实输出仍须额外计算。跨架构的反馈覆盖和干预代价见[学习风险](sparse-routing-risks-and-diagnostics.md#6-可选训练干预及其代价)。
 
 ## 3. 训练配置的独立选择
 

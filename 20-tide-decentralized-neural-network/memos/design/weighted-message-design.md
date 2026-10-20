@@ -7,13 +7,13 @@ tags:
   - memory
 ---
 
-# 局部架构的设计空间与取舍
+# 带权消息架构的设计空间与取舍
 
-本文从整体阅读局部架构：哪些信息被保存，哪些量参与评分与发送，哪些计算能省去，以及改变依赖可能得到什么、失去什么。共同定义见[局部架构](../../local-architecture-learning-note.md)，分配见[区域教材](../../region-allocation-learning-note.md)，记忆分别见 [KV](../../weighted-kv-sparse-activation-example.md)与[循环模块](../../recurrent-memory-learning-note.md)。
+本文从整体阅读局部架构：哪些信息被保存，哪些量参与评分与发送，哪些计算能省去，以及改变依赖可能得到什么、失去什么。共同定义见[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)，分配见[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md)，记忆分别见 [KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)与[循环模块](../../local-semantics/weighted-message/recurrent-memory-learning-note.md)。
 
 数学性质提供设计边界，机制分析提供选择理由，任务表现仍依赖完整模型与训练。一个值得保持的研究判断是：保留任务需要的内容与历史依赖，同时减少一个量兼任多个控制作用的情况。它可以随实验结果逐步加强、减弱或修改。复杂耦合、计算成本和失败配置可能使某些判断长期无法被独立检验；未检验不等于已证伪，也不等于已验证。
 
-表中的能力对应已定义函数；优势与困难是由信息和导数结构作出的机制分析。整网数学保证集中在[共同组合定理](../../local-architecture-learning-note.md#6-数值性质的组合)，外部实验依据集中在第 8 节，具体比较与观测由研究问题文档负责。
+表中的能力对应已定义函数；优势与困难是由信息和导数结构作出的机制分析。整网数学保证集中在[共同组合定理](../../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)，外部实验依据集中在第 8 节，具体比较与观测由研究问题文档负责。
 
 ## 1. 从整体看各个选择
 
@@ -28,7 +28,7 @@ tags:
 | 怎样汇集区域 query | 按 $\mu$ 或截断接收量 $w$ | 前者让发送能力参与共同判断；后者移除增益到共同 query 的直接依赖 |
 | 怎样分配发送 | 约束分配、直接 Attention、固定总量、接收总量后分份额、评分无关分配、硬排序 | 分别选择发送上限、区域总量、稀疏性与梯度结构 |
 | Full 怎样变换内容 | 历史读取加前馈残差；KV 可令读取残差尺度为零 | 读出后的变换与保存历史分别声明，去掉 Full 的历史读取仍可能保留 Read 对记忆的使用 |
-| 怎样连接计算 | 全连接层、HB、多区域与正时延反馈 | 决定可达信息、汇合时间、广播覆盖和实际工作 |
+| 怎样连接计算 | [全连接分层](../../topologies/fully-connected-layered.md)、[HB-Lattice](../../topologies/hb-lattice.md)、多区域与正时延反馈 | 决定可达信息、汇合时间、广播覆盖和实际工作 |
 
 这些选择先按共同架构的类型与时间定义组成模型，再按各命题检查所需性质。固定总强度 Attention 的稠密组合、具有弱输入连续性的组合、以及满足软硬极限条件的组合各有用途。实际求值成本还取决于完整驱动输入何时可得及所采用的联合算法。
 
@@ -86,7 +86,7 @@ Read$^-$ 已可用于“当前内容查询旧记忆”，而 Full 仍读取本�
 
 ## 5. 发送规则的取舍
 
-完整约束、支持与导数集中在[区域分配教材](../../region-allocation-learning-note.md#28-参数与性质对照)。下面比较研究上的用途。
+完整约束、支持与导数集中在[区域分配教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#28-参数与性质对照)。下面比较研究上的用途。
 
 | 候选 | 有利特性 | 风险与成本 |
 |---|---|---|
@@ -122,7 +122,7 @@ Read$^-$ 已可用于“当前内容查询旧记忆”，而 Full 仍读取本�
 
 记忆的保存与读取、Full 的内容变换分别承担职责。KV 教材的读取残差尺度为零时，Full 只用当前内容及前馈残差，描述读取仍可使用 KV；删除写入或改变 Attention／FFN 排列则需要完整的新函数绑定。不同区域怎样搭配这些计算，应按任务依赖与总成本选择。外部架构提供可行例证，不能单凭相似排列推出 Tide 广播与选择更优。
 
-研究记录可以写“当前更倾向某组合，依据是这些可观察结果，尚有这些替代解释”。不必为每个直觉预设一整套隔离实验。需要安排具体实验时，另查[可选研究问题与对照](../learning-systems/local-architecture-research-questions.md)，优先级由研究者结合整体掌握和资源决定。
+研究记录可以写“当前更倾向某组合，依据是这些可观察结果，尚有这些替代解释”。不必为每个直觉预设一整套隔离实验。需要安排具体实验时，另查[可选研究问题与对照](../training/weighted-message-research-questions.md)，优先级由研究者结合整体掌握和资源决定。
 
 ## 8. 外部证据
 

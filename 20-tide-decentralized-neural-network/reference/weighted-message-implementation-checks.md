@@ -7,13 +7,13 @@ tags:
   - validation
 ---
 
-# 局部架构：实现与数学定义的对应
+# 带权消息架构：实现与数学定义的对应
 
-本文核对已选择的组合与数学定义是否一致。共同函数见[局部架构](local-architecture-learning-note.md)，评分、分配和反向见[区域分配](region-allocation-learning-note.md)，组合性质见[共同架构 §6](local-architecture-learning-note.md#6-数值性质的组合)，记忆见 [KV](weighted-kv-sparse-activation-example.md)与[循环模块](recurrent-memory-learning-note.md)。训练效果和研究优先级由[独立研究文档](memos/learning-systems/local-architecture-research-questions.md)讨论。
+本文核对已选择的组合与数学定义是否一致。共同函数见[局部架构](../local-semantics/weighted-message/architecture-learning-note.md)，评分、分配和反向见[区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md)，组合性质见[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)，记忆见 [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)与[循环模块](../local-semantics/weighted-message/recurrent-memory-learning-note.md)。训练效果和研究优先级由[独立研究文档](../memos/training/weighted-message-research-questions.md)讨论。
 
 ## 1. 采用声明与比较对象
 
-实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。
+实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
 
 | 比较 | 必须保留的对象 |
 |---|---|
@@ -47,7 +47,7 @@ tags:
 
 对实现支持的 quad、bern、Shannon 与固定形状 ent，检查节点上限、总和范围、互补条件和最优性；小规模可与独立求解或断点算法比较。覆盖单点可行集、$M=1$ 两侧、全低分、总和上下界、松弛总和、零个或一个未饱和分量。
 
-求根区间、乘子符号、残差与误差分别报告。softmax 等值按[区域分配 §3.3](region-allocation-learning-note.md#33-与-softmaxsparsemaxentmax-的关系)核对：区分对任意评分成立的单位上限条件与给定评分的可行性判定。覆盖非单位上限但 softmax 可行的算例，以及触及、超过上限时的前向与边界反向。ent 的 $\alpha=2$ 在总和可变时核对阈值移位。
+求根区间、乘子符号、残差与误差分别报告。softmax 等值按[区域分配 §3.3](../local-semantics/weighted-message/region-allocation-learning-note.md#33-与-softmaxsparsemaxentmax-的关系)核对：区分对任意评分成立的单位上限条件与给定评分的可行性判定。覆盖非单位上限但 softmax 可行的算例，以及触及、超过上限时的前向与边界反向。ent 的 $\alpha=2$ 在总和可变时核对阈值移位。
 
 硬选择核对稳定平票顺序、零接收排除、全非正时最高分保留与激活上限。硬函数的训练替代梯度属于独立声明。
 
@@ -85,13 +85,13 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ## 5. 数值性质、图与继续
 
-数值比较按共同架构 §6 的固定图、参数、原始时间槽和有限切面进行，状态模块分别核对该节的局部假设。精确零消息增删与弱输入极限分别依照[性质对照](local-architecture-learning-note.md#64-发送规则的性质对照)选择函数范围，覆盖弱消息、弱候选、全零接收、空档和正时延反馈。
+数值比较按共同架构 §6 的固定图、参数、原始时间槽和有限切面进行，状态模块分别核对该节的局部假设。精确零消息增删与弱输入极限分别依照[性质对照](../local-semantics/weighted-message/architecture-learning-note.md#64-发送规则的性质对照)选择函数范围，覆盖弱消息、弱候选、全零接收、空档和正时延反馈。
 
 复现共同架构 §6.2 的固定总强度 Attention 算例，分别检查 mu 与 uniform 的零候选行为。混合组合使用全候选参考计算时，保留消息存在掩码；只有满足零消息删除条件时，才以显式零消息替代缺席并比较相同数值。
 
 复现区域分配 §5.3 的第二名间隔条件与四候选算例，核对有限正温度的精确分配。软硬比较使用单位输入和硬运行的评分条件；另复现平票、阈值临界及固定小数上限反例。发送数值收敛不等于正温度支持数收敛。pooled 的固定正温度连续性也不作为整网硬化保证。
 
-[全连接](weighted-kv-layered-example.md)核对单位接收、配置等值、KV 写入时间和计数；[HB](hb-lattice-example.md)核对展开收拢、偏移邻域、区域到达、候选并集及广播计数。复现 direct 的三层总量 $1,1/4,1/8$ 与固定总量规则的 $1,1,1$；不同评分的响应另按函数核对。
+[全连接拓扑](../topologies/fully-connected-layered.md)与 [HB-Lattice 拓扑](../topologies/hb-lattice.md)分别核对节点、区域、边、端口和时间对齐；图规模按固定结构计数。[全连接实例](../instances/fully-connected-layered-weighted-message.md)核对单位接收、配置等值及 KV 写入时间；[HB 实例](../instances/hb-lattice-weighted-message.md)核对区域到达、候选并集及广播计数。两类实例均检查各记忆模块的完整绑定和实际工作量。复现 direct 的三层总量 $1,1/4,1/8$ 与固定总量规则的 $1,1,1$；不同评分的响应另按函数核对。
 
 整段、不同长度分段、逐位置和位置内部切面均比较完整记录与边界。左状态须含原始时钟、区域历史和在途消息；给定完整驱动窗口后再核对各模块的联合契约。变更参数、位置或记忆类型后的继续，使用另外声明的转换或重算规则。
 
@@ -99,7 +99,7 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ## 附录：教学参考程序的对应
 
-[正时延图教学程序](examples/positive_delay_graph_reference.py)用整数与有理数函数展示切面、快照和调度重排。其范围及教学例子见 [PDG 附录 S.10](positive-delay-graph-finite-cut-learning-note.md#s10-教学参考程序与有限检验)。
+[正时延图教学程序](../examples/positive_delay_graph_reference.py)用整数与有理数函数展示切面、快照和调度重排。其范围及教学例子见 [PDG 附录 S.10](../positive-delay-graph-finite-cut-learning-note.md#s10-教学参考程序与有限检验)。
 
 | 程序名称或表示 | 数学对应 |
 |---|---|
