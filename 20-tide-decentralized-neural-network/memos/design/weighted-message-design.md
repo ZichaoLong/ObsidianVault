@@ -9,7 +9,7 @@ tags:
 
 # 带权消息架构的设计空间与取舍
 
-本文从整体阅读局部架构：哪些信息被保存，哪些量参与评分与发送，哪些计算能省去，以及改变依赖可能得到什么、失去什么。共同定义见[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)，分配见[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md)，记忆分别见 [KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../../local-semantics/weighted-message/recurrent-memory-learning-note.md)、[Gated DeltaNet](../../local-semantics/weighted-message/gated-delta-memory-learning-note.md)与 [SSD](../../local-semantics/weighted-message/ssd-memory-learning-note.md)。
+本文从整体阅读局部架构：哪些信息被保存，哪些量参与评分与发送，哪些计算能省去，以及改变依赖可能得到什么、失去什么。共同定义见[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)，分配见[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md)，记忆分别见 [KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)与 [SSD](../../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)。
 
 数学性质提供设计边界，机制分析提供选择理由，任务表现仍依赖完整模型与训练。一个值得保持的研究判断是：保留任务需要的内容与历史依赖，同时减少一个量兼任多个控制作用的情况。它可以随实验结果逐步加强、减弱或修改。复杂耦合、计算成本和失败配置可能使某些判断长期无法被独立检验；未检验不等于已证伪，也不等于已验证。
 

@@ -12,7 +12,7 @@ tags:
 
 # 固定逻辑时间上的短卷积
 
-短卷积用当前内容和有限段历史形成新的特征。本文定义一个带接收权重的因果卷积部件，供 [Gated DeltaNet](gated-delta-memory-learning-note.md) 与 [SSD](ssd-memory-learning-note.md) 的局部记忆使用。它保存投影后的历史，时间坐标采用[共同架构](architecture-learning-note.md)的逻辑时间 $\theta\in\mathbb N$。
+短卷积用当前内容和有限段历史形成新的特征。本文定义一个带接收权重的因果卷积部件，供 [Gated DeltaNet](gated-delta-learning-note.md) 与 [SSD](ssd-learning-note.md) 的局部记忆使用。它保存投影后的历史，时间坐标采用[共同架构](../architecture-learning-note.md)的逻辑时间 $\theta\in\mathbb N$。
 
 ## 1. 时间槽与保存内容
 

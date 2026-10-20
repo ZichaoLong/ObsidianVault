@@ -11,6 +11,12 @@ tags:
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
 
+## 2026-10-20：循环记忆目录与共同推导
+
+以 [254c870](https://github.com/ZichaoLong/ObsidianVault/commit/254c870) 为基线，将三份循环记忆候选教材和共用短卷积部件归入 local-semantics/weighted-message/recurrent-memory/。基础教材更名为 affine-delta-learning-note.md，Gated DeltaNet 与 SSD 文件名省去目录已表达的 memory；具体路径见[迁移表](migration-map.md#2026-10-20-循环记忆候选归类)。
+
+基础教材 §4.1 集中仿射递归、先后复合、结合律、单位元和前缀求值的推导；两份完整模块教材保留自身系数、状态与证明，引用共同复合依据。同步入口、索引、实例及研究材料的引用，检查脚本递归覆盖局部子目录。四份正典、局部函数、参数和配置取值保持，原路径不留转向页。
+
 ## 2026-10-20：完整 Gated DeltaNet 与 SSD 候选
 
 以 [4794e0e](https://github.com/ZichaoLong/ObsidianVault/commit/4794e0e) 为基线，四份正典逐字保持。基础 affine／delta 仍保留原函数和默认参数；独立增加 gated_delta 与 ssd 两份教材，包含状态、投影、短卷积、门、描述、完整内容、联合求值、继续与局部性质证明。

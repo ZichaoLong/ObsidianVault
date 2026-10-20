@@ -92,7 +92,7 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ### 4.2 原模型的对应范围
 
-[Gated DeltaNet 附录 S](../local-semantics/weighted-message/gated-delta-memory-learning-note.md#附录-s配置原模型对应与工作量)与 [SSD 附录 S](../local-semantics/weighted-message/ssd-memory-learning-note.md#附录-s配置原模型对应与工作量)固定参考实现及开关。以相同归一化输入、单位接收、等间隔时间、零初态和零矩阵被动衰减进行对照。逐步比较投影、卷积、门、矩阵、读取、输出门与 Mix；先恢复普通序列混合器，再核对 Tide 的描述和外部内容函数。
+[Gated DeltaNet 附录 S](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md#附录-s配置原模型对应与工作量)与 [SSD 附录 S](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md#附录-s配置原模型对应与工作量)固定参考实现及开关。以相同归一化输入、单位接收、等间隔时间、零初态和零矩阵被动衰减进行对照。逐步比较投影、卷积、门、矩阵、读取、输出门与 Mix；先恢复普通序列混合器，再核对 Tide 的描述和外部内容函数。
 
 GDN 核对 $\epsilon$ 所在位置、query 的 $d_k^{-1/2}$、每头 RMS 与门的顺序、矩阵采用 value-first 的轴排列。原实现对应还要求 RMS 缩放跨头共享、beta 投影无偏置，卷积偏置匹配。beta 取 sigmoid 范围，不能默用允许负特征值的其他开关。SSD 核对组数整除头数、B/C 共享映射、写入系数为 $d_h$、直通参数的逐头广播、norm_before_gate=False。参考卷积权重若按从旧到新排列，与教材按滞后 $0,1,\ldots$ 的顺序互相反转。
 
@@ -100,7 +100,7 @@ GDN 核对 $\epsilon$ 所在位置、query 的 $d_k^{-1/2}$、每头 RMS 与门�
 
 ### 4.3 带权、时间与反向
 
-覆盖不等间隔、长空档、conv_size=1、不同 conv_stride、快照延后读取，以及在原本空槽插入零或逐渐变弱的事件。比较新增事件之后的多次有效缓存、矩阵和读出，不能只看插入当步。复现[短卷积教材 §3](../local-semantics/weighted-message/causal-convolution-learning-note.md#3-弱接收与固定时间)的按事件移位反例；切分继续同时保留卷积与矩阵状态。
+覆盖不等间隔、长空档、conv_size=1、不同 conv_stride、快照延后读取，以及在原本空槽插入零或逐渐变弱的事件。比较新增事件之后的多次有效缓存、矩阵和读出，不能只看插入当步。复现[短卷积教材 §3](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#3-弱接收与固定时间)的按事件移位反例；切分继续同时保留卷积与矩阵状态。
 
 GDN 与 SSD 的正接收全候选都执行 Upd。测试本次未激活、下次激活且读取既有记忆的轨迹；本次发送控制不得改变本次缓存写入。给定完整驱动后，核对短卷积的预计算、仿射复合和逐步递归的所有中间结果，SSD 另与其历史展开式比较。缺失位置不能通过压紧序列后调用普通短卷积而隐式改变距离。
 
@@ -122,7 +122,7 @@ GDN 与 SSD 的正接收全候选都执行 Upd。测试本次未激活、下次�
 
 ## 6. 仓库文档检查
 
-[check_documents.py](../tools/check_documents.py)核对本地链接与锚点、全部局部教材的公式编号与 TeX 分组、空目录、正典版本及引用方向。正典的仓库内链接只指向四份正典之一，局部教材、实例与检索文档向上引用。脚本从自身位置定位仓库，可在任意工作目录执行；在仓库根目录使用：
+[check_documents.py](../tools/check_documents.py)核对本地链接与锚点、全部局部教材的公式编号与 TeX 分组、空目录、正典版本及引用方向。局部教材检查递归覆盖 weighted-message/ 的子目录。正典的仓库内链接只指向四份正典之一，局部教材、实例与检索文档向上引用。脚本从自身位置定位仓库，可在任意工作目录执行；在仓库根目录使用：
 
 ```bash
 python -B 20-tide-decentralized-neural-network/tools/check_documents.py

@@ -15,7 +15,7 @@ tags:
 
 本模块用多头矩阵保存关联记忆。当前内容经投影、短卷积和归一化形成 query、key 与 value；保留门先衰减旧矩阵，写入门再沿当前 key 修正预测误差。当前 query 读取更新后的矩阵，经输出归一化与门控得到内容。
 
-本文完整绑定[共同架构](architecture-learning-note.md)的状态、Upd、Mem、当前特征与内容函数 $G_v$。Agg、三种 Read、区域评分与发送、Next 和广播 Full 沿用共同定义。短卷积使用[固定逻辑时间规则](causal-convolution-learning-note.md)。[基础循环教材](recurrent-memory-learning-note.md)的 delta 保留其简洁定义；本文另外给出包含多头、短卷积和输出门的候选。
+本文完整绑定[共同架构](../architecture-learning-note.md)的状态、Upd、Mem、当前特征与内容函数 $G_v$。Agg、三种 Read、区域评分与发送、Next 和广播 Full 沿用共同定义。短卷积使用[固定逻辑时间规则](causal-convolution-learning-note.md)。[基础循环教材](affine-delta-learning-note.md)的 delta 保留其简洁定义；本文另外给出包含多头、短卷积和输出门的候选。
 
 ## 1. 输入、参数与状态
 
@@ -192,7 +192,7 @@ B_{h,i}=\beta_{h,i}\nu_{h,i}k_{h,i}^\top.
 \tag{12}
 $$
 
-$s_{i-1}$ 为此前保存时间。两个仿射变换的先后复合使用 $(A_1A_2,B_1A_2+B_2)$；这是结合的运算。摘要同样为仿射更新。逐次求值或精确复合给出全部中间状态，再按读取模式形成描述、区域选择和 Full，构成共同架构 §7 的联合契约。实际的高效分块算法还需利用 $I-\beta kk^\top$ 的结构；显式形成并乘稠密转移矩阵可能更昂贵。
+$s_{i-1}$ 为此前保存时间。每头的系数代入[基础教材 §4.1 的仿射复合](affine-delta-learning-note.md#41-仿射复合)，即可按其结合律求得全部中间矩阵；摘要同样为仿射更新。再按读取模式形成描述、区域选择和 Full，构成共同架构 §7 的联合契约。实际的高效分块算法还需利用 $I-\beta kk^\top$ 的结构；显式形成并乘稠密转移矩阵可能更昂贵。
 
 继续保存式 (3) 的完整状态，以及正典切面中的区域历史和在途消息。卷积保持原始时间，矩阵与摘要保持上次写入时间。位置空档、切分长度或延后求 Full 都不重置这些量。每个 Full 使用自己的计算快照。
 
@@ -207,7 +207,7 @@ $$
 \tag{13}
 $$
 
-**引理。** 从零初态开始，固定有限时间范围与有限参数，本文模块满足[共同架构 §6.1](architecture-learning-note.md#61-比较对象与局部条件)的四项局部条件。证明见附录 A。
+**引理。** 从零初态开始，固定有限时间范围与有限参数，本文模块满足[共同架构 §6.1](../architecture-learning-note.md#61-比较对象与局部条件)的四项局部条件。证明见附录 A。
 
 因而与相容的 KV、基础循环或 SSD 模块组合后，可按所选发送函数使用共同架构的零消息删除、正温度输入连续性和单位输入软硬极限。整网极限仍须满足硬运行的评分条件。该引理不要求记忆参数与分配温度共同变化。
 
@@ -235,4 +235,4 @@ memory_family=gated_delta 选择本文完整函数；memory_read=sum／state 选
 
 矩阵状态大小为 $O(n_{\mathrm{head}}d_md_k)$，另加卷积槽与 $O(d_s)$ 摘要；都不随接收次数增长。每次正接收的 Delta 更新需 $O(n_{\mathrm{head}}d_md_k)$，投影与卷积另计。state 描述又包含矩阵查询，Full 可复用同快照的中间量。降低本次激活数可省输出变换、前馈和广播，当前候选的状态更新仍属于 Upd。
 
-本文有限时间连续性与转移系数范数界不提供长程任务梯度的下界；门、压缩与覆盖的训练取舍见[设计总览](../../memos/design/weighted-message-design.md#2-保存历史与分配信用)，程序对应见[实现核对](../../reference/weighted-message-implementation-checks.md#4-记忆模块)。
+本文有限时间连续性与转移系数范数界不提供长程任务梯度的下界；门、压缩与覆盖的训练取舍见[设计总览](../../../memos/design/weighted-message-design.md#2-保存历史与分配信用)，程序对应见[实现核对](../../../reference/weighted-message-implementation-checks.md#4-记忆模块)。

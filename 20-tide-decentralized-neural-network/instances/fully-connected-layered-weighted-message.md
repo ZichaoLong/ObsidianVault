@@ -159,9 +159,9 @@ $$
 
 | 记忆 | 状态形状 | 时间与附加参数 |
 |---|---|---|
-| [affine／delta](../local-semantics/weighted-message/recurrent-memory-learning-note.md) | 两个 $d_m\times d_k$ 矩阵，$d_k=d_m=64$ | 矩阵和摘要的短期率为 $\bar\lambda_{\mathrm{short}}/D$，$\bar\lambda_{\mathrm{short}}>0$，长期率为零 |
-| [gated_delta](../local-semantics/weighted-message/gated-delta-memory-learning-note.md) | $4$ 头，$d_k=64,d_m=128$ | 矩阵被动率为零，qk_eps=$10^{-6}$，output_norm_eps=$10^{-5}$ |
-| [ssd](../local-semantics/weighted-message/ssd-memory-learning-note.md) | $4$ 头、$1$ 组，$d_k=64,d_m=128$ | 矩阵被动率为零，output_norm_eps=$10^{-5}$ |
+| [affine／delta](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) | 两个 $d_m\times d_k$ 矩阵，$d_k=d_m=64$ | 矩阵和摘要的短期率为 $\bar\lambda_{\mathrm{short}}/D$，$\bar\lambda_{\mathrm{short}}>0$，长期率为零 |
+| [gated_delta](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md) | $4$ 头，$d_k=64,d_m=128$ | 矩阵被动率为零，qk_eps=$10^{-6}$，output_norm_eps=$10^{-5}$ |
+| [ssd](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | $4$ 头、$1$ 组，$d_k=64,d_m=128$ | 矩阵被动率为零，output_norm_eps=$10^{-5}$ |
 
 后两者摘要的短期率取 $\log2/D$、长期率为零，conv_size=4、conv_stride=$D$。在节点时间 $Dt+\ell$，卷积依次读取输入位置 $t,t-1,t-2,t-3$；因此每位置均接收时恢复普通因果卷积。它们的输入门步长依各自教材定义，不再乘逻辑时间间隔 $D$。循环区域不使用 KV 窗口和 RoPE，时间作用由衰减、卷积与接收次序给出。
 

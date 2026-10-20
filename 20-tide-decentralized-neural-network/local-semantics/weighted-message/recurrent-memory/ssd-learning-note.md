@@ -15,7 +15,7 @@ tags:
 
 本模块给出一套具体的输入相关状态空间更新。每个头用一个标量控制整个矩阵的保留比例，当前输入决定写入向量与读取向量；完整内容还包含当前输入的直通项和输出门。相同递归可以展开为带衰减的历史加权和，这一联系称为状态空间对偶（State Space Duality，SSD）。
 
-本文采用 Mamba-2 的 Mamba2Simple 计算形状，完整绑定[共同架构](architecture-learning-note.md)的状态、Upd、Mem、当前特征与 $G_v$。短卷积使用[固定逻辑时间规则](causal-convolution-learning-note.md)，Agg、Read、区域分配、Next 和广播 Full 沿用共同定义。SSM 是一类状态空间模型的统称；这里每个矩阵的尺寸、门、离散递归和读出均由下文确定。
+本文采用 Mamba-2 的 Mamba2Simple 计算形状，完整绑定[共同架构](../architecture-learning-note.md)的状态、Upd、Mem、当前特征与 $G_v$。短卷积使用[固定逻辑时间规则](causal-convolution-learning-note.md)，Agg、Read、区域分配、Next 和广播 Full 沿用共同定义。SSM 是一类状态空间模型的统称；这里每个矩阵的尺寸、门、离散递归和读出均由下文确定。
 
 ## 1. 尺寸、状态与时钟
 
@@ -175,7 +175,7 @@ J_{h,i}=d_{h,i}\nu_{h,i}B_{\operatorname{grp}(h),i}^{\top}.
 \tag{12}
 $$
 
-于是 $H_{h,i}=\zeta_{h,i}H_{h,i-1}+J_{h,i}$。两个先后变换复合为 $(\zeta_2\zeta_1,\zeta_2J_1+J_2)$，满足结合律。从零矩阵出发可展开为
+于是 $H_{h,i}=\zeta_{h,i}H_{h,i-1}+J_{h,i}$。记 $I$ 为 $d_k$ 维单位矩阵，这对应系数对 $(\zeta_{h,i}I,J_{h,i})$；复合与前缀求值使用[基础教材 §4.1 的仿射复合](affine-delta-learning-note.md#41-仿射复合)。从零矩阵出发可展开为
 
 $$
 R_{h,i}
@@ -203,7 +203,7 @@ $$
 \tag{14}
 $$
 
-**引理。** 固定有限参数，从零初态开始，本文模块在固定有限时间内满足[共同架构 §6.1](architecture-learning-note.md#61-比较对象与局部条件)的有界性、零接收中性、更新连续性和读取连续性。证明见附录 A。
+**引理。** 固定有限参数，从零初态开始，本文模块在固定有限时间内满足[共同架构 §6.1](../architecture-learning-note.md#61-比较对象与局部条件)的有界性、零接收中性、更新连续性和读取连续性。证明见附录 A。
 
 因此它可与相容的 KV、基础循环和 Gated DeltaNet 模块混合。零消息、正温度连续性、单位输入软硬极限及有限正温度精确性分别使用共同架构中所选发送函数与评分条件。
 
@@ -231,4 +231,4 @@ memory_family=ssd 选择本文函数，memory_read=sum／state 选择式 (9)。�
 
 Tide 增加接收权重对步长和卷积历史的调制、逻辑时钟、描述摘要与外部内容残差；式 (11) 选择了供节点使用的前馈组合。原模型的整网结构与训练结果由其独立架构决定。
 
-每节点矩阵大小为 $O(n_{\mathrm{head}}d_md_k)$，另加固定范围卷积和摘要。一次接收的更新、一次矩阵读取各需 $O(n_{\mathrm{head}}d_md_k)$，分组减少 B/C 投影宽度而不删除各头状态；投影、卷积和前馈另计。所有正接收候选都更新状态，Full 稀疏只省相应内容计算与广播。有限时间连续性不保证无限时间或完整参数梯度稳定；比较见[设计总览](../../memos/design/weighted-message-design.md#2-保存历史与分配信用)，验证范围见[实现核对](../../reference/weighted-message-implementation-checks.md#4-记忆模块)。
+每节点矩阵大小为 $O(n_{\mathrm{head}}d_md_k)$，另加固定范围卷积和摘要。一次接收的更新、一次矩阵读取各需 $O(n_{\mathrm{head}}d_md_k)$，分组减少 B/C 投影宽度而不删除各头状态；投影、卷积和前馈另计。所有正接收候选都更新状态，Full 稀疏只省相应内容计算与广播。有限时间连续性不保证无限时间或完整参数梯度稳定；比较见[设计总览](../../../memos/design/weighted-message-design.md#2-保存历史与分配信用)，验证范围见[实现核对](../../../reference/weighted-message-implementation-checks.md#4-记忆模块)。

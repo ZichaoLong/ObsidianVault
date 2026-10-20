@@ -171,7 +171,7 @@ def main():
             if source in canonical and destination not in canonical:
                 errors.append(f"{location}: canonical textbook refers to downstream material: {raw}")
 
-    local_notes = sorted((BASE / "local-semantics" / "weighted-message").glob("*.md"))
+    local_notes = sorted((BASE / "local-semantics" / "weighted-message").rglob("*.md"))
     for path in local_notes:
         check_formulas(path, errors)
     for path in BASE.rglob("*"):

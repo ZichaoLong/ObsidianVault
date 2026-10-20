@@ -17,7 +17,7 @@ tags:
 
 图、区域和逻辑时间沿用 [SettleGraph](../../settlegraph-learning-note.md)、[TimedDAG](../../timed-dag-region-selector-learning-note.md) 与 [PositiveDelayGraph](../../positive-delay-graph-finite-cut-learning-note.md)。这里选择它们允许的局部函数。读者只需有限集合、向量、函数与归纳法。
 
-[区域分配](region-allocation-learning-note.md)定义评分与发送函数；[带权 KV](kv-memory-learning-note.md)、[基础循环记忆](recurrent-memory-learning-note.md)、[Gated DeltaNet](gated-delta-memory-learning-note.md)和 [Mamba-2／SSD](ssd-memory-learning-note.md)分别给出完整的状态、更新与读取。后两者共用[固定逻辑时间短卷积](causal-convolution-learning-note.md)。选定这些函数，再绑定图和时间，就得到一个确定的模型。设计取舍集中在[设计总览](../../memos/design/weighted-message-design.md)。
+[区域分配](region-allocation-learning-note.md)定义评分与发送函数；[带权 KV](kv-memory-learning-note.md)、[基础循环记忆](recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](recurrent-memory/gated-delta-learning-note.md)和 [Mamba-2／SSD](recurrent-memory/ssd-learning-note.md)分别给出完整的状态、更新与读取。后两者共用[固定逻辑时间短卷积](recurrent-memory/causal-convolution-learning-note.md)。选定这些函数，再绑定图和时间，就得到一个确定的模型。设计取舍集中在[设计总览](../../memos/design/weighted-message-design.md)。
 
 本支线采用接收驱动的状态更新：全部候选保留更新，区域选择历史为单点，发送控制为 $[0,1]$ 中的标量，正控制触发沿全部出边的广播。第 3—4 节给出这些选择的完整公式。它们在正典允许的函数中确定本支线的范围；稠密与稀疏发送均可在此范围内组成模型。
 
@@ -215,7 +215,7 @@ $$
 3. **更新连续性。** 旧有效状态收敛、$r^{\mathrm{in},(n)}\to r^{\mathrm{in}}$、$u^{(n)}$ 有界，且在 $r^{\mathrm{in}}>0$ 时 $u^{(n)}\to u$，则更新后的有效状态及其随后按固定时间推进的投影收敛。$r^{\mathrm{in}}=0$ 时极限为该槽不发生接收的状态。
 4. **读取连续性。** 有效状态与当前内容收敛时，Mem、当前特征和 $G_v$ 收敛；Read 的旧状态、新状态和初态分别按第 3 节使用。正极限接收处因而具有连续的描述与增益。
 
-[KV 附录 A](kv-memory-learning-note.md#附录-a局部性质的证明)、[基础循环附录 A](recurrent-memory-learning-note.md#附录-a状态性质的证明)、[Gated DeltaNet 附录 A](gated-delta-memory-learning-note.md#附录-a局部性质的证明)与 [SSD 附录 A](ssd-memory-learning-note.md#附录-a局部性质的证明)分别验证这些条件；短卷积的固定时间引理由对应部件教材证明。各节点可使用不同模块，只需第 5 节的类型相容。
+[KV 附录 A](kv-memory-learning-note.md#附录-a局部性质的证明)、[基础循环附录 A](recurrent-memory/affine-delta-learning-note.md#附录-a状态性质的证明)、[Gated DeltaNet 附录 A](recurrent-memory/gated-delta-learning-note.md#附录-a局部性质的证明)与 [SSD 附录 A](recurrent-memory/ssd-learning-note.md#附录-a局部性质的证明)分别验证这些条件；短卷积的固定时间引理由对应部件教材证明。各节点可使用不同模块，只需第 5 节的类型相容。
 
 ### 6.2 零消息与正温度输入
 

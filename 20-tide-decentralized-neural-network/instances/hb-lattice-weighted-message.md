@@ -144,9 +144,9 @@ $$
 
 | 记忆 | 状态形状与参数 |
 |---|---|
-| [affine／delta](../local-semantics/weighted-message/recurrent-memory-learning-note.md) | $d_k=d_m=64$，两种时间尺度，短期率 $\bar\lambda_{\mathrm{short}}/D$，$\bar\lambda_{\mathrm{short}}>0$，长期率零 |
-| [gated_delta](../local-semantics/weighted-message/gated-delta-memory-learning-note.md) | $4$ 头，$d_k=64,d_m=128$，矩阵被动率零，qk_eps=$10^{-6}$ |
-| [ssd](../local-semantics/weighted-message/ssd-memory-learning-note.md) | $4$ 头、$1$ 组，$d_k=64,d_m=128$，矩阵被动率零 |
+| [affine／delta](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) | $d_k=d_m=64$，两种时间尺度，短期率 $\bar\lambda_{\mathrm{short}}/D$，$\bar\lambda_{\mathrm{short}}>0$，长期率零 |
+| [gated_delta](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md) | $4$ 头，$d_k=64,d_m=128$，矩阵被动率零，qk_eps=$10^{-6}$ |
+| [ssd](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | $4$ 头、$1$ 组，$d_k=64,d_m=128$，矩阵被动率零 |
 
 后两者共同取 output_norm_eps=$10^{-5}$，摘要短期率 $\log2/D$、长期率零，conv_size=4、conv_stride=$D$。各区域继续使用原评分与发送绑定，全部有限矩阵、偏置、门参数、卷积系数及残差尺度按模块定义给出。循环区域不使用 KV 的窗口或 RoPE。
 

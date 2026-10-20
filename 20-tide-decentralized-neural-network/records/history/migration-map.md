@@ -78,7 +78,7 @@ git show 133d638:20-tide-decentralized-neural-network/tide-mathematical-foundati
 | `local-architecture-learning-note.md` | [local-semantics/weighted-message/architecture-learning-note.md](../../local-semantics/weighted-message/architecture-learning-note.md) |
 | `region-allocation-learning-note.md` | [local-semantics/weighted-message/region-allocation-learning-note.md](../../local-semantics/weighted-message/region-allocation-learning-note.md) |
 | `weighted-kv-sparse-activation-example.md` | [local-semantics/weighted-message/kv-memory-learning-note.md](../../local-semantics/weighted-message/kv-memory-learning-note.md) |
-| `recurrent-memory-learning-note.md` | [local-semantics/weighted-message/recurrent-memory-learning-note.md](../../local-semantics/weighted-message/recurrent-memory-learning-note.md) |
+| `recurrent-memory-learning-note.md` | [local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) |
 | `weighted-kv-layered-example.md` | [instances/fully-connected-layered-weighted-message.md](../../instances/fully-connected-layered-weighted-message.md) |
 | `hb-lattice-example.md` | [instances/hb-lattice-weighted-message.md](../../instances/hb-lattice-weighted-message.md) |
 | `semantic-interface-index.md` | [reference/semantic-interface-index.md](../../reference/semantic-interface-index.md) |
@@ -108,6 +108,19 @@ git show 133d638:20-tide-decentralized-neural-network/tide-mathematical-foundati
 | `weighted-kv-layered-example.md` | [全连接分层的带权消息实例](../../instances/fully-connected-layered-weighted-message.md) |
 
 仓库内入口已直接引用上表正文。外部旧链接按表迁移；正典的逐篇改动和引用引入时间见[修订记录](document-revisions.md#2026-10-20定义顺序与正典引用边界)。
+
+## 2026-10-20 循环记忆候选归类
+
+整理前版本为 [254c870](https://github.com/ZichaoLong/ObsidianVault/commit/254c870)。下表路径均相对于 local-semantics/weighted-message/；原位置不保留转向页。
+
+| 原路径 | 现行教材 |
+|---|---|
+| `recurrent-memory-learning-note.md` | [recurrent-memory/affine-delta-learning-note.md](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) |
+| `gated-delta-memory-learning-note.md` | [recurrent-memory/gated-delta-learning-note.md](../../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md) |
+| `ssd-memory-learning-note.md` | [recurrent-memory/ssd-learning-note.md](../../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) |
+| `causal-convolution-learning-note.md` | [recurrent-memory/causal-convolution-learning-note.md](../../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) |
+
+目录汇集并列的循环记忆候选与短卷积部件。基础教材 §4.1 集中仿射复合定义和证明，Gated DeltaNet 与 SSD 各自给出系数并引用该节。局部数值函数、配置名称及四份正典保持。
 
 ## 背景与补充推导的来源
 

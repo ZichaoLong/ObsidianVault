@@ -9,7 +9,7 @@ tags:
 
 # 带权消息架构：可选研究问题与对照
 
-本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../design/weighted-message-design.md)；函数以[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)、[区域分配](../../local-semantics/weighted-message/region-allocation-learning-note.md)、[KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)与[循环记忆](../../local-semantics/weighted-message/recurrent-memory-learning-note.md)教材为准。实现与定义的对应见[实现核对](../../reference/weighted-message-implementation-checks.md)。
+本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../design/weighted-message-design.md)；函数以[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)、[区域分配](../../local-semantics/weighted-message/region-allocation-learning-note.md)及共同架构列出的记忆教材为准。实现与定义的对应见[实现核对](../../reference/weighted-message-implementation-checks.md)。
 
 以下条目没有预设执行顺序，也不要求全部实施。研究者掌握设计空间后，根据当前问题、已有结果和资源选择优先级。一个配置失败、难以训练或过于昂贵，本身可成为缩小探索范围的依据；复杂耦合可能使某些机制判断长期只有间接支持。
 

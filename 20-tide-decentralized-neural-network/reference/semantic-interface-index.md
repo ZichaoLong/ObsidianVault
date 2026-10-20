@@ -21,8 +21,8 @@ tags:
 | [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
 | [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 共同接口、模块组合、零消息与正温度性质、单位输入的整网软硬极限 |
 | [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定增益、评分和发送函数 | 求解、导数、单次分配的连续性与温度极限 |
-| [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/gated-delta-memory-learning-note.md)、[SSD](../local-semantics/weighted-message/ssd-memory-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
-| [固定时间短卷积](../local-semantics/weighted-message/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
+| [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
+| [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
 | [全连接实例](../instances/fully-connected-layered-weighted-message.md)、[HB-Lattice 实例](../instances/hb-lattice-weighted-message.md) | 所选拓扑、局部函数、参数、初态与输入读出 | 完整模型绑定、条件性的传播保障、联合求值与实际工作量 |
 
@@ -63,10 +63,11 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $G_v$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：激活后的内容变换，由具体模块绑定 |
 | $a_v^{\mathrm{resp}},e_v^{\mathrm{resp}},x_v^{\mathrm{resp}}$ | [区域分配 §4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-求解与导数)：响应的自变量及其对评分差、发送上限的导数 |
 | $\xi_i,T_v,\chi_{v,\theta},\operatorname{Pos},\operatorname{Rot}$ | [KV §1—2](../local-semantics/weighted-message/kv-memory-learning-note.md#1-状态与接收写入)：原始写入时间、窗口、遮罩、位置与旋转 |
-| $H_a,Z_a,W_a,s$ | [基础循环 §1](../local-semantics/weighted-message/recurrent-memory-learning-note.md#1-状态与逻辑时间)：两种时间尺度的矩阵、摘要、写入量与保存时间 |
-| $\mathcal B,\operatorname{Conv},\operatorname{ConvWrite},L_{\mathrm{conv}},\delta_{\mathrm{conv}}$ | [短卷积 §1](../local-semantics/weighted-message/causal-convolution-learning-note.md#1-时间槽与保存内容)：缓存、读取、写入、抽头数与逻辑步长 |
-| $H_h,Q_h,k_h,\nu_h,g_h,\beta_h$ | [Gated DeltaNet §1—2](../local-semantics/weighted-message/gated-delta-memory-learning-note.md#1-输入参数与状态)：逐头矩阵、查询、key、value、保留门与误差写入门 |
-| $H_h,B_g,C_g,\nu_h,d_h,g_h,D_h$ | [SSD §1—3](../local-semantics/weighted-message/ssd-memory-learning-note.md#1-尺寸状态与时钟)：逐头矩阵、组内写入与读取向量、内容、有效步长、保留门与直通系数 |
+| $H_a,Z_a,W_a,s$ | [基础循环 §1](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md#1-状态与逻辑时间)：两种时间尺度的矩阵、摘要、写入量与保存时间 |
+| $(A,B),\circledast$ | [基础循环 §4.1](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md#41-仿射复合)：矩阵变换 $H\mapsto HA+B$ 的系数对与先后复合；各循环模块分别给出系数 |
+| $\mathcal B,\operatorname{Conv},\operatorname{ConvWrite},L_{\mathrm{conv}},\delta_{\mathrm{conv}}$ | [短卷积 §1](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#1-时间槽与保存内容)：缓存、读取、写入、抽头数与逻辑步长 |
+| $H_h,Q_h,k_h,\nu_h,g_h,\beta_h$ | [Gated DeltaNet §1—2](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md#1-输入参数与状态)：逐头矩阵、查询、key、value、保留门与误差写入门 |
+| $H_h,B_g,C_g,\nu_h,d_h,g_h,D_h$ | [SSD §1—3](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md#1-尺寸状态与时钟)：逐头矩阵、组内写入与读取向量、内容、有效步长、保留门与直通系数 |
 | $\operatorname{Mix},R,\operatorname{Mem}$ | 两份完整循环教材 §3：记忆内容混合、矩阵查询及区域描述；记忆门与发送增益 $\gamma_v$、控制 $c_v$ 分别定义 |
 | $\pi_{\mathrm{KV}},\pi_{\mathrm{rec}},\pi_{\mathrm{gdn}},\pi_{\mathrm{ssd}}$ | 各记忆教材的有效状态投影，用于数值性质比较；后两者还包括 $\pi_{\mathrm{conv}}$ |
 | $\operatorname{EmitValue},\Delta,\operatorname{ReadOut}$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：载荷、广播与有限输出读出 |

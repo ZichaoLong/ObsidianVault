@@ -95,7 +95,7 @@ Attention logit、SSM 状态谱/范数、低精度溢出、优化器和梯度尺
 
 ### 6.1 循环记忆与异构区域
 
-[循环记忆教材](../../local-semantics/weighted-message/recurrent-memory-learning-note.md)给出 affine／delta 的完整状态、更新、描述、Full、空档与弱接收规则，并证明有限时间状态条件和仿射复合。它们可与 KV 按区域组合；状态压缩、读写延迟和转移矩阵乘积仍有自己的学习取舍。
+[基础循环教材](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)给出 affine／delta 的完整状态、更新、描述、Full、空档与弱接收规则，并证明有限时间状态条件和仿射复合。它们可与 KV 按区域组合；状态压缩、读写延迟和转移矩阵乘积仍有自己的学习取舍。
 
 后续扩展其他循环模块时，沿同样的对象检查：弱接收不能隐式触发固定幅度的遗忘或重置；空档使用什么时钟；控制和状态是否相互依赖；精确联合求值是否仍有已知系数。已有模块的数学结论只覆盖其声明函数。
 
