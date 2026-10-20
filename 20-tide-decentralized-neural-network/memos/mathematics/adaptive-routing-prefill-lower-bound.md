@@ -13,1158 +13,205 @@ tags:
 
 # 自适应路由的查询轮数下界
 
-> [!summary] 本页定位
-> 本页研究一个精确的计算问题：若下一次函数求值的地址由前一次结果决定，怎样限制算法用并行猜测缩短等待的能力？正文先定义黑盒查询模型，再证明接近实际路径工作量的算法具有线性的最坏情况查询轮数。最后用分层图解释该问题，并列出将下界用于具体 Tide 模型时仍需证明的条件。
+本文研究由前一次结果决定下一次求值地址的黑盒函数链。在查询预算受限且地址空间足够大时，任何对所有函数链精确正确的确定性算法，都有需要逐步查询的最坏情况。下面给出计算模型、证明及其应用条件。
 
-> [!note] 与教材的关系
-> 本页保留自足的查询模型与证明，历史版本见 Git `133d638` 的同名旧文。当前 [chunk 教材](../../timed-dag-chunk-prefill-learning-note.md) 研究固定图和声明 batch 接口下的节点级时间批；这里研究黑盒链的总查询深度。二者量化对象和复杂度指标不同，不可直接互相替代。具体 selector 必须给出 oracle embedding 才能应用下界。
+[分块教材](../../timed-dag-chunk-prefill-learning-note.md)讨论固定语义和联合契约下的节点批数；本页计量获取黑盒函数值的查询量与自适应轮数。将结论用于某个 Tide 函数族，需要给出保持观察和成本的具体归约。
 
-> [!warning] 结论强度
-> “早期 token 可以影响后续 routing”本身不足以推出不可能性。若影响可表示为 prefix sum、affine scan、有限且紧凑的函数复合，仍可能并行。本页下界依赖四个明确条件：exactness、自适应地址依赖、黑盒 transition、以及不枚举整个 routing state space 的 work budget。
+## 1. 可组合递推与地址依赖
 
-> [!important] 本页的对象边界
-> 本页中的 $t$ 是自适应路由链的步骤索引，$q_t$ 是路由状态或地址。第 8 节将每个查询位置 $(t,q)$ 编成一个分层图顶点；该图随链长增长，并非已经给出了一个固定 Tide 空间图的时间展开。查询轮数、图的深度和固定节点的 Full 批数是三个不同指标。
+前一步影响后一步，仍可能具有可并行组合的结构。例如
 
-## 0. 结论概览
-
-本页证明的核心结论是：
-
-> 对必须正确处理所有长度为 $L$ 的黑盒路由链的算法，若状态空间足够大而查询预算受限，就存在一种 oracle，使每一轮至多揭示一个新的必要路由步骤。因此最坏情况至少需要 $L$ 轮，无法对全部实例保证 $o(L)$ 的查询深度。这不声称每个具体实例都需要 $L$ 轮。
-
-以下依赖形状说明它为何与路由有关；是否满足黑盒模型，还须按第 9 节检查：
-
-```text
-较早输入位置的晚期控制结果
--> 决定后续 token 应访问哪个 node
--> 该 node 的输出再决定更后续 token 的 node
--> 路由地址只能随执行逐步揭示
-```
-
-证明路线为：
-
-```text
-反例：跨 token 影响不必然串行
--> 定义任意 routing transition
--> 定义 parallel query round
--> 定义 exactness、work 与 adaptive depth
--> 证明 fresh-address lemma
--> 证明一轮至多推进一个未知路由
--> 得到 Omega(L) adaptive-depth 下界
--> 用出度一的分层图表示，再检查具体模型的归约
-```
-
-## 1. 为什么“跨 Token 影响”还不足以证否
-
-这一节先给出两个正例，说明必须把待证明命题收紧到“自适应地址依赖”，而不能只写“前序 token 影响后序 token”。
-
-本页所说的 `parallel prefix scan` 指：给定满足结合律的二元运算 $\otimes$ 和序列 $(a_0,\ldots,a_{L-1})$，用平衡树式组合同时计算所有前缀：
-
-$$
-a_0,
-\quad
-a_0\otimes a_1,
-\quad\ldots,\quad
-a_0\otimes\cdots\otimes a_{L-1}.
-$$
-
-结合律保证不同括号顺序得到相同结果，因此不必严格按从左到右的顺序逐项计算。
-
-### 例 1.1：前缀异或
-
-令：
-
-$$
-q_0=0
-$$
-
-并对 $t=0,1,\ldots,L-1$ 定义：
-
-$$
-q_{t+1}=q_t\mathbin{\mathrm{xor}}b_t,
-$$
-
-其中 $b_t\in\{0,1\}$。这里 $\mathrm{xor}$ 表示二进制异或：两个输入不同时结果为 $1$，相同时结果为 $0$。
-
-每个 $q_{t+1}$ 都依赖 $q_t$，但 `xor` 满足结合律：
-
-$$
-(a\mathbin{\mathrm{xor}}b)\mathbin{\mathrm{xor}}c
-=
-a\mathbin{\mathrm{xor}}(b\mathbin{\mathrm{xor}}c).
-$$
-
-因此全部 prefix values 可以通过 parallel prefix scan 计算。这里存在跨 token 依赖，却不存在本页要证明的不可并行性。
-
-### 例 1.2：仿射 recurrence
-
-令 routing state 属于实数向量空间，并定义：
-
-$$
-q_{t+1}=A_tq_t+b_t.
-$$
-
-把单步 transition 表示成 pair $(A_t,b_t)$，定义组合：
-
-$$
-(A_2,b_2)\otimes(A_1,b_1)
-=
-(A_2A_1,A_2b_1+b_2).
-$$
-
-这个组合满足结合律，所以同样可以 scan。Mamba/SSM 的部分高性能 prefill 路线属于这一类结构化 recurrence。
-
-### 本页真正研究的问题
-
-本页研究的不是一般 recurrence，而是：
-
-> 下一次 transition 应该在哪个 routing address 上执行，只有前一次 transition 返回后才能知道；transition family 又不承诺任何可供 scan 或 bulk composition 使用的代数结构。
-
-这种计算通常称为 `pointer chasing`。本页不预设读者了解该术语，后续将从集合、函数和查询开始完整定义。
-
-## 2. 基础记号
-
-### 定义 2.1：自然数与有限下标集
-
-定义：
-
-$$
-\mathbb N=\{0,1,2,\ldots\}.
-$$
-
-定义正整数集合：
-
-$$
-\mathbb N_{>0}=\{1,2,3,\ldots\}.
-$$
-
-记非负实数集合为：
-
-$$
-\mathbb R_{\geq0}=\{x\in\mathbb R\mid x\geq0\}.
-$$
-
-对任意 $L\in\mathbb N$，定义：
-
-$$
-[L]=\{0,1,\ldots,L-1\}.
-$$
-
-若 $L=0$，则 $[L]=\varnothing$。
-
-### 定义 2.2：有限序列
-
-给定集合 $A$ 与长度 $L\in\mathbb N$，一个长度为 $L$ 的 $A$-值序列是函数：
-
-$$
-a:[L]\to A.
-$$
-
-记：
-
-$$
-a_t=a(t),
-$$
-
-并写成：
-
-$$
-a_{0:L}=(a_0,a_1,\ldots,a_{L-1}).
-$$
-
-### 定义 2.3：二进制对数
-
-对任意实数 $x>0$，$\log_2x$ 表示以 $2$ 为底的对数。本页写 $\log x$ 时均指 $\log_2x$。
-
-### 定义 2.4：渐近上界 $O$
-
-设 $f,g:\mathbb N\to\mathbb R_{\geq 0}$。若存在常数 $c>0$ 和 $L_0\in\mathbb N$，使对所有 $L\geq L_0$：
-
-$$
-f(L)\leq c g(L),
-$$
-
-则记：
-
-$$
-f(L)=O(g(L)).
-$$
-
-### 定义 2.5：渐近下界 $\Omega$
-
-设 $f,g:\mathbb N\to\mathbb R_{\geq 0}$。若存在常数 $c>0$ 和 $L_0\in\mathbb N$，使对所有 $L\geq L_0$：
-
-$$
-f(L)\geq c g(L),
-$$
-
-则记：
-
-$$
-f(L)=\Omega(g(L)).
-$$
-
-### 定义 2.6：严格次线性 $o(L)$
-
-设 $f:\mathbb N\to\mathbb R_{\geq 0}$。若：
-
-$$
-\lim_{L\to\infty}\frac{f(L)}{L}=0,
-$$
-
-则记：
-
-$$
-f(L)=o(L).
-$$
-
-直观上，$f(L)=o(L)$ 表示 $f$ 的增长速度严格慢于线性增长。
-
-### 定义 2.7：Polylog 因子
-
-若存在常数 $c>0$ 与整数 $k\in\mathbb N$，使：
-
-$$
-f(L)\leq c\bigl(\log(L+2)\bigr)^k,
-$$
-
-则称 $f(L)$ 至多是一个 polylogarithmic factor，简称 `polylog factor`。
-
-式中使用 $L+2$，只是为了让 $L=0$ 或 $L=1$ 时对数仍有定义且为正数。
-
-### 定义 2.8：有向图、路径与 DAG
-
-一个有限有向图是 pair：
-
-$$
-G=(V,E),
-$$
-
-其中 $V$ 是有限节点集合，$E\subseteq V\times V$ 是有向边集合。
-
-若：
-
-$$
-(v_i,v_{i+1})\in E,
-\qquad 0\leq i<m,
-$$
-
-则节点序列：
-
-$$
-(v_0,v_1,\ldots,v_m)
-$$
-
-称为一条有向路径。
-
-若一条非空路径从某节点出发并回到同一节点，则称它包含一个有向环。没有任何有向环的有限有向图称为有向无环图，英文为 `directed acyclic graph`，简称 `DAG`。
-
-节点 $v$ 的出度是从 $v$ 出发的有向边数量：
-
-$$
-\operatorname{outdeg}(v)
-=
-|\{u\in V\mid(v,u)\in E\}|.
-$$
-
-## 3. 自适应路由链
-
-### 定义 3.1：Routing state space
-
-给定整数 $N\in\mathbb N_{>0}$，定义 routing state space：
-
-$$
-\Omega_N=\{0,1,\ldots,N-1\}.
-$$
-
-一个元素 $q\in\Omega_N$ 可以表示：
-
-- 下一次应实例化控制事件的空间节点地址。
-- 下一个应读取的 memory address。
-- selector 选择的 branch id。
-- 下一次 local kernel 应处理的 routing state。
-
-### 定义 3.2：Routing oracle
-
-一个 routing oracle 是函数：
-
-$$
-F:\Omega_N\to\Omega_N.
-$$
-
-称它为 `oracle`，表示算法不能直接读取整个函数表或假定它具有线性、仿射、结合律等内部结构。算法只能选择一个输入 $q\in\Omega_N$，获得对应的函数值 $F(q)$。
-
-这只是一个明确的黑盒计算模型，不表示实际 Tide kernel 必须由外部服务实现。实际 node/kernel 只要在所研究的抽象层上被视为“必须执行后才知道输出”，就可以用 oracle query 表示。
-
-### 定义 3.3：长度为 $L$ 的 routing oracle family
-
-给定 $L\in\mathbb N_{>0}$，一个长度为 $L$ 的 routing oracle family 是函数序列：
-
-$$
-F_{0:L}=(F_0,F_1,\ldots,F_{L-1}),
-$$
-
-其中每个：
-
-$$
-F_t:\Omega_N\to\Omega_N.
-$$
-
-每个 $F_t$ 在一次问题实例中是固定的函数。已固定的输入值或参数可以吸收到其定义；若转移还读取随执行变化的记忆，就须把有关记忆编码进 routing state，或另证这种依赖确实能归约到这里的函数族，不能仅凭改名消去依赖。这里 $t$ 首先是路由链步骤索引；只有在第 9 节把每一步与一个输入位置的控制决策对齐时，它才同时对应输入位置。
-
-### 定义 3.4：Reference route chain
-
-给定初始 routing state：
-
-$$
-q_0\in\Omega_N,
-$$
-
-递归定义：
-
-$$
-q_{t+1}=F_t(q_t),
-\qquad t\in[L].
-\tag{AR-1}
-$$
-^eq-adaptive-routing-chain
-
-称：
-
-$$
-q_{0:L+1}=(q_0,q_1,\ldots,q_L)
-$$
-
-为由 $(F_{0:L},q_0)$ 生成的 reference route chain。
-
-### 定义 3.5：可观察结果
-
-本页把最终 routing state $q_L$ 作为计算的可观察结果。也就是说，算法必须输出 $q_L$ 本身，而不是只输出某个无法区分不同 routing states 的常量。
-
-在 Tide 中，这一条件可以通过以下任一方式满足：
-
-- $q_L$ 决定最终 output node。
-- $q_L$ 决定输出 logits。
-- $q_L$ 属于 semantic contract 要求保持的最终 persistent state。
-- 两个不同的 $q_L$ 会导致后续合法输入上的可观察行为不同。
-
-更一般地，若实际模型只观察函数：
-
-$$
-\alpha:\Omega_N\to Z,
-$$
-
-并且只要求算法输出 $\alpha(q_L)$，那么本页证明需要保证最终构造的 $a,b$ 满足：
-
-$$
-\alpha(a)\neq\alpha(b).
-$$
-
-若 $\alpha$ 把所有 routing states 都映射到同一个结果，本页下界不适用于这个被弱化后的观察问题。
-
-### 例 3.6：地址追逐
-
-若 $q_t$ 表示当前 node address，而 node $q_t$ 的 local selector 返回下一个 node address：
-
-$$
-q_{t+1}=F_t(q_t),
-$$
-
-顺序参考算法沿着实际选中的 addresses 逐步前进。这就是后文所谓 pointer chasing。其他算法能否通过猜测或额外结构跳过等待，仍是需要证明的问题。
-
-## 4. Parallel Query Algorithm
-
-这一节定义“算法可以并行做什么”。
-
-### 定义 4.1：Oracle query
-
-一个 oracle query 是 pair：
-
-$$
-(t,q)\in[L]\times\Omega_N.
-$$
-
-它的返回值定义为：
-
-$$
-\operatorname{Ans}(t,q)=F_t(q).
-$$
-
-一次 query 对应一次实际 local transition evaluation、一次 node routing evaluation，或者对 routing table 中一个地址的读取。
-
-### 定义 4.2：Parallel query round
-
-第 $r$ 个 parallel query round 由一个有限 query set：
-
-$$
-B_r\subseteq[L]\times\Omega_N
-$$
-
-组成。
-
-该轮中所有 queries 同时提交；算法只有在整个 $B_r$ 的答案返回后，才能根据这些答案构造下一轮 $B_{r+1}$。
-
-因此，同一轮中的 query 不能依赖该轮中另一个 query 的返回值。
-
-### 定义 4.3：Deterministic parallel query algorithm
-
-一个 deterministic parallel query algorithm $\mathcal A$ 按以下规则工作：
-
-1. 在第 $0$ 轮开始前，只知道 $L,N,q_0$ 与算法自身代码。
-2. $B_0$ 只能由 $L,N,q_0$ 决定。
-3. 对 $r\geq1$，$B_r$ 可以由 $L,N,q_0$ 和前 $r$ 轮的全部 queries 与 answers 决定。
-4. 执行有限轮后，算法输出某个 $\widehat q_L\in\Omega_N$。
-
-算法是 deterministic，表示相同的已知信息总会产生相同的下一轮 queries 和相同输出。
-
-### 定义 4.4：Query transcript
-
-算法执行到某一轮后，所有已经提交的 queries 及其 answers 的有序记录称为 query transcript。
-
-两个 oracle families 若对 transcript 中出现的所有 queries 都给出相同答案，则算法到当前时刻无法区分这两个 oracle families。
-
-### 定义 4.5：Exactness
-
-若对任意 oracle family $F_{0:L}$ 与任意初始状态 $q_0\in\Omega_N$，算法输出均满足：
-
-$$
-\widehat q_L=q_L,
-$$
-
-其中 $q_L$ 由式 [[#^eq-adaptive-routing-chain|AR-1]] 定义，则称算法对长度 $L$ 的自适应路由链是 exact 的。
-
-### 定义 4.6：Query work
-
-若算法执行 $R$ 个 parallel query rounds，定义总 query work：
-
-$$
-Q_{\mathcal A}(F_{0:L},q_0)
-=
-\sum_{r=0}^{R-1}|B_r|.
-\tag{AR-2}
 $$
-^eq-query-work
-
-重复提交同一个 query 仍计入 work。一个最保守的算法只沿实际 route chain 查询：
-
-$$
-(0,q_0),(1,q_1),\ldots,(L-1,q_{L-1}),
-$$
-
-其 query work 为 $L$。
-
-本页只用 query work 建立下界，没有把普通算术、memory movement 或调度开销计入 $Q_{\mathcal A}$。把这些额外成本加入总 work 只会使算法更昂贵，不会削弱后面的 query lower bound。
-
-### 定义 4.7：Adaptive depth
-
-算法从开始到输出经历的 parallel query round 数量称为 adaptive depth，记为：
-
-$$
-R_{\mathcal A}(F_{0:L},q_0).
-$$
-
-这个量只计算“必须等待上一批答案后才能决定下一批 queries”的轮数，不计算同一轮内部有多少 queries。
-
-后文省略实例自变量时，统一使用**最坏情况**记号：
-
-$$
-Q_{\mathcal A}=\max_{F_{0:L},q_0}Q_{\mathcal A}(F_{0:L},q_0),
-\qquad
-R_{\mathcal A}=\max_{F_{0:L},q_0}R_{\mathcal A}(F_{0:L},q_0).
-$$
-
-固定有限 $L,N$ 后，函数族与初态的可能取值有限；算法按定义在每个实例上停止，所以上述最大值存在。工作量最大值与轮数最大值可以由不同实例取得。下界 $R_{\mathcal A}\ge L$ 表示至少存在一个需要 $L$ 轮的实例。
-
-### 定义 4.8：Parallel query algorithm scheme
-
-一个 parallel query algorithm scheme 是一族算法：
-
-$$
-\mathfrak A
-=
-(\mathcal A_{L,N})_{L\geq1,N\geq1},
-$$
-
-其中 $\mathcal A_{L,N}$ 处理长度为 $L$、routing state space size 为 $N$ 的实例。
-
-若每个 $\mathcal A_{L,N}$ 都满足定义 4.5 的 exactness，则称 algorithm scheme $\mathfrak A$ 是 exact 的。
-
-### 定义 4.9：Work-efficient algorithm scheme
-
-若存在常数 $c>0$、$k\in\mathbb N$ 与 $L_0\in\mathbb N$，使对所有 $L\geq L_0$ 和所有 $N\geq1$：
-
-$$
-Q_{\mathcal A_{L,N}}
-\leq
-cL\bigl(\log(L+2)\bigr)^k,
-\tag{AR-3}
-$$
-^eq-work-efficient
-
-则称 $\mathfrak A$ 相对于长度为 $L$ 的 reference route chain 是 work-efficient 的。
-
-这里的上界对 $N$ 一致成立。这个定义允许相对于 reference route chain 的 polylog overhead，但不允许为了避免自适应等待而枚举一个远大于实际 route chain 的 routing state space。
-
-### 定义 4.10：Token-axis high-performance prefill
-
-若 algorithm scheme $\mathfrak A$ exact、work-efficient，并且存在函数 $r:\mathbb N\to\mathbb R_{\geq0}$ 满足：
-
-$$
-r(L)=o(L),
-\tag{AR-4}
-$$
-^eq-high-performance-prefill
-
-且对所有 $L,N\geq1$：
-
+q_{t+1}=q_t\mathbin{\mathrm{xor}}b_t
 $$
-R_{\mathcal A_{L,N}}\leq r(L),
-$$
-
-则称 $\mathfrak A$ 在本页模型中具有 token-axis high-performance prefill。
-
-这是一个数学上的必要性能区分，不是完整的硬件性能模型。实际时间还受 kernel work、memory bandwidth、communication 与设备利用率影响。
-
-## 5. 两个初等引理
-
-### 引理 5.1：Fresh address lemma
-
-设 $U\subseteq\Omega_N$，且：
-
-$$
-|U|\leq N-1.
-$$
-
-则存在 $q\in\Omega_N$，使：
-
-$$
-q\notin U.
-$$
-
-**证明。**
-
-集合 $\Omega_N$ 有 $N$ 个元素，而 $U$ 至多有 $N-1$ 个元素。因此 $U$ 不可能包含 $\Omega_N$ 的全部元素，至少有一个 $q\in\Omega_N$ 不属于 $U$。
-
-∎
-
-### 引理 5.2：两个 fresh addresses
-
-设 $U\subseteq\Omega_N$，且：
-
-$$
-|U|\leq N-2.
-$$
-
-则存在两个不同的 $a,b\in\Omega_N$，使：
-
-$$
-a\notin U,
-\qquad
-b\notin U,
-\qquad
-a\neq b.
-$$
 
-**证明。**
+的全部状态是异或前缀。对结合运算 $\otimes$，前缀扫描同时计算 $a_0,a_0\otimes a_1,\ldots$，平衡树括号可降低依赖深度。另一个例子是输入已确定系数的仿射递推
 
-补集 $\Omega_N\setminus U$ 至少包含：
-
 $$
-N-(N-2)=2
+q_{t+1}=A_tq_t+b_t,\qquad
+(A_2,b_2)\otimes(A_1,b_1)=(A_2A_1,A_2b_1+b_2).
 $$
-
-个元素。从中选取两个不同元素，分别记为 $a,b$，结论成立。
-
-∎
 
-## 6. 自适应路由链下界
+此组合满足结合律，摘要的构造、复合和应用成本另行计量。
 
-### 定理 6.1：Exact adaptive routing lower bound
+本文研究任意函数 $F_t$。算法通过查询获得 $F_t(q)$；下一实际地址为该返回值，函数族没有额外提供可直接复合的摘要。这类地址追逐通常称为 pointer chasing。
 
-给定：
+## 2. 黑盒链与查询算法
 
-- 长度 $L\in\mathbb N_{>0}$。
-- Query budget $Q\in\mathbb N$。
-- Routing state space size $N\in\mathbb N_{>0}$。
-- 一个 deterministic parallel query algorithm $\mathcal A$。
+### 2.1 问题实例
 
-假设：
+取正整数链长 $L$、地址数 $N$，记 $[L]=\{0,\ldots,L-1\}$、$\Omega_N=\{0,\ldots,N-1\}$。给定初始地址 $q_0\in\Omega_N$ 和任意函数族
 
-1. $\mathcal A$ 对所有 routing oracle families $F_{0:L}$ 都是 exact 的。
-2. $\mathcal A$ 在任意 oracle family 上的总 query work 都不超过 $Q$。
-3. Routing state space 满足：
-
 $$
-N\geq Q+L+2.
-\tag{AR-5}
+F_t:\Omega_N\to\Omega_N,\qquad t\in[L],
 $$
-^eq-domain-size-condition
 
-那么：
+参考链为
 
 $$
-R_{\mathcal A}\geq L.
-\tag{AR-6}
+q_{t+1}=F_t(q_t),\qquad t\in[L].
+\tag{1}
 $$
-^eq-adaptive-depth-lower-bound
-
-即在这些明确的预算和状态空间条件下，任意 exact 算法都存在至少需要 $L$ 轮的实例。
 
-**证明。**
+任务是输出 $q_L$。每个 $F_t$ 在一次实例中固定。若实际转移还读取变化的记忆，应用本模型时须把相关记忆纳入地址状态，或另证归约。
 
-证明使用一种逐轮构造 oracle answers 的方法。这里的“构造者”只是数学证明中的选择规则，不是实际系统中的攻击者。若同一个 query 被重复提交，构造始终返回第一次已经选定的相同 answer，从而保证全部 answers 最终可以补全为真正的函数。
+### 2.2 一轮查询
 
-开始时，$q_0$ 已知。称 chain prefix：
+一次查询为 $(t,q)$，返回 $F_t(q)$。确定性算法起初只知道 $L,N,q_0$ 和自身代码。第 $r$ 轮同时提交有限查询集
 
 $$
-q_0,q_1,\ldots,q_k
+B_r\subseteq[L]\times\Omega_N.
 $$
 
-已经揭示，表示对所有 $0\leq t<k$，query：
-
-$$
-(t,q_t)
-$$
+该轮全部地址只由此前各轮的查询和答案确定；取得本轮答案后才能选择下一轮。查询及答案的有序记录称为查询记录。两个函数族在记录中的答案相同，算法到此时就具有相同已知信息。
 
-已经返回，并且其答案满足：
+算法在每个实例上有限轮停止。若对所有函数族和初始地址都输出式 (1) 的 $q_L$，称其精确。总查询量与查询轮数分别记为
 
 $$
-F_t(q_t)=q_{t+1}.
+Q_{\mathcal A}(F,q_0)=\sum_{r=0}^{R-1}|B_r|,
+\qquad R_{\mathcal A}(F,q_0)=R.
+\tag{2}
 $$
 
-初始时只有 $q_0$ 已知，所以已揭示 prefix 的长度参数为 $k=0$。
+重复查询仍计工作。顺序沿实际链求值需要 $L$ 次查询和 $L$ 轮。普通算术、存储与调度成本暂不计入；增加这些成本保持后文的查询下界。
 
-现在考虑任意一个 parallel query round。算法在看到本轮 answers 之前，必须先一次性提交本轮 query set。
+固定 $L,N$ 后，函数族和初态的可能值有限，定义最坏情况
 
-若本轮没有提交下一项必要 query：
-
 $$
-(k,q_k),
+Q_{\mathcal A}=\max_{F,q_0}Q_{\mathcal A}(F,q_0),\qquad
+R_{\mathcal A}=\max_{F,q_0}R_{\mathcal A}(F,q_0).
 $$
 
-则本轮不能确定 $q_{k+1}$，已揭示 chain prefix 不增长。
+两项最大值可以由不同实例取得。
 
-若本轮提交了 $(k,q_k)$，先考虑 $k<L-1$ 的情形。把算法在当前轮及以前对下一个 oracle $F_{k+1}$ 已经查询过的全部输入地址组成集合 $U$。
+### 2.3 算法族与工作预算
 
-由于算法全部执行期间的总 query work 不超过 $Q$，所以：
+算法族 $\mathfrak A=(\mathcal A_{L,N})_{L,N\ge1}$ 对每个尺寸提供精确算法。若存在常数 $c>0$、整数 $k\ge0$ 和 $L_0$，使
 
 $$
-|U|\leq Q.
+Q_{\mathcal A_{L,N}}\le cL\bigl(\log_2(L+2)\bigr)^k
+\quad(L\ge L_0,\ N\ge1),
+\tag{3}
 $$
 
-已经选定的 chain values 最多为：
+称它相对实际链工作高效。该上界对 $N$ 一致，允许相对 $L$ 次参考查询的多对数开销。
 
-$$
-q_0,q_1,\ldots,q_k,
-$$
+若还存在 $r(L)=o(L)$，对全部 $L,N$ 满足 $R_{\mathcal A_{L,N}}\le r(L)$，则具有一致的次线性查询深度。这里使用通常的渐近记号；设备性能需另计具体算术和通信。
 
-共 $k+1\leq L+1$ 个。把 $U$ 与这些 chain values 的集合并起来，所得集合大小至多：
+## 3. 最坏情况查询轮数
 
-$$
-Q+L+1.
-$$
+**定理。** 固定 $L\ge1$、查询预算 $Q\ge0$ 和 $N\ge Q+L+2$。任意精确确定性算法，若在每个实例上的查询量都不超过 $Q$，则其最坏情况查询轮数至少为 $L$。
 
-由条件 [[#^eq-domain-size-condition|AR-5]] 和引理 5.1，至少存在一个 routing state $q_{k+1}\in\Omega_N$，它既没有作为 $F_{k+1}$ 的已查询输入出现，也不同于此前已选定的 chain values。
+**证明。** 逐轮回答算法，使全部已给答案始终能补成固定函数族。重复查询沿用原答案。设已经揭示的实际链为 $q_0,\ldots,q_k$：查询 $(t,q_t)$ 对所有 $t<k$ 已返回 $q_{t+1}$，下一项 $(k,q_k)$ 尚未回答。初始 $k=0$。
 
-令当前必要 query 的 answer 为：
+算法先提交本轮全部查询。若其中没有 $(k,q_k)$，任选其余未定义答案，前缀不增长。若包含该查询且 $k<L-1$，令 $U$ 为本轮及以前对 $F_{k+1}$ 查询过的地址集合。它至多有 $Q$ 个元素。排除 $U$ 与此前链值后，排除数至多为 $Q+L+1<N$，故可选一个未被排除的地址 $q_{k+1}$，并回答
 
 $$
 F_k(q_k)=q_{k+1}.
 $$
 
-本轮其余首次出现的 queries 可以任意选择 answers；重复 queries 继续使用先前已经固定的 answers。
+本轮其他首次查询任意回答。由于 $(k+1,q_{k+1})$ 不在此前及本轮查询中，前缀恰好只增长一步。若 $k=L-1$，当前查询可返回任意 $q_L$，同样只增长一步。因此 $r$ 轮至多揭示到 $q_r$。
 
-因为算法在提交本轮 queries 时还不知道这个 $q_{k+1}$，而我们又选择它避开了本轮对 $F_{k+1}$ 的所有查询输入，所以 query：
+反设最坏情况少于 $L$ 轮。算法在上述回答下停止时，已揭示的最大下标为 $k<L$，而 $(k,q_k)$ 尚未查询。把所有已查询的输入地址与 $q_0,\ldots,q_k$ 合为集合 $V$，有 $|V|\le Q+L$。由 $N\ge Q+L+2$ 可取不同的 $a,b\notin V$。
 
-$$
-(k+1,q_{k+1})
-$$
-
-不可能已经在本轮或更早轮次得到答案。
-
-因此，即使本轮成功揭示了 $q_{k+1}$，也不能在同一轮继续可靠揭示 $q_{k+2}$。一个 parallel query round 至多把已知 chain prefix 推进一步。
-
-若 $k=L-1$，为 query $(L-1,q_{L-1})$ 选择任意与既有 answers 一致的返回值 $q_L$，其余 queries 仍按前述一致性规则回答。本轮最多揭示这个最终结果，同样只把 chain prefix 推进一步；此时不需要定义不存在的 $F_L$。
-
-由数学归纳法，经过 $r$ 个 parallel query rounds 后，最多能够可靠揭示到 $q_r$。
-
-现在反设：
-
-$$
-R_{\mathcal A}<L.
-$$
-
-这里反设的是最坏情况少于 $L$ 轮，因此算法在上述逐轮回答下也必须在 $L$ 轮以前停止。算法停止时最多揭示到某个 $q_k$，其中 $k<L$。取 $k$ 为已经揭示的最大下标。Query $(k,q_k)$ 不可能已经出现在 transcript 中；否则它的 answer 会确定 $q_{k+1}$，与 $k$ 的最大性矛盾。
-
-设全部 transcript 中作为 query 输入出现过的 routing addresses，以及已经选定的 chain values，共同组成集合 $V$。由 query budget 与 chain 长度：
-
-$$
-|V|\leq Q+L.
-$$
-
-结合条件 $N\geq Q+L+2$ 与引理 5.2，可以选择两个不同的 fresh addresses：
-
-$$
-a,b\in\Omega_N\setminus V.
-$$
-
-构造两个完整 oracle families $\mathcal F^{(a)}$ 和 $\mathcal F^{(b)}$：
-
-- 它们对 transcript 中所有已经出现的 queries 给出完全相同的 answers。
-- 在 family $\mathcal F^{(a)}$ 中，定义 $F_k(q_k)=a$，并对所有 $j>k$ 定义 $F_j(a)=a$。
-- 在 family $\mathcal F^{(b)}$ 中，定义 $F_k(q_k)=b$，并对所有 $j>k$ 定义 $F_j(b)=b$。
-- 所有尚未定义的其他函数值任意补全，使每个 $F_j$ 成为从 $\Omega_N$ 到 $\Omega_N$ 的完整函数。
-
-因为 $a,b$ 从未作为 query 输入出现，上述补全不与 transcript 中的任何 answer 冲突。
-
-算法在两个 oracle families 上看到完全相同的 transcript，所以 deterministic algorithm 必须输出相同的 $\widehat q_L$。
-
-但根据 reference route chain：
-
-$$
-q_L^{(a)}=a,
-$$
-
-$$
-q_L^{(b)}=b,
-$$
-
-而 $a\neq b$。因此同一个输出不可能同时对两个 oracle families 正确，与 exactness 假设矛盾。
-
-所以反设不成立，必有：
-
-$$
-R_{\mathcal A}\geq L.
-$$
-
-∎
-
-## 7. Work-Efficient Prefill 不可能性
-
-### 推论 7.1：不存在通用 work-efficient sublinear-depth prefill
-
-设 $\mathfrak A=(\mathcal A_{L,N})_{L,N\geq1}$ 是一个 deterministic、exact、work-efficient 的 parallel query algorithm scheme。由定义 4.9，存在常数 $c>0$、$k\in\mathbb N$ 与 $L_0\in\mathbb N$，使对所有 $L\geq L_0$ 和所有 $N\geq1$：
-
-$$
-Q_{\mathcal A_{L,N}}
-\leq
-cL\bigl(\log(L+2)\bigr)^k.
-$$
-
-定义整数 query bound：
-
-$$
-Q(L)
-=
-\left\lceil
-cL\bigl(\log(L+2)\bigr)^k
-\right\rceil.
-$$
-
-这里 $\lceil x\rceil$ 表示不小于实数 $x$ 的最小整数。
-
-对每个 $L\geq L_0$，选择 routing state space size：
-
-$$
-N(L)
-=Q(L)+L+2.
-$$
-
-则：
-
-$$
-R_{\mathcal A_{L,N(L)}}\geq L.
-$$
-
-因此，$\mathfrak A$ 不满足定义 4.10 的一致 $o(L)$ adaptive-depth 要求。所以，不存在对所有 routing state sizes 和任意 routing oracle families 都有效的 token-axis high-performance prefill algorithm scheme。
-
-**证明。**
-
-对每个固定 $L\geq L_0$，算法 $\mathcal A_{L,N(L)}$ 的 query work 不超过 $Q(L)$。把：
-
-$$
-Q=Q(L)
-$$
-
-代入定理 6.1，即得：
-
-$$
-R_{\mathcal A_{L,N(L)}}\geq L.
-$$
-
-若 $\mathfrak A$ 满足定义 4.10，则应存在 $r(L)=o(L)$，对所有 $N$ 都有 $R_{\mathcal A_{L,N}}\leq r(L)$。特别地，应有 $R_{\mathcal A_{L,N(L)}}\leq r(L)$。但上式给出 $R_{\mathcal A_{L,N(L)}}\geq L$，所以 $r(L)\geq L$，与 $r(L)=o(L)$ 矛盾。
-
-∎
-
-### 解释 7.2：为什么并行猜测没有推翻定理
-
-算法可以在一轮中猜测很多可能的 $q_{t+1}$，并查询：
-
-$$
-F_{t+1}(0),F_{t+1}(1),\ldots.
-$$
-
-若它查询 $F_{t+1}$ 的全部 $N$ 个输入，就一定覆盖真实的 $q_{t+1}$。随后可以继续枚举更深层候选。
-
-但这需要至少 $N$ 个 queries，违反定理中的 $N>Q+L$ 条件。在 Tide 语境中，这对应：
-
-- 执行所有候选 nodes。
-- 展开所有可能路径。
-- 把超稀疏 route chain 退化为 dense candidate evaluation。
-
-本页不是说枚举在逻辑上不可能，而是说它不属于相对于实际 route chain 的 work-efficient prefill。
-
-## 8. 用出度一的分层图表示查询问题
-
-本节把函数表编码成一张有限分层图。坐标 $t$ 表示路由链步骤，$q$ 表示该步骤查询的地址；顶点 $(t,q)$ 就是这张辅助图的节点。图的大小和深度随 $L$ 增长，所以它本身不证明一个固定 TimedDAG 在增长输入窗口时的节点批次下界。
-
-在下面的嵌入中，读取节点 $(t,q)$ 的唯一出边终点，计为一次 query $(t,q)$。一次性读取所有 nodes 的出边，等价于枚举 routing table，并计入相应 query work。
-
-### 定义 8.1：Layered routing graph
-
-给定 $L,N$ 与 oracle family $F_{0:L}$，定义有向图：
-
-$$
-G_{L,N,F}=(V,E).
-$$
+将同一查询记录分别补全为两份函数族：第一份令 $F_k(q_k)=a$，并令 $F_j(a)=a$ 对所有 $j>k$ 成立；第二份相应使用 $b$。其余未定义值任意补全。新赋值均未出现在查询记录中，因而与已有答案相容。
 
-节点集合为：
+两份实例的查询记录相同，确定性算法输出相同；实际终点却分别为 $a,b$，与精确性矛盾。故最坏情况至少为 $L$ 轮。$\square$
 
-$$
-V=\{(t,q)\mid 0\leq t\leq L,\ q\in\Omega_N\}.
-$$
-
-对每个 $t\in[L]$ 和 $q\in\Omega_N$，加入一条有向边：
-
-$$
-((t,q),(t+1,F_t(q)))\in E.
-$$
-
-因此每个非终止节点的出度恰好为 $1$。
-
-### 定义 8.2：实际访问路径（Active path）
-
-从初始顶点 $(0,q_0)$ 开始，每一步只查询并沿当前顶点的唯一出边前进。由式 [[#^eq-adaptive-routing-chain|AR-1]]，把这条实际访问的顶点序列称为 active path：
-
-$$
-(0,q_0)
-\to
-(1,q_1)
-\to
-\cdots
-\to
-(L,q_L).
-$$
-
-该 path 一共只访问 $L+1$ 个 nodes，尽管完整 Graph 有：
-
-$$
-(L+1)N
-$$
-
-个 nodes。
-
-### 命题 8.3：Routing chain 与 layered graph 等价
-
-计算 reference route chain 的最终状态 $q_L$，等价于确定 layered routing graph 中从 $(0,q_0)$ 出发的唯一 active path 的终点。
-
-**证明。**
-
-由定义 8.1，节点 $(t,q_t)$ 的唯一出边终点为：
-
-$$
-(t+1,F_t(q_t)).
-$$
-
-由式 [[#^eq-adaptive-routing-chain|AR-1]]：
-
-$$
-F_t(q_t)=q_{t+1}.
-$$
-
-所以唯一下一节点为 $(t+1,q_{t+1})$。从 $t=0$ 开始反复应用该结论，得到唯一 active path 的终点为 $(L,q_L)$。
-
-∎
-
-### 推论 8.4：一条稀疏实际路径仍可具有线性查询深度
-
-Layered routing graph 同时满足：
-
-- 每个活跃分层图顶点只沿一条边局部传递控制结果。
-- 每层只有一个分层图顶点位于实际 active path。
-- Reference active path 恰好执行 $L$ 次 routing transitions。
-- 下一个被查询的地址由当前分层图顶点对应的 local transition 决定。
-
-在定理 6.1 的 $N\ge Q+L+2$ 条件下，任意 exact 且查询量不超过 $Q$ 的算法，其最坏情况仍需至少 $L$ 轮。对 work-efficient 算法族，则按推论 7.1 选择相应的 $N(L)$。
-
-因此，出度一和实际只走一条路径，并不能保证低查询深度。这里“局部”仅指沿一条出边传递；各点入度可能随 $N$ 增长，也没有设备上的物理距离保证。
-
-**证明。**
-
-由命题 8.3，确定 Graph 终点等价于计算 $q_L$。对该计算应用定理 6.1，即得 adaptive-depth 下界。
-
-∎
-
-## 9. 较早输入位置的晚期控制结果与交错控制路径
-
-### 定义 9.1：Control event 与跨输入位置自适应依赖
-
-若一次已经实例化的参考事件，其事件值决定某个未来事件是否存在、位于哪个空间节点、选择哪条空间边，或者调用哪个 branch/kernel，则称该参考事件为 control event。这里决定“位于哪个空间节点”是决定未来事件的位置，不是创建、删除或修改静态空间节点。
-
-对每个输入位置 $t$，设 $c_t$ 是与该位置对齐的 routing control event。若 $c_t$ 的输出决定输入位置 $t+1$ 的某个 routing address，并且该 address 在 $c_t$ 完成前未知，则记：
+**推论。** 满足式 (3) 的精确确定性算法族没有一致的次线性查询深度。
 
-$$
-c_t\rightsquigarrow c_{t+1}.
-$$
-
-符号 $\rightsquigarrow$ 在本页专门表示这种“下一 control query address 由前一 control result 决定”的自适应依赖，而不只是普通数值依赖。
-
-### 定义 9.2：绝对逻辑时间中的交错
-
-对一组 control events，绝对逻辑时间是函数：
-
-$$
-\theta:\{c_0,c_1,\ldots,c_{L-1}\}\to\mathbb N.
-$$
-
-若：
-
-$$
-c_t\rightsquigarrow c_{t+1},
-$$
-
-则要求：
-
-$$
-\theta(c_t)<\theta(c_{t+1}).
-$$
-
-这里的 $\theta$ 就是统一逻辑时间，不是另一套内部时钟。其他事件可以具有介于 $\theta(c_t)$ 与 $\theta(c_{t+1})$ 之间的时间，也可以与某个 $c_t$ 同刻但没有依赖。这里的“交错”表示其他事件可以穿插出现；必要的控制结果仍有上述严格逻辑先后。
-
-### 定义 9.3：Oracle-complete 交错控制链
-
-若存在 control events：
-
-$$
-c_0,c_1,\ldots,c_{L-1},
-$$
-
-满足：
-
-$$
-c_0\rightsquigarrow c_1
-\rightsquigarrow\cdots
-\rightsquigarrow c_{L-1},
-$$
+**证明。** 对充分大的 $L$ 取
 
-并且对任意 $N$ 与任意 routing oracle family $F_{0:L}$，都可以选择该模型的合法参数和初始状态，使：
-
 $$
-q_{t+1}=F_t(q_t),
+Q(L)=\left\lceil cL\bigl(\log_2(L+2)\bigr)^k\right\rceil,
+\qquad N(L)=Q(L)+L+2.
 $$
-
-且执行方获得任意函数值 $F_t(q)$ 的唯一允许方式，是实际执行并计数一次对应 control evaluation，则称该模型类别允许长度为 $L$ 的 oracle-complete 交错控制链。
-
-最后一个条件排除了执行方免费读取 transition 的完整符号表达或完整函数表；它把可用信息严格限制为第 4 节定义的 oracle queries。在该查询模型下，这条链没有额外暴露可供 scan 或 bulk composition 使用的 summary。
-
-此外，要求这些 control events 具有定义 9.2 的严格递增逻辑时间。可以存在其他并行事件，但它们不能在查询接口之外额外暴露 oracle 的信息。
-
-本节的 work-efficient 仍沿用定义 4.9：相对于 $L$ 次参考查询，所有获取 oracle 值的查询至多增加 polylog 因子。若要改成“相对于整个 Tide 参考执行的总工作量高效”，还必须证明相应的成本归约；例如整个嵌入实例的参考成本也是对 $N$ 一致的 $O(L\,\mathrm{polylog}(L))$，且目标实现的总成本控制住了查询量。仅仅在一个本来就做大量额外工作的图中找到这条链，不能得到这个更强结论。
 
-### 推论 9.4：交错控制传播下界
+定理给出 $R_{\mathcal A_{L,N(L)}}\ge L$，与任何一致的 $o(L)$ 上界矛盾。$\square$
 
-若一个 Tide-like 模型类别对任意 $L$ 都允许定义 9.3 的 oracle-complete 交错控制链，且最终 route state 满足定义 3.5 的可观察条件，那么该模型类别不存在对所有实例均有效、同时满足本页 exactness、查询工作量上界与 $o(L)$ 查询深度的算法。
+定理允许算法并行猜测地址。查询某个 $F_t$ 的全部 $N$ 个地址能覆盖真实地址，但在定理的尺寸条件下已经超过预算。结论是一个带预算的最坏情况结论。
 
-**证明。**
+## 4. 分层图表示与不同复杂度指标
 
-根据定义 9.3，该模型类别可以实现定理 6.1 中任意 routing oracle family，并且每次获得 $F_t(q)$ 都计为一次 query。若存在题设中的 chunk prefill algorithm，把它应用于这些实例，就得到一个违反推论 7.1 的 adaptive routing algorithm scheme，矛盾。
+### 4.1 用图表示函数表
 
-∎
+对式 (1) 构造有限图
 
-### 定义 9.5：Weighted execution DAG 与 critical-path span
-
-设：
-
-$$
-\mathcal D=(\mathcal E,\mathcal A)
-$$
-
-是一个有限 DAG，其中 $\mathcal E$ 是 event 集合，$\mathcal A\subseteq\mathcal E\times\mathcal E$ 是 dependency edge 集合。
-
-给每个 event $e\in\mathcal E$ 指定正执行成本：
-
 $$
-w(e)>0.
+V=\{(t,q):0\le t\le L,\ q\in\Omega_N\},\qquad
+E=\{((t,q),(t+1,F_t(q))):t<L,\ q\in\Omega_N\}.
+\tag{4}
 $$
 
-对任意有向路径：
+每个非终端节点出度为 $1$。从 $(0,q_0)$ 沿唯一出边前进，逐步得到 $(t,q_t)$，最后到达 $(L,q_L)$。所以确定该路径终点等价于求黑盒链终点。
 
-$$
-\pi=(e_0,e_1,\ldots,e_m),
-$$
+应用查询下界时，读取节点 $(t,q)$ 的出边终点计为一次查询；函数表及完整图结构均通过该接口获得。完整图有 $(L+1)N$ 个节点，实际路径只访问 $L+1$ 个。该表示说明，实际路径稀疏仍可需要线性查询轮数；其节点入度没有统一常数上界。
 
-定义路径总成本：
+图的大小与深度随 $L$ 增长。若目标是固定 Tide 空间图上、随输入窗口增长的某项下界，还须给出保持该目标指标的归约。
 
-$$
-w(\pi)=\sum_{i=0}^{m}w(e_i).
-$$
+### 4.2 执行依赖的跨度
 
-定义 critical-path span：
+给有限作用 DAG $\mathcal D$ 的每个作用 $e$ 正成本 $w(e)$，定义
 
 $$
 \operatorname{Span}(\mathcal D)
-=
-\max_{\pi}w(\pi),
+ =\max_{\pi\text{ 为有向路径}}\sum_{e\in\pi}w(e),
 $$
 
-其中最大值取遍 $\mathcal D$ 中全部有向路径；空事件图的 span 约定为 $0$。即使有无限多处理器，任何保持这些 dependencies 的执行时间也不能小于 $\operatorname{Span}(\mathcal D)$。
+空图取零。任何保持这些依赖的执行，其完成时间至少为该跨度。
 
-### 推论 9.6：内部传播路径的额外 span
+例如 $L\ge2$ 个控制作用 $c_0,\ldots,c_{L-1}$ 依次位于同一路径上，若每段从 $c_t$ 之后到包含 $c_{t+1}$ 的成本至少为 $\lambda>0$，则跨度至少为 $\lambda(L-1)$。证明只需将这 $L-1$ 个互不重叠的路径段相加。
 
-设 $L\geq2$。假设 execution DAG 中存在一条依次经过：
+| 指标 | 计量对象 |
+|---|---|
+| 查询量 $Q$ | 获得了多少黑盒函数值 |
+| 查询轮数 $R$ | 后续查询地址依赖此前答案的轮数 |
+| 执行跨度 | 已声明作用依赖上的最长加权路径 |
+| 节点 Full 批数 | 固定契约与策略下，每节点调用多少次 Full 联合函数 |
+| 设备时间 | 具体算术、存储、通信和利用率 |
 
-$$
-c_0,c_1,\ldots,c_{L-1}
-$$
+更多独立作用可提高吞吐量，必要的查询链仍受第 3 节约束。控制计算具有线性跨度与某节点 Full 仅调用一批可以同时成立。
 
-的有向路径。再假设对每个 $0\leq t<L-1$，从紧接 $c_t$ 之后到包含 $c_{t+1}$ 为止的 path segment 总执行成本至少为 $\lambda>0$。
+## 5. 应用于 Tide 的条件
 
-则整个 execution 的 critical-path span 至少为：
+把某次已发生作用的结果用于决定未来作用的地址或存在性时，可称其为控制结果。若后续查询地址必须由前一控制结果确定，写作 $c_t\rightsquigarrow c_{t+1}$。这里 $t$ 是链步骤；应用于输入位置时须另外给出对应。这些控制作用通过消息链相连时，正时延使相应逻辑时间严格递增。
 
-$$
-\lambda(L-1).
-$$
+要将第 3 节下界用于一个 Tide 模型类别，须给出以下归约：
 
-**证明。**
+1. 对所需的 $L,N$ 和任意黑盒函数族，选择合法模型参数、状态及输入，实现式 (1) 的链。
+2. 求得任意 $F_t(q)$ 都对应一个计入预算的查询；模型没有在查询以外免费暴露函数表、符号表达或组合摘要。
+3. 要保持的观察能区分最终构造的两个地址。若只观察 $\alpha(q_L)$，须保证证明中的 $a,b$ 有 $\alpha(a)\ne\alpha(b)$。
+4. 保持要声称的工作量与深度指标。相对整个 Tide 参考执行的工作高效性，还要求参考成本对 $N$ 一致为 $O(L\,\mathrm{polylog}(L))$，且目标实现的成本控制住查询量。
 
-题设中的整条有向路径包含 $L-1$ 个互不重叠的连续 segments，每个 segment 的总执行成本至少为 $\lambda$。因此整条路径的总成本至少为 $\lambda(L-1)$。根据定义 9.5，DAG critical-path span 不小于任意一条有向路径的总成本，因此结论成立。
+**归约结论。** 某模型类别若对任意链长满足上述条件，则不存在对其全部实例精确正确、查询工作高效且查询深度一致为 $o(L)$ 的确定性算法。
 
-∎
+**证明。** 假设存在这样的算法，将其应用于每个嵌入实例，即得到违反第 3 节推论的黑盒算法族。$\square$
 
-### 解释 9.7：其他并行事件为什么不能消除下界
+下表集中列出使用范围：
 
-同一绝对逻辑时间内，可以存在大量彼此没有依赖、因而能够并行执行的其他 events：
+| 范围 | 应保留的前提或另需证明的内容 |
+|---|---|
+| 具体 selector | 给出上述函数族、信息接口、观察和成本归约 |
+| 同一模型的全部实例 | 下界为最坏情况；某些输入或参数可以容易求值 |
+| 随机或近似算法 | 另定义允许的错误概率与误差，并证明相应下界 |
+| 部署前的预处理 | 查询函数表及其预处理计入工作；免费获得完整表会改变模型 |
+| 固定图的节点批次 | 保持空间图和目标批数指标的专门归约 |
+| 硬件局部性 | 另给入度、通信距离及设备映射；式 (4) 只保证出度一 |
 
-```text
-A 输入位置相关的其他消息分支
-B 输入位置相关的局部计算
-数千个互不冲突的空间节点计算事件或消息派发事件
-其他 batch samples
-```
+目前这些条件是检查具体 Tide 函数族的研究入口。函数相对前态有依赖，或某种紧凑摘要不存在，均不足以独立完成上述归约。
 
-这些 events 可以提高硬件利用率和 streaming throughput。但只要从输入到 required output 仍存在推论 9.4 的必要 control chain，所有其他并行工作都不能缩短这条 critical path。
+## 6. 可利用的额外结构
 
-## 10. 本定理没有证明什么
+下列结构可形成高效求值的正例，具体工作量由摘要或联合算法决定：
 
-### 10.1 不是所有跨 token 依赖都不可并行
+| 结构 | 需要已知的对象与可用算法 |
+|---|---|
+| 各位置独立评分 | 同层全部内容已知，评分不按位置更新彼此可见的选择历史，可共同计算路由 |
+| 仿射或其他封闭复合 | 每步紧凑摘要由已知输入确定，摘要可结合复合，并具有明确构造与应用成本 |
+| 因果联合读取 | 已给出逐坐标等价的联合算法，例如因果 Attention |
+| 固定数目的联合路由阶段 | 各阶段的整段输入可得，阶段内部有独立、扫描或因果联合算法；内部跨度另计 |
+| 小地址空间 | 枚举函数表再复合，工作与存储显式依赖 $N$ |
 
-例 1.1 的 xor recurrence 和例 1.2 的 affine recurrence 都有跨 token 依赖，却可以 scan。下界针对的是任意、黑盒、自适应地址依赖。
+图级的精确联合条件见分块教材。将自适应链放进一个 SCC 或宏节点，仍需处理其内部查询；只有额外的函数结构及其算法才能改变计算条件。PDG 的有限切面定理提供有限作用和继续语义，局部算法分别承担成本结论。
 
-### 10.2 不是每个动态 Graph 都不可并行
-
-MoE 的 active expert graph 在执行 router 前同样未知，但一层中所有 token 的 route 可以由一个 bulk router 产生。它没有形成长度随 token 数增长的 pointer-chasing chain。
-
-### 10.3 不是说完整 active DAG 必须预先生成
-
-高性能 prefill 可以逐 layer 或逐 round 生成 active DAG。关键不是“是否一次性知道完整 DAG”，而是动态 control stages 的数量是否随 $L$ 线性增长。
-
-### 10.4 不是无条件排除枚举全部候选
-
-如果允许查询全部 $N$ 个 routing addresses，定理 6.1 的 domain-size 条件不再成立。此时可以用 dense candidate evaluation 换取较少 adaptive rounds，但这通常违背超稀疏 work 目标。
-
-### 10.5 不是具体 LH selector 的既成下界
-
-要把推论 9.4 应用于具体 LH/Tide selector，需要完成定义 9.3 的归约，至少说明：
-
-- 哪一族合法参数和状态实现了所需的任意 routing maps 或等价困难实例。
-- 实现从模型得到函数值的方式，怎样对应查询；模型是否还暴露了本证明未允许的摘要或其他信息。
-- 输出观察及工作量、状态空间规模、查询轮数怎样在归约下保持。
-
-仅证明某一种 compact associative summary 不存在，并不足以排除其他算法。即使完成归约，结论通常也是该模型类别的最坏情况，不能直接宣称每个 LH 配置都必然达到它。
-
-### 10.6 当前定理只处理 deterministic exact algorithm
-
-本页没有分析允许错误概率的 randomized algorithm，也没有分析近似 routing、近似最终状态或容忍输出误差的算法。若后续允许 approximation，需要重新定义 correctness，并单独证明相应下界。
-
-### 10.7 不把免费离线预处理藏在模型之外
-
-本页把读取或求值 $F_t(q)$ 计为 query work。若所有 routing maps 在部署前已经固定，允许执行方免费获得完整函数表并做无限离线预处理，那么 oracle model 不再适用。
-
-对 Tide 使用本页结论时，需要满足至少一个条件：routing transition 依赖当前 token、hidden、node memory 或 selector state，因而只能在运行时确定；或者读取与预处理完整 routing maps 的成本必须计入 work。
-
-## 11. 逃离下界的结构化特例
-
-结构化正例的图级条件见 [TimedDAG 分块预填充教材](../../timed-dag-chunk-prefill-learning-note.md)；本节只说明哪些额外结构使实例不再属于任意黑盒 oracle family。具体 kernel、设备和实测成本由实验仓库维护。
-
-### 11.1 Token-local routing
-
-若：
-
-$$
-q_t=\rho(h_t),
-$$
-
-并且同层所有 $h_t$ 已经可用，各 token 的 routing 不更新彼此可见的 mutable selector state，则所有 routes 可以批量计算。标准 MoE router 接近这一情形。
-
-### 11.2 Scan-composable transition
-
-若每个 transition 有可由已知输入预先求出的紧凑 summary $m_t$，并存在封闭的 associative operator $\otimes$，使区间 transition 可以组合，则前缀 state 可以通过 scan 得到。还需计入摘要构造、组合和状态读出的成本。Mamba/SSM 的部分仿射状态更新提供这类例子；一般非线性状态递推不自动满足它。
-
-### 11.3 Causal-bulk operator
-
-若跨 token 依赖由一个已证明等价的 causal chunk kernel 承载，则无需逐 token 暴露 routing query。GPT-style causal attention 属于这一类。
-
-### 11.4 有限个 Chunk-Wide Routing Stages
-
-本节把 `chunk-wide routing stage` 定义为：对固定 Graph round $r$，联合处理 chunk 中全部输入位置的一组 routing computations。早期讨论曾称它为 `chunk-wide routing frontier`，但为避免与 `causal input frontier` 混淆，本文改称 routing stage。不同输入位置可以选择不同空间节点，但不能通过同一 stage 内逐输入位置更新的可变 selector state 形成新的自适应链。
-
-这里的 routing stage 只是计算分组，不向当前教材增加一套 `phase`、barrier 或状态提交规则。它断言这一组路由计算可由已声明的批量算法求值，不再依靠任意黑盒地址的逐步猜测。
-
-若对不随 $L$ 增长的阶段数 $R$：
-
-$$
-A_{0:L}^{(r+1)}
-=
-\mathcal R_L^{(r)}(H_{0:L}^{(r)}),
-\qquad 0\leq r<R,
-$$
-
-且每个 $\mathcal R_L^{(r)}$ 都有已证明的 token-local、scan-composable 或 causal-bulk 实现，各阶段间的 $H_{0:L}^{(r)}$ 也能按声明的依赖与成本获得，那么路由事件图可经过 $R$ 个 chunk-wide stages 逐步生成。阶段数固定仍不等于 span 固定：例如某阶段内部的 scan 可以有 $O(\log L)$ 深度，causal-bulk 的成本也要另行计算。
-
-### 11.5 小状态空间的全枚举
-
-若 $N$ 足够小，可以先查询整个 transition table，再对函数表做 composition。它从数学上有效，但 work 与 memory 至少依赖 $N$，不能作为巨大超稀疏 Graph 的默认解法。
-
-### 11.6 SCC 封装本身不能消除查询
-
-把自适应链封装成一个宏节点，不改变其内部 oracle 查询、transcript 或适应性轮数。若宏节点仍允许定理 6.1 的全部实例，且使用同一预算，下界继续成立。只有额外限制其内部转移族，例如给出紧凑组合、有限阶段或精确 bulk 算法，才构成结构化正例。
-
-正时延 Graph 的有限切面结论解决作用是否有限及怎样继续，不单独保证低查询深度。SCC 是封装边界，不是另一种并行算法。
-
-## 12. 与显式程序复杂度下界的关系
-
-定理 6.1 是黑盒查询模型中的无条件结论。它不需要假设任何尚未解决的复杂度理论命题。
-
-编译器、数据流与并行执行的相关背景见 [编译器与 dataflow 谱系](../background/compiler-and-dataflow.md)；本节只说明本页定理的边界，不把外部理论当作证明步骤。
-
-如果不把 node/kernel transition 看作 oracle，而要求对任意显式给出的程序证明“绝不存在 polynomial-work、polylog-depth 的等价实现”，问题会更困难。
-
-复杂度理论中：
-
-- `P` 粗略表示可由顺序计算机在输入长度 $n$ 的 $c n^k$ 时间内求解的问题，其中 $c,k$ 是与输入无关的常数。
-- `NC` 粗略表示可用多项式总工作量和 polylogarithmic parallel depth 求解的问题。
-
-许多一般顺序状态机和程序执行问题可以表达 `P` 中最难并行化的一类问题。若能无条件证明所有这类显式 transition 都没有高效并行算法，可能需要解决或绕开 `P` 与 `NC` 关系中的长期未决问题。
-
-将本页用于具体模型时，分析顺序是：
-
-1. 使用本页定理中已经明确的 oracle 类别、预算和最坏情况结论。
-2. 再分析具体 Tide/LH selector 是否能够嵌入该 oracle hard family。
-3. 对无法嵌入的受限子类，寻找 token-local、scan、causal-bulk 或有限 chunk-wide routing stages。
-
-## 13. 应用时需要保留的边界
-
-第 8 节的图具有出度一及一条实际路径；它没有同时证明所有节点入度有统一常数上界，也没有给出设备上的物理距离界。因此这里的“局部通信”仅指沿声明出边传递，不能把它升级成完整硬件局部性。
-
-该展开图的大小和深度随链长增长，不是一个固定 TimedDAG 的参数全部保持不变、只增加输入窗口。要用本页否定某个固定图的节点级批能力，还需给出保持目标复杂度指标的具体归约。控制扫描有线性 span，与节点的 Full 只调用一批可以同时成立。
-
-仍值得继续研究的是：具体 selector 是否有足够一般的 oracle embedding；其状态与 Next 是否出现可组合代数；Full 输出何时返回以后控制；以及查询 work、控制 span、Full 批数和硬件成本怎样分别计量。后续问题由独立研究记录维护。
+对于显式程序，执行方可能分析其内部结构，超出本页黑盒接口。证明任意显式程序都缺少多项式工作量、多对数深度的等价算法，会涉及更强的复杂度问题。相关谱系见[编译器与 dataflow](../background/compiler-and-dataflow.md)。后续研究可据具体函数判断：哪些依赖已有可组合结构，哪些仍需逐步揭示，以及各项成本怎样传递到完整模型。

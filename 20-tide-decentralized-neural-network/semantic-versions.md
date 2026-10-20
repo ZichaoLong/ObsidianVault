@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-10-19
+as-of: 2026-10-20
 tags:
   - tide
   - semantic-version
@@ -10,39 +10,28 @@ tags:
 
 # 语义版本差异与下游采用
 
-本页集中记录版本差异、教材修订和下游采用信息。数学定义见[语义锚点](semantics-anchor.md)所列教材。
+本页记录影响采用的语义差异、配置迁移与有来源的采用声明。数学定义见[接口索引](semantic-interface-index.md)所列教材；编辑历程见[文档修订记录](memos/history/document-revisions.md)。
 
-## 简短差异
+## 核心语义
 
-| 版本或修订 | 变化 | 下游核对事项 |
+| 版本 | 变化 | 采用时核对 |
 |---|---|---|
-| 2026-10-19 局部架构支线与设计总览，沿用 tide-core-5 | 新建共同局部架构、区域分配与完整 affine／delta 循环模块；KV 专注记忆及数值证明。增加 received query／direct 基权重、pooled 总量分配及 Read 模式组合；dense 函数从实验文档移到区域教材。实例增加异构记忆组合，实验改为按需问题库 | 四份正典逐字保持。既有默认组合的数值函数保持；新配置有独立性质范围。配置及描述类型迁移见下文；本次未验证下游采用或训练效果 |
-| 2026-10-17 固定总强度的稠密 Attention，沿用 tide-core-5 | 新增 selection_mode=attention，attention_base=uniform 为普通 softmax，reception 为接收加权 softmax；直接取 $c=p$，有正基权重时总发送强度为 $1$、每节点上限为 $1$。定义固定正温度函数、导数、配置及 HB 传播算例，研究与实验分别比较接收权重、发送上限和总强度 | 四份正典及既有默认函数保持。核对真实候选与填充、零权重分支、完整反向、弱写入与强发送、整段与分段记录；各数值命题按其原函数范围使用。本次未验证下游采用 |
-| 2026-10-17 发送规则比较与配置整理，沿用 tide-core-5 | 局部 §7.10 集中比较直接 Attention、约束 Shannon 与可稀疏的约束选择；附录 S.2 明确后两组同属 soft，hard 单列；实验 §5.1 区分发送规则与约束内分配的对照目的 | 函数、公式、配置取值和四份正典保持；支持记录同时注明 selection_mode 与适用正则，按组解释实验结果。本次未验证下游采用 |
-| 2026-10-17 无求根的直接 Attention，沿用 tide-core-5 | 新增 selection_mode=direct：按发送上限加权归一化，再取 $c_v=\mu_vp_v^{\mathrm{sel}}$；定义导数与弱候选连续性，绑定全连接及 HB，补充强度传播与实验比较 | 四份正典、既有函数及默认配置保持。direct 无区域总和下限，不使用 k、eta 或预算正则；核对上限梯度、零边界、HB 衰减及继续。原硬化定理仅覆盖约束软选择与硬选择；本次未验证下游采用 |
-| 2026-10-17 固定尺度的稠密 Attention，沿用 tide-core-5 | 将固定正温 Shannon 选择展开为持续训练与推理的候选，明确普通 softmax 的适用条件、query 导数及两种架构绑定；研究取舍、实验与实现检查分别补充 | 四份正典、既有局部函数和默认配置保持。配置名直接对应现有参数；核对 softmax 与约束求解的等值条件、一般发送上限、完整反向及稠密成本。本次未验证下游采用 |
-| 2026-10-16 KV 教材按定义依赖重写，沿用 tide-core-5 | 先建立基础局部函数与完整算例，再引入替换模块、导数和软硬极限；统一发送强度、发送上限、总和约束与激活数量，集中重复性质，重排公式与章节 | 四份正典、局部函数及配置取值保持；正典对应见局部 §10，求解与成本见附录 S。同步实例、研究与实现核对的引用；本次未验证下游采用 |
-| 2026-10-15 KV 教学与研究文档分工，沿用 tide-core-5 | 局部教材集中质量、支持、梯度与单位输入硬化的推导和例子；训练目标、日程及对照迁入独立实验文档，实现检查迁入独立核对文档；组合实例保留图、绑定和推论 | 四份正典、局部默认函数及共同签名不变。原质量下限保留，最大上界下限仅列研究候选。更新章节引用：原局部 §5.5 的稠密控制见实验 §2.2，原附录 S.4 见实现核对，原分层 §4 训练目标见实验 §2；本次未验证下游采用 |
-| 2026-10-14 KV 评分、正则与增益族，沿用 tide-core-5 | 局部评分增加分组匹配，发送增加有界上下文增益；共同非空预算支持二次、二元熵与 entmax，补全证明、标量求根、隐式反向和研究对照 | 正典及共同签名不变；cat／fixed／quad 保留原数值基线。核对各族支持、$M_j\le1$ 强制分配、ent 的 $\alpha=2$ 阈值校准、弱接收及梯度；配置切换的权重／缓存兼容性另验。本次未验证下游采用 |
-| 2026-10-14 KV 非空选择，沿用 tide-core-5 | 有效候选非空时至少激活一个；软质量下限为 $\min(1,\sum_v\mu_v)$，硬选择在全低分时保留最高分候选；同步手算、连续性证明、投影反向及架构计数 | 正典及共同签名不变，KV 数值语义改变。核对上下质量界、零上界、全低分与单候选、$k_j=1$ 的阈值无关性及逐情形硬化间隔；全连接每层全部节点写入，当前 HB 每位置所有区域到达。本次未验证下游采用 |
-| 2026-10-13 KV 选择族与 HB 组合，沿用 tide-core-5 | 聚合增加节点／来源特化绑定；时间摘要／内容检索与独立／区域 Attention 评分组成四个选择，共用预算和 Full；新增多区域展开收拢的 HB 实例，补充投影反向、固定图证明与全图成本 | 正典及共同签名不变。原 KV 数值对应区域共享聚合、时间摘要与独立评分；其他选择须按描述空间成对绑定 Read／SelStep。核对弱候选对 query 的影响、检索零极限、自由区梯度、HB 候选覆盖和分块记录；本次未验证下游采用 |
-| 2026-10-13 KV 位置与继续修订，沿用 tide-core-5 | 局部函数增加固定 Pos、NoPE／完整及部分 RoPE，窗口与摘要率可逐节点声明，窗口允许全部接收历史；分层实例逐区域组合，连续性正式证明与实现验证要求集中到局部教材附录 | 四篇正典及共同签名保持不变。旧数值配置对应恒等 Pos、零旋转维数及原窗口、衰减和距离斜率；采用 RoPE 等新配置会改变局部数值。核对原始时间、旋转表示、弱消息及硬化条件、整段／分块／decode 一致性；未声明下游已采用 |
-| 2026-10-12 KV 文档分工，沿用 tide-core-5 | 局部函数、连续性和批量契约保留在原 KV 文档；分层拓扑、时间与端口绑定、模型接入和训练目标集中到分层架构实例 | 函数与既有架构语义保持；组合时分别引用局部定义和结构绑定。局部公式重新编号；训练方案见新实例 §4，下游采用状态保持原记录 |
-| tide-core-5（2026-10-12） | SettleGraph 完整沿用 TimedDAG 的空间、原子集合、局部签名及逐边／逐端口返回族；单次结算由严格分层和时间对齐给出。共同输入、广播和终端读出归为局部实例 | SettleGraph 绑定独立 $X_v$；单一载荷函数命名 EmitValue，Full 取广播提升或直接返回两个值族；保留平行边及一般端口。旧记录须按声明的边界映射比较 |
-| 2026-10-12 教材重整 | 保留 TimedDAG 的 P/S/U/F 结果元组，区分调用标签与结果；统一区间转导 Phi、记录粘合、块名称与表示解码 | Next 的旧状态须显式保留；区间数值输入不含关闭证明，共享边界只识别一次；BatchRegionState 只含 P/S/U，含 Full 时为 BatchRegion；Decode 后再作遗忘投影 |
-| tide-core-3 | 聚合输入保留入口、父边、终端或端口的来源标签 | 聚合参数保留来源；裸值聚合通过忽略标签表达 |
-| tide-core-4 | SettleGraph 激活容量取上界，允许少选与空选择；无激活终端时输出槽为 $\bot$ | 覆盖非空候选但空选择、未激活候选状态更新、缺席输出及编码恢复。旧选满规则仍是具体选择函数 |
-| 2026-10-10 教材修订，沿用 tide-core-4 | 统一局部函数与块接口；补齐变化支持集、普通作用覆盖及关闭依赖 | 核对边界、返回记录、调用条件及下述名称对应；核心局部递归与切面状态定义保持 |
-| 2026-10-10 带权 KV 架构修订，沿用 tide-core-4 | 特例具体化为来源聚合、时间窗口 KV、多尺度评分、可弃权预算选择与 Attention／前馈残差；补充训练目标与成本分析 | 局部函数已有变化，旧特例的数值不能直接沿用；连续性按有效时间窗口状态比较，硬化条件增加弃权阈值间隔。本次仅修订上游设计，未验证下游采用 |
+| tide-core-3 | 聚合输入保留入口、父边、终端或端口的来源标签 | 保留来源；裸值聚合由忽略标签表达 |
+| tide-core-4 | SettleGraph 激活容量取上界，允许少选与空选择；缺席终端输出为 $\bot$ | 空激活、未激活候选的状态作用、缺席输出与编码恢复 |
+| tide-core-5 | SettleGraph 沿用 TimedDAG 的独立 $X_v$、原子集合、局部签名及逐边／逐端口返回族；以严格分层和时间对齐给出单次结算 | 保留平行边与一般端口；广播取 $\operatorname{Full}=\Delta\circ\operatorname{EmitValue}$；旧记录按明确边界映射比较 |
 
-tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺序和作用结果不变，扩大 SettleGraph 可表达的实例范围。2026-10-12 的核心修订保留了当时的 KV 数值函数，三个层级统一使用 Full = Delta ∘ EmitValue 和端口记录读出；后续 KV 配置变化由上表单独记录。分层基线直接在终端端口产生记录，外部汇集不另造图内输出事件。旧输入／输出适配节点可以显式保留为一种边界配置，但不能据新旧原始记录的无映射比较宣称一致。
+tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺序和作用结果。局部特化可独立演进；核心版本与采用的不可变提交共同定位定义。
 
-名称对应按修订列出：
+## 局部支线的采用要点
 
-- 2026-10-12：事件边统一为 $\mathscr A^{\mathrm{ev}}$，发送前缀为 $M_{<b}^{\mathrm{send}}$；单步下一状态为 $q^{\mathrm{next}}$，位置边界状态为 $q_v^{[t]}$；阶段数统一为 $R$。旧 Run 区间函数对应 Phi；StatePath 仍只返回状态轨迹。
-- 2026-10-10：Choose 统一为 Allowed；块输出与参考函数统一为 BlockOut、RefBlock；联合契约归属为 ContractOwner/cown，作用归属仍为 own。PublishedDoneTo 包含消息已纳入的条件。BatchFull 经 ExpandFull 返回规范块记录。
+| 修订 | 影响 |
+|---|---|
+| 2026-10-14 非空约束分配 | 数值语义改变：总发送下限为 $\min(1,\sum_v\mu_v)$；配对硬函数在全低分时保留最高分候选 |
+| 2026-10-17 稠密 Attention | 增加 direct 与固定总强度 attention；各自的发送上限、零边界和总量性质分别使用，整网软硬极限仅覆盖约束分配与配对硬函数 |
+| 2026-10-19 模块组合 | 分开 memory_family、memory_read、region_score 与 selection_mode；增加循环模块、received 权重、pooled 和 Read 模式组合。既有默认数值保持，迁移见下表 |
+| 2026-10-20 定理整理与勘误 | 既有函数及默认数值保持。整网定理移到共同架构 §6 和附录 A，记忆模块验证局部条件；修正区域分配 §5.3／附录 A.2 中应使用第二名评分 $t_{(2)}$ 的有限温度条件，旧 $t_{(4)}$ 条件不足 |
 
-tide-core-4 的引入提交为 [d60d1cf](https://github.com/ZichaoLong/ObsidianVault/commit/d60d1cf)。教材勘误及符号整理由采用的不可变提交精确定位；涉及允许的核心行为变化时另记语义版本。新增特例可以在同一核心版本下独立演进。
+2026-10-20 的四份正典逐字保持。局部 Attention 份额统一写作 $p_v^{\mathrm{sel}}$，标量响应及导数使用 resp 上标，避免与记忆描述和评分向量混用。文件更名与兼容入口见[迁移索引](memos/history/migration-map.md#2026-10-20-路径与内容归属)。
 
 ## 局部配置迁移（2026-10-19）
 
@@ -63,7 +52,7 @@ tide-core-4 的引入提交为 [d60d1cf](https://github.com/ZichaoLong/ObsidianV
 
 | 下游 | 采用声明 | 依据与范围 | 符合性证据 |
 |---|---|---|---|
-| [graph-execution-foundation](https://github.com/ZichaoLong/tide/tree/graph-execution-foundation) | tide-core-3；已包含若干局部模块特化，带权 KV 特例尚未实现 | 2026-10-10 维护者在本次文档修订中说明；本地目录为 ~/llm/graph-execution-foundation | 由下游固定提交、检查及报告给出；本次文档修订未审计其实现 |
+| [graph-execution-foundation](https://github.com/ZichaoLong/tide/tree/graph-execution-foundation) | tide-core-3；已包含若干局部模块特化，带权 KV 特例尚未实现 | 2026-10-10 维护者说明（当日记录）；本地目录为 ~/llm/graph-execution-foundation | 由下游固定提交、检查及报告给出；本次文档修订未审计其实现 |
 | fractal-latcarf | 具体采用范围由实验记录声明 | SettleGraph 实验平台，维护模块、模型接入和训练设置 | 以该平台的版本对应和实验报告为准 |
 
 ## 下游引用
@@ -82,10 +71,6 @@ tide-core-4 的引入提交为 [d60d1cf](https://github.com/ZichaoLong/ObsidianV
 
 离线副本保留来源与提交，从上游单向更新。具体实现的最新支持范围和验证结果由下游维护；上游保留一般定义、证明与教学参考程序。
 
-## 来源与迁移材料
+## 来源
 
-SettleGraph 的早期定义参考了 fractal-latcarf 的实验语义文档。历史名称、旧资料与目录迁移见 [迁移索引](memos/history/migration-map.md) 和 [LH 历史](memos/history/lh-history.md)。
-
-学习资源的早期书目来自 `133d638:20-tide-decentralized-neural-network/appendices/tide-directed-learning-roadmap.md`。
-
-TIDE 的历史全称为 Topology-Invariant Degree-bounded Expansion Architecture for Autoregressive Token Inference。目录名保留既有链接；架构与数学含义以教材定义为准。
+SettleGraph 的早期定义参考了 fractal-latcarf 的实验语义文档。早期材料与来源见[迁移索引](memos/history/migration-map.md)、[LH 历史](memos/history/lh-history.md)和[文档修订记录](memos/history/document-revisions.md)。TIDE 的历史全称为 Topology-Invariant Degree-bounded Expansion Architecture for Autoregressive Token Inference。

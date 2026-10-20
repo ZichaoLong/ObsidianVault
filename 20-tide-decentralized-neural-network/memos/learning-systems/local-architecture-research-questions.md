@@ -9,7 +9,7 @@ tags:
 
 # 局部架构：可选研究问题与对照
 
-本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../architecture/selector-and-memory.md)；函数以[局部架构](../../local-architecture-learning-note.md)、[区域分配](../../region-allocation-learning-note.md)、[KV](../../weighted-kv-sparse-activation-example.md)与[循环记忆](../../recurrent-memory-learning-note.md)教材为准。实现与定义的对应见[实现核对](../../weighted-kv-implementation-checks.md)。
+本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../architecture/local-architecture-design.md)；函数以[局部架构](../../local-architecture-learning-note.md)、[区域分配](../../region-allocation-learning-note.md)、[KV](../../weighted-kv-sparse-activation-example.md)与[循环记忆](../../recurrent-memory-learning-note.md)教材为准。实现与定义的对应见[实现核对](../../local-architecture-implementation-checks.md)。
 
 以下条目没有预设执行顺序，也不要求全部实施。研究者掌握设计空间后，根据当前问题、已有结果和资源选择优先级。一个配置失败、难以训练或过于昂贵，本身可成为缩小探索范围的依据；复杂耦合可能使某些机制判断长期只有间接支持。
 
@@ -29,7 +29,7 @@ tags:
 
 比较以明确的问题为单位。局部分配实验可以固定同一 $(s,\mu,w)$；完整训练会改变消息与历史，结果应按整体方案解释。数据暴露、参数量、总算术工作和设备时间通常无法同时匹配，可给互补比较并记录剩余差别。
 
-全连接单位输入下，多种稠密规则数值相同且增益不起作用；HB 的非单位接收才区分这些选项。准备比较前可先查实例的配置生效条件，避免重复比较同一函数。
+准备比较前，先查[全连接实例的单位接收与等值结论](../../weighted-kv-layered-example.md#24-每层的接收写入与输出)以及 [HB 的弱接收算例](../../hb-lattice-example.md#25-稠密发送的强度传播)，确定所选形状能否区分这些函数。
 
 ## 2. 可选的任务与训练目标
 
@@ -89,7 +89,19 @@ $\phi'(0)=1/\epsilon_{\mathrm{cost}}$。过小的 $\epsilon_{\mathrm{cost}}$ 会
 
 仅使用任务目标、加入成本项、加入教师分别对应不同训练设置。持续稠密时，减小若干正发送强度可能降低上述成本代理，但实际 Full 与消息仍存在，需按真实运行计量。
 
+### 2.4 中间辅助监督
 
+选定前面的一项训练目标，记为 $\mathcal L_{\mathrm{base}}$。令 $\mathcal I_{\mathrm{aux}}$ 为有限辅助观测位置集合；$h_r$ 为学生的中间表示，$h_r^{\mathrm{teacher}}$ 为教师目标，$P_r$ 为到共同表示空间的线性或可学习投影。给定非负权重 $\alpha_r,\beta_r$ 和辅助任务损失 $\mathcal L_{\mathrm{aux},r}$，可定义
+
+$$
+\mathcal L=\mathcal L_{\mathrm{base}}
+ +\sum_{r\in\mathcal I_{\mathrm{aux}}}\alpha_r
+  \|P_rh_r-\operatorname{stopgrad}(h_r^{\mathrm{teacher}})\|_2^2
+ +\sum_{r\in\mathcal I_{\mathrm{aux}}}\beta_r\mathcal L_{\mathrm{aux},r}.
+\tag{4}
+$$
+
+教师生成方式、观测位置及额外工作由所选比较明确给出；没有教师时省去相应项。辅助头可以只在训练时存在。它可能缩短监督距离，也可能限制层间分工；未选硬分支的具体反事实输出仍须额外计算。跨架构的反馈覆盖和干预代价见[学习风险](learning-risks-and-diagnostics.md#6-可选训练干预及其代价)。
 
 ## 3. 训练配置的独立选择
 

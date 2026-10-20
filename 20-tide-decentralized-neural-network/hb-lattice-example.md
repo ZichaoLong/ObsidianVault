@@ -12,11 +12,11 @@ tags:
   - hb-lattice
 ---
 
-# 带权 KV 的 HB-Lattice 架构实例
+# HB-Lattice 构造与组合实例
 
 本文定义一个分层的 HB-Lattice：区域递归展开，到中间层达到最大数量，再逐层收拢；相邻层节点按固定邻域连接。每层可以有多个选择区域，各自根据当前候选与私有记忆作选择。空间图在一次运行中固定，实际计算路径随输入、历史和门控变化。
 
-第 1 节独立给出拓扑与时间，第 2 节绑定 [[weighted-kv-sparse-activation-example|带权 KV 局部函数族]]，第 3--4 节说明继续求值、候选传播及工作量。读者可先掌握 [[settlegraph-learning-note|SettleGraph]]。[[weighted-kv-layered-example|全连接分层实例]] 提供相同局部函数下的比较基线。
+第 1 节独立给出拓扑与时间，第 2 节给出采用 [[weighted-kv-sparse-activation-example|带权 KV]] 的完整组合，第 3--4 节说明继续求值、候选传播及工作量。读者可先掌握 [[settlegraph-learning-note|SettleGraph]]。[[weighted-kv-layered-example|全连接分层实例]] 提供相同局部函数下的比较基线。
 
 ## 1. 拓扑、区域与时间
 
@@ -100,32 +100,15 @@ $$
 
 ## 2. 局部函数与边界绑定
 
-本节以 KV 作为记忆模块。发送函数逐项取自[区域分配教材](region-allocation-learning-note.md)，共同函数与配置类型见[局部架构](local-architecture-learning-note.md)。除下文展开的规则，还可取 pooled（先定接收相关总量再分份额）或 dense（与评分无关的稠密分配）。att 的 query_weight 可取 mu／received，direct 的 allocation_base 可取 mu／received；未指定时均取 mu。
+本节固定一份 KV 组合，函数分别沿用[共同架构](local-architecture-learning-note.md)、[区域分配](region-allocation-learning-note.md)与 [KV 模块](weighted-kv-sparse-activation-example.md)。拓扑和时间始终由第 1 节给定。
 
-### 2.1 区域配置
+### 2.1 基线与来源
 
-全图共享载荷宽度 $d$，取共同架构的 $P=X_v=\mathbb R^{1+d}$。各节点为空 KV 初态，区域历史为单点，描述模式 $\tau_j=+$，采用 $\kappa_j=1$ 与默认 Next。Full 使用同一 $\Delta_v\circ\operatorname{EmitValue}_v$，向全部出边和输出端口广播本次载荷。
+全图共享载荷宽度 $d$，取 $P=X_v=\mathbb R^{1+d}$、区域共享 Agg、KV 空缓存初态、$\tau_j=+$、$\kappa_j=1$、默认 Next 和单点区域历史。Full 采用 KV 内容函数与共同广播，向全部出边和输出端口复制本次载荷。
 
-每区域选择下列配置；具体矩阵与有限参数值由组合声明：
+各区域取拼接局部评分、固定增益和约束二次分配，声明 $1\le k_j\le n$、阈值、正温度及 $K_j=n$。记忆描述、区域评分和位置可按 §2.3 分区绑定；其余宽度、矩阵、偏置与残差尺度按各模块定义给出有限值。区域 Attention 只汇集本区域同一逻辑时间的完整候选，消息仍沿式 (4) 传播。
 
-| 项目 | 绑定 |
-|---|---|
-| Agg | 区域共享、节点独立、来源独立或适配形式，采用局部架构教材的 Agg |
-| 记忆描述 | 时间摘要 $\mathrm{sum}$ 或内容检索 $\mathrm{qry}$ |
-| 局部评分 | 拼接 $\mathrm{cat}$ 或分组匹配 $\mathrm{match}$，均兼容两种记忆描述 |
-| 区域评分 | 独立 $\mathrm{ind}$ 或区域 Attention $\mathrm{att}$；Read 与 SelStep 成对选择 |
-| 写入与增益 | 同一 Upd 与 $w(r)$；fixed／context 决定 $\mu_v(q,\theta,r,u)$，增益统一有界 |
-| 选择函数 | soft、dense、hard 声明 $1\le k_j\le n$，soft、hard 另给阈值；六种函数按区域分配教材 §2 绑定 |
-| Attention 基权重 | attention 使用 uniform／mu；direct 使用 mu／received；pooled 固定 mu |
-| 正典激活容量 $K_j$ | 除硬选择外的各函数取 $K_j=n$，硬选择取 $K_j=k_j$ |
-| 记忆与位置 | §1.3 的窗口和坐标，以及各自的 Read／Full 旋转配置 |
-| 其余数值 | 局部架构教材 §5 所列宽度、投影、偏置、残差和评分尺度 |
-
-区域 Attention 只汇集本区域同一逻辑时间的完整候选。它增加区域内的控制信息共享；消息传播仍沿式 (4) 的边。缩小或扩大区域会改变 selector 可见的信息、通信范围和预算分配，须作为架构选择声明。
-
-发送规则的共同性质见[区域分配对照](region-allocation-learning-note.md#28-参数与性质对照)，配置键和函数定义逐项沿用区域分配教材附录 S.1。不同区域可选择不同局部评分、增益和正则；它们通过相同载荷、描述与控制类型组合。参数形状和状态相容性由绑定检查，修改配置后采用相应的参数与状态空间。
-
-固定尺度的稠密 Attention 取 region_score=att、alpha_loc=0、alpha_sel=1，并固定 tau_soft，例如取 $1$。selection_mode=attention 直接发送归一化权重，allocation_base=uniform 为普通 softmax，mu 按 $\mu$ 加权；有正基权重时总发送强度为 $1$。selection_mode=direct 在加权 softmax 后再乘 $\mu_v$。selection_mode=soft、budget_family=ent、ent_alpha=1 使用约束 Shannon，一般需要标量求根。各配置均取 $K_j=n$，可与其他区域的选择函数组合。
+替换发送函数时，沿用区域分配教材的完整定义及容量对应；替换记忆时按共同架构 §5 检查描述和参数形状。配置对应见附录 S。
 
 输入来源类别为 $\mathrm{in}$。对每条边 $e:v\to v'$，令
 
@@ -224,7 +207,7 @@ $$
 
 在 $Dq$ 处没有跨界消息，继续保留节点状态、单点历史和原始位置。切在位置内部时还须保留 $W_b$。Read 的内容检索和 Full 均只读取各自快照及原始时间，整段、连续多 chunk 与逐位置求值满足同一精确记录契约。查询、缓存与消息的工作量由第 4 节计量。
 
-在固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置上，约束分配、直接 Attention、pooled 与 dense 的逐区域组合适用 KV 教材的正温度连续性，证明不需要全连接。比较全图使用约束分配的运行与全图使用硬选择的运行时，单位输入使硬运行的发送上限均为零或一。若硬运行各次选择满足区域分配教材 §5.1 的评分条件，则温度趋零时消息、有效缓存与连续读出收敛到硬运行；须覆盖全低分时的最高分间隔，$k_j=1$ 时只需最高分唯一。
+固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](local-architecture-learning-note.md#6-数值性质的组合)。KV 验证状态条件；正温度输入连续性和单位输入的软硬极限分别使用各自的发送函数及评分条件。该组合定理直接覆盖本实例的稀疏邻域。
 
 硬选择每个区域每位置激活 $1$ 至 $k_j$ 个候选，激活者随输入和历史改变。既有空间边可在其他位置继续使用。连接较丰富的 HB 和较稀疏的 HB 各自在自己的固定图上使用同一结论。永久删边改变空间图；在同一图上，局部选择决定各次实际使用的边。
 
@@ -277,12 +260,18 @@ $$
 
 当前已收到消息的节点，即使未激活，仍完成本次准备并保留写入。Read、选择与下游工作共同进入局部架构教材附录 S.2 与 KV 教材附录 S 的代价和式。
 
-本实例的训练对照见 [可选研究问题与对照](memos/learning-systems/weighted-kv-experiment-plan.md)，图、局部函数与继续记录的程序对应见 [实现核对](weighted-kv-implementation-checks.md)。
+本实例的训练对照见 [可选研究问题与对照](memos/learning-systems/local-architecture-research-questions.md)，图、局部函数与继续记录的程序对应见 [实现核对](local-architecture-implementation-checks.md)。
 
 ## 5. 按区域组合不同记忆
 
-保留第 1 节的 HB 拓扑、来源和边界。§2.3 的七层形状可令中间层 $4$ 使用 [delta](recurrent-memory-learning-note.md)、memory_read=state，其余层仍用 KV；循环矩阵宽度可取 $d_k=d_m=64$，描述宽度统一为 $d_s=32$。各区域继续独立选择评分和发送函数。循环短期衰减按 $\lambda=\bar\lambda/D$ 换算，长期率为零，其余参数由组合给定。
+保留第 1 节的 HB 拓扑与时间，以及 §2.1—2.2 的来源和边界。§2.3 的七层形状可令中间层 $4$ 使用 [delta](recurrent-memory-learning-note.md)、memory_read=state，其余层仍用 KV；循环矩阵宽度可取 $d_k=d_m=64$，描述宽度统一为 $d_s=32$。各区域继续独立选择评分和发送函数。循环短期衰减按 $\lambda=\bar\lambda/D$ 换算，长期率为零，其余参数由组合给定。
 
 各次候选传播和消息计数只依赖图与发送，§2.4 和第 4 节的相应结论继续成立。缓存长度只描述 KV 区域，循环区域保存固定大小状态。区域 query 只要求描述类型相容，不要求不同区域有相同状态空间。
 
-按层调用各区域自己的精确状态与 Full 契约，得到同一正典记录和切面继续。采用 KV 与循环教材共同覆盖的发送函数时，可将各自状态连续性引理放入同一时间归纳；硬化结论仍须全图使用指定的约束／硬选择配对及硬运行评分条件。
+按层调用各区域自己的精确状态与 Full 契约，得到同一正典记录和切面继续。数值性质应用共同架构 §6，两种记忆分别提供局部引理。
+
+## 附录 S：配置对应
+
+第 2 节采用 memory_family=kv、read_mode=+、local_score=cat、send_gain=fixed、selection_mode=soft、budget_family=quad。第 2.3 节按层给出 memory_read=sum／qry 和 region_score=ind／att；query_weight 未另声明时取 mu。第 5 节中间层改为 memory_family=delta、memory_read=state。
+
+固定尺度的稠密区域 Attention 使用 region_score=att、alpha_loc=0、alpha_sel=1 及固定正 tau_soft。发送可取 attention、direct、pooled 或约束 Shannon；它们在弱接收处按第 2.5 节产生不同结果。attention 的 allocation_base 为 uniform／mu，direct 为 mu／received，pooled 固定 mu。其余取值和参数生效范围统一见[区域分配附录 S.1](region-allocation-learning-note.md#s1-配置名称)。

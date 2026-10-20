@@ -9,7 +9,7 @@ tags:
 
 # 局部架构：实现与数学定义的对应
 
-本文核对已选择的组合与数学定义是否一致。共同函数见[局部架构](local-architecture-learning-note.md)，评分、分配和反向见[区域分配](region-allocation-learning-note.md)，记忆见 [KV](weighted-kv-sparse-activation-example.md)与[循环模块](recurrent-memory-learning-note.md)。训练效果和研究优先级由[独立研究文档](memos/learning-systems/weighted-kv-experiment-plan.md)讨论。
+本文核对已选择的组合与数学定义是否一致。共同函数见[局部架构](local-architecture-learning-note.md)，评分、分配和反向见[区域分配](region-allocation-learning-note.md)，组合性质见[共同架构 §6](local-architecture-learning-note.md#6-数值性质的组合)，记忆见 [KV](weighted-kv-sparse-activation-example.md)与[循环模块](recurrent-memory-learning-note.md)。训练效果和研究优先级由[独立研究文档](memos/learning-systems/local-architecture-research-questions.md)讨论。
 
 ## 1. 采用声明与比较对象
 
@@ -63,11 +63,11 @@ tags:
 
 ### 3.3 反向与边界
 
-约束分配使用区域教材 §4.2 的隐式反向，或者明确声明有限迭代映射。光滑分支内用不跨界的扰动比较评分、上限和温度；总和取等号时核对加权中心化，$\sum a_v=0$ 单独处理。不可微点用声明的单侧或广义导数核对。
+约束分配使用区域教材 §4.2 的隐式反向，或者明确声明有限迭代映射。光滑分支内用不跨界的扰动比较评分、上限和温度；总和取等号时核对加权中心化，$\sum_v a_v^{\mathrm{resp}}=0$ 单独处理。不可微点用声明的单侧或广义导数核对。
 
 Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则。对原 direct 基权重 mu，验证两条直接上限依赖；received 只在固定接收和评分时移除基权重中的增益通路。pooled 在 $M<1$ 有总量导数，$M>1$ 无该项，$M=1$ 声明边界约定。
 
-完整链路检查 query、key、评分头、增益头、记忆描述及写入。全零基权重处通常没有通常 Jacobian，遮罩自动微分与方向导数分别记录。跳过零 Full 和求内容后乘零的边界反向分别说明。
+完整链路检查 query、key、评分头、增益头、记忆描述及写入。全零基权重处一般没有通常 Jacobian，遮罩自动微分与方向导数分别记录。跳过零 Full 和求内容后乘零的边界反向分别说明。
 
 ## 4. 记忆模块
 
@@ -84,12 +84,28 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ## 5. 数值性质、图与继续
 
-连续性比较按固定图、参数、原始时间槽和有限切面进行。覆盖弱消息、弱候选、全零接收、空档和正时延反馈。各函数范围按教材命题选择；固定总强度 Attention 的零边界不套用弱输入命题。
+连续性比较按共同架构 §6 的固定图、参数、原始时间槽和有限切面进行，状态模块分别核对该节的局部假设。覆盖弱消息、弱候选、全零接收、空档和正时延反馈。各函数范围按教材命题选择；固定总强度 Attention 的零边界不套用弱输入命题。
 
-软硬比较使用单位输入和硬运行的评分条件；另复现平票、阈值临界及固定小数上限反例。发送数值收敛不等于正温度支持数收敛。pooled 的固定正温度连续性也不作为整网硬化保证。
+复现区域分配 §5.3 的第二名间隔条件与四候选算例，核对有限正温度的精确分配。软硬比较使用单位输入和硬运行的评分条件；另复现平票、阈值临界及固定小数上限反例。发送数值收敛不等于正温度支持数收敛。pooled 的固定正温度连续性也不作为整网硬化保证。
 
-[全连接](weighted-kv-layered-example.md)核对单位接收、配置等值、KV 写入时间和计数；[HB](weighted-kv-hb-lattice-example.md)核对展开收拢、偏移邻域、区域到达、候选并集及广播计数。复现 direct 的三层总量 $1,1/4,1/8$ 与固定总量规则的 $1,1,1$；不同评分的响应另按函数核对。
+[全连接](weighted-kv-layered-example.md)核对单位接收、配置等值、KV 写入时间和计数；[HB](hb-lattice-example.md)核对展开收拢、偏移邻域、区域到达、候选并集及广播计数。复现 direct 的三层总量 $1,1/4,1/8$ 与固定总量规则的 $1,1,1$；不同评分的响应另按函数核对。
 
 整段、不同长度分段、逐位置和位置内部切面均比较完整记录与边界。左状态须含原始时钟、区域历史和在途消息；给定完整驱动窗口后再核对各模块的联合契约。变更参数、位置或记忆类型后的继续，使用另外声明的转换或重算规则。
 
 报告明确通过范围、误差、未覆盖组合与复现入口。性能测量与训练质量独立报告，不从局部数学性质推出加速或效果。
+
+## 附录：教学参考程序的对应
+
+[正时延图教学程序](examples/positive_delay_graph_reference.py)用整数与有理数函数展示切面、快照和调度重排。其范围及教学例子见 [PDG 附录 S.10](positive-delay-graph-finite-cut-learning-note.md#s10-教学参考程序与有限检验)。
+
+| 程序名称或表示 | 数学对应 |
+|---|---|
+| Spec.budget | 正典的激活数量容量 $K_j$ |
+| Spec.observe_all | 状态采用模式 $\kappa_j$；True 为全部候选采用 |
+| update、read、select、next_state、full | Upd、按已选模式包装的 Read、SelStep、Next、Full |
+| proposals、comparison_states、states | 候选状态、Full 快照、持久状态 |
+| Full 返回的两个字典 | 逐边和逐端口值族；字典缺项解码为该坐标的 $\bot$ |
+| Continuation | 切面 $Q_b$，包含节点状态、选择历史与跨界消息 |
+| run_random_ready_schedule | 给定参考事件集合后，在其依赖图上重排求值 |
+
+该程序覆盖延迟自环、两节点环、门控与选后清空，并比较完整记录和继续状态。在线封闭下界推进、局部神经函数和设备求值各需相应实现证据。这里的字段对应不改变教材签名。

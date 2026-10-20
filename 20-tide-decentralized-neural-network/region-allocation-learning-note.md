@@ -42,7 +42,7 @@ $$
 f_v=\big[&\mathcal N_d(u);\log(1+r_+);M_{\mathrm{short}};M_{\mathrm{long}};
  \log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}});\\
  &p_v(u)\odot M_{\mathrm{short}};p_v(u)\odot M_{\mathrm{long}}\big],\\
-s_v^{\mathrm{cat}}&=b_v+a_v^\top\operatorname{SiLU}(W_v^r f_v+b_v^r).
+s_v^{\mathrm{cat}}&=b_v+(a_v^{\mathrm{cat}})^\top\operatorname{SiLU}(W_v^r f_v+b_v^r).
 \end{aligned}
 \tag{2}
 $$
@@ -63,13 +63,13 @@ $E_v^g(z)=\mathcal N_{d_{\mathrm{sel}}}(C_v^{\mathrm{enc},g}\operatorname{SiLU}(
 $$
 \begin{aligned}
 x_v&=E_v^{\mathrm{cur}}(z^{\mathrm{cur}}),\quad e_v=E_v^{\mathrm{mem}}(z^{\mathrm{mem}}),
- \quad z_v=E_v^{\mathrm{stat}}(z^{\mathrm{stat}}),\quad h_v=[x_v;e_v;z_v],\\
-F_v^{\mathrm{match}}(h)&=(w_v^{\mathrm{match}})^\top
- [\operatorname{SiLU}(W_v^{\mathrm{match,gate}}h+b_v^{\mathrm{match,gate}})
- \odot(W_v^{\mathrm{match,up}}h+b_v^{\mathrm{match,up}})],\\
+ \quad z_v=E_v^{\mathrm{stat}}(z^{\mathrm{stat}}),\quad f_v^{\mathrm{match}}=[x_v;e_v;z_v],\\
+F_v^{\mathrm{match}}(f)&=(w_v^{\mathrm{match}})^\top
+ [\operatorname{SiLU}(W_v^{\mathrm{match,gate}}f+b_v^{\mathrm{match,gate}})
+ \odot(W_v^{\mathrm{match,up}}f+b_v^{\mathrm{match,up}})],\\
 s_v^{\mathrm{match}}&=b_v^{\mathrm{match}}+
  \alpha_v^{\mathrm{match}}x_v^\top e_v/\sqrt{d_{\mathrm{sel}}}
- +\alpha_v^{\mathrm{res}}F_v^{\mathrm{match}}(h_v).
+ +\alpha_v^{\mathrm{res}}F_v^{\mathrm{match}}(f_v^{\mathrm{match}}).
 \end{aligned}
 \tag{3}
 $$
@@ -173,18 +173,18 @@ $$
 
 $$
 Z=\sum_ua_ue^{s_u/\tau_{\mathrm{soft}}},\qquad
-p_v=\begin{cases}a_ve^{s_v/\tau_{\mathrm{soft}}}/Z,&Z>0,\\0,&Z=0.\end{cases}
+p_v^{\mathrm{sel}}=\begin{cases}a_ve^{s_v/\tau_{\mathrm{soft}}}/Z,&Z>0,\\0,&Z=0.\end{cases}
 \tag{9}
 $$
 
-有正基权重时，$p$ 的和为 $1$，正分量恰在 $a_v>0$ 的候选上。下列三种发送规则均直接使用这个函数，无需求解乘子。
+记 $p=(p_v^{\mathrm{sel}})_{v\in C}$。有正基权重时，$p$ 的和为 $1$，正分量恰在 $a_v>0$ 的候选上。下列三种发送规则均直接使用这个函数，无需求解乘子。
 
 ### 2.3 直接 Attention
 
 取 $a_v=\mu_v$ 或 $a_v=w_v$，定义
 
 $$
-c_v=\mu_vp_v.
+c_v=\mu_vp_v^{\mathrm{sel}}.
 \tag{10}
 $$
 
@@ -197,7 +197,7 @@ $$
 取 $a_v=1$ 或 $a_v=\mu_v$，定义
 
 $$
-c_v=p_v.
+c_v=p_v^{\mathrm{sel}}.
 \tag{11}
 $$
 
@@ -210,7 +210,7 @@ $$
 取 $a_v=\mu_v$，先定总量 $B=\min(1,M)$，再定义
 
 $$
-c_v=Bp_v.
+c_v=Bp_v^{\mathrm{sel}}.
 \tag{12}
 $$
 
@@ -242,7 +242,7 @@ $$
 
 ### 2.8 参数与性质对照
 
-| 发送规则 | 每节点上限 | 非空时总和 | 激活范围 | 正典容量 $K_j$ |
+| 发送规则 | 每节点上限 | 有正发送时的总和 | 激活范围 | 正典容量 $K_j$ |
 |---|---|---|---|---|
 | 约束 quad／ent，$\alpha>1$ | $\mu_v$ | $[\min(1,M),\min(k,M)]$ | 可以精确稀疏 | $\lvert \mathcal R_j\rvert$ |
 | 约束 Shannon／bern | $\mu_v$ | 同上 | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
@@ -326,9 +326,9 @@ Shannon 在零处的熵导数无穷大；从正分量移入足够小的量到零
 ### 4.2 约束分配的反向
 
 固定温度和正则形状。在保持零、内部、上限状态及总和约束松紧不变的光滑分支上，记
-$a_v=\partial g/\partial x_v$、$e_v=\partial g/\partial\mu_v$，$x_v=t_v-\lambda$。
+$x_v^{\mathrm{resp}}=t_v-\lambda$，并在此处求响应导数 $a_v^{\mathrm{resp}}=\partial g/\partial x$、$e_v^{\mathrm{resp}}=\partial g/\partial\mu$。
 
-| 分支 | $a_v$ | $e_v$ |
+| 分支 | $a_v^{\mathrm{resp}}$ | $e_v^{\mathrm{resp}}$ |
 |---|---|---|
 | quad，$0<c_v<\mu_v$ | $1/\tau$ | $0$ |
 | ent，$0<c_v<\mu_v$ | $c_v^{2-\alpha}/\tau$ | $0$ |
@@ -336,23 +336,23 @@ $a_v=\partial g/\partial x_v$、$e_v=\partial g/\partial\mu_v$，$x_v=t_v-\lambd
 | quad／ent，上限饱和 | $0$ | $1$ |
 | quad／ent，零饱和 | $0$ | $0$ |
 
-总和固定在 $B=1$ 或 $k$ 且 $A_0=\sum_va_v>0$ 时，微分给出
+总和固定在 $B=1$ 或 $k$ 且 $A_0=\sum_va_v^{\mathrm{resp}}>0$ 时，微分给出
 
 $$
-d\lambda=\frac{\sum_va_vdt_v+\sum_ve_vd\mu_v-dB}{A_0},\qquad
-dc_v=a_v(dt_v-d\lambda)+e_vd\mu_v.
+d\lambda=\frac{\sum_va_v^{\mathrm{resp}}dt_v+\sum_ve_v^{\mathrm{resp}}d\mu_v-dB}{A_0},\qquad
+dc_v=a_v^{\mathrm{resp}}(dt_v-d\lambda)+e_v^{\mathrm{resp}}d\mu_v.
 \tag{18}
 $$
 
-对标量目标 $\mathcal L$，记 $g_v^{\mathcal L}=\partial\mathcal L/\partial c_v$、$\bar g=\sum_va_vg_v^{\mathcal L}/A_0$，则
+对标量目标 $\mathcal L$，记 $g_v^{\mathcal L}=\partial\mathcal L/\partial c_v$、$\bar g=\sum_va_v^{\mathrm{resp}}g_v^{\mathcal L}/A_0$，则
 
 $$
-\frac{\partial\mathcal L}{\partial t_v}=a_v(g_v^{\mathcal L}-\bar g),\qquad
-\frac{\partial\mathcal L}{\partial\mu_v}=e_v(g_v^{\mathcal L}-\bar g)+\bar g\frac{\partial B}{\partial\mu_v}.
+\frac{\partial\mathcal L}{\partial t_v}=a_v^{\mathrm{resp}}(g_v^{\mathcal L}-\bar g),\qquad
+\frac{\partial\mathcal L}{\partial\mu_v}=e_v^{\mathrm{resp}}(g_v^{\mathcal L}-\bar g)+\bar g\frac{\partial B}{\partial\mu_v}.
 \tag{19}
 $$
 
-本分支的 $B$ 为常数，末项为零。提高一个未饱和评分会在可响应的候选之间重新分配；其负梯度方向比较该候选与加权平均的任务边际影响。总和上下限都松弛时，$\lambda=0$ 固定，直接用 $dc_v=a_vdt_v+e_vd\mu_v$。
+本分支的 $B$ 为常数，末项为零。提高一个未饱和评分会在可响应的候选之间重新分配；其负梯度方向比较该候选与加权平均的任务边际影响。总和上下限都松弛时，$\lambda=0$ 固定，直接用 $dc_v=a_v^{\mathrm{resp}}dt_v+e_v^{\mathrm{resp}}d\mu_v$。
 
 quad 在未饱和集合 $\mathcal F$ 内的评分 Jacobian 为 $\tau^{-1}(I-\mathbf1\mathbf1^\top/|\mathcal F|)$。总和固定且只有一个未饱和候选时，评分导数为零；各边际影响相同时也可为零。$A_0=0$ 时不得除零，应沿严格饱和分支求导。分支切换处另给单侧或广义导数。
 
@@ -361,8 +361,8 @@ quad 在未饱和集合 $\mathcal F$ 内的评分 Jacobian 为 $\tau^{-1}(I-\mat
 在式 (9) 的 $Z>0$ 分支，把评分和基权重看作独立输入，记 $J_p=\operatorname{diag}(p)-pp^\top$，有
 
 $$
-\frac{\partial p_v}{\partial s_u}=\frac{p_v}{\tau}(\mathbf1[v=u]-p_u),\qquad
-\frac{\partial p_v}{\partial a_u}=\frac{e^{s_u/\tau}}Z(\mathbf1[v=u]-p_v).
+\frac{\partial p_v^{\mathrm{sel}}}{\partial s_u}=\frac{p_v^{\mathrm{sel}}}{\tau}(\mathbf1[v=u]-p_u^{\mathrm{sel}}),\qquad
+\frac{\partial p_v^{\mathrm{sel}}}{\partial a_u}=\frac{e^{s_u/\tau}}Z(\mathbf1[v=u]-p_v^{\mathrm{sel}}).
 \tag{20}
 $$
 
@@ -370,19 +370,19 @@ $$
 
 $$
 \begin{array}{ll}
-\text{直接 Attention：}&dc_v=p_vd\mu_v+\mu_vdp_v,\\
-\text{固定总强度：}&dc_v=dp_v,\\
-\text{区域总量后分份额：}&dc_v=p_vdB+Bdp_v,\quad B=\min(1,M).
+\text{直接 Attention：}&dc_v=p_v^{\mathrm{sel}}d\mu_v+\mu_vdp_v^{\mathrm{sel}},\\
+\text{固定总强度：}&dc_v=dp_v^{\mathrm{sel}},\\
+\text{区域总量后分份额：}&dc_v=p_v^{\mathrm{sel}}dB+Bdp_v^{\mathrm{sel}},\quad B=\min(1,M).
 \end{array}
 \tag{21}
 $$
 
 对直接 Attention 的 $a=\mu$，这给出
-$\partial c_v/\partial\mu_u=2p_v\mathbf1[v=u]-c_ve^{s_u/\tau}/Z$；$a=w$ 时固定 $w,s$ 则为 $p_v\mathbf1[v=u]$。评分 Jacobian 分别为 $\operatorname{diag}(\mu)J_p/\tau$、$J_p/\tau$、$BJ_p/\tau$。由 $\|J_p\|_2\le1/2$ 得到相应范数界。固定总强度的评分反向为
+$\partial c_v/\partial\mu_u=2p_v^{\mathrm{sel}}\mathbf1[v=u]-c_ve^{s_u/\tau}/Z$；$a=w$ 时固定 $w,s$ 则为 $p_v^{\mathrm{sel}}\mathbf1[v=u]$。评分 Jacobian 分别为 $\operatorname{diag}(\mu)J_p/\tau$、$J_p/\tau$、$BJ_p/\tau$。由 $\|J_p\|_2\le1/2$ 得到相应范数界。固定总强度的评分反向为
 
 $$
 \frac{\partial\mathcal L}{\partial s_v}
- =\frac{p_v}{\tau}\left(g_v^{\mathcal L}-\sum_up_ug_u^{\mathcal L}\right).
+ =\frac{p_v^{\mathrm{sel}}}{\tau}\left(g_v^{\mathcal L}-\sum_up_u^{\mathrm{sel}}g_u^{\mathcal L}\right).
 $$
 
 这些局部公式还须沿评分、基权重与增益的真实依赖回传。全零权重处，固定总强度的 $a=\mu$ 不连续；直接与区域总量函数连续但一般不可微。例如原直接函数沿 $\mu=\varepsilon\delta$ 的方向导数为
@@ -434,17 +434,17 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 
 ### 5.3 正温度的精确性
 
-固定二元上限与 §5.1 的分离评分，quad 达到硬向量的充分条件为：
+固定二元上限与 §5.1 的分离评分，将有效候选的调整后评分从高到低记为 $t_{(1)},t_{(2)},\ldots$。至少有两个有效候选时，quad 达到硬向量的充分条件为：
 
 | 情形 | 温度界 |
 |---|---|
-| $k=1$，或有效评分全负 | $\tau\le t_{(1)}-t_{(4)}$ |
+| $k=1$，或有效评分全负 | $\tau\le t_{(1)}-t_{(2)}$ |
 | $k>1$，正评分数介于 $1$ 与 $k$ | $\tau\le\min_{t_v>0}t_v$ |
 | 正评分数超过 $k$ | $\tau\le t_{(k)}-t_{(k+1)}$ |
 
-有效候选至多一个时任意正温度均成立。ent 的固定 $\alpha>1$ 也有这样的充分小正温区间；Shannon 和 bern 在正温度保持全部有效分量为正。附录 A 给出响应阈值及证明。
+例如 $t=(4,3,2,1),k=1$ 时，温度界为 $1$；$\tau=2$ 给出 $(0.75,0.25,0,0)$，$\tau=1$ 给出 $(1,0,0,0)$。有效候选至多一个时任意正温度均成立。ent 的固定 $\alpha>1$ 也有这样的充分小正温区间；Shannon 和 bern 在正温度保持全部有效分量为正。附录 A 给出响应阈值及证明。
 
-整网的消息、评分和上限会随温度共同变化。[KV 教材](weighted-kv-sparse-activation-example.md#8-单位输入的整网软硬极限)将局部结论沿时间组合，[循环教材](recurrent-memory-learning-note.md#5-连续性与组合)给出另一个可用模块。定理比较固定参数、固定输入及有限时间的值；训练日程和是否切换硬函数由研究配置决定。
+整网的消息、评分和上限会随温度共同变化。[共同架构 §6.3](local-architecture-learning-note.md#63-单位输入的软硬极限)将本节的局部结论沿逻辑时间组合，各记忆教材验证相应状态条件。该定理比较固定参数、固定输入与有限时间；训练日程由研究配置给出。
 
 ## 附录 A：连续性与极限证明
 
@@ -462,7 +462,7 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 
 **证明 §5.1 的硬向量唯一性。** 零上限坐标固定。无有效候选或只有一个时可行集为单点；$k=1$ 时最高分唯一使单位总量集中于它。$k>1$ 且全负时，总和取下限 $1$，再由最高分唯一决定分配。有正评分时，负分量可移向未满的正分量，或在正分量全满后直接删除，从而严格提高目标。正评分数不超过 $k$ 时它们全部取 $1$；超过 $k$ 时严格截断间隔唯一确定前 $k$ 个。$\square$
 
-**证明 §5.3。** quad 中，选最高分一个时取 $\lambda=t_{(4)}$，选全部正评分时取 $\lambda=0$，选前 $k$ 个正评分时取 $\lambda=t_{(k+1)}$。表中温度界使式 (17) 逐坐标为所需的零或一，并满足乘子符号和互补条件。总和上下限同时取等号时，$\lambda$ 可为任意符号。
+**证明 §5.3。** quad 中，选最高分一个时取 $\lambda=t_{(2)}$，选全部正评分时取 $\lambda=0$，选前 $k$ 个正评分时取 $\lambda=t_{(k+1)}$。表中温度界使式 (17) 逐坐标为所需的零或一，并满足乘子符号和互补条件。总和上下限同时取等号时，$\lambda$ 可为任意符号。
 
 ent 的 $\alpha>1$ 在单位上限处，响应为 $1$ 和 $0$ 的条件分别是
 
@@ -481,7 +481,7 @@ $$
 
 在有正极限接收的情形，总量规则还有 $c_v\to0$ 对应于 $r_v\to0$；这是组合消息连续性所需的单候选结论。固定总强度 $a=\mu$ 在分母趋零处不满足该命题；$a=1$ 的候选增删还会改变分母。
 
-正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量规则使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；本文硬化定理仅使用约束分配与式 (14)。
+正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量规则使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；共同架构的软硬极限定理仅使用约束分配与式 (14)。
 
 ## 附录 S：配置、求解与边界反向
 
@@ -505,20 +505,20 @@ soft 是约束优化函数的配置名称，包含持续稠密和可精确稀疏
 
 ### S.2 标量求解与隐式反向
 
-对 §4.1 中需要取边界总和 $B$ 的情形，有 $0<B<M$。令 $q=B/M\in(0,1)$，对有效候选取满足 $g(x_v,\mu_v;\tau)=q\mu_v$ 的逆响应：
+对 §4.1 中需要取边界总和 $B$ 的情形，有 $0<B<M$。令 $q=B/M\in(0,1)$，对有效候选取满足 $g(x_v^{\mathrm{resp}},\mu_v;\tau)=q\mu_v$ 的逆响应：
 
-| 正则 | $x_v$ |
+| 正则 | $x_v^{\mathrm{resp}}$ |
 |---|---|
 | quad | $\tau q\mu_v$ |
 | bern | $\tau\log(q/(1-q))$ |
 | Shannon | $\tau[1+\log(q\mu_v)]$ |
 | ent，$\alpha>1$ | $\tau[(q\mu_v)^{\alpha-1}-1/\alpha]/(\alpha-1)$ |
 
-令 $\lambda_{\mathrm{lo}}=\min_v(t_v-x_v)$、$\lambda_{\mathrm{hi}}=\max_v(t_v-x_v)$。单调性给出 $S(\lambda_{\mathrm{lo}})\ge B\ge S(\lambda_{\mathrm{hi}})$。二分维持此区间；Newton 候选步为 $\lambda+(S(\lambda)-B)/\sum_va_v$，仅在斜率非零且落入保留区间时使用。根区间可与乘子的对应半轴相交。
+令 $\lambda_{\mathrm{lo}}=\min_v(t_v-x_v^{\mathrm{resp}})$、$\lambda_{\mathrm{hi}}=\max_v(t_v-x_v^{\mathrm{resp}})$。单调性给出 $S(\lambda_{\mathrm{lo}})\ge B\ge S(\lambda_{\mathrm{hi}})$。二分维持此区间；Newton 候选步为 $\lambda+(S(\lambda)-B)/\sum_va_v^{\mathrm{resp}}$，仅在斜率非零且落入保留区间时使用。根区间可与乘子的对应半轴相交。
 
 每轮工作量为 $O(|C|)$。初始区间宽度 $D$ 到精度 $\varepsilon_\lambda$ 所需轮数为 $O(\max(1,\log_2(D/\varepsilon_\lambda)))$；同宽零区间直接求值。终止同时检查坐标误差、可行性及最优性残差，低温时相同乘子误差可造成更大坐标误差。quad 可排序 $t_v-\tau\mu_v,t_v$ 后扫描断点，工作量 $O(|C|\log|C|)$；ent 的 $\alpha=2$ 先按式 (16) 移位。
 
-反向使用 §4.2 的最优解映射导数，只保存分配、分支及响应统计，工作量 $O(|C|)$。对有限次迭代自动求导定义了另一种反向目标。$M=1$、精确断点、总和约束松紧交界和增益截断均需声明边界约定。若训练温度，固定 $x,\mu$ 时 $\partial g/\partial\tau=-a_vx_v/\tau$，再按总和约束修正；可训练 $\alpha$ 的反向须另行定义。
+反向使用 §4.2 的最优解映射导数，只保存分配、分支及响应统计，工作量 $O(|C|)$。对有限次迭代自动求导定义了另一种反向目标。$M=1$、精确断点、总和约束松紧交界和增益截断均需声明边界约定。若训练温度，固定 $x,\mu$ 时 $\partial g/\partial\tau=-a_v^{\mathrm{resp}}x_v^{\mathrm{resp}}/\tau$，再按总和约束修正；可训练 $\alpha$ 的反向须另行定义。
 
 ### S.3 稳定求值与支持
 
@@ -526,4 +526,4 @@ soft 是约束优化函数的配置名称，包含持续稠密和可精确稀疏
 
 指数响应先在对数域与上限比较；达到上限时直接返回原上限。sigmoid 采用稳定形式；ent 在 $\alpha$ 接近 $1$ 时使用 log1p／expm1 形式。数学零、浮点下溢零与人为裁剪零分别记录。
 
-Attention 规则的 $Z>0$ 边界按式 (20) 核对右导数。全零分支一般没有通常 Jacobian；实现可声明返回零反向，须与方向导数分别记录。跳过 Full 与求出内容再乘零的边界反向也需按所选目标比较。具体核对项见[实现对应](weighted-kv-implementation-checks.md)。
+Attention 规则的 $Z>0$ 边界按式 (20) 核对右导数。全零分支一般没有通常 Jacobian；实现可声明返回零反向，须与方向导数分别记录。跳过 Full 与求出内容再乘零的边界反向也需按所选目标比较。具体核对项见[实现对应](local-architecture-implementation-checks.md)。
