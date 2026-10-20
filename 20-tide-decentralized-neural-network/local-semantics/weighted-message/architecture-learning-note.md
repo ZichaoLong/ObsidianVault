@@ -17,7 +17,7 @@ tags:
 
 图、区域和逻辑时间沿用 [SettleGraph](../../settlegraph-learning-note.md)、[TimedDAG](../../timed-dag-region-selector-learning-note.md) 与 [PositiveDelayGraph](../../positive-delay-graph-finite-cut-learning-note.md)。这里选择它们允许的局部函数。读者只需有限集合、向量、函数与归纳法。
 
-[区域分配](region-allocation-learning-note.md)定义评分与发送函数；[带权 KV](kv-memory-learning-note.md)和[循环记忆](recurrent-memory-learning-note.md)分别给出完整的状态、更新与读取。选定这些函数，再绑定图和时间，就得到一个确定的模型。设计取舍集中在[设计总览](../../memos/design/weighted-message-design.md)。
+[区域分配](region-allocation-learning-note.md)定义评分与发送函数；[带权 KV](kv-memory-learning-note.md)、[基础循环记忆](recurrent-memory-learning-note.md)、[Gated DeltaNet](gated-delta-memory-learning-note.md)和 [Mamba-2／SSD](ssd-memory-learning-note.md)分别给出完整的状态、更新与读取。后两者共用[固定逻辑时间短卷积](causal-convolution-learning-note.md)。选定这些函数，再绑定图和时间，就得到一个确定的模型。设计取舍集中在[设计总览](../../memos/design/weighted-message-design.md)。
 
 本支线采用接收驱动的状态更新：全部候选保留更新，区域选择历史为单点，发送控制为 $[0,1]$ 中的标量，正控制触发沿全部出边的广播。第 3—4 节给出这些选择的完整公式。它们在正典允许的函数中确定本支线的范围；稠密与稀疏发送均可在此范围内组成模型。
 
@@ -123,7 +123,7 @@ $$
 \tag{7}
 $$
 
-模块另提供当前内容特征 $p_v(u)\in\mathbb R^{d_s}$。KV 中 $M$ 是时间摘要或内容检索结果，$W$ 是相应有效写入权重之和。循环模块给出自己的衰减摘要与累积权重。这些统计量的含义由各模块定义。
+模块另提供当前内容特征 $p_v(u)\in\mathbb R^{d_s}$。KV 中 $M$ 是时间摘要或内容检索结果，$W$ 是相应有效写入权重之和。循环模块可提供衰减摘要或矩阵查询；Gated DeltaNet 与 SSD 的 state 描述用短期摘要和矩阵读出分别占据两个通道。$W$ 的含义由各模块定义，循环的接收写入量不表示矩阵中的可恢复信息量。
 
 为每个节点指定描述空间 $D_v$ 和函数 $\operatorname{Describe}_v:S_v\times\mathbb N\times X_v\to D_v$。[区域分配教材](region-allocation-learning-note.md#1-节点向区域提供什么)用上述记忆描述与当前内容定义两组具体的 $D_v$ 和 Describe。给定其中一组，三种正典读取为
 
@@ -138,7 +138,7 @@ $$
 
 选择描述模式 $\tau_j=+$ 时，评分可看见本次写入；选 $-$ 时，评分使用旧记忆并显式接收当前 $u$；选 $0$ 时只使用当前内容与固定初态。三者的 Full 均读取 $\widetilde q$。状态模块必须定义在查询时刻如何读取旧状态，特别是逻辑时间空档内的衰减与过期。
 
-式 (7) 是当前评分族所用的描述接口。状态模块分别解释两个时间尺度及权重统计；其内部可以保存序列或矩阵。其他记忆可给出同型描述以复用该评分族，或同时定义新的 Describe 与 SelStep。
+式 (7) 是当前评分族所用的描述接口。状态模块分别解释 short、long 两个通道及其统计量；通道名称不要求状态内部保存两个副本。其他记忆可给出同型描述以复用该评分族，或同时定义新的 Describe 与 SelStep。
 
 ## 4. 分配、完整计算与发送
 
@@ -206,7 +206,7 @@ $$
 e_{v,\theta}=\pi_{v,\theta}(q_v).
 $$
 
-它取值于固定的有限维向量空间，可随节点和比较时刻变化。KV 用窗口内的加权条目，循环模块用同一时刻的有效矩阵和摘要。该投影只用于数值比较；精确记录与分段继续仍使用完整状态。
+它取值于固定的有限维向量空间，可随节点和比较时刻变化。KV 用窗口内的加权条目，循环模块用同一时刻的有效矩阵和摘要；带短卷积的模块还包括按原始时间对齐并补零的有效缓存。该投影只用于数值比较；精确记录与分段继续仍使用完整状态。
 
 下面三个命题要求每个状态与内容模块满足以下条件，均在固定有限时间范围内讨论：
 
@@ -215,7 +215,7 @@ $$
 3. **更新连续性。** 旧有效状态收敛、$r^{\mathrm{in},(n)}\to r^{\mathrm{in}}$、$u^{(n)}$ 有界，且在 $r^{\mathrm{in}}>0$ 时 $u^{(n)}\to u$，则更新后的有效状态及其随后按固定时间推进的投影收敛。$r^{\mathrm{in}}=0$ 时极限为该槽不发生接收的状态。
 4. **读取连续性。** 有效状态与当前内容收敛时，Mem、当前特征和 $G_v$ 收敛；Read 的旧状态、新状态和初态分别按第 3 节使用。正极限接收处因而具有连续的描述与增益。
 
-[KV 附录 A](kv-memory-learning-note.md#附录-a局部性质的证明)与[循环附录 A](recurrent-memory-learning-note.md#附录-a状态性质的证明)分别验证这些条件。各节点可使用不同模块，只需第 5 节的类型相容。
+[KV 附录 A](kv-memory-learning-note.md#附录-a局部性质的证明)、[基础循环附录 A](recurrent-memory-learning-note.md#附录-a状态性质的证明)、[Gated DeltaNet 附录 A](gated-delta-memory-learning-note.md#附录-a局部性质的证明)与 [SSD 附录 A](ssd-memory-learning-note.md#附录-a局部性质的证明)分别验证这些条件；短卷积的固定时间引理由对应部件教材证明。各节点可使用不同模块，只需第 5 节的类型相容。
 
 ### 6.2 零消息与正温度输入
 
@@ -272,7 +272,7 @@ $$
 
 其中 $W_b$ 保存此前发出、在 $b$ 或以后到达的消息。下一段沿用全局时间与同一位置函数。精确继续保存原始状态；用于连续性比较的有效状态投影可能遗忘过期条目或等价表示，两种比较关系各有用途。
 
-给定窗口内区域全部节点、全部时刻的完整输入纤维，包括确定为空的纤维，各模块可构造 BatchRegionState 与逐节点 BatchFull。前者返回实际 P/S/U 作用、全部值与右边界状态，后者返回全部正式 Full 值及展开的边消息和端口记录。KV 前缀与循环仿射复合分别给出这种契约的见证。输入完整性何时成立，由图和[分块预填充教材](../../timed-dag-chunk-prefill-learning-note.md)确定。
+给定窗口内区域全部节点、全部时刻的完整输入纤维，包括确定为空的纤维，各模块可构造 BatchRegionState 与逐节点 BatchFull。前者返回实际 P/S/U 作用、全部值与右边界状态，后者返回全部正式 Full 值及展开的边消息和端口记录。KV 前缀与循环仿射复合分别给出这种契约的见证；Gated DeltaNet 与 SSD 先由完整驱动计算短卷积，再求矩阵递归。输入完整性何时成立，由图和[分块预填充教材](../../timed-dag-chunk-prefill-learning-note.md)确定。
 
 ## 附录 A：组合定理的证明
 
@@ -308,8 +308,8 @@ $$
 
 | 配置名 | 数学选择 |
 |---|---|
-| memory_family | kv、affine、delta：选择各模块已给出的状态、读取与默认内容函数绑定；各职责见 §3—5 |
-| memory_read | KV 的 sum、qry；循环模块的 sum、state，见各模块教材 |
+| memory_family | kv、affine、delta、gated_delta、ssd：选择各模块已给出的状态、读取与默认内容函数绑定；各职责见 §3—5 |
+| memory_read | KV 的 sum、qry；各循环模块的 sum、state。state 的具体查询与通道含义由所选模块定义 |
 | read_mode | 正典 $\tau_j\in\{0,-,+\}$；本文完整例子默认 $+$ |
 | local_score、region_score | 区域分配教材的 cat／match、ind／att |
 | send_gain、query_weight | 发送增益与区域 query 的汇集权重，分别指定 |

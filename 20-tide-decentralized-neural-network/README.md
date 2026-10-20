@@ -41,9 +41,12 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 | [共同局部架构](local-semantics/weighted-message/architecture-learning-note.md) | 载荷、接收、状态与控制接口，组合条件，整网数值性质 |
 | [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 增益、评分、稠密与稀疏发送，求解、导数与局部温度极限 |
 | [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
-| [循环记忆](local-semantics/weighted-message/recurrent-memory-learning-note.md) | affine／delta 状态模块，逻辑时间、读取与局部状态性质 |
+| [基础循环记忆](local-semantics/weighted-message/recurrent-memory-learning-note.md) | affine／delta 的简洁状态、读取与局部性质 |
+| [固定逻辑时间短卷积](local-semantics/weighted-message/causal-convolution-learning-note.md) | 带权历史槽、当前读取、空档与弱事件；供完整循环候选复用的部件 |
+| [Gated DeltaNet](local-semantics/weighted-message/gated-delta-memory-learning-note.md) | 多头 Delta、短卷积、保留与写入门、输出归一化及完整局部绑定 |
+| [Mamba-2／SSD](local-semantics/weighted-message/ssd-memory-learning-note.md) | 分组状态、输入步长、标量转移、短卷积、直通与输出门的完整绑定 |
 
-第一次阅读可依次学习共同架构 §1—4、区域分配 §1 与 §2.1，再读 KV §1—5.1。这样先定义接收、写入、描述、评分、分配和发送，再完成一次从输入到输出的计算。其余发送函数、循环记忆和数值证明可按问题继续阅读。各函数的定义与证明由对应教材集中维护。
+第一次阅读可依次学习共同架构 §1—4、区域分配 §1 与 §2.1，再读 KV §1—5.1。这样先定义接收、写入、描述、评分、分配和发送，再完成一次从输入到输出的计算。学习矩阵记忆可先读基础循环；完整 Gated DeltaNet 与 SSD 先使用短卷积部件，再各自定义更新、描述、内容与继续。各函数的定义与证明由对应教材集中维护。
 
 ## 具体拓扑与完整实例
 
@@ -66,5 +69,6 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [研究备忘](memos/README.md) | 设计分析、学习问题、数学补充与外部背景 |
 | [学习资源](resources/learning-resources.md) | 按问题选读的书目和练习 |
 | [教学参考程序](examples/positive_delay_graph_reference.py) | 正时延图有限切面、分段继续与规范记录的可执行例子 |
+| [循环记忆公式核对](examples/recurrent_memory_checks.py) | 短卷积、Delta／SSD 恒等式、弱事件和分段继续的有限数值检查 |
 
 reference/ 提供名称检索与实现核对；memos/ 提供研究参考；examples/ 保存教学程序，resources/ 汇集学习材料。版本、下游采用和修订历史集中在 records/，入口为[版本与采用记录](records/semantic-versions-and-adoption.md)。

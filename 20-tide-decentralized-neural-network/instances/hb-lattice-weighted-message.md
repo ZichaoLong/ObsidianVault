@@ -140,19 +140,29 @@ $$
 
 ## 3. KV 与循环记忆的组合
 
-保留 §1.1 选定的 HB 拓扑与时间，以及 §2.1—2.2 的来源和边界。§2.3 的七层形状可令中间层 $4$ 使用 [delta](../local-semantics/weighted-message/recurrent-memory-learning-note.md)，以矩阵查询 $M^{\mathrm{state}}$ 形成描述，其余层仍用 KV；替换区域采用循环教材的状态空间、零初态、Upd、Mem、当前特征与 $G_v$，取 $d_k=d_m=64$，描述宽度统一为 $d_s=32$。各区域继续独立选择评分和发送函数。循环短期衰减按 $\lambda=\bar\lambda/D$ 换算，长期率为零，其余参数由组合给定。
+保留 §1.1 选定的 HB 拓扑与时间，以及 §2.1—2.2 的来源和边界。在 §2.3 的七层形状中，中间层 $4$ 的每个区域独立选择下列一种循环记忆，其余层仍用 KV。替换区域采用相应教材的状态空间、零初态、Upd、Mem、当前特征与 $G_v$，统一 $d_s=32,d_f=2048$、memory_read=state、Read$^+$。
 
-候选传播和消息计数公式只依赖图与实际发送，§2.4 和第 5 节的相应结论继续成立。更换记忆可以改变评分、激活者和实际路径，计数按新运行确定。缓存长度只描述 KV 区域，循环区域保存固定大小状态。区域 query 只要求描述类型相容，不要求不同区域有相同状态空间。
+| 记忆 | 状态形状与参数 |
+|---|---|
+| [affine／delta](../local-semantics/weighted-message/recurrent-memory-learning-note.md) | $d_k=d_m=64$，两种时间尺度，短期率 $\bar\lambda_{\mathrm{short}}/D$，$\bar\lambda_{\mathrm{short}}>0$，长期率零 |
+| [gated_delta](../local-semantics/weighted-message/gated-delta-memory-learning-note.md) | $4$ 头，$d_k=64,d_m=128$，矩阵被动率零，qk_eps=$10^{-6}$ |
+| [ssd](../local-semantics/weighted-message/ssd-memory-learning-note.md) | $4$ 头、$1$ 组，$d_k=64,d_m=128$，矩阵被动率零 |
 
-按层调用各区域自己的精确状态与 Full 契约，得到同一正典记录和切面继续。数值性质应用共同架构 §6，两种记忆分别提供局部引理。
+后两者共同取 output_norm_eps=$10^{-5}$，摘要短期率 $\log2/D$、长期率零，conv_size=4、conv_stride=$D$。各区域继续使用原评分与发送绑定，全部有限矩阵、偏置、门参数、卷积系数及残差尺度按模块定义给出。循环区域不使用 KV 的窗口或 RoPE。
+
+HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 取槽，缺失位置为零，正接收历史写入 $wz$；后续位置不因缺失而前移。矩阵门的有效步长由当前接收及内容决定，与跨越几个逻辑位置分别定义。此绑定使弱事件消失时仍满足对应模块的连续性引理。
+
+候选传播和消息计数公式只依赖图与实际发送，§2.4 和第 5 节的相应结论继续成立。更换记忆可以改变评分、激活者和实际路径，计数按新运行确定。缓存长度只描述 KV 区域；循环矩阵与短卷积具有固定大小，并在全部正接收候选上更新。区域 query 只要求描述类型相容，不要求不同区域有相同状态空间。
+
+按层取得完整驱动后，调用各区域自己的状态与 Full 契约。带短卷积的模块先求卷积，随后求矩阵递归。消息宽度、描述类型和拓扑时间均匹配，组合是合法 SettleGraph，并保留正典切面继续。数值性质应用共同架构 §6，各记忆分别提供局部引理。
 
 ## 4. 分段继续与所用数学性质
 
 固定总强度 Attention 使用固定正温度，普通版和接收加权版均可持续用于训练、推理。它与其他已定义选择共用本节的精确分段继续和联合求值。
 
-给定位置区间 $[p,q)$ 的左切面 $Q_{Dp}$ 及完整端口输入，可以逐层求值。先取得该层所有区域的完整驱动纤维，再按区域调用所选模块的 BatchRegionState 和逐节点 BatchFull。KV 使用其教材 §6 的前缀与读取构造，循环使用其教材 §4 的仿射复合，由此确定下一层所需的消息。同层区域之间没有消息依赖，层内多个区域可独立求值。稀疏边只改变需要汇集的父节点集合。
+给定位置区间 $[p,q)$ 的左切面 $Q_{Dp}$ 及完整端口输入，可以逐层求值。先取得该层所有区域的完整驱动纤维，再按区域调用所选模块的 BatchRegionState 和逐节点 BatchFull。KV 使用其教材 §6 的前缀与读取构造，循环使用相应教材 §4 的卷积准备及仿射复合，由此确定下一层所需的消息。基础 affine／delta 无卷积步骤。同层区域之间没有消息依赖，层内多个区域可独立求值。稀疏边只改变需要汇集的父节点集合。
 
-在 $Dq$ 处没有跨界消息，继续保留节点状态、单点历史和原始位置。切在位置内部时还须保留 $W_b$。Read 的内容检索和 Full 均只读取各自快照及原始时间，整段、连续多 chunk 与逐位置求值满足同一精确记录契约。查询、缓存与消息的工作量由第 5 节计量。
+在 $Dq$ 处没有跨界消息，继续保留节点状态、单点历史和原始位置，带短卷积的状态还包含原始时间槽。切在位置内部时须保留 $W_b$。Read 的内容检索和 Full 均只读取各自快照及原始时间，整段、连续多 chunk 与逐位置求值满足同一精确记录契约。查询、缓存与消息的工作量由第 5 节计量。
 
 固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。KV 与循环模块分别验证状态条件；正温度输入连续性和单位输入的软硬极限分别使用各自的发送函数及评分条件。该组合定理直接覆盖本实例的稀疏邻域。
 
@@ -215,6 +225,6 @@ $$
 
 ## 附录 S：配置对应
 
-第 2 节采用 memory_family=kv、read_mode=+、local_score=cat、send_gain=fixed、selection_mode=constrained、regularizer=quad。第 2.3 节按层给出 memory_read=sum／qry 和 region_score=ind／att；query_weight 未另声明时取 mu。第 3 节中间层改为 memory_family=delta、memory_read=state。
+第 2 节采用 memory_family=kv、read_mode=+、local_score=cat、send_gain=fixed、selection_mode=constrained、regularizer=quad。第 2.3 节按层给出 memory_read=sum／qry 和 region_score=ind／att；query_weight 未另声明时取 mu。第 3 节中间层逐区域选 memory_family=affine／delta／gated_delta／ssd、memory_read=state，其余绑定按表给出。
 
 固定尺度的稠密区域 Attention 使用 region_score=att、alpha_loc=0、alpha_sel=1 及固定正 allocation_temperature。发送可取 unit_attention、direct_attention、pooled_attention 或约束 Shannon；它们在弱接收处按第 2.5 节产生不同结果。unit_attention 的 allocation_base 为 uniform／mu，direct_attention 为 mu／received，pooled_attention 固定 mu。其余取值和参数生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。

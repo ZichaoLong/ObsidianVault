@@ -21,7 +21,8 @@ tags:
 | [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
 | [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 共同接口、模块组合、零消息与正温度性质、单位输入的整网软硬极限 |
 | [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定增益、评分和发送函数 | 求解、导数、单次分配的连续性与温度极限 |
-| [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[循环记忆](../local-semantics/weighted-message/recurrent-memory-learning-note.md) | 各自的状态、更新、描述与内容函数 | 局部状态性质及共同组合定理所需的假设 |
+| [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/gated-delta-memory-learning-note.md)、[SSD](../local-semantics/weighted-message/ssd-memory-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
+| [固定时间短卷积](../local-semantics/weighted-message/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
 | [全连接实例](../instances/fully-connected-layered-weighted-message.md)、[HB-Lattice 实例](../instances/hb-lattice-weighted-message.md) | 所选拓扑、局部函数、参数、初态与输入读出 | 完整模型绑定、条件性的传播保障、联合求值与实际工作量 |
 
@@ -62,11 +63,15 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $G_v$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：激活后的内容变换，由具体模块绑定 |
 | $a_v^{\mathrm{resp}},e_v^{\mathrm{resp}},x_v^{\mathrm{resp}}$ | [区域分配 §4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-求解与导数)：响应的自变量及其对评分差、发送上限的导数 |
 | $\xi_i,T_v,\chi_{v,\theta},\operatorname{Pos},\operatorname{Rot}$ | [KV §1—2](../local-semantics/weighted-message/kv-memory-learning-note.md#1-状态与接收写入)：原始写入时间、窗口、遮罩、位置与旋转 |
-| $H_a,Z_a,W_a,s$ | [循环模块 §1](../local-semantics/weighted-message/recurrent-memory-learning-note.md#1-状态与逻辑时间)：矩阵、摘要、写入量与保存时间 |
-| $\pi_{\mathrm{KV}},\pi_{\mathrm{rec}}$ | 各记忆教材的有效状态投影，用于数值性质比较 |
+| $H_a,Z_a,W_a,s$ | [基础循环 §1](../local-semantics/weighted-message/recurrent-memory-learning-note.md#1-状态与逻辑时间)：两种时间尺度的矩阵、摘要、写入量与保存时间 |
+| $\mathcal B,\operatorname{Conv},\operatorname{ConvWrite},L_{\mathrm{conv}},\delta_{\mathrm{conv}}$ | [短卷积 §1](../local-semantics/weighted-message/causal-convolution-learning-note.md#1-时间槽与保存内容)：缓存、读取、写入、抽头数与逻辑步长 |
+| $H_h,Q_h,k_h,\nu_h,g_h,\beta_h$ | [Gated DeltaNet §1—2](../local-semantics/weighted-message/gated-delta-memory-learning-note.md#1-输入参数与状态)：逐头矩阵、查询、key、value、保留门与误差写入门 |
+| $H_h,B_g,C_g,\nu_h,d_h,g_h,D_h$ | [SSD §1—3](../local-semantics/weighted-message/ssd-memory-learning-note.md#1-尺寸状态与时钟)：逐头矩阵、组内写入与读取向量、内容、有效步长、保留门与直通系数 |
+| $\operatorname{Mix},R,\operatorname{Mem}$ | 两份完整循环教材 §3：记忆内容混合、矩阵查询及区域描述；记忆门与发送增益 $\gamma_v$、控制 $c_v$ 分别定义 |
+| $\pi_{\mathrm{KV}},\pi_{\mathrm{rec}},\pi_{\mathrm{gdn}},\pi_{\mathrm{ssd}}$ | 各记忆教材的有效状态投影，用于数值性质比较；后两者还包括 $\pi_{\mathrm{conv}}$ |
 | $\operatorname{EmitValue},\Delta,\operatorname{ReadOut}$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：载荷、广播与有限输出读出 |
 
-配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 选择状态函数族，memory_read 选择描述读取，region_score 选择评分来源，selection_mode 选择发送函数。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
+配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 取 kv／affine／delta／gated_delta／ssd，memory_read 选择该模块定义的描述读取，region_score 选择评分来源，selection_mode 选择发送函数。conv_stride 使用逻辑时间单位；GDN 的 head_k_dim 与 SSD 的 state_dim 均对应各自 $d_k$。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
 
 SettleGraph 的 $r_v$ 保持节点秩的含义；带权消息的接收强度统一记为 $r_v^{\mathrm{in}}$。边集沿用 $A$，激活集合沿用 $\mathcal A$。
 
@@ -159,4 +164,4 @@ $$
 
 Decode 忠实恢复所表示的原子、状态、控制和快照；Pi 只删除辅助坐标。两者都不调用参考递归来补写或修正结果。局部函数核对解码后函数值，联合求值核对实际支持集及全部返回坐标，层级嵌入按明确的限制与重索引比较。
 
-切面继续比较同一 $Q_b$ 与后续输入所得记录；有效状态投影 $\pi_{\mathrm{KV},v,\theta}$、$\pi_{\mathrm{rec},v,\theta}$，外部读出及指定反向规则分别采用自身证明条件。有效投影可以丢弃原始状态细节，不能代替无损解码。KV 与循环教材附录给出各自状态证明和表示；区域分配教材给出求解与反向目标。[实现核对](weighted-message-implementation-checks.md)整理位置、软硬极限和分段继续的检查范围；浮点容差和有限验证结果由具体实现声明。
+切面继续比较同一 $Q_b$ 与后续输入所得记录；各记忆的有效状态投影、外部读出及指定反向规则分别采用自身证明条件。有效投影可以丢弃原始状态细节，不能代替无损解码。KV 与各循环教材附录给出状态证明和表示；区域分配教材给出求解与反向目标。[实现核对](weighted-message-implementation-checks.md)整理位置、短卷积、原模型对应、软硬极限和分段继续的检查范围；浮点容差和有限验证结果由具体实现声明。

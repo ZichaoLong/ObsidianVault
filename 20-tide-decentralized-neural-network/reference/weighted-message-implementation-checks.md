@@ -9,7 +9,7 @@ tags:
 
 # 带权消息架构：实现与数学定义的对应
 
-本文核对已选择的组合与数学定义是否一致。共同函数见[局部架构](../local-semantics/weighted-message/architecture-learning-note.md)，评分、分配和反向见[区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md)，组合性质见[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)，记忆见 [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)与[循环模块](../local-semantics/weighted-message/recurrent-memory-learning-note.md)。训练效果和研究优先级由[独立研究文档](../memos/training/weighted-message-research-questions.md)讨论。
+本文核对已选择的组合与数学定义是否一致。共同函数见[局部架构](../local-semantics/weighted-message/architecture-learning-note.md)，评分、分配和反向见[区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md)，组合性质见[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)，记忆定义由各模块教材给出。训练效果和研究优先级由[独立研究文档](../memos/training/weighted-message-research-questions.md)讨论。
 
 ## 1. 采用声明与比较对象
 
@@ -73,6 +73,8 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ## 4. 记忆模块
 
+### 4.1 状态、读取与组合
+
 | 模块 | 核对内容 |
 |---|---|
 | KV 写入 | 正接收一条、零接收不改；权重与 K/V 内容分开；私有适配恢复独立投影；未激活仍写入 |
@@ -82,7 +84,27 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 | 循环弱输入 | 写入和遗忘共同趋中性；零事件保留原元组；插入趋弱事件后有效未来状态收敛 |
 | 循环读取 | sum／state，旧、新、初态读取；逻辑时间衰减、单节点算例 |
 | 循环联合求值 | 顺序与仿射复合的每个中间状态；矩阵复合方向；时间戳、零事件和右切面 |
+| gated_delta | Q/K/V 的投影、卷积、SiLU、稳定 L2 与 query 缩放；先保留再修正；每头先 RMS 后输出门 |
+| ssd | z/x/B/C/dt 的投影拆分及头组映射；只对 x/B/C 卷积；dt 写入系数、D 直通；整内部宽度先输出门后 RMS |
+| 完整循环描述 | sum 的两个摘要；state 的短期摘要和矩阵读出；$W$ 为接收统计；SSD 描述不包含 D 直通项 |
+| 短卷积 | 当前项取显式投影，历史写入 $wz$；固定时间槽、缺失补零；旧／新快照的当前卷积相等 |
 | 异构组合 | 相同消息宽度、区域描述相容；每模块使用自己的状态、时间与表示解码 |
+
+### 4.2 原模型的对应范围
+
+[Gated DeltaNet 附录 S](../local-semantics/weighted-message/gated-delta-memory-learning-note.md#附录-s配置原模型对应与工作量)与 [SSD 附录 S](../local-semantics/weighted-message/ssd-memory-learning-note.md#附录-s配置原模型对应与工作量)固定参考实现及开关。以相同归一化输入、单位接收、等间隔时间、零初态和零矩阵被动衰减进行对照。逐步比较投影、卷积、门、矩阵、读取、输出门与 Mix；先恢复普通序列混合器，再核对 Tide 的描述和外部内容函数。
+
+GDN 核对 $\epsilon$ 所在位置、query 的 $d_k^{-1/2}$、每头 RMS 与门的顺序、矩阵采用 value-first 的轴排列。原实现对应还要求 RMS 缩放跨头共享、beta 投影无偏置，卷积偏置匹配。beta 取 sigmoid 范围，不能默用允许负特征值的其他开关。SSD 核对组数整除头数、B/C 共享映射、写入系数为 $d_h$、直通参数的逐头广播、norm_before_gate=False。参考卷积权重若按从旧到新排列，与教材按滞后 $0,1,\ldots$ 的顺序互相反转。
+
+记录源码提交、配置、精度与误差；不同融合核的近似、累加顺序和低精度状态各自核对。本仓库给出实数公式对应，未据此宣称完成 GPU 内核或下游符合性验证。
+
+### 4.3 带权、时间与反向
+
+覆盖不等间隔、长空档、conv_size=1、不同 conv_stride、快照延后读取，以及在原本空槽插入零或逐渐变弱的事件。比较新增事件之后的多次有效缓存、矩阵和读出，不能只看插入当步。复现[短卷积教材 §3](../local-semantics/weighted-message/causal-convolution-learning-note.md#3-弱接收与固定时间)的按事件移位反例；切分继续同时保留卷积与矩阵状态。
+
+GDN 与 SSD 的正接收全候选都执行 Upd。测试本次未激活、下次激活且读取既有记忆的轨迹；本次发送控制不得改变本次缓存写入。给定完整驱动后，核对短卷积的预计算、仿射复合和逐步递归的所有中间结果，SSD 另与其历史展开式比较。缺失位置不能通过压紧序列后调用普通短卷积而隐式改变距离。
+
+反向验证覆盖输入投影、历史卷积、保留与写入门、状态查询、输出门、归一化及区域描述。光滑点使用方向差分或独立自动微分核对，$w$ 截断处声明边界反向；区分记忆中性极限与当前内容方向的变化。门参数、归一化常数、低精度累加和状态反向截断均在验证报告中注明。有限时间连续性与固定输入转移范数界不替代训练梯度测量。
 
 ## 5. 数值性质、图与继续
 
@@ -100,7 +122,7 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ## 6. 仓库文档检查
 
-[check_documents.py](../tools/check_documents.py)核对本地链接与锚点、四份局部教材的公式编号与 TeX 分组、空目录、正典版本及引用方向。正典的仓库内链接只指向四份正典之一，局部教材、实例与检索文档向上引用。脚本从自身位置定位仓库，可在任意工作目录执行；在仓库根目录使用：
+[check_documents.py](../tools/check_documents.py)核对本地链接与锚点、全部局部教材的公式编号与 TeX 分组、空目录、正典版本及引用方向。正典的仓库内链接只指向四份正典之一，局部教材、实例与检索文档向上引用。脚本从自身位置定位仓库，可在任意工作目录执行；在仓库根目录使用：
 
 ```bash
 python -B 20-tide-decentralized-neural-network/tools/check_documents.py
@@ -109,6 +131,16 @@ python -B 20-tide-decentralized-neural-network/tools/check_documents.py
 正典的预期哈希对应已审阅版本。确需修改正典时，先审阅差异并记入修订记录，再更新预期哈希。结构检查不判定数学命题的真假；神经函数的验证仍使用前述比较对象。
 
 ## 附录：教学参考程序的对应
+
+### 循环记忆的有限公式核对
+
+[recurrent_memory_checks.py](../examples/recurrent_memory_checks.py)以已投影的特征为输入，检查规则时间卷积、旧／新快照、Delta 误差式与仿射式及状态方向导数、SSD 递归与历史展开、全部切分点的继续，以及插入弱事件后的多步收敛。程序使用标准库，覆盖单头、不同步长和空档；完整多头模块、输出变换、区域分配和设备内核仍按第 4 节核对。
+
+```bash
+python -B 20-tide-decentralized-neural-network/examples/recurrent_memory_checks.py
+```
+
+### 正时延图的规范记录
 
 [正时延图教学程序](../examples/positive_delay_graph_reference.py)用整数与有理数函数展示切面、快照和调度重排。其范围及教学例子见 [PDG 附录 S.10](../positive-delay-graph-finite-cut-learning-note.md#s10-有限检验的比较对象)。
 

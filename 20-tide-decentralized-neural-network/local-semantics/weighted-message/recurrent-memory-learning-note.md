@@ -11,11 +11,11 @@ tags:
   - learning-note
 ---
 
-# 有界接收驱动的循环记忆
+# 基础循环记忆：仿射写入与 Delta 写入
 
 本模块用固定大小的矩阵与摘要保存历史。每次接收对状态作一次仿射更新，当前内容再查询该状态。它与[带权 KV](kv-memory-learning-note.md)共用[局部架构](architecture-learning-note.md)的载荷、聚合、描述、区域分配、Next 和广播 Full。
 
-下面完整定义两种接收更新：门控仿射写入，以及带衰减的 Delta 写入。它们给出可组合的局部函数，具体网络的其余结构由组合指定。仿射写入属于输入决定系数的线性状态空间更新；更一般 SSM 的通道衰减、输入输出投影和离散化可沿同样接口定义。这里的 Delta 公式采用关联记忆的误差校正；完整 Gated DeltaNet 模型还包含自身的投影、短卷积、多头与归一化等绑定。
+下面完整定义两种接收更新：门控仿射写入，以及带衰减的 Delta 写入。它们给出可组合的基础局部函数。仿射写入的系数由输入决定，Delta 写入进一步按关联预测的误差修正矩阵。[Gated DeltaNet](gated-delta-memory-learning-note.md)与 [Mamba-2／SSD](ssd-memory-learning-note.md)分别定义包含短卷积、多头、具体门和输出归一化的完整候选；它们使用独立的 memory_family 名称。
 
 ## 1. 状态与逻辑时间
 

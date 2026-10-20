@@ -33,8 +33,23 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-20 反向与零消息条件勘误 | 函数定义保持。quad 总和松弛时使用独立响应导数；固定总强度 mu 支持零消息删除，uniform 须区分缺席与零消息；softmax 的前向等值与边界反向分别判定。下游核对范围见实现检查 §3、§5 |
 | 2026-10-20 目录分层与拓扑拆分 | 核心版本、局部函数与配置取值保持。拓扑定义独立，实例引用图和函数形成完整绑定；下游更新正文路径，并区分通用图结论与依赖局部绑定的性质 |
 | 2026-10-20 定义顺序与正典引用边界 | 局部函数及默认数值保持，配置名称和局部符号按下表迁移。共同架构补入有限正温度精确运行推论。四份正典清除向下引用，PDG 的有限检验段落改为自足说明；其数学定义、公式、命题与证明保持 |
+| 2026-10-20 完整循环记忆候选 | 增加 memory_family=gated_delta／ssd 与固定逻辑时间短卷积；给出完整局部函数、状态引理、原模型对应、两类拓扑绑定和实现核对。既有 affine／delta／kv、评分与发送函数保持；本轮四份正典逐字保持 |
 
-此前截至 [e6f5513](https://github.com/ZichaoLong/ObsidianVault/commit/e6f5513) 的目录与局部整理保持四份正典原文；本次引用清理的逐篇差异见[修订记录](history/document-revisions.md#2026-10-20定义顺序与正典引用边界)。局部 Attention 份额使用 $p_v^{\mathrm{sel}}$，标量响应及导数使用 resp 上标。旧路径的直接落点见[迁移索引](history/migration-map.md#2026-10-20-移除转向入口)。
+截至 [e6f5513](https://github.com/ZichaoLong/ObsidianVault/commit/e6f5513) 的目录与局部整理保持四份正典原文；随后引用清理的逐篇差异见[修订记录](history/document-revisions.md#2026-10-20定义顺序与正典引用边界)。局部 Attention 份额使用 $p_v^{\mathrm{sel}}$，标量响应及导数使用 resp 上标。旧路径的直接落点见[迁移索引](history/migration-map.md#2026-10-20-移除转向入口)。
+
+## 完整循环候选的采用范围（2026-10-20）
+
+核心版本继续为 tide-core-5。基础 delta 没有被重命名或替换；新配置选择不同的状态、参数和数值函数。memory_read=state 在新模块中表示短期摘要与矩阵查询两个通道，具体定义见相应教材 §3。
+
+| 新配置 | 定义与对应范围 | 下游需新增的内容 |
+|---|---|---|
+| gated_delta | [Gated DeltaNet 局部教材](../local-semantics/weighted-message/gated-delta-memory-learning-note.md)，等间隔单位接收下对照 FLA [9d478fac](https://github.com/fla-org/flash-linear-attention/tree/9d478facb282410dc150051d5f57205cd3812f31) 指定开关的记忆混合器 | 多头矩阵、Q/K/V 短卷积、L2、保留／写入／输出门、逐头输出 RMS、描述与完整状态 |
+| ssd | [SSD 局部教材](../local-semantics/weighted-message/ssd-memory-learning-note.md)，等间隔单位接收下对照 Mamba [e9594ce1](https://github.com/state-spaces/mamba/tree/e9594ce1c732d97440f0332fdc43170a2294dbfa) 的 Mamba2Simple | x/B/C 短卷积、头组映射、标量门与 dt 写入、D 直通、先门控后整体 RMS |
+| conv_size／conv_stride | [固定时间短卷积](../local-semantics/weighted-message/causal-convolution-learning-note.md)的抽头数与逻辑步长 | 原始时间槽、带权历史、快照重建、空档与分段状态；分层绑定的步长为 $D$ |
+
+对原模型的对应是指定实数公式与参数形状的对应；源码版本、门开关、归一化常数及参考输入由各教材附录 S 固定。带权接收、逻辑空档、selector 摘要与图广播为 Tide 的显式适配。旧模型的缓存不自动成为新模型从头运行的状态，切换配置后的继续须重算或声明转换。
+
+本次未审计下游对新候选的支持，也未做训练、吞吐或 GPU 内核一致性验证。实现核对集中在[记忆模块检查](../reference/weighted-message-implementation-checks.md#4-记忆模块)，论文证据与推断边界集中在[设计总览](../memos/design/weighted-message-design.md#8-外部证据)。
 
 ## 局部名称迁移（2026-10-20）
 
