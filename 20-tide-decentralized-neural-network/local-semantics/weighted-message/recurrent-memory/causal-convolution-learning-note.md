@@ -14,6 +14,8 @@ tags:
 
 短卷积用当前内容和有限段历史形成新的特征。本文定义一个带接收权重的因果卷积部件，供 [Gated DeltaNet](gated-delta-learning-note.md) 与 [SSD](ssd-learning-note.md) 的局部记忆使用。它保存投影后的历史，时间坐标采用[共同架构](../architecture-learning-note.md)的逻辑时间 $\theta\in\mathbb N$。
 
+在完整记忆模块中，当前聚合先作投影，Conv 将它与已保存的投影历史合成特征；接收更新用 ConvWrite 保存本次历史。节点描述和完整内容读取也可使用 Conv。本文返回卷积特征与缓存，矩阵更新、Mem 和 $G_v$ 由使用它的记忆教材继续定义。
+
 ## 1. 时间槽与保存内容
 
 固定特征宽度 $p\ge1$、抽头数 $L_{\mathrm{conv}}\ge1$、抽头的逻辑时间间距 $\delta_{\mathrm{conv}}\ge1$，后两者均为整数。抽头指卷积所读取的一个时间偏移。最远偏移为

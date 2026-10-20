@@ -164,9 +164,9 @@ HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 
 
 在 $Dq$ 处没有跨界消息，继续保留节点状态、单点历史和原始位置，带短卷积的状态还包含原始时间槽。切在位置内部时须保留 $W_b$。Read 的内容检索和 Full 均只读取各自快照及原始时间，整段、连续多 chunk 与逐位置求值满足同一精确记录契约。查询、缓存与消息的工作量由第 5 节计量。
 
-固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。KV 与循环模块分别验证状态条件；正温度输入连续性和单位输入的软硬极限分别使用各自的发送函数及评分条件。该组合定理直接覆盖本实例的稀疏邻域。
+固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。KV 与循环模块分别验证状态条件，区域控制按区域分配 §6 核对。单位输入的软硬关系使用[区域分配 §5.4](../local-semantics/weighted-message/region-allocation-learning-note.md#54-单位输入的整网软硬关系)的发送函数及评分条件。有限时间的组合结论覆盖本实例的稀疏邻域。
 
-若全部区域采用 quad 或固定 $\alpha>1$ 的 ent，且对应硬运行满足评分条件，则共同架构的正温度推论给出：在固定参数、输入和有限时间范围内，充分小正温度使完整记录及切面继续状态精确等于硬运行。所需温度界按该次硬运行确定。
+若全部区域采用 quad 或固定 $\alpha>1$ 的 ent，且对应硬运行满足评分条件，则区域分配 §5.4 的推论给出：在本实例的单位外部输入、固定参数和有限时间范围内，充分小正温度使完整记录及切面继续状态精确等于硬运行。所需温度界按该次硬运行确定。
 
 硬选择每个区域每位置激活 $1$ 至 $k_j$ 个候选，激活者随输入和历史改变。既有空间边可在其他位置继续使用。连接较丰富的 HB 和较稀疏的 HB 各自在自己的固定图上使用同一结论。永久删边改变空间图；在同一图上，局部选择决定各次实际使用的边。
 
@@ -189,7 +189,7 @@ $$
 
 其中 $\Delta_\ell$ 为该层最大出度。显式保留零 Full 及零广播会产生额外候选。满足[共同架构命题 1](../local-semantics/weighted-message/architecture-learning-note.md#62-零消息与正温度输入)的组合保持消息投影、有效状态和 ReadOut，候选与消息计数须按实际计算规则重算。
 
-含固定总强度 uniform Attention 的混合组合须保留消息存在掩码：缺席槽只作张量填充，不产生真实候选。把缺席改为存在的零强度消息，可能改变下游份额与前向结果；各发送函数的适用范围见[性质对照](../local-semantics/weighted-message/architecture-learning-note.md#64-发送规则的性质对照)。
+含固定总强度 uniform Attention 的混合组合须保留消息存在掩码：缺席槽只作张量填充，不产生真实候选。把缺席改为存在的零强度消息，可能改变下游份额与前向结果；各发送函数的适用范围见[性质对照](../local-semantics/weighted-message/region-allocation-learning-note.md#61-零接收与正温度连续性)。
 
 硬运行另有
 

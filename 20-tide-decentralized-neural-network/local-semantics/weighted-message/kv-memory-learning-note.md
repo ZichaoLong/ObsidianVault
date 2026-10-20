@@ -13,7 +13,9 @@ tags:
 
 # 带权 KV：写入、描述与内容读取
 
-本模块把节点状态定义为带原始时间和写入权重的 KV 序列。接收发生时保存信息，Read 提取候选描述，激活后的 Full 再读取完整内容。聚合、状态采用和广播使用[局部架构教材](architecture-learning-note.md)的共同函数，评分与发送使用[区域分配教材](region-allocation-learning-note.md)。本文定义记忆部分，并给出完整算例、精确继续及局部性质的证明。
+本模块把节点状态定义为带原始时间和写入权重的 KV 序列。接收发生时保存信息，Read 提取候选描述，激活后的 Full 再读取完整内容。聚合、状态采用和广播使用[局部架构教材](architecture-learning-note.md)的共同函数，评分与发送使用[区域分配教材](region-allocation-learning-note.md)。本文具体给出架构的 $S_v,q_v^{\mathrm{init}}$、Upd、Mem、当前特征 $p_v$ 与内容函数 $G_v$。
+
+阅读顺序对应一次节点作用：§1 定义收到聚合后怎样写入；§2 定义查询位置；§3 计算供 Describe 使用的记忆量；区域选择给出 $c_v$ 后，§4 为激活节点计算 $G_v$。第 5 节完成架构中 $a,b,c$ 的同一算例。
 
 固定内容宽度 $d$。消息 $(m,z)$、聚合 $h=(r^{\mathrm{in}},u)$、归一化 $\mathcal N$ 及数值投影 $\pi_P(m,z)=(m_+,m_+z)$ 均沿用共同定义。各参数在一次运行中固定。
 
@@ -45,7 +47,7 @@ p_v(u)&=W_v^S\mathcal N_d(u),
 \tag{2}
 $$
 
-共享基座给出区域共同的 KV 投影，节点差异由秩至多为 $r_a$ 的乘积提供。相同输入的基座投影可共同求值，各节点仍保存私有条目。取 $r_a=d$、$W_j^{\mathrm{KV}}=0$、$V_v^{\mathrm{ad}}=I_d$ 与 $U_v=[W_v^K;W_v^V]$，即可表示任意独立的 K、V 投影。式 (2) 定义写入；Attention 读取由 §3.1 给出。
+共享基座给出区域共同的 KV 投影，节点差异由秩至多为 $r_a$ 的乘积提供。相同输入的基座投影可共同求值，各节点仍保存私有条目。取 $r_a=d$、$W_j^{\mathrm{KV}}=0$、$V_v^{\mathrm{ad}}=I_d$ 与 $U_v=[W_v^K;W_v^V]$，即可表示任意独立的 K、V 投影。式 (2) 定义写入；Attention 读取由 §4.1 给出。
 
 为每节点固定窗口 $T_v\in\mathbb N_{\ge1}\cup\{\infty\}$，以原始逻辑时间计量。定义遮罩
 
@@ -107,7 +109,7 @@ $$
 
 旋转维数为零时 $\operatorname{Rot}=I_{d_h}$；旋转全部或部分坐标分别得到完整或部分 RoPE。旋转维数独立于评分网络的宽度。
 
-对每个头固定 $W^Q_{v,h}\in\mathbb R^{d_h\times d}$，定义当前 query 为 $Q_{v,h}(u)=W^Q_{v,h}\mathcal N_d(u)$。另取非负距离偏置斜率 $b^{\mathrm{pos}}_{v,h}$，为下节 Attention 定义匹配分数
+对每个头固定 $W^Q_{v,h}\in\mathbb R^{d_h\times d}$，定义当前 query 为 $Q_{v,h}(u)=W^Q_{v,h}\mathcal N_d(u)$。另取非负距离偏置斜率 $b^{\mathrm{pos}}_{v,h}$，为 §4.1 的完整内容读取定义匹配分数
 
 $$
 \ell_{i,h}=\frac{
@@ -135,54 +137,9 @@ $$
 
 NoPE 的 Full 匹配使用内容，时间窗口、摘要和状态顺序仍保留时间信息。令 $\Delta p=\operatorname{Pos}_v(\theta)-\operatorname{Pos}_v(\xi_i)$，可选的线性距离偏置在 softmax 中乘入 $e^{-b^{\mathrm{pos}}_{v,h}\Delta p_+}$，是一种距离衰减；它与 RoPE 的旋转可以分别配置。
 
-## 3. 激活后的内容读取
+## 3. 供评分使用的记忆描述
 
-### 3.1 带权 Attention
-
-使用 §2 的 query 和匹配分数，从本次计算状态 $q$ 中读取窗口内的记忆：
-
-$$
-\begin{aligned}
-\widehat w_i&=\chi_{v,\theta}(\xi_i)w_i,\qquad
-W=\sum_i\widehat w_i,\qquad a(W)=\min(1,W),\\
-R_{v,h}(q,\theta,u)
-&=\begin{cases}
-\displaystyle a(W)
- \frac{\sum_i\widehat w_i e^{\ell_{i,h}}\nu_{i,h}}
-      {\sum_i\widehat w_i e^{\ell_{i,h}}},&W>0,\\
-0,&W=0.
-\end{cases}
-\end{aligned}
-\tag{5}
-$$
-
-$\ell_{i,h}$ 是当前内容与第 $i$ 条记忆的匹配分数。$\widehat w_i$ 是本次读取中该条目的有效权重，$W$ 是这些权重之和。$R_{v,h}$ 先对记忆的 value 作归一化加权平均，再乘 $a(W)$。
-
-窗口内有效权重全为 $1$ 时，得到通常的多头 Attention 读取。最后一条弱记忆消失时，$a(W)$ 使读取趋零；单位记忆有 $a(1)=1$。实际匹配采用 §2 的位置公式；零旋转和零距离偏置恢复纯内容匹配。
-
-### 3.2 内容函数
-
-固定前馈宽度 $d_f$，取 $W_v^O\in\mathbb R^{d\times d}$、$W_v^{\mathrm{gate}},W_v^{\mathrm{up}}\in\mathbb R^{d_f\times d}$、$W_v^{\mathrm{down}}\in\mathbb R^{d\times d_f}$ 以及非负残差尺度 $\alpha_{\mathrm{att}},\alpha_{\mathrm{ff}}$，定义
-
-$$
-\begin{aligned}
-x_v&=u+\alpha_{\mathrm{att}}W_v^O
-       [R_{v,1};\ldots;R_{v,H_{\mathrm{att}}}],\\
-G_v(q,\theta,u)
- &=x_v+\alpha_{\mathrm{ff}}W_v^{\mathrm{down}}
- \left[
- \operatorname{SiLU}(W_v^{\mathrm{gate}}\mathcal N_d(x_v))
- \odot W_v^{\mathrm{up}}\mathcal N_d(x_v)
- \right].
-\end{aligned}
-\tag{6}
-$$
-
-式 (5) 负责读取历史，式 (6) 将读出与当前内容合成，再作预归一化的 SwiGLU 前馈残差。$G_v$ 接入[共同 Full](architecture-learning-note.md#4-分配完整计算与发送)，发送 $(c_v,G_v)$；下一状态仍取接收后的 $\widetilde q$。取 $\alpha_{\mathrm{att}}=0$ 得到只在 Full 使用前馈残差的变式，KV 仍可供 Read 选择使用；若再删除记忆写入，需改用相应无记忆模块定义。
-
-## 4. 供评分使用的记忆描述
-
-### 4.1 时间摘要
+### 3.1 时间摘要
 
 对每节点取 $\beta_{v,\mathrm{long}}=0$、$\beta_{v,\mathrm{short}}>0$，均按逻辑时间计量。固定节点后省略部分下标，对 $a\in\{\mathrm{short},\mathrm{long}\}$ 定义
 
@@ -194,12 +151,12 @@ W_a(q,\theta)&=\sum_i\omega_i^a(\theta),\\
 M_a^{\mathrm{sum}}(q,\theta)&=
  \frac{\sum_i\omega_i^a(\theta)p_i}{\max(1,W_a(q,\theta))}.
 \end{aligned}
-\tag{7}
+\tag{5}
 $$
 
 短期摘要突出近期接收，长期摘要覆盖整个窗口；分母使最后一条弱记忆消失时摘要也趋零。摘要本身只按时间和写入权重汇集，当前内容在后续评分中与它交互。
 
-### 4.2 当前内容检索
+### 3.2 当前内容检索
 
 取偶数 $0\le d_v^{\mathrm{rot,read}}\le d_s$、坐标配对及有限频率 $\omega_{v,a}^{\mathrm{rot,read}}$。$\operatorname{Rot}_v^{\mathrm{read}}$ 使用 §2 的旋转矩阵族，宽度换为 $d_s$，采用这些独立参数；零旋转维数给出内容匹配。它沿用同一 $\operatorname{Pos}_v$，与 Full 的位置配置分别选择。
 
@@ -223,22 +180,77 @@ M_a^{\mathrm{qry}}(q,\theta,u)&=
 0,&W_a=0.
 \end{cases}
 \end{aligned}
+\tag{6}
+$$
+
+两个时间尺度共用本次匹配分数。检索结果替换 §3.1 的摘要。宽度与检索量允许接近 Full，成本按实际配置计量。
+
+两种读取均返回共同的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$，当前特征为 §1 的 $p_v(u)$。时间摘要使用独立的摘要投影；qry 从 §1 写入的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
+
+Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。这些 Mem 返回值连同当前 $r_v^{\mathrm{in}},u_v,p_v(u_v)$，进入[区域教材的 Describe](region-allocation-learning-note.md#14-describe-与-selstep-的对应)。Describe 返回节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变的是记忆信息的取得方式，区域评分和发送函数仍可分别选择。
+
+## 4. 激活后的内容读取
+
+区域选择完成后，只有 $c_v>0$ 的节点执行本节内容函数。它读取本次计算状态 $\widetilde q_v$；§3 中给区域提供描述的读取已在选择前完成。
+
+### 4.1 带权 Attention
+
+使用 §2 的 query 和匹配分数，从本次计算状态 $q$ 中读取窗口内的记忆：
+
+$$
+\begin{aligned}
+\widehat w_i&=\chi_{v,\theta}(\xi_i)w_i,\qquad
+W=\sum_i\widehat w_i,\qquad a(W)=\min(1,W),\\
+R_{v,h}(q,\theta,u)
+&=\begin{cases}
+\displaystyle a(W)
+ \frac{\sum_i\widehat w_i e^{\ell_{i,h}}\nu_{i,h}}
+      {\sum_i\widehat w_i e^{\ell_{i,h}}},&W>0,\\
+0,&W=0.
+\end{cases}
+\end{aligned}
+\tag{7}
+$$
+
+$\ell_{i,h}$ 是当前内容与第 $i$ 条记忆的匹配分数。$\widehat w_i$ 是本次读取中该条目的有效权重，$W$ 是这些权重之和。$R_{v,h}$ 先对记忆的 value 作归一化加权平均，再乘 $a(W)$。
+
+窗口内有效权重全为 $1$ 时，得到通常的多头 Attention 读取。最后一条弱记忆消失时，$a(W)$ 使读取趋零；单位记忆有 $a(1)=1$。实际匹配采用 §2 的位置公式；零旋转和零距离偏置恢复纯内容匹配。
+
+### 4.2 内容函数
+
+固定前馈宽度 $d_f$，取 $W_v^O\in\mathbb R^{d\times d}$、$W_v^{\mathrm{gate}},W_v^{\mathrm{up}}\in\mathbb R^{d_f\times d}$、$W_v^{\mathrm{down}}\in\mathbb R^{d\times d_f}$ 以及非负残差尺度 $\alpha_{\mathrm{att}},\alpha_{\mathrm{ff}}$，定义
+
+$$
+\begin{aligned}
+x_v&=u+\alpha_{\mathrm{att}}W_v^O
+       [R_{v,1};\ldots;R_{v,H_{\mathrm{att}}}],\\
+G_v(q,\theta,u)
+ &=x_v+\alpha_{\mathrm{ff}}W_v^{\mathrm{down}}
+ \left[
+ \operatorname{SiLU}(W_v^{\mathrm{gate}}\mathcal N_d(x_v))
+ \odot W_v^{\mathrm{up}}\mathcal N_d(x_v)
+ \right].
+\end{aligned}
 \tag{8}
 $$
 
-两个时间尺度共用本次匹配分数。检索结果替换 §4.1 的摘要。宽度与检索量允许接近 Full，成本按实际配置计量。
-
-选择 sum 或 qry 后，评分中的 $M_a$ 使用相应记忆描述。
-
-两种读取均返回共同的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$，当前特征为 §1 的 $p_v(u)$。时间摘要使用独立的摘要投影；qry 从 Full 的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
-
-Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。各区域可分别选择描述模式及区域分配教材中相容的描述、评分与发送函数。
+式 (7) 负责读取历史，式 (8) 将读出与当前内容合成，再作预归一化的 SwiGLU 前馈残差。$G_v$ 接入[共同 Full](architecture-learning-note.md#4-分配完整计算与发送)，发送 $(c_v,G_v)$；下一状态仍取接收后的 $\widetilde q$。取 $\alpha_{\mathrm{att}}=0$ 得到只在 Full 使用前馈残差的变式，KV 仍可供 Read 选择使用；若再删除记忆写入，需改用相应无记忆模块定义。
 
 ## 5. 完整例子
 
 ### 5.1 从接收到输出
 
-取共享聚合、Read$^+$、时间摘要、cat 局部评分、ind 区域评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
+本例完成[架构 §4.4](architecture-learning-note.md#44-一组贯穿例子)与[区域教材 §3.1](region-allocation-learning-note.md#31-贯穿例子的区域计算)的函数绑定。取共享聚合、Read$^+$、时间摘要、cat 局部评分、ind 区域评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
+
+本次新状态上，两种时间摘要均只读到当前写入；因此
+
+$$
+\operatorname{Mem}_a=(1,1,1,1),\qquad
+\operatorname{Mem}_b=(-1,-1,1,1),\qquad
+\operatorname{Mem}_c=(0,0,0,0).
+$$
+
+这些四元组依次为短期描述、长期描述、短期写入量和长期写入量，正是 Describe 的记忆输入。
 
 评分网络输出常数 $s=(2,1,100)$，可由零输出权重与相应偏置实现。取 $\eta_j=0,k_j=1,\tau_{\mathrm{sel}}=2$。
 
@@ -248,7 +260,7 @@ Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当
 | $b$ | $(1,-1)$ | $(0,-1,-1,1)$ | $1$ | $1$ | $0.25$ |
 | $c$ | $(0,0)$ | 不追加 | $0$ | $100$ | $0$ |
 
-节点 $c$ 的发送上限为零，其高分不影响选择。$a,b$ 的分配由[区域分配 §2.1](region-allocation-learning-note.md#21-约束分配)的两节点公式得到。三者均保留接收后的状态，随后计算激活者的 Full。
+节点 $c$ 的发送上限为零，其高分不影响选择。Describe 返回的三元组及 SelStep 的控制计算已在[区域教材的同一例子](region-allocation-learning-note.md#31-贯穿例子的区域计算)中展开。三者均保留接收后的状态，随后计算激活者的 Full。
 
 令 $W_v^O=1,\alpha_{\mathrm{att}}=1,\alpha_{\mathrm{ff}}=0$，记同刻端口的 ReadOut 为 $O$。$a,b$ 的 Attention 分别读出 $1,-1$，Full 内容为 $2,-2$，发送 $(0.75,2),(0.25,-2)$。若直接作为终端，$O=1$；若共同到达采用[共同聚合](architecture-learning-note.md#2-接收聚合) 且 $\alpha_{\mathrm{agg}}=0$ 的下游，则下游得到 $(r^{\mathrm{in}},u)=(1,1)$，再开始自己的接收流程。
 
@@ -263,7 +275,7 @@ s_a=0.5,\qquad
 s_b=0.75-M_{\mathrm{long}}^{\mathrm{sum}}(\widetilde q_b,\theta).
 $$
 
-这属于[拼接评分](region-allocation-learning-note.md#12-局部评分)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
+这属于[拼接评分](region-allocation-learning-note.md#13-局部评分的两种具体函数)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
 
 | 位置 | 两节点新写入的 $(\xi,\nu,p,w)$ | $M_{\mathrm{long}}$ | $(s_a,s_b)$ | 激活者 | 终端 $O$ |
 |---|---|---|---|---|---|
@@ -310,18 +322,18 @@ $$
 
 微弱正接收可能触发清理，零接收保留原列表；过期项在该投影中均为零，之后不会重新可读。有效状态比较允许裸列表不同；同一函数的精确求值仍恢复原始序列。
 
-**引理。** 从空缓存开始，在固定有限时间和有界接收内容、强度下，KV 更新、sum／qry 描述与式 (6) 的内容函数满足[共同架构 §6.1](architecture-learning-note.md#61-比较对象与局部条件)的有界性、零接收中性、更新连续性和读取连续性。三种 Read 模式均成立。证明见附录 A。
+**引理。** 从空缓存开始，在固定有限时间和有界接收内容、强度下，KV 更新、sum／qry 描述与式 (8) 的内容函数满足[共同架构 §6.1](architecture-learning-note.md#61-比较对象与局部条件)的有界性、零接收中性、更新连续性和读取连续性。三种 Read 模式均成立。证明见附录 A。
 
 <a id="7-有效状态与正温度连续性"></a>
 <a id="8-单位输入的整网软硬极限"></a>
 
-选定发送函数后，[共同组合定理](architecture-learning-note.md#6-数值性质的组合)据此给出零消息删除、正温度输入连续性，以及约束分配与硬选择的单位输入极限。每项结论使用各自声明的发送函数和评分条件；与循环记忆的混合使用同一组定理。
+该引理验证记忆一侧的条件。区域控制另按[区域教材 §6](region-allocation-learning-note.md#6-发送规则如何满足架构条件)核对，再应用共同架构的零消息删除与连续性命题；约束分配与硬选择的单位输入结论见[区域教材 §5.4](region-allocation-learning-note.md#54-单位输入的整网软硬关系)。与循环模块混合时，各节点分别验证自己的记忆条件。
 
 ## 附录 A：局部性质的证明
 
 ### A.1 有界性
 
-$\|\mathcal N_p(x)\|\le\sqrt p$，故写入的 K/V 与摘要特征有界；有限时间内每节点至多写有限项，权重不超过 $1$。时间摘要的分母至少为 $1$；检索和 Attention 是有界 value 的凸组合再乘至多为 $1$ 的系数，位置旋转保持范数。式 (6) 的残差在有界 $u$ 上有界。所得界与区域选择温度无关。
+$\|\mathcal N_p(x)\|\le\sqrt p$，故写入的 K/V 与摘要特征有界；有限时间内每节点至多写有限项，权重不超过 $1$。时间摘要的分母至少为 $1$；检索和 Attention 是有界 value 的凸组合再乘至多为 $1$ 的系数，位置旋转保持范数。式 (8) 的残差在有界 $u$ 上有界。所得界与区域选择温度无关。
 
 ### A.2 更新与时间推进
 

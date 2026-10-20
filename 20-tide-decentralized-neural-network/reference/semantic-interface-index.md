@@ -19,8 +19,8 @@ tags:
 | [TimedDAG](../timed-dag-region-selector-learning-note.md) | 有限无环消息图、有限输入及严格递增端口日程 | 唯一有限记录、规范作用、合法暴露、关闭与切面继续 |
 | [PositiveDelayGraph](../positive-delay-graph-finite-cut-learning-note.md) | 有限正时延消息图，输入局部有限，允许空间有环 | 相容有限切面、区间组合与强连通分量求值 |
 | [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
-| [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 共同接口、模块组合、零消息与正温度性质、单位输入的整网软硬极限 |
-| [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定增益、评分和发送函数 | 求解、导数、单次分配的连续性与温度极限 |
+| [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 完整计算过程、模块组合、局部条件到整网性质的推导、精确继续与联合求值 |
+| [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定增益、评分和发送函数 | Describe 与 SelStep 的具体定义、求解与导数、局部极限及单位输入的整网软硬关系 |
 | [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
 | [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
@@ -28,7 +28,7 @@ tags:
 
 SettleGraph 向 TimedDAG 保留图对象、端口和局部函数，重索引位置坐标并补齐空档状态；TimedDAG 记录逐切面限制后得到 PositiveDelayGraph 的相容记录族。分块求值研究固定语义下的联合函数。
 
-局部架构是这些正典允许的一条特化支线。零消息删除、正温度连续性和单位输入软硬极限各有明确的函数范围与条件，集中见[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。
+局部架构是这些正典允许的一条特化支线。[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)给出局部条件与组合结论；[区域分配 §5—6](../local-semantics/weighted-message/region-allocation-learning-note.md#5-温度极限与硬选择)验证具体发送函数的适用范围。
 
 ## 基础对象与时间
 
@@ -56,8 +56,9 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 |---|---|
 | $(m,z),\pi_P,(r^{\mathrm{in}},u),\operatorname{Agg},\operatorname{SrcClass}_v$ | [共同架构 §1—2](../local-semantics/weighted-message/architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献、接收聚合及从带标签端口／入边到有限类别的映射 |
 | $\operatorname{Mem}_v,p_v,\operatorname{Describe}_v$ | [共同架构 §3](../local-semantics/weighted-message/architecture-learning-note.md#3-状态与记忆描述)：记忆描述、当前特征与选择描述的组合 |
-| $w_v,\gamma_v,\mu_v$ | [区域分配 §1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#11-接收量与发送增益)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
-| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v$ | [区域分配 §1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#13-描述量与区域评分)：区域 query、节点 key 与评分 |
+| $q_v^{\mathrm{read}}$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：描述模式指定的初态、旧状态或新状态 |
+| $w_v,\gamma_v,\mu_v$ | [区域分配 §1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#11-本节点可用的信息)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
+| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v$ | [区域分配 §1.2](../local-semantics/weighted-message/region-allocation-learning-note.md#12-从节点描述到区域评分)：区域 query、节点 key 与评分 |
 | $c_v,\mathcal A,M,S$ | [区域分配 §2](../local-semantics/weighted-message/region-allocation-learning-note.md#2-从评分得到发送强度)：发送强度（本支线的控制量）、激活集合、$\mu$ 总和与实际发送总和 |
 | $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [约束分配](../local-semantics/weighted-message/region-allocation-learning-note.md#21-约束分配)：可行域、总和上下限、阈值、调整后评分和温度 |
 | $a_v,Z,p_v^{\mathrm{sel}}$ | [加权 Attention](../local-semantics/weighted-message/region-allocation-learning-note.md#22-加权-attention-的共同定义)：基权重、归一化分母和份额 |

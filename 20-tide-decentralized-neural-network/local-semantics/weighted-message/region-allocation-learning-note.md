@@ -13,13 +13,24 @@ tags:
 
 # 区域评分与发送分配
 
-区域接收候选节点的描述，先形成评分，再决定各节点发送多少。本文将信息读取、评分和分配分别定义。相同评分可以接稠密 Attention、约束优化或硬排序；各函数的支持、梯度和极限由自己的定义确定。
+本文具体定义[局部架构](architecture-learning-note.md)中的 Describe 与 SelStep。Describe 让一个节点把本次接收和记忆转为描述 $d_v$；SelStep 收齐区域内的候选描述，先得到评分 $s_v$，再得到发送强度 $c_v$，返回激活集合与控制族。
+
+计算依次经过“节点信息 → 节点描述 → 区域评分 → 发送分配”。第 1 节定义前三步，第 2 节给出可选发送函数，第 3 节把它们用于同一组节点。求解、导数及温度极限在函数定义之后讨论。
 
 消息、候选、归一化和广播沿用[局部架构教材](architecture-learning-note.md)。固定区域 $j$ 的一次选择，候选集为 $C\subseteq\mathcal R_j$。$r_v^{\mathrm{in}},u_v$ 是候选 $v$ 的接收强度与聚合内容，记忆模块提供 $p_v(u_v)$、两个 $d_s$ 维描述 $M_{v,a}$ 和非负统计量 $W_{v,a}$，$a\in\{\mathrm{short},\mathrm{long}\}$。矩阵、偏置均为有限参数。
 
 ## 1. 节点向区域提供什么
 
-### 1.1 接收量与发送增益
+### 1.1 本节点可用的信息
+
+架构已由描述模式确定本次读取的状态 $q_v^{\mathrm{read}}$。在该状态上求
+
+$$
+\operatorname{Mem}_v(q_v^{\mathrm{read}},\theta,u_v)
+=(M_{v,\mathrm{short}},M_{v,\mathrm{long}},W_{v,\mathrm{short}},W_{v,\mathrm{long}}).
+$$
+
+本节点可用的输入是 $r_v^{\mathrm{in}},u_v$、当前特征 $p_v(u_v)$ 以及这四个记忆量。先指定一个由这些输入到实数的局部评分函数，记其输出为 $s_v^{\mathrm{loc}}$；§1.3 给出两种具体公式。节点可以另用同一组输入决定发送增益 $\gamma_v$。
 
 定义截断后的接收量 $w_v=\min(1,(r_v^{\mathrm{in}})_+)$。取有限 $\gamma_{\max}\ge1$，令
 
@@ -31,72 +42,19 @@ $$
 
 $w_v$ 描述本次接收，$\mu_v$ 允许有界放大。在约束分配、直接 Attention 与硬选择中，$\mu_v$ 是发送上限；其他分配会使用它作为权重或总量依据。始终有 $w_v\le\mu_v\le\gamma_{\max}w_v$，两者具有相同的正分量位置。
 
-固定增益直接给定，或取 $\gamma_v=1+(\gamma_{\max}-1)\sigma(\zeta_v)$。上下文增益可由当前内容与记忆计算，具体参数化见下节。
+固定增益直接给定，或以有限标量参数 $\zeta_v$ 定义 $\gamma_v=1+(\gamma_{\max}-1)\sigma(\zeta_v)$。上下文增益可由当前内容与记忆计算，具体参数化见 §1.3。
 
-### 1.2 局部评分
+### 1.2 从节点描述到区域评分
 
-为简洁省略节点下标，所有记忆量均在所选 Read 状态、当前 $\theta,u$ 上求值。取正整数隐藏宽度 $d_r$、矩阵 $W_v^r\in\mathbb R^{d_r\times(d+4d_s+3)}$、向量 $b_v^r,a_v^{\mathrm{cat}}\in\mathbb R^{d_r}$ 和标量 $b_v$。拼接评分（cat）定义为
-
-$$
-\begin{aligned}
-f_v=\big[&\mathcal N_d(u);\log(1+(r^{\mathrm{in}})_+);M_{\mathrm{short}};M_{\mathrm{long}};
- \log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}});\\
- &p_v(u)\odot M_{\mathrm{short}};p_v(u)\odot M_{\mathrm{long}}\big],\\
-s_v^{\mathrm{cat}}&=b_v+(a_v^{\mathrm{cat}})^\top\operatorname{SiLU}(W_v^r f_v+b_v^r).
-\end{aligned}
-\tag{2}
-$$
-
-$f_v$ 的宽度为 $d+4d_s+3$。矩阵的不同列分别作用于内容、统计量与交互项。
-
-另一种评分先分组编码。令
-
-$$
-z^{\mathrm{cur}}=\mathcal N_d(u),\quad
-z^{\mathrm{mem}}=[M_{\mathrm{short}};M_{\mathrm{long}}],\quad
-z^{\mathrm{stat}}=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})].
-$$
-
-固定正整数匹配宽度 $d_{\mathrm{sel}}$。对 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$，取相容形状的矩阵与偏置，定义两层编码
-$E_v^g(z)=\mathcal N_{d_{\mathrm{sel}}}(C_v^{\mathrm{enc},g}\operatorname{SiLU}(B_v^{\mathrm{enc},g}z+b_v^{\mathrm{enc},g})+d_v^{\mathrm{enc},g})$，中间宽度为 $d_r$，并定义
-
-$$
-\begin{aligned}
-x_v&=E_v^{\mathrm{cur}}(z^{\mathrm{cur}}),\quad e_v=E_v^{\mathrm{mem}}(z^{\mathrm{mem}}),
- \quad z_v=E_v^{\mathrm{stat}}(z^{\mathrm{stat}}),\quad f_v^{\mathrm{match}}=[x_v;e_v;z_v],\\
-F_v^{\mathrm{match}}(f)&=(w_v^{\mathrm{match}})^\top
- [\operatorname{SiLU}(W_v^{\mathrm{match,gate}}f+b_v^{\mathrm{match,gate}})
- \odot(W_v^{\mathrm{match,up}}f+b_v^{\mathrm{match,up}})],\\
-s_v^{\mathrm{match}}&=b_v^{\mathrm{match}}+
- \alpha_v^{\mathrm{match}}x_v^\top e_v/\sqrt{d_{\mathrm{sel}}}
- +\alpha_v^{\mathrm{res}}F_v^{\mathrm{match}}(f_v^{\mathrm{match}}).
-\end{aligned}
-\tag{3}
-$$
-
-门控残差的隐藏宽度为 $d_r$，两个尺度非负。选择 $s_v^{\mathrm{loc}}=s_v^{\mathrm{cat}}$ 或 $s_v^{\mathrm{match}}$。参数默认按节点独立，允许显式共享同形参数。分组的非线性、归一化和匹配构成函数差异。
-
-取 $W_v^\gamma\in\mathbb R^{d_r\times(d+4d_s+3)}$、$a_v^\gamma,b_v^{\gamma,h}\in\mathbb R^{d_r}$ 和标量 $b_v^\gamma$。特征 $f_v$ 进入独立的增益头，定义上下文增益
-
-$$
-\gamma_v=1+(\gamma_{\max}-1)\sigma\bigl(b_v^\gamma+
- (a_v^\gamma)^\top\operatorname{SiLU}(W_v^\gamma f_v+b_v^{\gamma,h})\bigr).
-\tag{4}
-$$
-
-评分与增益采用不同参数。KV 的写入量取 $w_v$，增益不改变这次写入。
-
-### 1.3 描述量与区域评分
-
-独立评分 ind 的描述空间为
+第一种区域评分直接采用节点给出的 $s_v^{\mathrm{loc}}$，称为独立评分（ind）。其描述空间为
 
 $$
 D_v^{\mathrm{ind}}=\{(w,\mu,s):0\le w\le\mu\le1,\ \mu\le\gamma_{\max}w,\ s\in\mathbb R\}.
 $$
 
-节点传递 $(w_v,\mu_v,s_v^{\mathrm{loc}})$，最终评分 $s_v=s_v^{\mathrm{loc}}$。这里的独立指最终评分只使用本节点的描述；局部评分仍可选 cat 或 match。例如 cat 与 ind 组合时，拼接网络的输出直接成为最终评分。
+节点传递 $(w_v,\mu_v,s_v^{\mathrm{loc}})$，最终评分 $s_v=s_v^{\mathrm{loc}}$。这里的独立指最终评分只使用本节点的描述。下节定义的两种局部评分都能接入此处。
 
-区域 Attention 评分 att 另传递当前特征和记忆 key。取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$ 及两个 $d_{\mathrm{sel}}$ 维偏置，定义
+第二种区域评分让节点共同形成 query，再与各节点的记忆 key 匹配，称为区域 Attention 评分（att）。为此，节点描述还包含当前特征和记忆 key。固定正整数匹配宽度 $d_{\mathrm{sel}}$，取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$ 及两个 $d_{\mathrm{sel}}$ 维偏置，定义
 
 $$
 \begin{aligned}
@@ -106,7 +64,7 @@ K_v^{\mathrm{sel}}&=W_v^{\mathrm{mem}}[M_{v,\mathrm{short}};M_{v,\mathrm{long}};
 D_v^{\mathrm{att}}&=\{(w,\mu,x,K,s):(w,\mu,s)\in D_v^{\mathrm{ind}},\ x,K\in\mathbb R^{d_{\mathrm{sel}}}\},\\
 d_v&=(w_v,\mu_v,x_v^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v^{\mathrm{loc}}).
 \end{aligned}
-\tag{5}
+\tag{2}
 $$
 
 区域从完整候选集形成一个 query。取 $W_j^{\mathrm{in}},W_j^{\mathrm{out}}\in\mathbb R^{d_{\mathrm{sel}}\times d_{\mathrm{sel}}}$、$b_j^{\mathrm{in}},b_j^{\mathrm{out}}\in\mathbb R^{d_{\mathrm{sel}}}$ 和非负尺度 $\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}}$。选择汇集权重 $q_v^{\mathrm{wt}}=\mu_v$ 或 $q_v^{\mathrm{wt}}=w_v$，定义
@@ -120,12 +78,81 @@ Q_j^{\mathrm{sel}}&=\psi_j(\bar x_j),\quad
 s_v&=\alpha_j^{\mathrm{loc}}s_v^{\mathrm{loc}}+
  \alpha_j^{\mathrm{sel}}(Q_j^{\mathrm{sel}})^\top K_v^{\mathrm{sel}}/\sqrt{d_{\mathrm{sel}}}.
 \end{aligned}
-\tag{6}
+\tag{3}
 $$
 
 取 $(\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}})=(1,0)$ 恢复独立评分的数值。两个汇集权重都使零接收候选对 query 无影响；弱候选的影响趋零。使用 $w_v$ 时，在固定接收和记忆描述的条件下，改变发送增益不改变 query。
 
 区域 query 的汇集量由本节直接定义。它与记忆模块的写入量可以数值相同，也可以不同；更换记忆模块不会隐式改变 query。
+
+### 1.3 局部评分的两种具体函数
+
+为简洁省略节点下标，所有记忆量均在所选 Read 状态、当前 $\theta,u$ 上求值。取正整数隐藏宽度 $d_r$、矩阵 $W_v^r\in\mathbb R^{d_r\times(d+4d_s+3)}$、向量 $b_v^r,a_v^{\mathrm{cat}}\in\mathbb R^{d_r}$ 和标量 $b_v$。拼接评分（cat）定义为
+
+$$
+\begin{aligned}
+f_v=\big[&\mathcal N_d(u);\log(1+(r^{\mathrm{in}})_+);M_{\mathrm{short}};M_{\mathrm{long}};
+ \log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}});\\
+ &p_v(u)\odot M_{\mathrm{short}};p_v(u)\odot M_{\mathrm{long}}\big],\\
+s_v^{\mathrm{cat}}&=b_v+(a_v^{\mathrm{cat}})^\top\operatorname{SiLU}(W_v^r f_v+b_v^r).
+\end{aligned}
+\tag{4}
+$$
+
+$f_v$ 的宽度为 $d+4d_s+3$。矩阵的不同列分别作用于内容、统计量与交互项。
+
+另一种评分先分组编码。令
+
+$$
+z^{\mathrm{cur}}=\mathcal N_d(u),\quad
+z^{\mathrm{mem}}=[M_{\mathrm{short}};M_{\mathrm{long}}],\quad
+z^{\mathrm{stat}}=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})].
+$$
+
+使用 §1.2 的匹配宽度 $d_{\mathrm{sel}}$。对 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$，取相容形状的矩阵与偏置，定义两层编码
+$E_v^g(z)=\mathcal N_{d_{\mathrm{sel}}}(C_v^{\mathrm{enc},g}\operatorname{SiLU}(B_v^{\mathrm{enc},g}z+b_v^{\mathrm{enc},g})+d_v^{\mathrm{enc},g})$，中间宽度为 $d_r$，并定义
+
+$$
+\begin{aligned}
+x_v&=E_v^{\mathrm{cur}}(z^{\mathrm{cur}}),\quad e_v=E_v^{\mathrm{mem}}(z^{\mathrm{mem}}),
+ \quad z_v=E_v^{\mathrm{stat}}(z^{\mathrm{stat}}),\quad f_v^{\mathrm{match}}=[x_v;e_v;z_v],\\
+F_v^{\mathrm{match}}(f)&=(w_v^{\mathrm{match}})^\top
+ [\operatorname{SiLU}(W_v^{\mathrm{match,gate}}f+b_v^{\mathrm{match,gate}})
+ \odot(W_v^{\mathrm{match,up}}f+b_v^{\mathrm{match,up}})],\\
+s_v^{\mathrm{match}}&=b_v^{\mathrm{match}}+
+ \alpha_v^{\mathrm{match}}x_v^\top e_v/\sqrt{d_{\mathrm{sel}}}
+ +\alpha_v^{\mathrm{res}}F_v^{\mathrm{match}}(f_v^{\mathrm{match}}).
+\end{aligned}
+\tag{5}
+$$
+
+门控残差的隐藏宽度为 $d_r$，两个尺度非负。选择 $s_v^{\mathrm{loc}}=s_v^{\mathrm{cat}}$ 或 $s_v^{\mathrm{match}}$。参数默认按节点独立，允许显式共享同形参数。分组的非线性、归一化和匹配构成函数差异。
+
+取 $W_v^\gamma\in\mathbb R^{d_r\times(d+4d_s+3)}$、$a_v^\gamma,b_v^{\gamma,h}\in\mathbb R^{d_r}$ 和标量 $b_v^\gamma$。特征 $f_v$ 进入独立的增益头，定义上下文增益
+
+$$
+\gamma_v=1+(\gamma_{\max}-1)\sigma\bigl(b_v^\gamma+
+ (a_v^\gamma)^\top\operatorname{SiLU}(W_v^\gamma f_v+b_v^{\gamma,h})\bigr).
+\tag{6}
+$$
+
+评分与增益采用不同参数。KV 的写入量取 $w_v$，增益不改变这次写入。
+
+### 1.4 Describe 与 SelStep 的对应
+
+选定局部评分、增益和区域评分后，Describe 成为确定函数：给定 $(q,\theta,h)$，先按 §1.1 在 $q$ 上求记忆量，再计算 $w_v,\mu_v,s_v^{\mathrm{loc}}$；ind 返回三元组，att 另计算 $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ 并返回五元组。架构的 Read 将 $q$ 取为 $q_v^{\mathrm{read}}$。
+
+SelStep 使用收到的完整描述族，按 §1.2 得到 $(s_v)_{v\in C}$，再调用第 2 节选定的发送函数得到 $(c_v)_{v\in C}$。因此局部评分和增益属于节点描述，跨节点匹配和发送分配属于区域计算。
+
+| 已定义的量 | 从何处取得 | 后续用途 |
+|---|---|---|
+| $M_{v,a},W_{v,a},p_v(u_v)$ | 记忆模块与当前内容 | 局部评分、增益和记忆 key |
+| $s_v^{\mathrm{loc}}$ | 本节点的评分函数 | ind 的最终评分，或 att 的局部评分项 |
+| $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | att 的节点描述 | 共同 query 与跨节点匹配 |
+| $s_v$ | 区域评分 | 发送分配 |
+| $w_v,\mu_v$ | 接收及增益 | 所选规则的上限、基权重或总量依据 |
+
+区域 att 只定义评分，可接下文任一种发送函数。下文的 Attention 分配把评分转成份额；记忆模块中的 Attention 则读取本节点历史。三者各自使用明确的输入和返回值。
 
 ## 2. 从评分得到发送强度
 
@@ -206,7 +233,7 @@ $$
 
 两种基权重的支持相同，均激活全部有效候选。总和是各节点上限的加权平均：$0<S\le\max_v\mu_v\le1$。每个节点保留 $c_v\le\mu_v$，区域没有式 (7) 的下限。只有一个有效候选时发送 $c_v=\mu_v$。
 
-使用 $\mu$ 时，增益既参与份额又参与幅度；使用 $w$ 时，固定评分和接收后，增益只通过本节点外乘的 $\mu_v$ 生效。再将式 (6) 的 query 权重取为 $w$，就同时移除了增益经 query 影响其他评分的直接依赖。后续消息和未来记忆仍连接整个网络。
+使用 $\mu$ 时，增益既参与份额又参与幅度；使用 $w$ 时，固定评分和接收后，增益只通过本节点外乘的 $\mu_v$ 生效。再将式 (3) 的 query 权重取为 $w$，就同时移除了增益经 query 影响其他评分的直接依赖。后续消息和未来记忆仍连接整个网络。
 
 ### 2.4 固定总强度 Attention
 
@@ -272,7 +299,27 @@ $$
 
 ## 3. 例子与恢复关系
 
-### 3.1 同一组输入下的稠密规则
+### 3.1 贯穿例子的区域计算
+
+沿用[架构 §4.4](architecture-learning-note.md#44-一组贯穿例子)的 $a,b,c$，聚合分别为 $(1,1),(1,-1),(0,0)$。取固定增益 $1$、cat 局部评分和 ind 区域评分。将评分网络输出权重置零，偏置取 $2,1,100$，于是记忆描述无论为何值，都得到
+
+$$
+(w_v)_v=(\mu_v)_v=(1,1,0),\qquad
+(s_v^{\mathrm{loc}})_v=(s_v)_v=(2,1,100).
+$$
+
+Describe 返回 $d_a=(1,1,2)$、$d_b=(1,1,1)$、$d_c=(0,0,100)$。SelStep 采用约束 quad，取 $k=1,\eta=0,\tau_{\mathrm{sel}}=2$。由于 $c_c=0$，剩余两项的总和为 $1$；§2.1 的两节点公式给出
+
+$$
+c_a=\tfrac12+\frac{2-1}{2\cdot2}=\tfrac34,\qquad
+c_b=\tfrac14,\qquad
+\operatorname{SelStep}_{j,C}(*,\theta,(d_v)_v)
+=(\{a,b\},(3/4,1/4,0),*).
+$$
+
+保持评分和上限，将温度取为 $0.5$，控制变为 $(1,0,0)$；两次都可取正典容量 $K_j=3$。[KV §5.1](kv-memory-learning-note.md#51-从接收到输出)继续给出同一例子的状态、记忆描述及激活后的完整内容。
+
+### 3.2 同一组输入下的稠密规则
 
 取 $\mu=w=(0.2,1)$、相等评分，约束 Shannon 使用 $k=1$：
 
@@ -286,7 +333,7 @@ $$
 
 四个候选均有 $\mu=w=0.1$ 且评分相等时，上述规则每节点分别发送 $0.25,0.25,0.025,0.1,0.1$。最后两种的同分前向相同，改变评分后的响应可以不同。
 
-### 3.2 与 softmax、sparsemax、entmax 的关系
+### 3.3 与 softmax、sparsemax、entmax 的关系
 
 有效候选非空、各自的 $\mu_v=1$ 且 $k=1$ 时，式 (7) 为概率单纯形 $\{c:c_v\ge0,\sum_vc_v=1\}$。ent 在此集合上的解称为 $\alpha$-entmax；$\alpha=1$ 给出 softmax，$\alpha=2$ 给出称为 sparsemax 的欧氏投影 $\arg\min_{c\in F(\mu)}\|c-s/\tau\|_2^2$，quad 也给出同一投影。最高分唯一时，零温极限只选该候选，称为 Top-1。
 
@@ -464,7 +511,66 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 
 例如 $t=(4,3,2,1),k=1$ 时，温度界为 $1$；$\tau=2$ 给出 $(0.75,0.25,0,0)$，$\tau=1$ 给出 $(1,0,0,0)$。有效候选至多一个时任意正温度均成立。ent 的固定 $\alpha>1$ 也有这样的充分小正温区间；Shannon 和 bern 在正温度保持全部有效分量为正。附录 A 给出响应阈值及证明。
 
-整网的消息、评分和上限会随温度共同变化。[共同架构 §6.3](architecture-learning-note.md#63-单位输入的软硬极限)将本节的局部结论沿逻辑时间组合，各记忆教材验证相应状态条件。该定理比较固定参数、固定输入与有限时间；训练日程由研究配置给出。
+整网的消息、评分和上限会随温度共同变化。下节将这些局部结论用于完整运行。
+
+### 5.4 单位输入的整网软硬关系
+
+固定有限正时延图、有限切面、参数和初态。各记忆模块满足[架构 §6.1](architecture-learning-note.md#61-比较对象与局部条件)的四项条件。两份运行使用相同的输入、评分、增益、$k_j,\eta_j$、记忆与内容函数；全部外部输入强度为 $1$。
+
+一份在各区域使用约束分配，正则形状固定，正典容量取 $K_j=|\mathcal R_j|$；另一份使用硬选择，容量取 $K_j=k_j$。
+
+**命题。** 若硬运行在切面以前的每次区域选择满足 §5.1 的评分条件，则各区域温度共同趋零时，约束运行的消息投影、有效状态与 ReadOut 收敛到硬运行。各区域可使用不同的趋零序列及固定正则形状。
+
+**证明。** 硬运行从单位外部输入开始，每条实际发送的强度仍为 $1$：接收强度是非负整数，$\gamma_v\ge1$ 使 $\mu_v$ 为 $0$ 或 $1$，硬选择的正控制遂为 $1$。
+
+若更早消息与有效状态已收敛，局部更新和读取条件使本次正极限接收处的增益、描述、评分收敛，上限也趋向硬运行的二元上限。趋零接收处有 $c_v\le\mu_v\le\gamma_{\max}(r_v^{\mathrm{in}})_+\to0$，评分仍有界。§5.1 因而给出本次控制收敛，包括硬运行的空槽。这验证了[架构命题 3](architecture-learning-note.md#63-局部分配极限与整网极限)的前提，得到整网结论。$\square$
+
+软运行中的 $\mu_v$ 可以介于零和一之间；它们随上游一起趋向硬运行的端点。固定某些非二元上限只降低温度时，仍使用 §5.2 的局部反例。
+
+**推论。** 在上述条件下，若各区域正则为 quad 或固定 $\alpha>1$ 的 ent，则存在 $\tau_*>0$，使全部区域温度满足 $0<\tau_{\mathrm{sel},j}\le\tau_*$ 时，两份运行在切面以前的全部正式作用、原始状态、消息、端口记录及继续状态精确相同。
+
+**证明。** §5.3 在每次固定硬输入上给出正温度界。实际选择事件有限，取这些界的最小值，应用架构 §6.3 的精确性推论。$\square$
+
+此界依赖所固定的输入、参数与时间范围。Shannon 与 bern 一般只有数值收敛；训练改变参数后，评分条件与温度界需重新判断。
+
+## 6. 发送规则如何满足架构条件
+
+### 6.1 零接收与正温度连续性
+
+架构的区域条件针对 Read 与 SelStep 的完整复合。先看评分：两种 query 汇集权重均随接收趋零；零接收候选对 query 无贡献，正极限接收处的评分连续。有界记忆描述、当前内容和有限参数给出有界评分与增益。
+
+然后核对各发送函数。下表的数值结论均配合架构声明的记忆条件；软硬一列另使用 §5.4 的单位输入与评分条件。
+
+| 发送规则 | 零接收条件 | 正温度连续条件 | §5.4 软硬比较中的角色 |
+|---|---|---|---|
+| 约束分配 | 满足 | 满足 | 软端 |
+| 直接 Attention，两种基权重 | 满足 | 满足 | 未纳入 |
+| 固定总强度 Attention，$a=\mu$ | 满足 | 一般不满足 | 未纳入 |
+| 固定总强度 Attention，$a=1$ | 一般不满足 | 一般不满足 | 未纳入 |
+| 区域总量分配 | 满足 | 满足 | 未纳入 |
+| 按比例分配 | 满足 | 满足 | 未纳入 |
+| 硬选择 | 满足 | 一般不满足 | 硬端 |
+
+约束分配的连续性由附录 A.1 给出，三种连续的无求根规则由附录 A.3 给出；硬选择仅在有效候选中排序。由此可分别使用架构的零消息删除和正温度连续性命题。
+
+固定总强度 $a=\mu$ 在单候选 $\mu=\varepsilon>0$ 时始终发送 $1$，到 $\mu=0$ 时发送 $0$。它允许删除精确零候选，但正接收趋零时不连续。向一个候选加入同分零接收候选，$a=\mu$ 的控制由 $(1)$ 变为 $(1,0)$；$a=1$ 则变为 $(1/2,1/2)$。两种函数仍可按架构第 5、7 节组成模型并精确继续。
+
+### 6.2 弱接收的放大
+
+对满足 $c_v\le\mu_v$ 的规则，由增益定义得到
+
+$$
+c_v\le\min(1,\gamma_v(r_v^{\mathrm{in}})_+),
+\qquad 1\le\gamma_v\le\gamma_{\max}.
+$$
+
+在无其他输入、每步只有一条入边的长度 $L$ 路径上，第 $\ell$ 步增益上界记为 $\Gamma_\ell$，则末端强度不超过
+
+$$
+r_0^{\mathrm{in}}\prod_{\ell=1}^L\Gamma_\ell.
+$$
+
+固定有限路径允许弱信号放大，同时保持 $r_0^{\mathrm{in}}\to0$ 时末端趋零。单候选、每步增益为 $4$ 且发送达到上限时，$0.01$ 可依次变为 $0.04,0.16,0.64,1$。区域竞争可以使实际发送低于上限。
 
 ## 附录 A：连续性与极限证明
 
@@ -476,7 +582,7 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 
 零极限上限坐标的线性目标绝对值受 $L\sum_{\mu_v^*=0}\mu_v^{(n)}$ 控制，趋于零。三种正则在 $0\le c\le\mu\le1$ 上联合连续有界；bern 在 $\mu\to0$ 时由 $0\le\mu h_B(c/\mu)\le\mu\log2$ 得到延拓。将最优性不等式与上述可行恢复列比较并取极限，每个聚点都是极限目标的最优解。正温度由严格凹性给出唯一性；零温度使用假设的唯一性。因此整列收敛。$\square$
 
-同理，固定 $\mu,t$ 时将目标除以趋于无穷的温度，紧性与正则严格凹性给出 §3.2 的高温结论。
+同理，固定 $\mu,t$ 时将目标除以趋于无穷的温度，紧性与正则严格凹性给出 §3.3 的高温结论。
 
 ### A.2 二元上限与有限温度
 
@@ -499,9 +605,9 @@ $$
 
 **证明。** 有正极限接收时，式 (9) 中相应项收敛到正值，零极限项因有界指数趋零，故分母趋正，份额收敛。全部接收趋零时，直接规则用 $c\le\mu$，总量规则用 $\sum c=\min(1,M)$，均得 $c\to0$。按比例规则在 $M>0$ 直接连续，零处仍有 $c\le\mu$。零接收坐标对各分母、总量和发送均无贡献。$\square$
 
-在有正极限接收的情形，总量规则还有 $c_v\to0$ 对应于 $r_v^{\mathrm{in}}\to0$；这是组合消息连续性所需的单候选结论。固定总强度 $a=\mu$ 允许增删精确零接收坐标：它们对分母与发送均无贡献；但分母趋零时一般不连续。固定总强度 $a=1$ 把真实零接收候选计入分母，增删它们一般改变其他份额。两种比较的整网范围及算例见[共同架构 §6.2](architecture-learning-note.md#62-零消息与正温度输入)。
+在有正极限接收的情形，总量规则还有 $c_v\to0$ 对应于 $r_v^{\mathrm{in}}\to0$；这是组合消息连续性所需的单候选结论。固定总强度 $a=\mu$ 允许增删精确零接收坐标：它们对分母与发送均无贡献；但分母趋零时一般不连续。固定总强度 $a=1$ 把真实零接收候选计入分母，增删它们一般改变其他份额。两种比较分别对应共同架构的零接收条件和正温度连续条件，具体反例见 §6.1。
 
-正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量规则使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；共同架构的软硬极限定理仅使用约束分配与式 (14)。
+正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量规则使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；§5.4 的单位输入软硬结论使用约束分配与式 (14)。
 
 ## 附录 S：配置、求解与边界反向
 
@@ -522,10 +628,10 @@ selection_mode 指定发送函数：
 
 | 名称 | 取值与含义 |
 |---|---|
-| local_score | cat、match，式 (2)、(3) |
-| region_score | ind、att，§1.3 的描述空间与评分 |
-| send_gain | fixed、context，式 (1)、(4) |
-| query_weight | mu、received：式 (6) 分别使用 $\mu_v,w_v$；默认 mu |
+| local_score | cat、match，式 (4)、(5) |
+| region_score | ind、att，§1.2 的描述空间与评分 |
+| send_gain | fixed、context，式 (1)、(6) |
+| query_weight | mu、received：式 (3) 分别使用 $\mu_v,w_v$；默认 mu |
 | allocation_base | direct_attention 使用 mu 或 received，默认 mu；unit_attention 使用 uniform 或 mu，默认 uniform；pooled_attention 固定 mu |
 | regularizer、ent_alpha | constrained 的 quad／bern／ent；ent 另指定固定 $\alpha\in[1,2]$ |
 | allocation_temperature | constrained、direct_attention、unit_attention、pooled_attention 使用的正温度，与正典描述模式 $\tau_j$ 分别命名 |
