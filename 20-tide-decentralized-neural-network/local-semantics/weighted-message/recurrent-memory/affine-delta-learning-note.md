@@ -22,7 +22,7 @@ tags:
 | 本文定义 | 在共同计算中的用途 |
 |---|---|
 | §1 的状态与初态，§2 的 Upd | 从旧状态和本次聚合形成 $\widetilde q_v$，全部候选保留 |
-| §2 的当前特征，§3.1 的 Mem | 在描述模式指定的状态上取得记忆量，交给 Describe |
+| §2 的当前特征 $p_v(u)$，§3.1 的 Mem | 从当前内容取得特征，从描述模式指定的状态取得记忆描述，供 Describe 使用 |
 | §3.2 的 $G_v$ | 区域返回 $c_v$ 后，激活节点在 $\widetilde q_v$ 上计算完整内容 |
 
 Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §1—2](../region-allocation-learning-note.md#1-节点向区域提供什么)。
@@ -63,7 +63,7 @@ g&=\exp[-w\operatorname{softplus}((a_v^{\mathrm{retain}})^\top\mathcal N_d(u)+b_
 \tag{3}
 $$
 
-全部参数有限，$\|k\|\le1$、$0<g\le1$、$0\le\beta\le w$。$g$ 与 $\beta$ 依赖当前已知接收，不读取旧状态或区域选择。
+式 (3) 的 $p_v$ 实现架构的当前内容特征，同一特征用于下面的摘要写入。全部参数有限，$\|k\|\le1$、$0<g\le1$、$0\le\beta\le w$。$g$ 与 $\beta$ 依赖当前已知接收，不读取旧状态或区域选择。
 
 记 $I$ 为 $d_k$ 维单位矩阵。当 $r^{\mathrm{in}}>0$ 时，选择下述一种更新，对两个时间尺度分别作用：
 
@@ -92,6 +92,8 @@ $r^{\mathrm{in}}\le0$ 时直接定义 Upd 返回原 $q$。正接收后的状态�
 
 ### 3.1 两种记忆描述
 
+本节用时间摘要或矩阵查询实现架构的 Mem 接口，为评分提供本节点的记忆信息。
+
 取 $Q_v^r\in\mathbb R^{d_k\times d}$、$L_{v,a}\in\mathbb R^{d_s\times d_m}$，定义 $Q_v^{\mathrm{read}}(u)=Q_v^r\mathcal N_d(u)$。在任意可读状态与时间上，令 $W_{v,a}=W_a^-(q,\theta)$。两种描述分别为
 
 $$
@@ -110,7 +112,7 @@ $$
 =(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}}).
 $$
 
-在描述模式指定的状态上求这个四元组，连同当前接收与式 (3) 的 $p_v(u)$ 进入 Describe，得到 $d_v$。区域 SelStep 随后将完整描述族变为控制 $c_v$；Mem 本身不决定激活集合。
+在描述模式指定的状态上求这个四元组。[区域教材定义的 Describe](../region-allocation-learning-note.md#14-describe-与-selstep-的对应)使用它、式 (3) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$。区域 SelStep 随后将完整描述族变为控制 $c_v$ 与激活集合。
 
 这里 $W_a$ 是衰减后的接收写入量之和；Delta 会覆盖或抵消矩阵中的部分内容，故 $W_a$ 不表示可恢复的记忆条数，也不度量矩阵存储的精确信息量。
 

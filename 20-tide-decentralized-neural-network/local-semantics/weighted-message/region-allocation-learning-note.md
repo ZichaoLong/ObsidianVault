@@ -13,24 +13,26 @@ tags:
 
 # 区域评分与发送分配
 
-本文具体定义[局部架构](architecture-learning-note.md)中的 Describe 与 SelStep。Describe 让一个节点把本次接收和记忆转为描述 $d_v$；SelStep 收齐区域内的候选描述，先得到评分 $s_v$，再得到发送强度 $c_v$，返回激活集合与控制族。
+节点可以依据当前接收内容与自身记忆参与区域分工。[局部架构](architecture-learning-note.md)为此规定了当前内容特征与记忆描述的接口，各记忆模块给出其具体函数。本文使用这些信息定义 Describe 与 SelStep：Describe 先计算本节点的评分及相关量，形成描述 $d_v$；SelStep 收齐区域内的候选描述，得到区域评分 $s_v$ 与发送强度 $c_v$，返回激活集合与控制族。
 
 计算依次经过“节点信息 → 节点描述 → 区域评分 → 发送分配”。第 1 节定义前三步，第 2 节给出可选发送函数，第 3 节把它们用于同一组节点。求解、导数及温度极限在函数定义之后讨论。
 
-消息、候选、归一化和广播沿用[局部架构教材](architecture-learning-note.md)。固定区域 $j$ 的一次选择，候选集为 $C\subseteq\mathcal R_j$。$r_v^{\mathrm{in}},u_v$ 是候选 $v$ 的接收强度与聚合内容，记忆模块提供 $p_v(u_v)$、两个 $d_s$ 维描述 $M_{v,a}$ 和非负统计量 $W_{v,a}$，$a\in\{\mathrm{short},\mathrm{long}\}$。矩阵、偏置均为有限参数。
+消息、候选、归一化和广播沿用局部架构。固定区域 $j$ 的一次选择，候选集为 $C\subseteq\mathcal R_j$。$r_v^{\mathrm{in}},u_v$ 是候选 $v$ 的接收强度与聚合内容。矩阵、偏置均为有限参数。
 
 ## 1. 节点向区域提供什么
 
 ### 1.1 本节点可用的信息
 
-架构已由描述模式确定本次读取的状态 $q_v^{\mathrm{read}}$。在该状态上求
+沿用[架构 §3.2](architecture-learning-note.md#32-从状态取得记忆描述)的描述宽度 $d_s$ 和当前内容特征 $p_v(u_v)\in\mathbb R^{d_s}$。描述模式确定本次读取的状态 $q_v^{\mathrm{read}}$，从该状态取得记忆描述：
 
 $$
 \operatorname{Mem}_v(q_v^{\mathrm{read}},\theta,u_v)
 =(M_{v,\mathrm{short}},M_{v,\mathrm{long}},W_{v,\mathrm{short}},W_{v,\mathrm{long}}).
 $$
 
-本节点可用的输入是 $r_v^{\mathrm{in}},u_v$、当前特征 $p_v(u_v)$ 以及这四个记忆量。先指定一个由这些输入到实数的局部评分函数，记其输出为 $s_v^{\mathrm{loc}}$；§1.3 给出两种具体公式。节点可以另用同一组输入决定发送增益 $\gamma_v$。
+两个 $M_{v,a}\in\mathbb R^{d_s}$ 提供记忆内容，两个 $W_{v,a}\ge0$ 提供接收积累的统计量，$a\in\{\mathrm{short},\mathrm{long}\}$。$p_v$ 与 Mem 的具体计算由所选记忆模块给定，以下函数使用它们的返回值。
+
+本节点可用的信息是 $r_v^{\mathrm{in}},u_v$、$p_v(u_v)$ 以及这四个记忆量。先指定一个由这些信息到实数的局部评分函数，记其输出为 $s_v^{\mathrm{loc}}$；§1.3 给出两种具体公式。节点可以另用同一组信息决定发送增益 $\gamma_v$。
 
 定义截断后的接收量 $w_v=\min(1,(r_v^{\mathrm{in}})_+)$。取有限 $\gamma_{\max}\ge1$，令
 
@@ -54,7 +56,7 @@ $$
 
 节点传递 $(w_v,\mu_v,s_v^{\mathrm{loc}})$，最终评分 $s_v=s_v^{\mathrm{loc}}$。这里的独立指最终评分只使用本节点的描述。下节定义的两种局部评分都能接入此处。
 
-第二种区域评分让节点共同形成 query，再与各节点的记忆 key 匹配，称为区域 Attention 评分（att）。为此，节点描述还包含当前特征和记忆 key。固定正整数匹配宽度 $d_{\mathrm{sel}}$，取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$ 及两个 $d_{\mathrm{sel}}$ 维偏置，定义
+第二种区域评分让节点共同形成 query，再与各节点的记忆 key 匹配，称为区域 Attention 评分（att）。为此，节点描述还包含用于汇集 query 的当前内容投影和记忆 key。固定正整数匹配宽度 $d_{\mathrm{sel}}$，取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$ 及两个 $d_{\mathrm{sel}}$ 维偏置，定义
 
 $$
 \begin{aligned}
@@ -66,6 +68,8 @@ d_v&=(w_v,\mu_v,x_v^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v^{\mathrm{loc}}).
 \end{aligned}
 \tag{2}
 $$
+
+式 (2) 从 $u_v$ 计算 $x_v^{\mathrm{sel}}$，从 Mem 的四个分量计算 $K_v^{\mathrm{sel}}$，两者的宽度均为区域匹配所需的 $d_{\mathrm{sel}}$。记忆模块提供的 $p_v(u_v)$ 则用于 §1.3 的拼接特征。
 
 区域从完整候选集形成一个 query。取 $W_j^{\mathrm{in}},W_j^{\mathrm{out}}\in\mathbb R^{d_{\mathrm{sel}}\times d_{\mathrm{sel}}}$、$b_j^{\mathrm{in}},b_j^{\mathrm{out}}\in\mathbb R^{d_{\mathrm{sel}}}$ 和非负尺度 $\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}}$。选择汇集权重 $q_v^{\mathrm{wt}}=\mu_v$ 或 $q_v^{\mathrm{wt}}=w_v$，定义
 
@@ -99,9 +103,9 @@ s_v^{\mathrm{cat}}&=b_v+(a_v^{\mathrm{cat}})^\top\operatorname{SiLU}(W_v^r f_v+b
 \tag{4}
 $$
 
-$f_v$ 的宽度为 $d+4d_s+3$。矩阵的不同列分别作用于内容、统计量与交互项。
+$f_v$ 的宽度为 $d+4d_s+3$。其中 $p_v(u)\odot M_a$ 用两个同宽向量形成当前内容与记忆的交互项；矩阵的不同列分别作用于内容、统计量与交互项。
 
-另一种评分先分组编码。令
+另一种评分对当前内容、记忆向量与统计量分别编码。令
 
 $$
 z^{\mathrm{cur}}=\mathcal N_d(u),\quad
@@ -140,13 +144,14 @@ $$
 
 ### 1.4 Describe 与 SelStep 的对应
 
-选定局部评分、增益和区域评分后，Describe 成为确定函数：给定 $(q,\theta,h)$，先按 §1.1 在 $q$ 上求记忆量，再计算 $w_v,\mu_v,s_v^{\mathrm{loc}}$；ind 返回三元组，att 另计算 $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ 并返回五元组。架构的 Read 将 $q$ 取为 $q_v^{\mathrm{read}}$。
+选定局部评分、增益和区域评分后，Describe 成为确定函数：给定 $(q,\theta,h)$，其中 $h=(r_v^{\mathrm{in}},u_v)$，按 §1.1 取得当前特征与记忆量，并由所选公式计算 $w_v,\mu_v,s_v^{\mathrm{loc}}$；ind 返回三元组 $(w_v,\mu_v,s_v^{\mathrm{loc}})$，att 另计算 $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ 并返回式 (2) 的五元组。架构的 Read 将 $q$ 取为 $q_v^{\mathrm{read}}$。
 
 SelStep 使用收到的完整描述族，按 §1.2 得到 $(s_v)_{v\in C}$，再调用第 2 节选定的发送函数得到 $(c_v)_{v\in C}$。因此局部评分和增益属于节点描述，跨节点匹配和发送分配属于区域计算。
 
 | 已定义的量 | 从何处取得 | 后续用途 |
 |---|---|---|
-| $M_{v,a},W_{v,a},p_v(u_v)$ | 记忆模块与当前内容 | 局部评分、增益和记忆 key |
+| $p_v(u_v)$ | 所选记忆模块的当前内容特征函数 | 拼接特征中的内容与记忆交互，供局部评分或上下文增益使用 |
+| $M_{v,a},W_{v,a}$ | 记忆模块的 Mem 读取 | 局部评分、上下文增益与区域匹配的记忆 key |
 | $s_v^{\mathrm{loc}}$ | 本节点的评分函数 | ind 的最终评分，或 att 的局部评分项 |
 | $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | att 的节点描述 | 共同 query 与跨节点匹配 |
 | $s_v$ | 区域评分 | 发送分配 |

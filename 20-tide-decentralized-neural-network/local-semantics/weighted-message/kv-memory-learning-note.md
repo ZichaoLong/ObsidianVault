@@ -47,6 +47,8 @@ p_v(u)&=W_v^S\mathcal N_d(u),
 \tag{2}
 $$
 
+式 (2) 的 $p_v$ 实现架构的当前内容特征。写入时将 $p_v(u)$ 保存为条目中的 $p_i$，使当前内容与历史摘要使用同一投影；第 3 节再从保存的条目实现 Mem。
+
 共享基座给出区域共同的 KV 投影，节点差异由秩至多为 $r_a$ 的乘积提供。相同输入的基座投影可共同求值，各节点仍保存私有条目。取 $r_a=d$、$W_j^{\mathrm{KV}}=0$、$V_v^{\mathrm{ad}}=I_d$ 与 $U_v=[W_v^K;W_v^V]$，即可表示任意独立的 K、V 投影。式 (2) 定义写入；Attention 读取由 §4.1 给出。
 
 为每节点固定窗口 $T_v\in\mathbb N_{\ge1}\cup\{\infty\}$，以原始逻辑时间计量。定义遮罩
@@ -139,6 +141,8 @@ NoPE 的 Full 匹配使用内容，时间窗口、摘要和状态顺序仍保留
 
 ## 3. 供评分使用的记忆描述
 
+本节实现架构的 Mem 接口。时间摘要汇集已保存的摘要特征，内容检索用当前内容查询已保存的 K/V；两种方式为后续评分提供同型的记忆描述。
+
 ### 3.1 时间摘要
 
 对每节点取 $\beta_{v,\mathrm{long}}=0$、$\beta_{v,\mathrm{short}}>0$，均按逻辑时间计量。固定节点后省略部分下标，对 $a\in\{\mathrm{short},\mathrm{long}\}$ 定义
@@ -185,9 +189,9 @@ $$
 
 两个时间尺度共用本次匹配分数。检索结果替换 §3.1 的摘要。宽度与检索量允许接近 Full，成本按实际配置计量。
 
-两种读取均返回共同的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$，当前特征为 §1 的 $p_v(u)$。时间摘要使用独立的摘要投影；qry 从 §1 写入的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
+两种读取均返回架构规定的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$。时间摘要使用式 (2) 的摘要投影；qry 从 §1 写入的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
 
-Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。这些 Mem 返回值连同当前 $r_v^{\mathrm{in}},u_v,p_v(u_v)$，进入[区域教材的 Describe](region-allocation-learning-note.md#14-describe-与-selstep-的对应)。Describe 返回节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变的是记忆信息的取得方式，区域评分和发送函数仍可分别选择。
+Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#14-describe-与-selstep-的对应)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
 
 ## 4. 激活后的内容读取
 

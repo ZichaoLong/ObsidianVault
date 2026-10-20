@@ -13,7 +13,7 @@ tags:
 
 # 带权消息的有状态局部架构
 
-节点收到消息后，先形成候选新状态，再向所属区域提供描述。区域依据全部候选描述决定各节点的发送强度；获得正发送强度的节点计算完整内容，并向下游广播。全部候选保留本次状态更新，供以后接收使用。
+节点收到消息后，先形成候选新状态，再结合当前接收与自身记忆，向所属区域提供描述。区域依据全部候选描述决定各节点的发送强度；获得正发送强度的节点计算完整内容，并向下游广播。全部候选保留本次状态更新，供以后接收使用。
 
 本文定义这条支线的共同架构：消息、接收、状态、描述、选择与广播如何组成一次计算，以及哪些局部条件足以保证整网性质。图、区域和逻辑时间沿用 [SettleGraph](../../settlegraph-learning-note.md)、[TimedDAG](../../timed-dag-region-selector-learning-note.md) 与 [PositiveDelayGraph](../../positive-delay-graph-finite-cut-learning-note.md)。
 
@@ -117,7 +117,9 @@ $$
 
 ### 3.2 从状态取得记忆描述
 
-固定正整数描述宽度 $d_s$。记忆模块提供两个向量 $M_{v,\mathrm{short}},M_{v,\mathrm{long}}\in\mathbb R^{d_s}$ 和两个非负统计量 $W_{v,\mathrm{short}},W_{v,\mathrm{long}}$，组成函数
+节点可以结合本次接收与自身记忆参与区域分工。Agg 已将当前原子集合 $B_{v,\theta}$ 变为 $(r^{\mathrm{in}},u)$，节点状态 $q$ 保存历次接收形成的信息。为使不同状态形式接入共同的评分函数，本节规定当前内容特征与记忆描述的接口。
+
+固定正整数描述宽度 $d_s$。记忆模块提供当前内容特征函数 $p_v:\mathbb R^d\to\mathbb R^{d_s}$；它从聚合内容 $u$ 提取供评分使用的特征。模块另提供两个向量 $M_{v,\mathrm{short}},M_{v,\mathrm{long}}\in\mathbb R^{d_s}$ 和两个非负统计量 $W_{v,\mathrm{short}},W_{v,\mathrm{long}}$，组成记忆描述函数
 
 $$
 \operatorname{Mem}_v(q,\theta,u)
@@ -125,11 +127,15 @@ $$
 \tag{7}
 $$
 
-模块另提供当前内容特征 $p_v(u)\in\mathbb R^{d_s}$。Mem 的四个返回分量供后续评分使用；short、long 是两个通道的名称，各记忆模块定义其数值含义。描述宽度相同即可共用后续函数，状态内部可以保存序列、矩阵或其他对象。
+$p_v(u)$ 与两个记忆向量具有相同宽度，便于构造当前内容与记忆的交互。Mem 从指定状态取得信息，也可以使用当前 $u$ 查询该状态；用于读取的状态由下一节的描述模式指定。两个向量承载记忆内容，统计量可表达不同时间尺度下的接收积累；short、long 是两个通道的名称，各模块定义其数值含义。
+
+本文规定这些函数的输入与返回形状。第 5 节列出的记忆教材给出具体函数，内部状态可以保存序列、矩阵或其他对象。后续 Describe 使用 $p_v(u)$、Mem 的返回值以及当前接收，构造区域所需的节点描述。
 
 ### 3.3 节点描述与状态快照
 
-为每个节点指定描述空间 $D_v$ 和函数 $\operatorname{Describe}_v:S_v\times\mathbb N\times X_v\to D_v$。它使用当前接收 $(r^{\mathrm{in}},u)$、当前特征 $p_v(u)$ 及 $\operatorname{Mem}_v(q,\theta,u)$，形成传给区域的描述 $d_v$。Describe 的输入只含本节点的信息；区域随后同时使用所有候选的 $d_v$。
+为每个节点指定描述空间 $D_v$ 和函数 $\operatorname{Describe}_v:S_v\times\mathbb N\times X_v\to D_v$。给定 $(q,\theta,(r^{\mathrm{in}},u))$，它使用当前接收、$p_v(u)$ 及 $\operatorname{Mem}_v(q,\theta,u)$，计算传给区域的描述 $d_v\in D_v$。这些信息只来自本节点；区域随后同时使用所有候选的 $d_v$。
+
+具体的 Describe 与区域选择须配套定义。节点可以先将当前内容与记忆变为局部评分，也可以同时提供区域匹配所需的向量。当前特征与记忆描述是构造 $d_v$ 的依据，$D_v$ 规定传给区域的描述结构。
 
 正典描述模式 $\tau_j\in\{0,-,+\}$ 使用
 
@@ -264,13 +270,13 @@ $$
 
 相连节点共用载荷宽度；同一区域的描述须能进入同一个区域评分函数。不同状态宽度可先映到共同描述宽度 $d_s$。各记忆教材定义的 KV 与循环模块可在不同区域组合；同一区域异构时还须统一描述和匹配宽度。所有函数对其声明空间都是确定的全函数。
 
-各教材对上述对象的具体化如下：
+本文规定共同的函数签名与计算顺序。各教材实现这些函数，并按下表使用已给定的接口：
 
 | 教材 | 填入的函数或对象 | 接入共同过程的位置 |
 |---|---|---|
-| [区域评分与发送分配](region-allocation-learning-note.md) | $D_v$、Describe、SelStep 及其参数 | 将接收与记忆描述变为 $d_v$，再变为 $(\mathcal A,(c_v),*)$ |
-| [带权 KV](kv-memory-learning-note.md) | $S_v,q_v^{\mathrm{init}}$、Upd、Mem、$p_v,G_v$ | 以带权序列保存接收，提供描述与完整内容 |
-| [基础循环记忆](recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](recurrent-memory/gated-delta-learning-note.md)、[SSD](recurrent-memory/ssd-learning-note.md) | 同上 | 以矩阵及辅助状态保存接收，提供同型描述与完整内容 |
+| [区域评分与发送分配](region-allocation-learning-note.md) | $D_v$、Describe、SelStep 及其参数 | 使用当前接收、$p_v(u)$ 与 Mem 构造 $d_v$，再从区域描述族得到 $(\mathcal A,(c_v),*)$ |
+| [带权 KV](kv-memory-learning-note.md) | $S_v,q_v^{\mathrm{init}}$、Upd、Mem、$p_v,G_v$ | 以带权序列保存接收，实现当前内容特征、记忆描述与完整内容 |
+| [基础循环记忆](recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](recurrent-memory/gated-delta-learning-note.md)、[SSD](recurrent-memory/ssd-learning-note.md) | 同上 | 以矩阵及辅助状态保存接收，实现同型的当前内容特征、记忆描述与完整内容 |
 | [固定逻辑时间短卷积](recurrent-memory/causal-convolution-learning-note.md) | Conv、ConvWrite | 作为 Gated DeltaNet 与 SSD 更新、读取中的部件 |
 
 更换记忆模块时，Describe 使用新的 Mem 与当前特征；更换区域评分或发送函数时，Upd 与 $G_v$ 仍按各自定义计算。式 (7) 的两个描述通道是这里复用评分族的接口；采用其他描述形式时须同时指定相容的 Describe 与 SelStep。

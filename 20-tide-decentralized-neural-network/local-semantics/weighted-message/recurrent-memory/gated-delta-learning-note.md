@@ -22,7 +22,7 @@ tags:
 | 本文定义 | 在共同计算中的用途 |
 |---|---|
 | §1 的状态与初态，§2 的 Upd | 从旧状态和本次聚合形成 $\widetilde q_v$，全部候选保留 |
-| §2 的当前特征，§3.1 的 Mem | 在描述模式指定的状态上取得记忆量，交给 Describe |
+| §1 的当前特征 $p_v(u)$，§3.1 的 Mem | 从当前内容取得特征，从描述模式指定的状态取得记忆描述，供 Describe 使用 |
 | §3.2 的 $G_v$ | 区域返回 $c_v$ 后，激活节点在 $\widetilde q_v$ 上计算完整内容 |
 
 Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §1—2](../region-allocation-learning-note.md#1-节点向区域提供什么)。
@@ -37,7 +37,7 @@ p_v(u)=P_vx,\quad P_v\in\mathbb R^{d_s\times d}.
 \tag{1}
 $$
 
-$\mathcal N,\sigma,\operatorname{SiLU}$ 使用共同架构 §2 的定义。另取 $\epsilon_{\mathrm{qk}},\epsilon_{\mathrm{out}}>0$，定义稳定的 L2 归一化和带缩放的 RMS 归一化：
+式 (1) 的 $p_v$ 实现架构的当前内容特征，也用于后面的摘要写入。$\mathcal N,\sigma,\operatorname{SiLU}$ 使用共同架构 §2 的定义。另取 $\epsilon_{\mathrm{qk}},\epsilon_{\mathrm{out}}>0$，定义稳定的 L2 归一化和带缩放的 RMS 归一化：
 
 $$
 \operatorname{L2}_{\epsilon}(z)=\frac{z}{\sqrt{\epsilon+\|z\|_2^2}},\qquad
@@ -132,6 +132,8 @@ $r^{\mathrm{in}}\le0$ 时 Upd 返回原 $q$。全部正接收候选保留矩阵�
 
 ### 3.1 给区域的记忆描述
 
+本节以接收摘要和多头矩阵查询实现架构的 Mem 接口，为评分提供本节点的记忆信息。
+
 在任意待读状态 $q$ 上，使用其缓存与当前 $u$ 按式 (5) 形成查询，定义拼接读出
 
 $$
@@ -155,7 +157,7 @@ $$
 
 sum 使用两个时间尺度的接收摘要；state 使用短期摘要与当前内容查询的矩阵记忆。基础循环的 state 分别查询两个时间尺度的矩阵，本文式 (9) 则把短期摘要与一个多头矩阵读出放入同一 Mem 接口。此处 long 通道的遗忘由 $\lambda_h,g_h,\beta_h$ 共同决定。$W_a$ 始终表示相应衰减规则下的接收写入量，不能由它推出矩阵还保存多少信息。
 
-Read$^+$／$^-$／$^0$ 分别选择新状态、旧状态和零初态，在该状态上求式 (9)。Describe 将此 Mem、当前特征与接收量变为 $d_v$，SelStep 再从区域描述族形成评分及控制 $c_v$。默认使用 state 描述与 Read$^+$。
+Read$^+$／$^-$／$^0$ 分别选择新状态、旧状态和零初态，在该状态上求式 (9)。[区域教材定义的 Describe](../region-allocation-learning-note.md#14-describe-与-selstep-的对应)使用这个 Mem 返回值、式 (1) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$；SelStep 再从区域描述族形成评分及控制 $c_v$。默认使用 state 描述与 Read$^+$。
 
 ### 3.2 完整内容
 
