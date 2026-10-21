@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-10-20
+as-of: 2026-10-21
 tags:
   - tide
   - semantic-version
@@ -22,6 +22,8 @@ tags:
 
 tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺序和作用结果。局部特化可独立演进；核心版本与采用的不可变提交共同定位定义。
 
+2026-10-21 的教材勘误补全[分块教材 §8.3](../timed-dag-chunk-prefill-learning-note.md#83-自回归输出的结构检查)的自回归检查：采用固定输出坐标、各端口允许前缀，以及包含消息存在性依赖的保守来源集合。只追溯实际已发送消息不能独立作为自回归证据。核心递归、局部函数与继续状态保持，核心版本仍为 tide-core-5。
+
 ## 局部支线的采用要点
 
 | 修订 | 影响 |
@@ -29,7 +31,7 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-14 非空约束分配 | 数值语义改变：总发送下限为 $\min(1,\sum_v\mu_v)$；配对硬函数在全低分时保留最高分候选 |
 | 2026-10-17 稠密 Attention | 增加 direct 与固定总强度 attention；各自的发送上限、零边界和总量性质分别使用，整网软硬极限仅覆盖约束分配与配对硬函数 |
 | 2026-10-19 模块组合 | 分开 memory_family、memory_read、region_score 与 selection_mode；增加循环模块、received 权重、pooled 和 Read 模式组合。既有默认数值保持，迁移见下表 |
-| 2026-10-20 有限温度条件勘误 | 既有函数及默认数值保持。区域分配 §5.3／附录 A.2 的有限温度条件使用第二名评分 $t_{(2)}$；旧 $t_{(4)}$ 条件不足 |
+| 2026-10-20 有限温度条件勘误 | 既有函数及默认数值保持。区域分配 [§7.3](../local-semantics/weighted-message/region-allocation-learning-note.md#73-正温度的精确性)／[附录 A.2](../local-semantics/weighted-message/region-allocation-learning-note.md#a2-二元上限与有限温度)的有限温度条件使用第二名评分 $t_{(2)}$；旧 $t_{(4)}$ 条件不足 |
 | 2026-10-20 反向与零消息条件勘误 | 函数定义保持。quad 总和松弛时使用独立响应导数；固定总强度 mu 支持零消息删除，uniform 须区分缺席与零消息；softmax 的前向等值与边界反向分别判定。下游核对范围见实现检查 §3、§5 |
 | 2026-10-20 局部名称迁移与正温度精确性 | 局部函数及默认数值保持，配置名称和局部符号按下表迁移。共同架构补入有限正温度精确运行推论，适用范围见各函数条件 |
 | 2026-10-20 完整循环记忆候选 | 增加 memory_family=gated_delta／ssd 与固定逻辑时间短卷积；原模型对应和新增实现内容见下表。既有 affine／delta／kv、评分与发送函数保持 |

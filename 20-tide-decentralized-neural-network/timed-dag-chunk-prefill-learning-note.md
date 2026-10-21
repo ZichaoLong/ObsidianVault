@@ -1147,16 +1147,55 @@ $$
 
 ### 8.3 自回归输出的结构检查
 
-用于预测输入位置 $t+1$ 的某个输出作用，其事件 DAG 祖先应只包含位置不大于 $t$ 的外部输入记录。记作用 $\xi$ 的外部祖先集合为 $\operatorname{Anc}_{\mathrm{ext}}(\xi)$；结构条件写成：
+自回归任务需声明每个输出可见的输入前缀，并保证其余输入位置的值不能改变这个输出。固定规格、各端口输入长度 $L_i$ 与时间规则 $\iota_i$，定义输入位置集合及其上的限制：
 
 $$
-\operatorname{Anc}_{\mathrm{ext}}(\xi)
-\subseteq
-\{(i,k)\mid k\le t\}.
+\mathsf{InputPos}=\{(i,k)\mid i\in\mathsf I,\ k\in[L_i]\},
+\qquad
+x|_D=(x_i(k))_{(i,k)\in D}
+\quad(D\subseteq\mathsf{InputPos}).
+$$
+
+外部记录 $(\mathrm{ext},i,k,p)$ 的来源标签为 $(i,k)$。固定输出坐标 $(\theta,o)$，记 $z_{\theta,o}(x)\in P_\bot$ 为该坐标的值：有记录 $(\mathrm{out},\theta,o,p)$ 时取 $p$，缺席时取 $\bot$。这样同时比较输出值与输出是否存在。
+
+为这个输出指定各端口可见的位置数 $n_i\in\{0,\ldots,L_i\}$，记 $n=(n_i)_{i\in\mathsf I}$，允许的输入前缀为
+
+$$
+\mathsf{Prefix}(n)=\{(i,k)\in\mathsf{InputPos}\mid k<n_i\}.
+$$
+
+自回归要求对任意 $x,x'\in\mathfrak X$ 都有
+
+$$
+x|_{\mathsf{Prefix}(n)}=x'|_{\mathsf{Prefix}(n)}
+\quad\Longrightarrow\quad
+z_{\theta,o}(x)=z_{\theta,o}(x').
+$$
+
+称一个固定集合 $D_{\theta,o}\subseteq\mathsf{InputPos}$ 为该输出的**保守外部依赖集合**，若对任意 $x,x'\in\mathfrak X$ 都有
+
+$$
+x|_{D_{\theta,o}}=x'|_{D_{\theta,o}}
+\quad\Longrightarrow\quad
+z_{\theta,o}(x)=z_{\theta,o}(x').
+$$
+
+因此，自回归要求具有如下充分条件：
+
+$$
+D_{\theta,o}\subseteq\mathsf{Prefix}(n).
 \tag{37}
 $$
 
-分块、状态扫描和联合 Full 契约都通过精化保留原事件 DAG 的语义坐标，因此不会改变式 (37) 的真值。
+**证明。** 两份输入在允许前缀上相等，由式 (37) 可得它们在 $D_{\theta,o}$ 上相等，再由保守外部依赖集合的定义得到输出相等。$\square$
+
+单输入流或任务已对齐各端口位置时，预测位置 $t+1$ 可取 $n_i=\min(L_i,t+1)$；此时允许前缀恰为输入位置集合中满足 $k\le t$ 的部分。一般多端口任务分别声明各 $n_i$。
+
+一种构造 $D_{\theta,o}$ 的方法，是把参考递归在覆盖 $\theta$ 的有限切面内展开，保留全部可能的消息槽、候选标记与激活标记。消息槽用值或 $\bot$ 表示发送与缺席。外部输入的来源为自身标签，固定初态的来源为空集；函数结果取自变量来源的并，条件分支取条件与全部分支来源的并。按递归顺序归纳，所得输出来源集合满足上述定义。
+
+这个检查须覆盖消息存在性的依赖。例如某个输入决定是否额外发送一条消息，即使本次未发送，下游结果仍可能受该输入影响。一次运行的 $P/S/U/F$ 事件 DAG 以实际作用为顶点，消息边只来自实际发送；单独追溯它可能漏掉这种依赖。
+
+精确分块、状态扫描和联合 Full 求值对每份输入都保留同一个 $z_{\theta,o}(x)$，因而保留上述前缀不变性；同一个 $D_{\theta,o}$ 也继续满足其定义。
 
 ### 8.4 分块边界上的状态
 

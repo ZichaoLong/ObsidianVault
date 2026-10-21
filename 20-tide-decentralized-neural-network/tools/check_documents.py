@@ -25,9 +25,9 @@ CANONICAL_HASHES = {
     "timed-dag-region-selector-learning-note.md":
         "5a9157fb8f76219d1aaa91a1dc9ed1c1bfc1902f4966e5e03ddee0abf2b24866",
     "positive-delay-graph-finite-cut-learning-note.md":
-        "800f7e488fb29cac3d007ea439e639053c6953534f1a554fd11cba34bd72d111",
+        "042782c97a4e1f7ba357d3aca097196b00bb9bf25c816f02ed4c8e35238a6be2",
     "timed-dag-chunk-prefill-learning-note.md":
-        "1e23307163ab28e9d74311215bf19a2be66763290198a94d13559d261997430a",
+        "5fc0deef0980ca4ea640fb165e2974e023a0754fca23bbbd051153cc9c2280b2",
 }
 REMOVED_ENTRIES = {
     "semantics-anchor",

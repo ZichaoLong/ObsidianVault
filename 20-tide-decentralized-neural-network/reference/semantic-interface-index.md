@@ -170,7 +170,7 @@ $\operatorname{res}_P,\operatorname{res}_S$ 取标签的结果三元组。Next �
 | $\Lambda_v^U(I;\cdot),\Lambda_v^F(I;\cdot)$ | 实际状态作用时间、实际完整输出时间 |
 | $R,m_v^U,m_v^F,m_v^{UF},m_j^R$ | 自适应阶段数、各类节点批数与区域块数 |
 
-各见证均满足 $\mathcal K(z)=\operatorname{RefBlock}_K(z)$，并遵守范围的进入依赖与关闭条件。范围包含未发生坐标时，返回的实际支持集明确给出缺席。区域状态与区域状态加输出契约都可属于成本种类 $R$，覆盖范围区分二者。
+各见证均满足 $\mathcal K(z)=\operatorname{RefBlock}_K(z)$，并遵守范围的进入依赖与关闭条件。范围包含未发生坐标时，返回的实际支持集明确给出缺席。区域状态与区域状态加输出契约都可属于契约种类 $R$，覆盖范围区分二者。
 
 PDG 增加 Full 解释参数 $\mathbf F$，写作 $\operatorname{RefBlock}_K^{\mathbf F}$ 等；固定解释后省略上标。$\Lambda_v^F(I;\mathbf F,\omega)$ 的上标 $F$ 始终表示作用种类。PDG 的性能比较固定其余局部函数，属于分块教材共同规格族的特例。批数和阶段数同时依赖规格、输入、策略和契约族。
 

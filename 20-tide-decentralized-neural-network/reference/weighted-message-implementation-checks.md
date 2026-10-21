@@ -126,6 +126,8 @@ GDN 与 SSD 的正接收全候选都执行 Upd。测试本次未激活、下次�
 
 整段、不同长度分段、逐位置和位置内部切面均比较完整记录与边界。左状态须含原始时钟、区域历史和在途消息；给定完整驱动窗口后再核对各模块的联合契约。变更参数、位置或记忆类型后的继续，使用另外声明的转换或重算规则。
 
+自回归任务按[分块教材 §8.3](../timed-dag-chunk-prefill-learning-note.md#83-自回归输出的结构检查)声明输出坐标与各端口允许前缀。固定前缀、改变其余输入，比较输出值及输出是否存在；来源检查覆盖候选、激活与消息缺席的控制依赖。有限输入比较用于检验实现，一般前缀不变性由保守依赖集合及其包含关系证明。
+
 报告明确通过范围、误差、未覆盖组合与复现入口。性能测量与训练质量独立报告，不从局部数学性质推出加速或效果。
 
 ## 6. 仓库文档检查
@@ -150,7 +152,7 @@ python -B 20-tide-decentralized-neural-network/examples/recurrent_memory_checks.
 
 ### 正时延图的规范记录
 
-[正时延图教学程序](../examples/positive_delay_graph_reference.py)用整数与有理数函数展示切面、快照和调度重排。其范围及教学例子见 [PDG 附录 S.10](../positive-delay-graph-finite-cut-learning-note.md#s10-有限检验的比较对象)。
+[正时延图教学程序](../examples/positive_delay_graph_reference.py)用整数与有理数函数展示切面、快照和调度重排。比较对象与检验方法见 [PDG 附录 S.8](../positive-delay-graph-finite-cut-learning-note.md#s8-有限检验的比较对象)，本程序的已覆盖范围见下文。
 
 | 程序名称或表示 | 数学对应 |
 |---|---|
