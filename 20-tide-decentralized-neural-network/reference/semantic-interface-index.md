@@ -28,7 +28,7 @@ tags:
 
 SettleGraph 向 TimedDAG 保留图对象、端口和局部函数，重索引位置坐标并补齐空档状态；TimedDAG 记录逐切面限制后得到 PositiveDelayGraph 的相容记录族。分块求值研究固定语义下的联合函数。
 
-局部架构是这些正典允许的一条特化支线。[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)给出局部条件与组合结论；[区域分配 §5—6](../local-semantics/weighted-message/region-allocation-learning-note.md#5-温度极限与硬选择)验证具体发送函数的适用范围。
+局部架构是这些正典允许的一条特化支线。[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)给出局部条件与组合结论；[区域分配 §7—8](../local-semantics/weighted-message/region-allocation-learning-note.md#7-温度极限与硬选择)验证具体发送函数的适用范围。
 
 ## 基础对象与时间
 
@@ -52,28 +52,45 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 ## 局部支线的符号与定义归属
 
+### 共同接口与状态
+
 | 符号或函数 | 含义与唯一的定义入口 |
 |---|---|
 | $(m,z),\pi_P,(r^{\mathrm{in}},u),\operatorname{Agg},\operatorname{SrcClass}_v$ | [共同架构 §1—2](../local-semantics/weighted-message/architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献、接收聚合及从带标签端口／入边到有限类别的映射 |
-| $\operatorname{Mem}_v,p_v,\operatorname{Describe}_v$ | [共同架构 §3](../local-semantics/weighted-message/architecture-learning-note.md#3-状态与记忆描述)：记忆描述、当前特征与选择描述的组合 |
+| $p_v,\operatorname{Mem}_v$ | [共同架构 §3.2](../local-semantics/weighted-message/architecture-learning-note.md#32-从状态取得记忆描述)：当前内容特征与记忆描述接口，由各记忆模块实现 |
+| $\operatorname{Describe}_v,d_v\in D_v$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：节点向区域返回描述的接口，具体描述结构由区域教材实现 |
 | $q_v^{\mathrm{read}}$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：描述模式指定的初态、旧状态或新状态 |
-| $w_v,\gamma_v,\mu_v$ | [区域分配 §1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#11-本节点可用的信息)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
-| $Q_j^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v$ | [区域分配 §1.2](../local-semantics/weighted-message/region-allocation-learning-note.md#12-从节点描述到区域评分)：区域 query、节点 key 与评分 |
-| $c_v,\mathcal A,M,S$ | [区域分配 §2](../local-semantics/weighted-message/region-allocation-learning-note.md#2-从评分得到发送强度)：发送强度（本支线的控制量）、激活集合、$\mu$ 总和与实际发送总和 |
-| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [约束分配](../local-semantics/weighted-message/region-allocation-learning-note.md#21-约束分配)：可行域、总和上下限、阈值、调整后评分和温度 |
-| $a_v,Z,p_v^{\mathrm{sel}}$ | [加权 Attention](../local-semantics/weighted-message/region-allocation-learning-note.md#22-加权-attention-的共同定义)：基权重、归一化分母和份额 |
-| $G_v$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：激活后的内容变换，由具体模块绑定 |
-| $x_v^{\mathrm{resp}},a_v^{\mathrm{resp}},e_v^{\mathrm{resp}}$ | [区域分配 §4.2](../local-semantics/weighted-message/region-allocation-learning-note.md#42-约束分配的反向)：实际响应点 $t_v-\lambda$ 及在此处对自变量、发送上限的响应导数 |
+| $G_v,\operatorname{EmitValue},\Delta$ | [共同架构 §4.2](../local-semantics/weighted-message/architecture-learning-note.md#42-完整内容与广播)：完整内容、载荷与逐边／逐端口广播；$G_v$ 由具体模块绑定 |
+| $\operatorname{ReadOut}$ | [共同架构 §4.4](../local-semantics/weighted-message/architecture-learning-note.md#44-图的输出读出)：有限输出坐标上的读出 |
+
+### 区域描述、评分与分配
+
+| 符号或函数 | 含义与定义入口 |
+|---|---|
+| $f_v,s_v^{\mathrm{loc}}$ | [区域分配 §2.1—2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#21-当前内容与记忆的共同特征)：评分候选的内部特征与局部评分；$f_v$ 也供上下文增益使用 |
+| $w_v,\gamma_v,\mu_v$ | [区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-接收量与发送增益)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
+| $D_v^{\mathrm{ind}},D_v^{\mathrm{att}},x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-describe-的返回值)：两种 Describe 返回结构；后者另含当前内容投影与记忆 key |
+| $Q_j^{\mathrm{sel}},s_v$ | [区域分配 §3](../local-semantics/weighted-message/region-allocation-learning-note.md#3-从描述族得到区域评分)：从描述族构造的区域 query 与最终评分；独立评分直接取 $s_v=s_v^{\mathrm{loc}}$ |
+| $c_v,\mathcal A,M,S$ | [区域分配 §4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-发送分配与-selstep-返回)：发送强度（本支线的控制量）、激活集合、$\mu$ 总和与实际发送总和 |
+| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [约束分配](../local-semantics/weighted-message/region-allocation-learning-note.md#41-约束优化分配)：可行域、总和上下限、阈值、调整后评分和温度 |
+| $a_v,Z,p_v^{\mathrm{sel}}$ | [Attention 份额](../local-semantics/weighted-message/region-allocation-learning-note.md#42-通过-attention-份额分配)：三种 Attention 发送规则共同使用的基权重、归一化分母与内部份额 |
+| $x_v^{\mathrm{resp}},a_v^{\mathrm{resp}},e_v^{\mathrm{resp}}$ | [区域分配 §6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#62-约束分配的反向)：实际响应点 $t_v-\lambda$ 及在此处对自变量、发送上限的响应导数 |
 | $x_v^{\mathrm{bracket}}$ | [区域分配附录 S.2](../local-semantics/weighted-message/region-allocation-learning-note.md#s2-标量求解与隐式反向)：用于构造求根区间的逆响应点 |
+
+### 记忆模块与共用部件
+
+| 符号或函数 | 含义与定义入口 |
+|---|---|
 | $\xi_i,T_v,\chi_{v,\theta},\operatorname{Pos},\operatorname{Rot}$ | [KV §1—2](../local-semantics/weighted-message/kv-memory-learning-note.md#1-状态与接收写入)：原始写入时间、窗口、遮罩、位置与旋转 |
 | $H_a,Z_a,W_a,s$ | [基础循环 §1](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md#1-状态与逻辑时间)：两种时间尺度的矩阵、摘要、写入量与保存时间 |
 | $(A,B),\circledast$ | [基础循环 §4.1](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md#41-仿射复合)：矩阵变换 $H\mapsto HA+B$ 的系数对与先后复合；各循环模块分别给出系数 |
-| $\mathcal B,\operatorname{Conv},\operatorname{ConvWrite},L_{\mathrm{conv}},\delta_{\mathrm{conv}}$ | [短卷积 §1](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#1-时间槽与保存内容)：缓存、读取、写入、抽头数与抽头的逻辑时间间距 |
+| $\mathcal B,\operatorname{Conv},\operatorname{ConvWrite},L_{\mathrm{conv}},\delta_{\mathrm{conv}}$ | [短卷积 §1](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#1-缓存卷积与写入)：缓存、读取、写入、抽头数与抽头的逻辑时间间距 |
 | $H_h,Q_h,k_h,\nu_h,g_h,\beta_h$ | [Gated DeltaNet §1—2](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md#1-输入参数与状态)：逐头矩阵、查询、key、value、保留门与误差写入门 |
 | $H_h,B_g,C_g,\nu_h,d_h,g_h,D_h$ | [SSD §1—3](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md#1-尺寸状态与时钟)：逐头矩阵、组内写入与读取向量、内容、有效步长、保留门与直通系数 |
 | $\operatorname{Mix},R,\operatorname{Mem}$ | 两份完整循环教材 §3：记忆内容混合、矩阵查询及区域描述；记忆门与发送增益 $\gamma_v$、控制 $c_v$ 分别定义 |
 | $\pi_{\mathrm{KV}},\pi_{\mathrm{rec}},\pi_{\mathrm{gdn}},\pi_{\mathrm{ssd}}$ | 各记忆教材的有效状态投影，用于数值性质比较；后两者还包括 $\pi_{\mathrm{conv}}$ |
-| $\operatorname{EmitValue},\Delta,\operatorname{ReadOut}$ | [共同架构 §4](../local-semantics/weighted-message/architecture-learning-note.md#4-分配完整计算与发送)：载荷、广播与有限输出读出 |
+
+### 配置与名称
 
 配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 取 kv／affine／delta／gated_delta／ssd；memory_read 选择该模块定义的记忆描述读取函数，read_mode 对应描述模式 $\tau_j$，指定 Read 所用的状态快照。region_score 选择区域评分方式，selection_mode 选择发送函数。conv_stride 的逻辑时间单位与卷积接口映射见[短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续)；GDN 的 head_k_dim 与 SSD 的 state_dim 均对应各自 $d_k$。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
 

@@ -26,8 +26,8 @@ tags:
 
 | 文档 | 对象与结论 |
 |---|---|
-| [函数保持生长](mathematics/function-preserving-growth.md) | 投影 simulation、中性 residual、有限 DAG 细化及受限 fixed-merge 闭包 |
-| [来源、聚合与读出](mathematics/provenance-and-readout.md) | 安全商、保守依赖集合与未来可观察行为 |
+| [函数保持生长](mathematics/function-preserving-growth.md) | 状态投影与输出保持、中性残差、有限 DAG 细化及固定汇合的分段等价 |
+| [来源、聚合与读出](mathematics/provenance-and-readout.md) | 保持指定观察的聚合与状态压缩、保守来源集合及读出时间 |
 | [自适应路由下界](mathematics/adaptive-routing-prefill-lower-bound.md) | 确定性精确黑盒查询模型的轮数下界、完整证明及向具体模型转用的条件 |
 
 这些材料在各自声明的模型内给出结论。局部架构的函数与组合定理仍由[局部教材](../local-semantics/weighted-message/architecture-learning-note.md)承担。

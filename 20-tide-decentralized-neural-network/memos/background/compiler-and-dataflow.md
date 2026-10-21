@@ -71,13 +71,16 @@ Lamport 的逻辑顺序区分因果先后与物理完成时间。Naiad/Timely �
 
 参考：[Data-Oblivious Stream Productivity](https://doi.org/10.1007/978-3-540-89439-1_7)。
 
-## 8. Scan、provenance 与 confluence
+## 8. 按用途选择计算与分析工具
 
-Prefix scan 的价值来自可结合且可有效表示的转移摘要，而不是“所有函数复合都结合”。节点状态块的形式化条件见 [TimedDAG 分块预填充教材第 5.1 节](../../timed-dag-chunk-prefill-learning-note.md#51-状态顺序与因果状态块)。
+下列工具处理不同问题；使用时分别核对其前提。
 
-数据库 provenance 提醒我们：聚合后能否回答来源问题，取决于是否保存相应信息；若后继只依赖总和，就无需为重建每项来源付费。CALM/confluence 研究顺序无关的分布式结果，但它们的前提不能直接替代任意神经状态更新的证明。
-
-Differential Dataflow 的带时间集合与增量维护提供了另一种索引/布局思想；派生索引可以是执行表示，不应偷偷成为新的模型含义。
+| 用途 | 概念与条件 | 对 Tide 的对应 |
+|---|---|---|
+| 联合求出状态前缀 | Prefix scan 使用可结合且可有效表示的转移摘要 | 节点状态块须给出精确联合函数，条件见[分块教材 §5.1](../../timed-dag-chunk-prefill-learning-note.md#51-状态顺序与因果状态块)；函数复合的结合律本身不保证摘要紧凑或求值高效 |
+| 追踪来源 | 数据库 provenance 保存所需的来源信息 | 聚合后能回答哪些来源问题，取决于保留了什么；指定后继只依赖总和时，可以只维护相应观察 |
+| 判断顺序无关性 | CALM／confluence 在各自的程序与通信条件下研究结果 | 神经状态更新的执行重排仍须验证其局部函数和依赖 |
+| 维护变化后的结果 | Differential Dataflow 使用带时间集合与增量维护 | 可启发派生索引和执行布局；这些表示须保持既有模型的可观察行为 |
 
 参考：[Blelloch，Prefix Sums](https://www.cs.cmu.edu/~guyb/papers/Ble93.pdf)；[Provenance Semirings](https://doi.org/10.1145/1265530.1265535)；[Logic and Lattices for Distributed Programming](https://doi.org/10.1145/2391229.2391230)；[Differential Dataflow](https://www.cidrdb.org/cidr2013/Papers/CIDR13_Paper111.pdf)。
 

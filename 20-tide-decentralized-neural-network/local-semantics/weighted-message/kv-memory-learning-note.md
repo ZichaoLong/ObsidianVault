@@ -21,6 +21,8 @@ tags:
 
 ## 1. 状态与接收写入
 
+### 1.1 保存的条目
+
 固定记忆描述宽度 $d_s$、KV 适配秩 $r_a$、Attention 头数 $H_{\mathrm{att}}$ 和每头宽度 $d_h$，满足 $H_{\mathrm{att}}d_h=d$。
 
 节点状态空间 $S_v$ 是全部有限序列
@@ -34,6 +36,8 @@ p_i\in\mathbb R^{d_s},\quad w_i\ge0.
 $$
 
 $k_i$ 是匹配记忆所用的 key，$\nu_i$ 是读取时被加权的 value。它们分别分成 $H_{\mathrm{att}}$ 个 $d_h$ 维子向量，记为 $k_{i,h},\nu_{i,h}$；$p_i$ 是供后续评分使用的摘要特征，$w_i$ 是独立的写入权重，$\xi_i$ 是原始逻辑时间。初态为空；实际运行中每节点每逻辑时间至多写一项。
+
+### 1.2 写入投影与当前特征
 
 令 $j=\rho(v)$ 为节点所属区域，记 $I_p$ 为 $p$ 维单位矩阵。区域共享基座 $W_j^{\mathrm{KV}}\in\mathbb R^{2d\times d}$，节点各有 $U_v\in\mathbb R^{2d\times r_a}$、$V_v^{\mathrm{ad}}\in\mathbb R^{r_a\times d}$ 与 $W_v^S\in\mathbb R^{d_s\times d}$。定义
 
@@ -50,6 +54,8 @@ $$
 式 (2) 的 $p_v$ 实现架构的当前内容特征。写入时将 $p_v(u)$ 保存为条目中的 $p_i$，使当前内容与历史摘要使用同一投影；第 3 节再从保存的条目实现 Mem。
 
 共享基座给出区域共同的 KV 投影，节点差异由秩至多为 $r_a$ 的乘积提供。相同输入的基座投影可共同求值，各节点仍保存私有条目。取 $r_a=d$、$W_j^{\mathrm{KV}}=0$、$V_v^{\mathrm{ad}}=I_d$ 与 $U_v=[W_v^K;W_v^V]$，即可表示任意独立的 K、V 投影。式 (2) 定义写入；Attention 读取由 §4.1 给出。
+
+### 1.3 窗口与接收更新
 
 为每节点固定窗口 $T_v\in\mathbb N_{\ge1}\cup\{\infty\}$，以原始逻辑时间计量。定义遮罩
 
@@ -76,6 +82,8 @@ $$
 窗口按原始写入时间定义。一条强度趋零的输入会产生权重趋零的新条目；窗口内已有条目的保留仍由各自的写入时间决定。
 
 ## 2. 位置坐标
+
+内容检索和完整内容读取都可以用位置参与匹配。先定义共同的位置坐标与旋转矩阵族；两种读取随后分别选择自己的宽度、频率和投影。
 
 为每个节点固定位置函数
 
@@ -111,17 +119,6 @@ $$
 
 旋转维数为零时 $\operatorname{Rot}=I_{d_h}$；旋转全部或部分坐标分别得到完整或部分 RoPE。旋转维数独立于评分网络的宽度。
 
-对每个头固定 $W^Q_{v,h}\in\mathbb R^{d_h\times d}$，定义当前 query 为 $Q_{v,h}(u)=W^Q_{v,h}\mathcal N_d(u)$。另取非负距离偏置斜率 $b^{\mathrm{pos}}_{v,h}$，为 §4.1 的完整内容读取定义匹配分数
-
-$$
-\ell_{i,h}=\frac{
- [\operatorname{Rot}_{v,h}(\operatorname{Pos}_v(\theta))Q_{v,h}(u)]^\top
- [\operatorname{Rot}_{v,h}(\operatorname{Pos}_v(\xi_i))k_{i,h}]}{\sqrt{d_h}}
- -b^{\mathrm{pos}}_{v,h}
-   (\operatorname{Pos}_v(\theta)-\operatorname{Pos}_v(\xi_i))_+.
-\tag{4}
-$$
-
 数学状态中的 $k_i$ 保持未旋转形式，$\nu_i,p_i$ 也不施加旋转。上述旋转满足
 
 $$
@@ -129,21 +126,15 @@ $$
 =\operatorname{Rot}_{v,h}(q-p),
 $$
 
-故旋转后的匹配依赖相对坐标，并包含各频率对应的相位信息。下面三种配置共用这一匹配公式：
-
-| 配置 | 旋转维数 | 距离偏置 |
-|---|---|---|
-| NoPE | $d^{\mathrm{rot}}_{v,h}=0$ | $b^{\mathrm{pos}}_{v,h}=0$ |
-| 完整 RoPE | $d^{\mathrm{rot}}_{v,h}=d_h$，要求 $d_h$ 为偶数 | 通常为零 |
-| 部分 RoPE | $0<d^{\mathrm{rot}}_{v,h}<d_h$，旋转维数为偶数 | 通常为零 |
-
-NoPE 的 Full 匹配使用内容，时间窗口、摘要和状态顺序仍保留时间信息。令 $\Delta p=\operatorname{Pos}_v(\theta)-\operatorname{Pos}_v(\xi_i)$，可选的线性距离偏置在 softmax 中乘入 $e^{-b^{\mathrm{pos}}_{v,h}\Delta p_+}$，是一种距离衰减；它与 RoPE 的旋转可以分别配置。
+故旋转后的匹配依赖相对坐标，并包含各频率对应的相位信息。第 3、4 节分别为记忆描述和完整内容选定查询与匹配参数。
 
 ## 3. 供评分使用的记忆描述
 
 本节实现架构的 Mem 接口。时间摘要汇集已保存的摘要特征，内容检索用当前内容查询已保存的 K/V；两种方式为后续评分提供同型的记忆描述。
 
-### 3.1 时间摘要
+### 3.1 两种读取共用的时间权重
+
+两种描述都要确定哪些条目参与，以及这些条目积累了多少写入权重。短期、长期通道分别采用以下时间权重和统计量。
 
 对每节点取 $\beta_{v,\mathrm{long}}=0$、$\beta_{v,\mathrm{short}}>0$，均按逻辑时间计量。固定节点后省略部分下标，对 $a\in\{\mathrm{short},\mathrm{long}\}$ 定义
 
@@ -151,16 +142,23 @@ $$
 \begin{aligned}
 \omega_i^a(\theta)&=\chi_{v,\theta}(\xi_i)w_i
  e^{-\beta_{v,a}(\theta-\xi_i)_+},\\
-W_a(q,\theta)&=\sum_i\omega_i^a(\theta),\\
-M_a^{\mathrm{sum}}(q,\theta)&=
- \frac{\sum_i\omega_i^a(\theta)p_i}{\max(1,W_a(q,\theta))}.
+W_a(q,\theta)&=\sum_i\omega_i^a(\theta).
 \end{aligned}
-\tag{5}
+$$
+
+### 3.2 时间摘要
+
+时间摘要（sum）按上述权重汇集保存的摘要特征：
+
+$$
+M_a^{\mathrm{sum}}(q,\theta)=
+ \frac{\sum_i\omega_i^a(\theta)p_i}{\max(1,W_a(q,\theta))}.
+\tag{4}
 $$
 
 短期摘要突出近期接收，长期摘要覆盖整个窗口；分母使最后一条弱记忆消失时摘要也趋零。摘要本身只按时间和写入权重汇集，当前内容在后续评分中与它交互。
 
-### 3.2 当前内容检索
+### 3.3 当前内容检索
 
 取偶数 $0\le d_v^{\mathrm{rot,read}}\le d_s$、坐标配对及有限频率 $\omega_{v,a}^{\mathrm{rot,read}}$。$\operatorname{Rot}_v^{\mathrm{read}}$ 使用 §2 的旋转矩阵族，宽度换为 $d_s$，采用这些独立参数；零旋转维数给出内容匹配。它沿用同一 $\operatorname{Pos}_v$，与 Full 的位置配置分别选择。
 
@@ -184,14 +182,16 @@ M_a^{\mathrm{qry}}(q,\theta,u)&=
 0,&W_a=0.
 \end{cases}
 \end{aligned}
-\tag{6}
+\tag{5}
 $$
 
-两个时间尺度共用本次匹配分数。检索结果替换 §3.1 的摘要。宽度与检索量允许接近 Full，成本按实际配置计量。
+两个时间尺度共用本次匹配分数。内容检索（qry）使用共同时间权重，并按当前内容与记忆的匹配重新分配读取份额。宽度与检索量允许接近 Full，成本按实际配置计量。
+
+### 3.4 Mem 的返回值与状态快照
 
 两种读取均返回架构规定的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$。时间摘要使用式 (2) 的摘要投影；qry 从 §1 写入的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
 
-Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#14-describe-与-selstep-的对应)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
+Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#24-describe-的返回值)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
 
 ## 4. 激活后的内容读取
 
@@ -199,7 +199,28 @@ Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当
 
 ### 4.1 带权 Attention
 
-使用 §2 的 query 和匹配分数，从本次计算状态 $q$ 中读取窗口内的记忆：
+对每个头固定 $W^Q_{v,h}\in\mathbb R^{d_h\times d}$，定义当前 query 为 $Q_{v,h}(u)=W^Q_{v,h}\mathcal N_d(u)$。另取非负距离偏置斜率 $b^{\mathrm{pos}}_{v,h}$，为完整内容读取定义匹配分数
+
+$$
+\ell_{i,h}=\frac{
+ [\operatorname{Rot}_{v,h}(\operatorname{Pos}_v(\theta))Q_{v,h}(u)]^\top
+ [\operatorname{Rot}_{v,h}(\operatorname{Pos}_v(\xi_i))k_{i,h}]}{\sqrt{d_h}}
+ -b^{\mathrm{pos}}_{v,h}
+   (\operatorname{Pos}_v(\theta)-\operatorname{Pos}_v(\xi_i))_+.
+\tag{6}
+$$
+
+下面三种配置共用这一匹配公式：
+
+| 配置 | 旋转维数 | 距离偏置 |
+|---|---|---|
+| NoPE | $d^{\mathrm{rot}}_{v,h}=0$ | $b^{\mathrm{pos}}_{v,h}=0$ |
+| 完整 RoPE | $d^{\mathrm{rot}}_{v,h}=d_h$，要求 $d_h$ 为偶数 | 通常为零 |
+| 部分 RoPE | $0<d^{\mathrm{rot}}_{v,h}<d_h$，旋转维数为偶数 | 通常为零 |
+
+NoPE 的 Full 匹配使用内容，时间窗口、摘要和状态顺序仍保留时间信息。令 $\Delta p=\operatorname{Pos}_v(\theta)-\operatorname{Pos}_v(\xi_i)$，可选的线性距离偏置在 softmax 中乘入 $e^{-b^{\mathrm{pos}}_{v,h}\Delta p_+}$，是一种距离衰减；它与 RoPE 的旋转可以分别配置。
+
+用这些匹配分数，从本次计算状态 $q$ 中读取窗口内的记忆：
 
 $$
 \begin{aligned}
@@ -218,7 +239,7 @@ $$
 
 $\ell_{i,h}$ 是当前内容与第 $i$ 条记忆的匹配分数。$\widehat w_i$ 是本次读取中该条目的有效权重，$W$ 是这些权重之和。$R_{v,h}$ 先对记忆的 value 作归一化加权平均，再乘 $a(W)$。
 
-窗口内有效权重全为 $1$ 时，得到通常的多头 Attention 读取。最后一条弱记忆消失时，$a(W)$ 使读取趋零；单位记忆有 $a(1)=1$。实际匹配采用 §2 的位置公式；零旋转和零距离偏置恢复纯内容匹配。
+窗口内有效权重全为 $1$ 时，得到通常的多头 Attention 读取。最后一条弱记忆消失时，$a(W)$ 使读取趋零；单位记忆有 $a(1)=1$。实际匹配采用本节的位置与内容公式；零旋转和零距离偏置恢复纯内容匹配。
 
 ### 4.2 内容函数
 
@@ -244,7 +265,7 @@ $$
 
 ### 5.1 从接收到输出
 
-本例完成[架构 §4.4](architecture-learning-note.md#44-一组贯穿例子)与[区域教材 §3.1](region-allocation-learning-note.md#31-贯穿例子的区域计算)的函数绑定。取共享聚合、Read$^+$、时间摘要、cat 局部评分、ind 区域评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
+本例完成[架构 §4.5](architecture-learning-note.md#45-一组贯穿例子)与[区域教材 §5.1](region-allocation-learning-note.md#51-贯穿例子的区域计算)的函数绑定。取共享聚合、Read$^+$、时间摘要、cat 局部评分、ind 区域评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
 
 本次新状态上，两种时间摘要均只读到当前写入；因此
 
@@ -264,11 +285,11 @@ $$
 | $b$ | $(1,-1)$ | $(0,-1,-1,1)$ | $1$ | $1$ | $0.25$ |
 | $c$ | $(0,0)$ | 不追加 | $0$ | $100$ | $0$ |
 
-节点 $c$ 的发送上限为零，其高分不影响选择。Describe 返回的三元组及 SelStep 的控制计算已在[区域教材的同一例子](region-allocation-learning-note.md#31-贯穿例子的区域计算)中展开。三者均保留接收后的状态，随后计算激活者的 Full。
+节点 $c$ 的发送上限为零，其高分不影响选择。Describe 返回的三元组及 SelStep 的控制计算已在[区域教材的同一例子](region-allocation-learning-note.md#51-贯穿例子的区域计算)中展开。三者均保留接收后的状态，随后计算激活者的 Full。
 
 令 $W_v^O=1,\alpha_{\mathrm{att}}=1,\alpha_{\mathrm{ff}}=0$，记同刻端口的 ReadOut 为 $O$。$a,b$ 的 Attention 分别读出 $1,-1$，Full 内容为 $2,-2$，发送 $(0.75,2),(0.25,-2)$。若直接作为终端，$O=1$；若共同到达采用[共同聚合](architecture-learning-note.md#2-接收聚合) 且 $\alpha_{\mathrm{agg}}=0$ 的下游，则下游得到 $(r^{\mathrm{in}},u)=(1,1)$，再开始自己的接收流程。
 
-保持评分不变，将温度降到 $0.5$，发送强度已经是 $(1,0,0)$，只执行 $a$ 的 Full，终端 $O=2$。共同阈值的作用已由[区域分配 §2.1](region-allocation-learning-note.md#21-约束分配)确定。采用硬选择时，有效候选中最高分的 $a$ 激活，节点 $c$ 始终因发送上限为零而排除。
+保持评分不变，将温度降到 $0.5$，发送强度已经是 $(1,0,0)$，只执行 $a$ 的 Full，终端 $O=2$。共同阈值的作用已由[区域分配 §4.1](region-allocation-learning-note.md#41-约束优化分配)确定。采用硬选择时，有效候选中最高分的 $a$ 激活，节点 $c$ 始终因发送上限为零而排除。
 
 ### 5.2 未激活时保留的记忆
 
@@ -279,7 +300,7 @@ s_a=0.5,\qquad
 s_b=0.75-M_{\mathrm{long}}^{\mathrm{sum}}(\widetilde q_b,\theta).
 $$
 
-这属于[拼接评分](region-allocation-learning-note.md#13-局部评分的两种具体函数)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
+这属于[拼接评分](region-allocation-learning-note.md#22-局部评分的候选)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
 
 | 位置 | 两节点新写入的 $(\xi,\nu,p,w)$ | $M_{\mathrm{long}}$ | $(s_a,s_b)$ | 激活者 | 终端 $O$ |
 |---|---|---|---|---|---|
@@ -331,7 +352,7 @@ $$
 <a id="7-有效状态与正温度连续性"></a>
 <a id="8-单位输入的整网软硬极限"></a>
 
-该引理验证记忆一侧的条件。区域控制另按[区域教材 §6](region-allocation-learning-note.md#6-发送规则如何满足架构条件)核对，再应用共同架构的零消息删除与连续性命题；约束分配与硬选择的单位输入结论见[区域教材 §5.4](region-allocation-learning-note.md#54-单位输入的整网软硬关系)。与循环模块混合时，各节点分别验证自己的记忆条件。
+该引理验证记忆一侧的条件。区域控制另按[区域教材 §8](region-allocation-learning-note.md#8-发送规则如何满足架构条件)核对，再应用共同架构的零消息删除与连续性命题；约束分配与硬选择的单位输入结论见[区域教材 §7.4](region-allocation-learning-note.md#74-单位输入的整网软硬关系)。与循环模块混合时，各节点分别验证自己的记忆条件。
 
 ## 附录 A：局部性质的证明
 
