@@ -58,7 +58,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 |---|---|
 | $(m,z),\pi_P,(r^{\mathrm{in}},u),\operatorname{Agg},\operatorname{SrcClass}_v$ | [共同架构 §1—2](../local-semantics/weighted-message/architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献、接收聚合及从带标签端口／入边到有限类别的映射 |
 | $p_v,\operatorname{Mem}_v$ | [共同架构 §3.2](../local-semantics/weighted-message/architecture-learning-note.md#32-从状态取得记忆描述)：当前内容特征与记忆描述接口，由各记忆模块实现 |
-| $\operatorname{Describe}_v,d_v\in D_v$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：节点向区域返回描述的接口，具体描述结构由区域教材实现 |
+| $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v],d_v\in D_v$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：以 Mem 与当前特征为部件的描述函数；绑定后简记 Describe，具体构造由区域教材给出 |
 | $q_v^{\mathrm{read}}$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：描述模式指定的初态、旧状态或新状态 |
 | $G_v,\operatorname{EmitValue},\Delta$ | [共同架构 §4.2](../local-semantics/weighted-message/architecture-learning-note.md#42-完整内容与广播)：完整内容、载荷与逐边／逐端口广播；$G_v$ 由具体模块绑定 |
 | $\operatorname{ReadOut}$ | [共同架构 §4.4](../local-semantics/weighted-message/architecture-learning-note.md#44-图的输出读出)：有限输出坐标上的读出 |
@@ -67,7 +67,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 | 符号或函数 | 含义与定义入口 |
 |---|---|
-| $f_v,s_v^{\mathrm{loc}}$ | [区域分配 §2.1—2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#21-当前内容与记忆的共同特征)：评分候选的内部特征与局部评分；$f_v$ 也供上下文增益使用 |
+| $f_v,s_v^{\mathrm{cat}},s_v^{\mathrm{match}},s_v^{\mathrm{loc}}$ | [区域分配 §2.1—2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#21-当前内容与记忆的共同特征)：内部特征、两种候选及所选局部评分；$f_v$ 也供上下文增益使用 |
 | $w_v,\gamma_v,\mu_v$ | [区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-接收量与发送增益)：截断接收量、增益、接收相关发送量；作为上限或基权重的角色由发送规则给定 |
 | $D_v^{\mathrm{ind}},D_v^{\mathrm{att}},x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-describe-的返回值)：两种 Describe 返回结构；后者另含当前内容投影与记忆 key |
 | $Q_j^{\mathrm{sel}},s_v$ | [区域分配 §3](../local-semantics/weighted-message/region-allocation-learning-note.md#3-从描述族得到区域评分)：从描述族构造的区域 query 与最终评分；独立评分直接取 $s_v=s_v^{\mathrm{loc}}$ |

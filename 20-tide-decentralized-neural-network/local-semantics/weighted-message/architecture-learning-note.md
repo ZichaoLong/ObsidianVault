@@ -52,7 +52,7 @@ $$
 \tag{2}
 $$
 
-向量上的标量函数逐分量作用，$\odot$ 表示逐分量乘法，方括号表示拼接。
+向量上的标量函数逐分量作用，$\odot$ 表示逐分量乘法，$[x;y]$ 表示向量拼接。
 
 ## 2. 接收聚合
 
@@ -143,11 +143,25 @@ $p_v(u)$ 与两个记忆向量具有相同宽度，便于构造当前内容与�
 
 ### 3.3 节点描述与状态快照
 
-为每个节点指定描述空间 $D_v$ 和函数 $\operatorname{Describe}_v:S_v\times\mathbb N\times X_v\to D_v$。给定 $(q,\theta,(r^{\mathrm{in}},u))$，它使用当前接收、$p_v(u)$ 及 $\operatorname{Mem}_v(q,\theta,u)$，计算传给区域的描述 $d_v\in D_v$。这些信息只来自本节点；区域随后同时使用所有候选的 $d_v$。
+Describe 将当前接收与记忆信息组合为传给区域的节点描述。为每个节点指定描述空间 $D_v$，以所选记忆描述函数和当前特征函数为部件，记这组描述函数为
+
+$$
+\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]:
+ S_v\times\mathbb N\times X_v\longrightarrow D_v.
+$$
+
+方括号中是组成模型时选定的函数；圆括号中是一次求值的输入。给定 $(q,\theta,h)$，其中 $h=(r^{\mathrm{in}},u)$，Describe 使用 $p_v(u)$、$\operatorname{Mem}_v(q,\theta,u)$ 及当前接收，得到
+
+$$
+d_v=\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]
+ (q,\theta,h)\in D_v.
+$$
+
+这些信息只来自本节点；区域随后同时使用所有候选的 $d_v$。绑定上述函数后，简记为 $\operatorname{Describe}_v(q,\theta,h)$。
 
 具体的 Describe 与区域选择须配套定义。节点可以先将当前内容与记忆变为局部评分，也可以同时提供区域匹配所需的向量。当前特征与记忆描述是构造 $d_v$ 的依据，$D_v$ 规定传给区域的描述结构。
 
-正典描述模式 $\tau_j\in\{0,-,+\}$ 使用
+正典 Read 按描述模式 $\tau_j\in\{0,-,+\}$ 选取状态，再调用已绑定的 Describe：
 
 $$
 \begin{aligned}
@@ -293,7 +307,7 @@ $$
 | [基础循环记忆](recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](recurrent-memory/gated-delta-learning-note.md)、[SSD](recurrent-memory/ssd-learning-note.md) | 同上 | 以矩阵及辅助状态保存接收，实现同型的当前内容特征、记忆描述与完整内容 |
 | [固定逻辑时间短卷积](recurrent-memory/causal-convolution-learning-note.md) | Conv、ConvWrite | 作为 Gated DeltaNet 与 SSD 更新、读取中的部件 |
 
-更换记忆模块时，Describe 使用新的 Mem 与当前特征；更换区域评分或发送函数时，Upd 与 $G_v$ 仍按各自定义计算。式 (7) 的两个描述通道是这里复用评分族的接口；采用其他描述形式时须同时指定相容的 Describe 与 SelStep。
+记忆教材给出 Mem 与当前特征 $p_v$，区域教材给出 Describe 如何组合它们；选定后得到 §3.3 的 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。更换区域评分或发送函数时，Upd 与 $G_v$ 仍按各自定义计算。式 (7) 的两个描述通道是这里复用评分族的接口；采用其他描述形式时须同时指定相容的 Describe 与 SelStep。
 
 三个图层级使用同一组 Agg、Upd、Read、SelStep、Next、Full。正时延图允许反馈；图无环时得到 TimedDAG；进一步满足区域严格分层和到达对齐时得到 SettleGraph。[全连接分层](../../topologies/fully-connected-layered.md)与 [HB-Lattice](../../topologies/hb-lattice.md)分别给出独立的图与时间定义；[完整实例](../../README.md#具体拓扑与完整实例)将它们与本支线的局部函数绑定。
 

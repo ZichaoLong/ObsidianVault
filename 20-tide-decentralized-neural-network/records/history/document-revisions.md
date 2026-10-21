@@ -11,6 +11,12 @@ tags:
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
 
+## 2026-10-21：显式组合描述函数与候选的共同收尾
+
+以 [864f438](https://github.com/ZichaoLong/ObsidianVault/commit/864f438) 为基线，局部架构用 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$ 显示描述函数的组成部件，区分模型绑定与单次求值，并保留绑定后的 Describe 简写。Read 仍按描述模式传入初态、旧状态或新状态，函数签名及计算顺序保持。
+
+区域教材将局部评分的候选函数与所选评分、共同性质分节，门控残差的宽度和尺度留在匹配评分定义中；两种描述形式与完整 Describe 的组装同样分层。同步符号索引和实现核对，将整体导入、候选细节、共同收尾以及参数化组合的写法补入写作技能。既有数值函数、配置值、编号公式及四份正典保持。
+
 ## 2026-10-21：按定义依赖与候选关系重排行文
 
 以 [5da2b8e](https://github.com/ZichaoLong/ObsidianVault/commit/5da2b8e) 为基线，依据新增的 [tide-math-writing 技能](../../skills/tide-math-writing/SKILL.md)重写局部教材及配套材料。四份正典逐字保持；已有局部函数、参数、配置值、状态顺序及性质的条件保持。

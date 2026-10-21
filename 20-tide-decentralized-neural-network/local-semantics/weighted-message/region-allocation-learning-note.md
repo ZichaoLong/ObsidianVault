@@ -30,13 +30,14 @@ $$
 
 两个 $M_{v,a}\in\mathbb R^{d_s}$ 提供记忆内容，两个 $W_{v,a}\ge0$ 提供接收积累的统计量，$a\in\{\mathrm{short},\mathrm{long}\}$。$p_v$ 与 Mem 的具体计算由所选记忆模块给定，以下函数使用它们的返回值。
 
-Describe 接收所选状态、逻辑时间和聚合输入，返回区域所需的描述：
+本章给出 Describe 如何组合所选的 Mem 与 $p_v$。沿用架构的参数化记法，它接收本次状态、逻辑时间和聚合输入，返回区域所需的描述：
 
 $$
-d_v=\operatorname{Describe}_v(q_v^{\mathrm{read}},\theta,h_v)\in D_v.
+d_v=\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]
+ (q_v^{\mathrm{read}},\theta,h_v)\in D_v.
 $$
 
-描述空间 $D_v$ 随区域评分方式确定。第 2 节构造本节点的局部评分、接收相关量及可选的匹配向量，并将它们组装为 $d_v$。
+方括号内的函数在模型绑定时选定，以下省略；各次调用使用它们在当前输入上的值。描述空间 $D_v$ 随区域评分方式确定。第 2 节构造本节点的局部评分、接收相关量及可选的匹配向量，并将它们组装为 $d_v$。
 
 SelStep 使用整个描述族，返回激活集合及每个候选的发送控制。控制 $c_v\in[0,1]$ 表示发送强度，$\mathcal A=\{v\in C:c_v>0\}$；区域历史为单点 $*$，故所需返回形式为
 
@@ -67,18 +68,20 @@ $f_v$ 的宽度为 $d+4d_s+3$。其中 $p_v(u)\odot M_a$ 用两个同宽向量�
 
 ### 2.2 局部评分的候选
 
-两种候选均返回一个实数 $s_v^{\mathrm{loc}}$，供后续区域评分使用。
+局部评分将本节点的当前接收与记忆信息变为一个实数 $s_v^{\mathrm{loc}}$。它随后写入描述 $d_v$，供第 3 节的区域评分使用。这里可选拼接评分（cat）或分组匹配评分（match）；先定义两种函数，再给出所选评分及其性质。
 
-#### 2.2.1 拼接评分
+#### 2.2.1 候选函数
 
-取 $W_v^r\in\mathbb R^{d_r\times(d+4d_s+3)}$、$b_v^r,a_v^{\mathrm{cat}}\in\mathbb R^{d_r}$ 和标量 $b_v$，定义拼接评分（cat）：
+##### 拼接评分（cat）
+
+取 $W_v^r\in\mathbb R^{d_r\times(d+4d_s+3)}$、$b_v^r,a_v^{\mathrm{cat}}\in\mathbb R^{d_r}$ 和标量 $b_v$，对 §2.1 的共同特征定义
 
 $$
 s_v^{\mathrm{cat}}=b_v+(a_v^{\mathrm{cat}})^\top\operatorname{SiLU}(W_v^r f_v+b_v^r).
 \tag{1}
 $$
 
-#### 2.2.2 分组匹配评分
+##### 分组匹配评分（match）
 
 另一种评分对当前内容、记忆向量与统计量分别编码。令
 
@@ -89,7 +92,7 @@ z^{\mathrm{stat}}=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1
 $$
 
 对 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$，取相容形状的矩阵与偏置，定义两层编码
-$E_v^g(z)=\mathcal N_{d_{\mathrm{sel}}}(C_v^{\mathrm{enc},g}\operatorname{SiLU}(B_v^{\mathrm{enc},g}z+b_v^{\mathrm{enc},g})+d_v^{\mathrm{enc},g})$，中间宽度为 $d_r$，并定义
+$E_v^g(z)=\mathcal N_{d_{\mathrm{sel}}}(C_v^{\mathrm{enc},g}\operatorname{SiLU}(B_v^{\mathrm{enc},g}z+b_v^{\mathrm{enc},g})+d_v^{\mathrm{enc},g})$，中间宽度为 $d_r$。另取隐藏宽度为 $d_r$ 的门控残差参数，以及非负尺度 $\alpha_v^{\mathrm{match}},\alpha_v^{\mathrm{res}}$，定义
 
 $$
 \begin{aligned}
@@ -105,7 +108,21 @@ s_v^{\mathrm{match}}&=b_v^{\mathrm{match}}+
 \tag{2}
 $$
 
-门控残差的隐藏宽度为 $d_r$，两个尺度非负。两种候选分别给出 $s_v^{\mathrm{loc}}=s_v^{\mathrm{cat}}$ 或 $s_v^{\mathrm{match}}$；参数默认按节点独立，允许显式共享同形参数。
+#### 2.2.2 所选评分与性质
+
+选定一种函数后，本节点的局部评分为
+
+$$
+s_v^{\mathrm{loc}}=
+\begin{cases}
+s_v^{\mathrm{cat}},&\text{选择拼接评分},\\
+s_v^{\mathrm{match}},&\text{选择分组匹配评分}.
+\end{cases}
+$$
+
+两种函数的参数默认按节点独立，允许显式共享同形参数。给定当前特征与记忆描述后，式 (1)、(2) 均连续依赖于所用的数值输入。
+
+拼接评分将内容、统计量及当前内容与记忆的逐分量乘积一起送入非线性变换。分组匹配评分先分别编码内容、记忆和统计量，再将内容与记忆的内积同门控残差相加。两者均提供当前内容与记忆的交互，区别在于如何组织这些交互。所选 $s_v^{\mathrm{loc}}$ 进入 §2.4 的任一种描述结构。
 
 ### 2.3 接收量与发送增益
 
@@ -134,7 +151,11 @@ $$
 
 局部评分与增益已经确定后，节点可计算 $w_v,\mu_v,s_v^{\mathrm{loc}}$。下面两种描述分别供第 3 节的独立评分（ind）和区域 Attention 评分（att）使用。
 
-**独立评分的描述。** 区域只需要接收相关量和本节点的评分，取
+#### 2.4.1 描述形式
+
+##### 独立评分的描述（ind）
+
+区域只需要接收相关量和本节点的评分，取
 
 $$
 D_v^{\mathrm{ind}}=\{(w,\mu,s):0\le w\le\mu\le1,\ \mu\le\gamma_{\max}w,\ s\in\mathbb R\}.
@@ -142,7 +163,9 @@ $$
 
 Describe 返回 $d_v=(w_v,\mu_v,s_v^{\mathrm{loc}})$。
 
-**区域 Attention 评分的描述。** 节点另提供当前内容投影 $x_v^{\mathrm{sel}}$ 和记忆 key $K_v^{\mathrm{sel}}$。区域将汇集前者形成 query，再与各节点的后者匹配。
+##### 区域 Attention 评分的描述（att）
+
+节点另提供当前内容投影 $x_v^{\mathrm{sel}}$ 和记忆 key $K_v^{\mathrm{sel}}$。区域将汇集前者形成 query，再与各节点的后者匹配。
 
 取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$ 及两个 $d_{\mathrm{sel}}$ 维偏置，定义
 
@@ -157,9 +180,13 @@ d_v&=(w_v,\mu_v,x_v^{\mathrm{sel}},K_v^{\mathrm{sel}},s_v^{\mathrm{loc}}).
 \tag{5}
 $$
 
-这里 $x_v^{\mathrm{sel}}$ 直接从 $u_v$ 投影，$K_v^{\mathrm{sel}}$ 从 Mem 的返回值投影，二者宽度均为 $d_{\mathrm{sel}}$。Describe 返回式 (5) 的五元组。记忆模块的 $p_v(u_v)$ 在拼接评分或上下文增益中通过共同特征 $f_v$ 参与计算。
+这里 $x_v^{\mathrm{sel}}$ 直接从 $u_v$ 投影，$K_v^{\mathrm{sel}}$ 从 Mem 的返回值投影，二者宽度均为 $d_{\mathrm{sel}}$。Describe 返回式 (5) 的五元组。
 
-至此，给定 $(q,\theta,h)$ 和所选局部评分、增益及描述形式，Describe 为确定函数。架构的 Read 将其中的 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。
+#### 2.4.2 完成 Describe 的构造
+
+两种描述都包含 $w_v,\mu_v,s_v^{\mathrm{loc}}$；att 另保留供区域匹配使用的两个向量。局部评分选择 cat／match，描述形式选择 ind／att，两个选择可以独立组合。记忆模块的 $p_v(u_v)$ 在拼接评分或上下文增益中通过共同特征 $f_v$ 参与计算。
+
+给定 Mem、$p_v$、局部评分、增益、描述形式及相应参数后，本节构造了确定函数 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。一次求值使用 $(q,\theta,h)$，返回所选三元组或五元组；架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。第 3 节开始使用整个区域的描述族。
 
 ## 3. 从描述族得到区域评分
 
