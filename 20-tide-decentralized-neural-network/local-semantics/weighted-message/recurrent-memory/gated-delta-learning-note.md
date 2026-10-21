@@ -148,22 +148,34 @@ $$
 
 ### 3.2 记忆描述
 
-本节以接收摘要和多头矩阵查询实现架构的 Mem 接口，为评分提供本节点的记忆信息。
+Mem 返回两个描述向量和两个写入量统计。这里有两种取得描述向量的方式：sum 使用接收摘要，state 另使用 §3.1 的矩阵查询。先定义候选向量，再组装完整返回。
 
-取 $L^{\mathrm{read}}\in\mathbb R^{d_s\times n_{\mathrm{head}}d_m}$。两种描述绑定为
+给定 $(q,\theta,u)$，以下有效状态与读取均在这组输入上求值。对 $a\in\{\mathrm{short},\mathrm{long}\}$ 定义时间摘要；矩阵查询另取 $L^{\mathrm{read}}\in\mathbb R^{d_s\times n_{\mathrm{head}}d_m}$，得到
 
 $$
 \begin{aligned}
 M_a^{\mathrm{sum}}&=Z_a^-/\max(1,W_a^-),\\
 (M_{\mathrm{short}}^{\mathrm{state}},M_{\mathrm{long}}^{\mathrm{state}})
- &=(M_{\mathrm{short}}^{\mathrm{sum}},L^{\mathrm{read}}R(q,\theta,u)),\\
+ &=(M_{\mathrm{short}}^{\mathrm{sum}},L^{\mathrm{read}}R(q,\theta,u)).
+\end{aligned}
+$$
+
+在组成模型时固定 sum 或 state。所选向量和 Mem 的完整返回为
+
+$$
+\begin{aligned}
+(M_{\mathrm{short}},M_{\mathrm{long}})
+ &=\begin{cases}
+(M_{\mathrm{short}}^{\mathrm{sum}},M_{\mathrm{long}}^{\mathrm{sum}}),&\text{选择 sum},\\
+(M_{\mathrm{short}}^{\mathrm{state}},M_{\mathrm{long}}^{\mathrm{state}}),&\text{选择 state},
+\end{cases}\\
 \operatorname{Mem}_v(q,\theta,u)
  &=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}}^-,W_{\mathrm{long}}^-).
 \end{aligned}
 \tag{9}
 $$
 
-sum 使用两个时间尺度的接收摘要；state 使用短期摘要与当前内容查询的矩阵记忆。基础循环的 state 分别查询两个时间尺度的矩阵，本文式 (9) 则把短期摘要与一个多头矩阵读出放入同一 Mem 接口。此处 long 通道的遗忘由 $\lambda_h,g_h,\beta_h$ 共同决定。$W_a$ 始终表示相应衰减规则下的接收写入量，不能由它推出矩阵还保存多少信息。
+两种方式共用短期描述和写入量统计；选择 state 时，long 描述由当前内容查询多头矩阵取得。基础循环的 state 分别查询两种时间尺度的矩阵，本文使用一组多头矩阵，其历史保留与修正由 $\lambda_h,g_h,\beta_h$ 共同决定。$W_a$ 始终表示相应衰减规则下的接收写入量，不能由它推出矩阵还保存多少信息。
 
 Read$^+$／$^-$／$^0$ 分别选择新状态、旧状态和零初态，在该状态上求式 (9)。[区域教材定义的 Describe](../region-allocation-learning-note.md#24-describe-的返回值)使用这个 Mem 返回值、式 (1) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$；SelStep 再从区域描述族形成评分及控制 $c_v$。默认使用 state 描述与 Read$^+$。
 

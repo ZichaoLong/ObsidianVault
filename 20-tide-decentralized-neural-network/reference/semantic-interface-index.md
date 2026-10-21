@@ -90,6 +90,8 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $\operatorname{Mix},R,\operatorname{Mem}$ | 两份完整循环教材 §3：记忆内容混合、矩阵查询及区域描述；记忆门与发送增益 $\gamma_v$、控制 $c_v$ 分别定义 |
 | $\pi_{\mathrm{KV}},\pi_{\mathrm{rec}},\pi_{\mathrm{gdn}},\pi_{\mathrm{ssd}}$ | 各记忆教材的有效状态投影，用于数值性质比较；后两者还包括 $\pi_{\mathrm{conv}}$ |
 
+记忆教材中的 $M_a^{\mathrm{sum}},M_a^{\mathrm{qry}},M_a^{\mathrm{state}}$ 标记不同读取候选；$M_a$ 表示本次按已选方式得到的描述值。所选的两个向量与共同写入量统计组成 $\operatorname{Mem}_v(q,\theta,u)$ 的返回。state 的具体通道由各模块定义，基础循环与 Gated DeltaNet／SSD 分别使用自己的矩阵读取构造。
+
 ### 配置与名称
 
 配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 取 kv／affine／delta／gated_delta／ssd；memory_read 选择该模块定义的记忆描述读取函数，read_mode 对应描述模式 $\tau_j$，指定 Read 所用的状态快照。region_score 选择区域评分方式，selection_mode 选择发送函数。conv_stride 的逻辑时间单位与卷积接口映射见[短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续)；GDN 的 head_k_dim 与 SSD 的 state_dim 均对应各自 $d_k$。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。

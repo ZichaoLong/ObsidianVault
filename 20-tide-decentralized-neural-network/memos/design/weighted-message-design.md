@@ -60,7 +60,7 @@ GDN 沿用基础 Delta 的矩阵误差修正形式，另定义卷积特征、多
 
 ### 2.2 描述读取与 Full 读取
 
-共同 Mem 接口返回 $(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$。两个 $M$ 都有宽度 $d_s$，供相同的评分函数使用；它们的具体来源如下。
+共同 Mem 接口返回 $(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$。两个 $M$ 都有宽度 $d_s$，供相同的评分函数使用。下表每一行对应一份记忆描述绑定，两个向量按所选行一起取得；各教材先定义候选向量，再显式组装这个四元组。
 
 | 记忆与描述方式 | $M_{\mathrm{short}}$ | $M_{\mathrm{long}}$ |
 |---|---|---|

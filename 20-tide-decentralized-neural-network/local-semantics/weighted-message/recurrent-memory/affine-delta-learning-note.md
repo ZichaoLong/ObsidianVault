@@ -102,7 +102,7 @@ $r^{\mathrm{in}}\le0$ 时直接定义 Upd 返回原 $q$。正接收后的状态�
 
 本节用时间摘要或矩阵查询实现架构的 Mem 接口，为评分提供本节点的记忆信息。
 
-取 $Q_v^r\in\mathbb R^{d_k\times d}$、$L_{v,a}\in\mathbb R^{d_s\times d_m}$，定义 $Q_v^{\mathrm{read}}(u)=Q_v^r\mathcal N_d(u)$。在任意可读状态与时间上，令 $W_{v,a}=W_a^-(q,\theta)$。两种描述分别为
+给定一次读取的 $(q,\theta,u)$，两种方式共用写入量统计 $W_{v,a}=W_a^-(q,\theta)$。矩阵查询另取 $Q_v^r\in\mathbb R^{d_k\times d}$、$L_{v,a}\in\mathbb R^{d_s\times d_m}$，定义 $Q_v^{\mathrm{read}}(u)=Q_v^r\mathcal N_d(u)$。两种描述向量为
 
 $$
 \begin{aligned}
@@ -113,12 +113,20 @@ M_a^{\mathrm{state}}(q,\theta,u)&=
 \tag{6}
 $$
 
-前者按时间汇集独立摘要，后者让当前内容直接查询矩阵状态。将选定的两个 $M_a$ 记为 $M_{\mathrm{short}},M_{\mathrm{long}}$，完整返回值为
+在组成模型时固定 sum 或 state；两个时间尺度采用同一种方式。对 $a\in\{\mathrm{short},\mathrm{long}\}$，所选描述及完整返回为
 
 $$
+\begin{aligned}
+M_a&=\begin{cases}
+M_a^{\mathrm{sum}}(q,\theta,u),&\text{选择时间摘要（sum）},\\
+M_a^{\mathrm{state}}(q,\theta,u),&\text{选择矩阵查询（state）},
+\end{cases}\\
 \operatorname{Mem}_v(q,\theta,u)
-=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}}).
+ &=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}}).
+\end{aligned}
 $$
+
+sum 按时间汇集独立摘要，state 让当前内容分别查询两份矩阵。读取方式与 §2 的 affine／delta 更新可独立组合；选定后，每次调用在给定状态与时间上使用同一组函数。
 
 在描述模式指定的状态上求这个四元组。[区域教材定义的 Describe](../region-allocation-learning-note.md#24-describe-的返回值)使用它、式 (3) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$。区域 SelStep 随后将完整描述族变为控制 $c_v$ 与激活集合。
 

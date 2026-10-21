@@ -189,7 +189,24 @@ $$
 
 ### 3.4 Mem 的返回值与状态快照
 
-两种读取均返回架构规定的 $\operatorname{Mem}_v=(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$。时间摘要使用式 (2) 的摘要投影；qry 从 §1 写入的 K/V 再投影得到检索 key/value。两者具有不同的参数共享和梯度依赖。
+在组成模型时，为节点选定 sum 或 qry。给定一次读取的 $(q,\theta,u)$，两个通道采用同一种读取方式：对 $a\in\{\mathrm{short},\mathrm{long}\}$，取
+
+$$
+M_a=
+\begin{cases}
+M_a^{\mathrm{sum}}(q,\theta),&\text{选择时间摘要（sum）},\\
+M_a^{\mathrm{qry}}(q,\theta,u),&\text{选择内容检索（qry）}.
+\end{cases}
+$$
+
+共同统计量仍由 §3.1 给出，完整返回为
+
+$$
+\operatorname{Mem}_v(q,\theta,u)
+ =(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}}(q,\theta),W_{\mathrm{long}}(q,\theta)).
+$$
+
+sum 使用式 (2) 的摘要投影，当前内容在后续评分中与摘要交互；qry 从已写入的 K/V 再投影，并由当前内容参与检索。两者改变描述向量的来源，保持相同的四元组形状与写入量统计。
 
 Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#24-describe-的返回值)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
 
@@ -270,9 +287,11 @@ $$
 本次新状态上，两种时间摘要均只读到当前写入；因此
 
 $$
-\operatorname{Mem}_a=(1,1,1,1),\qquad
-\operatorname{Mem}_b=(-1,-1,1,1),\qquad
-\operatorname{Mem}_c=(0,0,0,0).
+\begin{aligned}
+\operatorname{Mem}_a(\widetilde q_a,\theta,u_a)&=(1,1,1,1),\\
+\operatorname{Mem}_b(\widetilde q_b,\theta,u_b)&=(-1,-1,1,1),\\
+\operatorname{Mem}_c(\widetilde q_c,\theta,u_c)&=(0,0,0,0).
+\end{aligned}
 $$
 
 这些四元组依次为短期描述、长期描述、短期写入量和长期写入量，正是 Describe 的记忆输入。
