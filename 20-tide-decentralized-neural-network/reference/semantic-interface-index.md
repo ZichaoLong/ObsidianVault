@@ -69,9 +69,9 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 |---|---|
 | $w_v$ | [区域分配 §2.1](../local-semantics/weighted-message/region-allocation-learning-note.md#21-当前接收与记忆信息)：截断接收量 $\min(1,(r_v^{\mathrm{in}})_+)$ |
 | $f_v$ | [区域分配 §2.2.1](../local-semantics/weighted-message/region-allocation-learning-note.md#221-拼接特征)：供拼接评分、拼接区域证据和拼接上下文增益使用的特征 |
-| $E_v^{h,g}$ | [区域分配 §2.2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#222-分组编码)：当前内容、记忆、统计的分组编码；score 与 reg 用途默认参数独立 |
+| $E_v^{h,g}$ | [区域分配 §2.2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#222-分组编码)：当前内容、记忆、统计的分组编码；score、reg、key 用途默认参数独立，key 只使用 mem 组 |
 | $s_v^{\mathrm{cat}},s_v^{\mathrm{match}},s_v^{\mathrm{loc}}$ | [区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-局部评分的候选)：两种评分函数与所选局部评分；match 独立编码内容、记忆与统计量 |
-| $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)：区域 Attention 评分所需的当前内容投影与记忆 key |
+| $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)：区域 Attention 评分所需的当前内容投影与记忆 key；后者选择 content_stats／content，宽度相同 |
 | $\mu_v^{\max},z_v^{\mathrm{reg}},D_v^{\mathrm{reg,ind}},D_v^{\mathrm{reg,att}}$ | [区域分配 §2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)：指定总量、区域阈值的节点上限、区域证据与四元组／六元组描述；上下文控制选择 cat／grouped 证据，固定控制取零证据 |
 | $\gamma_v,\mu_v,D_v^{\mathrm{ind}},D_v^{\mathrm{att}}$ | [区域分配 §2.6](../local-semantics/weighted-message/region-allocation-learning-note.md#26-使用节点增益的描述)：固定或拼接上下文增益、接收相关发送量与三元组／五元组描述 |
 | $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$ | [区域分配 §2.7](../local-semantics/weighted-message/region-allocation-learning-note.md#27-完成-describe-的构造)：选定各部件后，组装所需描述的完整函数 |
@@ -103,7 +103,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 ### 配置与名称
 
-配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 取 kv／affine／delta／gated_delta／ssd；memory_read 选择该模块定义的记忆描述读取函数，read_mode 对应描述模式 $\tau_j$，指定 Read 所用的状态快照。region_score 选择区域评分方式，region_evidence 选择上下文控制的证据构造，selection_mode 选择发送函数。conv_stride 的逻辑时间单位与卷积接口映射见[短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续)；GDN 的 head_k_dim 与 SSD 的 state_dim 均对应各自 $d_k$。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
+配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 取 kv／affine／delta／gated_delta／ssd；memory_read 选择该模块定义的记忆描述读取函数，read_mode 对应描述模式 $\tau_j$，指定 Read 所用的状态快照。region_score 选择区域评分方式，region_key 选择 att 的记忆 key，region_evidence 选择上下文控制的证据构造，selection_mode 选择发送函数。conv_stride 的逻辑时间单位与卷积接口映射见[短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续)；GDN 的 head_k_dim 与 SSD 的 state_dim 均对应各自 $d_k$。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
 
 regional_total 与 regional_threshold 配套使用区域控制描述；region_control_mode 选择 fixed／context，region_control_width 指定证据宽度。固定分支分别读取 total_fraction 或 eta，上下文分支使用区域头。它们的 regional_total_zero、regional_threshold_hard 分别保留相同描述和控制头，只替换分配；四种配置均不使用 send_gain、allocation_base，att 固定 query_weight=received。constrained、hard_selection 及 Attention 函数使用节点增益描述，各字段按所选函数参与计算。
 

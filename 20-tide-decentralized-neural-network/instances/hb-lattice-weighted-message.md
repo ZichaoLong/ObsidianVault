@@ -173,6 +173,7 @@ $W_j^{\mathrm{recv}}=\sum_v\min(1,r_v^{\mathrm{in}})
 | §4.2 七层 KV 配置 | 第 1 节 KV 基线 | 七层尺寸、各层记忆描述、区域评分、窗口与位置；发送仍为二次正则约束分配 |
 | §4.3 七层混合记忆 | §4.2 的配置 | 中间层各区域的记忆模块及读取方式；其余层继续使用 §4.2 的 KV |
 | §4.4 区域控制 | §4.2 或 §4.3，先选定一份 | 配套区域描述、总量或阈值头与分配函数；图和记忆保持所选绑定 |
+| §4.5 内容 key 与局部评分 | §4.4 的一份完整配置 | 选定区域采用 att 与内容 key，保留非零局部评分项 |
 
 这些选择也可组合：例如在七层配置中另指定稠密发送。组合时逐区域确定最终字段，按所选记忆重定参数形状，并核对第 5 节的描述相容性与容量条件。§4.1 的数值传播表使用自己的三层图与相等评分条件。
 
@@ -267,6 +268,12 @@ $B_j=(1+\min(2,\sum_v\mu_v^{\max}))/2$；区域头能否调节取决于区间是
 
 显式求值各自的配对运行时，全图采用指定总量可取 regional_total_zero，保持 $K_j=64$；全图采用区域阈值可取 regional_threshold_hard，改取 $K_j=k_j=2$。两者均保留对应描述、评分与区域头，移除温度和正则参数。混合不同配对函数时，发送总量与极限条件按所选组合另行核对。
 
+### 4.5 内容 key 与局部评分
+
+继承 §4.4 的一份完整配置，在选定区域取 region_score=att、region_key=content、alpha_loc=alpha_sel=$1$，沿用 $d_r=d_{\mathrm{sel}}=32$ 与 query_weight=received。局部评分保持 cat，描述使用 $D^{\mathrm{reg,att}}$；给定[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)的当前内容投影、独立内容 key 编码，以及 §3.2 的区域 query 参数。其余区域保持所继承的评分绑定，att 未另声明时取 region_key=content_stats。
+
+区域控制、证据、发送、图与记忆均继承所选配置，容量仍按发送函数确定。该组合让共同 query 匹配各节点本次取得的记忆内容，接收与写入统计仍可经局部评分及原有区域控制影响发送。给定全部有限参数后可按第 5 节组合；修改 key 会改变评分与路径，硬化条件使用新运行的评分间隔。
+
 ## 5. 组合条件与分段继续
 
 ### 5.1 类型与容量
@@ -354,8 +361,10 @@ $$
 
 ## 附录 S：配置对应
 
-第 1 节采用 memory_family=kv、read_mode=+、local_score=cat、send_gain=fixed、selection_mode=constrained、regularizer=quad。第 4.2 节按层给出 memory_read=sum／qry 和 region_score=ind／att；query_weight 未另声明时取 mu。第 4.3 节中间层逐区域选 memory_family=affine／delta／gated_delta／ssd、memory_read=state，其余绑定按表给出。
+第 1 节采用 memory_family=kv、read_mode=+、local_score=cat、send_gain=fixed、selection_mode=constrained、regularizer=quad。第 4.2 节按层给出 memory_read=sum／qry 和 region_score=ind／att；query_weight 未另声明时取 mu，att 的 region_key 未另声明时取 content_stats。第 4.3 节中间层逐区域选 memory_family=affine／delta／gated_delta／ssd、memory_read=state，其余绑定按表给出。
 
 固定尺度的稠密区域 Attention 使用 region_score=att、alpha_loc=0、alpha_sel=1 及固定正 allocation_temperature。发送可取 unit_attention、direct_attention、pooled_attention 或约束 Shannon；它们在弱接收处按第 4.1 节产生不同结果。unit_attention 的 allocation_base 为 uniform／mu，direct_attention 为 mu／received，pooled_attention 固定 mu。
 
 第 4.4 节使用 regional_total／regional_threshold，配套区域描述与 region_control_mode=fixed／context；固定控制分别读取 total_fraction 或 eta，上下文控制读取区域头并按 region_evidence 选择 cat／grouped 证据。region_control_width=$32$，gamma_max=$2$；att 使用 received，send_gain、allocation_base 不参与。其余取值和参数生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
+
+第 4.5 节在继承的区域控制配置上采用 content key 与非零局部评分，完整替换字段由该节给出；记忆与区域证据继续独立绑定。

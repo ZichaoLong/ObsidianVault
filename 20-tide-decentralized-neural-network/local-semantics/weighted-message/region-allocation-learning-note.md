@@ -82,7 +82,7 @@ $$
 
 ### 2.2 拼接特征与分组编码
 
-这两种构造从当前接收与记忆取得内部特征，随后由各自的输出函数形成评分或证据。不同用途分别给定参数。
+这两种构造从当前接收与记忆取得内部特征，随后形成局部评分、区域证据或记忆 key。不同用途分别给定参数。
 
 #### 2.2.1 拼接特征
 
@@ -108,7 +108,7 @@ $f_v$ 的宽度为 $d+4d_s+3$。两个逐分量乘积提供当前内容与记忆
 
 #### 2.2.2 分组编码
 
-分组匹配评分与分组区域证据先分别处理当前内容、记忆与统计量。共同输入为
+分组匹配评分与分组区域证据先分别处理当前内容、记忆与统计量；内容 key 只使用其中的记忆编码。共同输入为
 
 $$
 z^{\mathrm{cur}}=\mathcal N_d(u),\quad
@@ -116,7 +116,7 @@ z^{\mathrm{mem}}=[M_{\mathrm{short}};M_{\mathrm{long}}],\quad
 z^{\mathrm{stat}}=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})].
 $$
 
-令组别 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的输入宽度为 $d_{\mathrm{cur}}=d$、$d_{\mathrm{mem}}=2d_s$、$d_{\mathrm{stat}}=3$。用途标记 $h\in\{\mathrm{score},\mathrm{reg}\}$ 分别表示评分与区域证据。对每个节点、用途及组别，取
+令组别 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的输入宽度为 $d_{\mathrm{cur}}=d$、$d_{\mathrm{mem}}=2d_s$、$d_{\mathrm{stat}}=3$。用途标记 $h\in\{\mathrm{score},\mathrm{reg},\mathrm{key}\}$ 分别表示局部评分、区域证据和内容 key。对各用途实际使用的组别，取
 $B_v^{h,g}\in\mathbb R^{d_r\times d_g}$、
 $C_v^{h,g}\in\mathbb R^{d_{\mathrm{sel}}\times d_r}$、
 $b_v^{h,g}\in\mathbb R^{d_r}$、
@@ -127,7 +127,7 @@ E_v^{h,g}(z)=\mathcal N_{d_{\mathrm{sel}}}
 \left(C_v^{h,g}\operatorname{SiLU}(B_v^{h,g}z+b_v^{h,g})+a_v^{h,g}\right).
 $$
 
-各组输出均为 $d_{\mathrm{sel}}$ 维向量，连续依赖输入且范数不超过 $\sqrt{d_{\mathrm{sel}}}$。评分使用 $h=\mathrm{score}$，区域证据使用 $h=\mathrm{reg}$；两套编码默认参数独立。同形参数的共享须在模型绑定中明确给出。
+各组输出均为 $d_{\mathrm{sel}}$ 维向量，连续依赖输入且范数不超过 $\sqrt{d_{\mathrm{sel}}}$。评分与区域证据分别使用 score、reg 的三组编码；内容 key 只使用 $E_v^{\mathrm{key,mem}}$。各用途的参数默认独立，同形参数的共享须在模型绑定中明确给出。
 
 ### 2.3 局部评分的候选
 
@@ -182,18 +182,40 @@ $$
 
 区域 Attention 评分（att）需要节点提供当前内容投影 $x_v^{\mathrm{sel}}$ 和记忆 key $K_v^{\mathrm{sel}}$。区域将汇集前者形成 query，再与各节点的后者匹配；独立评分（ind）直接使用局部评分。
 
-取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$ 及两个 $d_{\mathrm{sel}}$ 维偏置，定义
+#### 2.4.1 当前内容投影
+
+两种 key 共用相同的 query 输入构造。取 $W_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}\times d}$、$b_v^{\mathrm{loc}}\in\mathbb R^{d_{\mathrm{sel}}}$，定义
 
 $$
-\begin{aligned}
-x_v^{\mathrm{sel}}&=W_v^{\mathrm{loc}}\mathcal N_d(u_v)+b_v^{\mathrm{loc}},\\
-K_v^{\mathrm{sel}}&=W_v^{\mathrm{mem}}[M_{v,\mathrm{short}};M_{v,\mathrm{long}};
- \log(1+W_{v,\mathrm{short}});\log(1+W_{v,\mathrm{long}})]+b_v^{\mathrm{mem}}.
-\end{aligned}
+x_v^{\mathrm{sel}}=W_v^{\mathrm{loc}}\mathcal N_d(u_v)+b_v^{\mathrm{loc}}.
+$$
+
+#### 2.4.2 记忆 key 的候选
+
+记忆 key 向共同 query 提供本节点参与匹配的信息。记忆与统计 key 使用 Mem 的全部四项；内容 key 编码两个记忆向量，写入统计仍可由已有局部评分使用。两者都返回 $d_{\mathrm{sel}}$ 维向量。
+
+使用 §2.2.2 的记忆向量 $z^{\mathrm{mem}}$。记忆与统计 key 取 $W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$、$b_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}}$；内容 key 取该节的独立编码 $E_v^{\mathrm{key,mem}}$。选定构造后，
+
+$$
+K_v^{\mathrm{sel}}=
+\begin{cases}
+W_v^{\mathrm{mem}}
+ [z^{\mathrm{mem}};\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})]
+ +b_v^{\mathrm{mem}},
+ &\text{记忆与统计 key},\\
+E_v^{\mathrm{key,mem}}(z^{\mathrm{mem}}),
+ &\text{内容 key}.
+\end{cases}
 \tag{3}
 $$
 
-两个向量分别从当前内容、Mem 返回值投影，宽度均为 $d_{\mathrm{sel}}$。局部评分 cat／match 与区域评分 ind／att 独立选择；采用 att 时，将式 (3) 的两个向量放入所选描述。
+#### 2.4.3 描述字段与依赖
+
+局部评分、记忆 key 与区域证据分别选择。采用 att 时，将本节的 $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ 放入 §2.5 或 §2.6 的描述；§3.2 用同一个评分公式处理两种 key。采用 ind 时无需本节的两个向量。
+
+两种 key 均连续依赖其数值输入；内容 key 另满足 $\|K_v^{\mathrm{sel}}\|\le\sqrt{d_{\mathrm{sel}}}$。固定两个记忆向量时，内容 key 对 $W_{v,\mathrm{short}},W_{v,\mathrm{long}}$ 无直接依赖。编码含偏置，零记忆向量不强制得到零 key。
+
+Mem 的读取方式决定记忆向量本身的依赖：KV 的 qry、循环记忆的 state 已使用当前内容查询记忆；Read$^+$ 还可能把当前接收纳入所读状态。这里的 key 使用该次 Mem 返回值，参数共享与计算复用须保留这组输入和状态快照。
 
 ### 2.5 指定总量与区域阈值所用的描述
 
@@ -350,7 +372,7 @@ $$
 
 ### 2.7 完成 Describe 的构造
 
-给定 Mem、$p_v$、局部评分、区域评分方式、发送候选及其所需的证据或增益构造和参数后，§2.5 或 §2.6 确定了函数 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。一次求值使用 $(q,\theta,h)$，返回对应元组；架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。
+给定 Mem、$p_v$、局部评分、区域评分方式及所需 key、发送候选及其所需证据或增益的构造与参数后，§2.5 或 §2.6 确定了函数 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。一次求值使用 $(q,\theta,h)$，返回对应元组；架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。
 
 局部评分进入 $s_v^{\mathrm{loc}}$ 字段；att 的两个匹配向量由 §2.4 给出。指定总量、区域阈值还传入节点上限与区域证据；使用节点增益的规则传入由所选增益得到的 $\mu_v$。这些构造分别从当前内容与记忆取得所需信息，第 3 节开始使用完整描述族。
 
@@ -381,6 +403,17 @@ s_v&=\alpha_j^{\mathrm{loc}}s_v^{\mathrm{loc}}+
 $$
 
 取 $(\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}})=(1,0)$ 恢复独立评分的数值。两个汇集权重都使零接收候选对 query 无影响；弱候选的影响趋零。使用 $w_v$ 时，在固定接收和记忆描述的条件下，改变发送增益不改变 query。
+
+内容 key 配合非零 $\alpha_j^{\mathrm{loc}}$ 时，两个记忆向量参与共同 query 的匹配，当前接收与写入统计仍可经局部评分影响 $s_v$。取 $\alpha_j^{\mathrm{loc}}=0$ 会关闭局部评分项；在固定 $Q_j^{\mathrm{sel}}$ 与两个记忆向量时，显式写入统计对 $s_v$ 无影响。完整模型仍保留记忆读取、query 权重、发送上限与区域控制各自的统计依赖。
+
+对内容 key，由 §2.4 的范数界和 Cauchy–Schwarz 不等式，
+
+$$
+\left|\frac{(Q_j^{\mathrm{sel}})^\top K_v^{\mathrm{sel}}}
+ {\sqrt{d_{\mathrm{sel}}}}\right|\le\|Q_j^{\mathrm{sel}}\|.
+$$
+
+该匹配项的幅度还随 query 及 $\alpha_j^{\mathrm{sel}}$ 变化；区域 query 沿用本节的共同函数。
 
 区域 query 的汇集量由本节直接定义。它与记忆模块的写入量可以数值相同，也可以不同；更换记忆模块不会隐式改变 query。
 
@@ -1021,7 +1054,7 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 
 ### 8.1 零接收与正温度连续性
 
-架构的区域条件针对 Read 与 SelStep 的完整复合。先看评分：两种 query 汇集权重均随接收趋零；零接收候选对 query 无贡献，正极限接收处的评分连续。有界记忆描述、当前内容和有限参数给出有界评分与增益。
+架构的区域条件针对 Read 与 SelStep 的完整复合。先看评分：两种 query 汇集权重均随接收趋零；零接收候选对 query 无贡献，正极限接收处的评分连续。§2.4 的两种 key 均为连续函数；有界记忆描述、当前内容和有限参数给出有界评分与增益，内容 key 还有该节的统一范数界。因此两种 key 均可用于下述组合条件。
 
 §2.5 的两种区域证据都是连续函数的复合；归一化给出共同界
 
@@ -1149,6 +1182,7 @@ regional_total 与 regional_total_zero 保留同一 Describe、评分和总量�
 |---|---|
 | local_score | cat、match，式 (1)、(2) |
 | region_score | ind、att；指定总量、区域阈值配套使用 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，其余使用节点增益描述 |
+| region_key | att 使用 content_stats／content，分别对应 §2.4.2 的记忆与统计 key、内容 key；默认 content_stats |
 | send_gain | fixed、context，式 (4)、(5)，用于节点增益描述；区域控制描述不使用 |
 | gamma_max | 有限最大倍率；指定总量与区域阈值直接使用 $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$ |
 | query_weight | 节点增益描述的 att mu／received 分别使用 $\mu_v,w_v$，默认 mu；区域控制 att 固定 received |
@@ -1161,11 +1195,13 @@ regional_total 与 regional_total_zero 保留同一 Describe、评分和总量�
 | region_evidence | context 控制下的 cat／grouped，§2.5.2，默认 cat；与 local_score 独立选择 |
 | region_control_width | $d_{\mathrm{reg}}$，指定总量、区域阈值的描述证据宽度 |
 | total_fraction | 指定总量在 fixed 控制时的 $\rho_j\in[0,1]$；context 由区域头给出比例 |
-| alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度 |
+| alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度；content key 配非零 alpha_loc 时保留已有局部评分通路 |
 
 三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，region_evidence=cat 给定拼接证据投影；grouped 给定 §2.2.2 的三组证据编码及 §2.5.2 的组合矩阵与偏置，编码使用 $d_r,d_{\mathrm{sel}}$，输出宽度为 $d_{\mathrm{reg}}$。两种构造都另给同型区域头的全部参数。local_score=match 与 region_evidence=grouped 的编码参数默认独立，共享关系须显式绑定。
 
 fixed 返回零证据，只使用指定的 eta 或 total_fraction，region_evidence 不参与求值。指定总量、区域阈值及各自配对函数均不使用 send_gain 或 allocation_base；指定总量不叠加 eta。其他发送函数不使用 region_evidence。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。
+
+region_key 仅用于 att。content_stats 给定 $W_v^{\mathrm{mem}},b_v^{\mathrm{mem}}$；content 给定 $E_v^{\mathrm{key,mem}}$ 的两个矩阵与两个偏置，输入宽度为 $2d_s$，中间宽度为 $d_r$，输出宽度为 $d_{\mathrm{sel}}$。两者均使用相同的当前内容投影与区域 query，描述元组形状保持。key 编码与局部评分、区域证据的参数默认独立；同形共享须显式声明。ind 不读取 region_key。
 
 regional_total_zero、regional_threshold_hard、hard_selection 直接计算各自的排序规则，不使用 allocation_temperature、regularizer 或 ent_alpha。配置检查须识别不适用的字段；显式选择配对函数时移除这些求解参数，正温度函数的温度仍要求严格为正。
 

@@ -152,12 +152,13 @@ $\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$ 的两个隐藏单元。其�
 | §4.2 八层 KV 配置 A、B | 第 1 节 KV 基线 | 八层尺寸、各区域的 KV 窗口与位置参数；评分与发送沿用基线 |
 | §4.3 八层混合记忆 | §4.2 的配置 B | 区域 $4,8$ 的记忆模块及读取方式；其余区域继续使用配置 B 的 KV |
 | §4.4 区域控制 | §4.2 的配置 B 或 §4.3，先选定一份 | 配套区域描述、总量或阈值头、分配函数；将 $k_j$ 改为 $2$ |
+| §4.5 内容 key 与局部评分 | §4.4 的一份完整配置 | 选定区域改用 att 与内容 key，保留非零局部评分项 |
 
 这些选择也可组合：例如在八层混合记忆中另采用 §4.1 的评分与发送。组合时逐区域确定最终字段，按所选记忆重定参数形状，并核对第 5 节的描述相容性与容量条件。各例的层数和尺寸只限定该例。
 
 ### 4.1 固定尺度的稠密 Attention 组合
 
-在选定区域将独立评分替换为区域 Attention 评分，Describe 同时改为五元组，给定相应投影与 query 参数，取 $\alpha_j^{\mathrm{loc}}=0,\alpha_j^{\mathrm{sel}}=1$。发送选择直接 Attention、固定总强度 Attention、总量缩放 Attention 或 $k_j=1$ 的约束 Shannon，采用固定正温度与正典容量 $K_j=n$。其余字段继承第 1 节。
+在选定区域将独立评分替换为区域 Attention 评分，Describe 同时改为五元组，采用 region_key=content_stats，给定相应投影与 query 参数，取 $\alpha_j^{\mathrm{loc}}=0,\alpha_j^{\mathrm{sel}}=1$。发送选择直接 Attention、固定总强度 Attention、总量缩放 Attention 或 $k_j=1$ 的约束 Shannon，采用固定正温度与正典容量 $K_j=n$。其余字段继承第 1 节。
 
 四种选择均由 §3 得到 $w_v=\mu_v=1$，所以在这些区域共同满足
 
@@ -236,6 +237,12 @@ region_control_width=$32$。context 分支逐区域选择 region_evidence=cat／
 
 KV 写入时间与循环更新时钟继续满足 §3。指定总量按教材 §7.2 比较自身零温分配，所选节点可以发送小数强度；区域阈值的单位输入硬化按 §7.4 核对。显式求值时，分别将 selection_mode 改为 regional_total_zero 或 regional_threshold_hard，保留本节对应的描述、评分与区域头，移除温度和正则参数；容量分别取 $K_j=4$、$K_j=k_j=2$。
 
+### 4.5 内容 key 与局部评分
+
+继承 §4.4 的一份完整配置。在选定区域取 region_score=att、region_key=content、alpha_loc=alpha_sel=$1$、query_weight=received，令 $d_{\mathrm{sel}}=32$。局部评分保持 cat，描述改为 $D^{\mathrm{reg,att}}$；给定[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)的当前内容投影、独立内容 key 编码，以及 §3.2 的区域 query 参数。编码中间宽度沿用 $d_r=32$。
+
+区域控制、证据选择、记忆模块、发送函数、容量及其余参数继承所选配置。内容 key 与共同 query 匹配，接收与写入统计仍可经局部评分影响分配；统计对记忆与区域控制的作用继续由原函数决定。每个选定区域给定上述全部有限参数，便得到一份完整绑定；第 5 节的组合条件继续适用，极限条件按新评分核对。
+
 ## 5. 组合成立的条件
 
 图与时间满足拓扑教材的单次结算条件。所有相连节点共用 $P=\mathbb R^{1+d}$，各记忆提供相容的描述，区域分配返回控制与激活集合；因此所选函数可以代入正典递归。除硬选择取 $K_j=k_j$ 外，各发送函数均取 $K_j=n$。数值性质分别使用下表的条件。
@@ -289,8 +296,10 @@ $$
 
 基线使用 memory_family=kv、memory_read=sum、read_mode=+、local_score=cat、region_score=ind、send_gain=fixed、selection_mode=constrained、regularizer=quad。所有节点的初态、来源与矩阵形状由第 1 节确定；位置绑定对应 KV 教材的 Pos、窗口与旋转配置。
 
-第 4.1 节在选定区域使用 region_score=att、alpha_loc=0、alpha_sel=1 和固定 allocation_temperature。四种等值发送分别取 direct_attention、unit_attention、pooled_attention，以及 constrained／ent／ent_alpha=1／k=1。第 4.2 节的 A、B 继承基线的评分与发送；第 4.3 节继承 B，再替换区域 $4,8$ 的 memory_family、memory_read 及对应参数形状。组合采用第 4.1 节时另声明相应区域。完整取值与生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
+第 4.1 节在选定区域使用 region_score=att、region_key=content_stats、alpha_loc=0、alpha_sel=1 和固定 allocation_temperature。四种等值发送分别取 direct_attention、unit_attention、pooled_attention，以及 constrained／ent／ent_alpha=1／k=1。第 4.2 节的 A、B 继承基线的评分与发送；第 4.3 节继承 B，再替换区域 $4,8$ 的 memory_family、memory_read 及对应参数形状。组合采用第 4.1 节时另声明相应区域。完整取值与生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
 
 第 4.4 节使用 regional_threshold／regional_total 及其配套描述，region_control_mode 选择 fixed／context，region_control_width=$32$、gamma_max=$2$、$k_j=2$。固定分支分别读取 eta 或 total_fraction，context 使用区域头并按 region_evidence 选择 cat／grouped 证据；send_gain 与 allocation_base 不参与。参数形状和无效字段按区域分配附录 S.1 核对。
+
+第 4.5 节在继承的区域控制配置上采用 content key 与非零局部评分，完整替换字段由该节给出；其余 att 配置未声明时使用 content_stats。
 
 实现核对见[局部架构实现对应](../reference/weighted-message-implementation-checks.md)，任务与训练比较见[可选研究问题](../memos/training/weighted-message-research-questions.md)。

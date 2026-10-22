@@ -482,6 +482,7 @@ KV 的条目前缀、循环记忆的仿射复合分别构造这些联合函数�
 | memory_read | KV 的 sum、qry；各循环模块的 sum、state。state 的具体查询与通道含义由所选模块定义 |
 | read_mode | 正典描述模式 $\tau_j\in\{0,-,+\}$；[KV 完整例子](kv-memory-learning-note.md#5-完整例子)取 $+$ |
 | local_score、region_score | 区域分配教材的 cat／match、ind／att |
+| region_key | att 的 content_stats／content，选择记忆与统计 key 或内容 key；定义见区域分配 §2.4 |
 | send_gain、query_weight | 发送增益与区域 query 的汇集权重，分别指定 |
 | selection_mode | 区域分配教材附录 S.1 所列发送函数 |
 | region_control_mode、region_control_width | 指定总量、区域阈值及各自配对函数的 fixed／context 控制及描述证据宽度；绑定相应 Describe |

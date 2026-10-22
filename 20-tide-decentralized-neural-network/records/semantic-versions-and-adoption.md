@@ -39,8 +39,23 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-22 区域阈值与指定总量 | 增加 regional_threshold／regional_total，配套区域证据、控制头与描述类型；共同 Alloc 接口覆盖三种约束候选。原 constrained、其他发送函数及默认配置数值保持；新增绑定与极限目标见“区域控制候选的采用范围” |
 | 2026-10-22 配对函数配置补全 | 为已定义的零温分配与区域阈值硬函数分别增加 regional_total_zero、regional_threshold_hard；既有数学函数和配置含义保持，容量及参数范围见“配对函数的配置对应” |
 | 2026-10-22 分组区域证据 | 增加 region_evidence=cat／grouped，默认 cat 保留原证据函数；评分与证据分别绑定，描述类型、发送规则及核心版本保持 |
+| 2026-10-22 内容 key | 增加 region_key=content_stats／content，默认 content_stats 保留原 key；content 采用独立记忆编码，显式写入统计仍可经局部评分影响选择 |
 
 编辑过程、正文重排和正典引用清理的逐篇差异见[修订记录](history/document-revisions.md)；文件更名及旧路径的现行落点见[迁移索引](history/migration-map.md)。局部 Attention 份额沿用 $p_v^{\mathrm{sel}}$，响应点与导数沿用 resp 上标；区间构造点单独使用 bracket 上标。
+
+## 内容 key 的采用范围（2026-10-22）
+
+以 [fefbf7b](https://github.com/ZichaoLong/ObsidianVault/commit/fefbf7b) 为基线，新增[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)的内容 key。四份正典、记忆模块、query、已有评分及发送函数保持，核心版本仍为 tide-core-5。
+
+| 变化 | 采用时核对 |
+|---|---|
+| region_key | att 的 content_stats／content，默认 content_stats；前者保留原记忆与统计投影，后者仅编码两个 Mem 向量。ind 不使用此键 |
+| 编码与参数 | content 使用 $E_v^{\mathrm{key,mem}}$，输入宽度 $2d_s$、中间宽度 $d_r$、输出宽度 $d_{\mathrm{sel}}$，默认独立于评分与证据参数 |
+| 评分与统计 | 共同评分公式和描述类型保持；非零 alpha_loc 保留已有局部评分通路，alpha_loc=0 关闭该项。Mem、query 权重、节点上限及区域控制的统计依赖仍按所选函数计算 |
+| 数值性质 | 内容 key 连续且范数有界；零记忆不强制零 key。原组合条件继续适用，硬化间隔须按新评分检查 |
+| 实例 | 两份实例 §4.5 给出区域控制之上的 content key＋非零局部评分绑定；既有实例仍默认 content_stats |
+
+式 (3) 现为所选 key 的分支定义，原当前内容投影移到同节之前，其他编号公式保持。内容 key 同时改变显式输入、编码和归一化，不能把完整比较仅解释为移除统计量的效果。实现核对见[记忆 key 检查](../reference/weighted-message-implementation-checks.md#36-区域-attention-的记忆-key)。本次未核验下游支持或训练效果。
 
 ## 分组区域证据的采用范围（2026-10-22）
 

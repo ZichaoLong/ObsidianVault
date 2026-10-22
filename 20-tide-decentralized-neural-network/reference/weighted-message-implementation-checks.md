@@ -13,7 +13,7 @@ tags:
 
 ## 1. 采用声明与比较对象
 
-实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、region_evidence、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
+实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、region_key、region_evidence、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
 
 采用实例中的配置时，按其继承表展开每个区域的最终绑定，再核对被替换的状态、初态、Upd、Mem、当前特征与内容函数。KV 的窗口和旋转参数只用于 KV 区域。指定总量与区域阈值按 ind／att 使用四元组／六元组描述；使用节点增益的规则按 ind／att 使用三元组／五元组。按所选描述给定匹配及证据构造；$f_v$ 的三个使用者为 cat 评分、cat 证据和拼接上下文增益，各自采用独立参数。match 评分与 grouped 证据使用各自的分组编码，均不依赖 $f_v$。
 
@@ -106,6 +106,21 @@ tags:
 Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则。对 direct_attention 的 allocation_base=mu，验证两条直接上限依赖；received 只在固定接收和评分时移除基权重中的增益通路。pooled_attention 在 $M<1$ 有总量导数，$M>1$ 无该项，$M=1$ 声明边界约定。
 
 完整链路检查 query、key、评分头、增益头、记忆描述及写入。全零基权重处一般没有通常 Jacobian，遮罩自动微分与方向导数分别记录。跳过零 Full 和求内容后乘零的边界反向分别说明。
+
+### 3.6 区域 Attention 的记忆 key
+
+按[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)与 §3.2 核对 region_key=content_stats／content；二者均返回原描述字段中的 $d_{\mathrm{sel}}$ 维 key。
+
+| 核对项 | 覆盖情形 |
+|---|---|
+| 参数与前向 | content_stats 恢复原拼接投影；content 只用两个记忆向量和独立的 $E_v^{\mathrm{key,mem}}$，中间宽度 $d_r$、输出宽度 $d_{\mathrm{sel}}$；ind 不使用 region_key |
+| 直接统计依赖 | 固定两个 Mem 向量、query 与参数，只改变显式写入统计：content 的 key 不变；alpha_loc=0 时最终评分不变，非零 alpha_loc 时保留局部评分的统计路径 |
+| 完整依赖 | 上一项不能替代完整求值检查；Mem、增益相关 query 权重、节点上限与区域头仍可依赖统计。KV qry 与循环 state 须保留当前内容和 Read 快照 |
+| 范数与边界 | content 满足 $\|K_v^{\mathrm{sel}}\|\le\sqrt{d_{\mathrm{sel}}}$ 及教材 §3.2 的匹配界；覆盖零记忆和非零偏置，不得强制空记忆的 key 为零 |
+| 独立与共享 | 固定输入与 Mem 时，独立 key 参数只改变对应匹配路径；与评分或证据显式共享编码时，反向汇总全部使用者的贡献 |
+| 梯度与弱接收 | 对 query、记忆向量及编码参数作方向差分，覆盖经评分到正温度分配的非饱和分支；核对零接收候选删除及弱接收极限，沿用所选发送函数的适用条件 |
+
+内容 key 与局部评分的组合在两份实例 §4.5 给出。改变 key 后重新求相应运行的评分间隔，不能把旧配置的硬化温度界直接作为新配置的保证。
 
 ## 4. 记忆模块
 
