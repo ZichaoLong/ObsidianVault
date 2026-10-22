@@ -40,7 +40,6 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 |---|---|
 | [共同局部架构](local-semantics/weighted-message/architecture-learning-note.md) | 完整计算过程、模块接口与组合，局部条件如何支持整网性质，精确继续与联合求值 |
 | [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | Describe 与 SelStep 的具体定义，评分和发送候选，求解与导数，单位输入的软硬关系 |
-| [区域共享放大额度](local-semantics/weighted-message/shared-amplification-learning-note.md) | 区域汇集内容与记忆证据，共同限制放大量并分配发送；配套描述、求解、反向与组合性质 |
 | [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
 | [基础循环记忆](local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) | affine／delta 的完整局部定义，循环候选共用的仿射复合 |
 | [固定逻辑时间短卷积](local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 带权历史槽、当前读取、空档与弱事件；供完整循环候选复用的部件 |
@@ -52,8 +51,6 @@ recurrent-memory/ 汇集三份循环记忆候选教材及共用的短卷积部�
 第一次阅读可先读共同架构 §1—5，掌握完整计算和模块位置；随后沿区域分配 §1—4 构造描述、评分和控制，再用 §5.1 的例子核对完整返回；读 KV §1—5.1，完成同一例子的记忆与内容计算。三篇沿用相同的 $a,b,c$ 节点和消息。架构第 6—7 节给出组合性质的条件；具体模块各自验证这些条件。
 
 学习矩阵记忆可先读基础循环。完整 Gated DeltaNet 与 SSD 使用短卷积部件，再定义自己的更新、描述与内容；它们填入同一套架构函数。
-
-共享额度教材在区域评分之后阅读，复用其特征与评分，另给出一份完整的 Describe／SelStep 绑定。它可与各记忆模块组合；两份实例分别说明稀疏邻域中的作用和全连接单位输入下的退化情形。
 
 ## 具体拓扑与完整实例
 

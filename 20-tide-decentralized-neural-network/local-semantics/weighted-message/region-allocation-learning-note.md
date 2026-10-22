@@ -15,7 +15,7 @@ tags:
 
 节点用当前接收与自身记忆参与区域分工。本章实现[局部架构](architecture-learning-note.md)中的两个接口：Describe 把本节点的信息变为描述，SelStep 收齐区域描述后决定各节点的发送强度。
 
-先定义节点如何构造描述，再定义区域如何评分和分配。发送分配包含约束优化、直接使用 Attention 份额的规则、按比例分配与硬选择；各候选返回相同形式的控制族。完整例子之后讨论求解、导数和组合性质。[区域共享放大额度](shared-amplification-learning-note.md)复用这里的评分函数，另行实现一组配套的 Describe 与 SelStep，见 §4.6。
+先定义节点如何构造描述，再定义区域如何评分和分配。发送分配包含约束优化、直接使用 Attention 份额的规则、按比例分配与硬选择；各候选返回相同形式的控制族。完整例子之后讨论求解、导数和组合性质。
 
 ## 1. 已有输入与接口任务
 
@@ -355,12 +355,6 @@ $$
 
 正典 $K_j$ 只声明允许的激活数量，$\mathcal A$ 仍由具体函数返回。训练或推理使用哪一种函数由配置给出。固定正温度的任一种函数均可持续使用。
 
-### 4.6 区域共享放大额度
-
-节点还可以把当前内容与记忆的向量证据交给区域，由区域共同决定本次允许增加多少发送强度。[共享额度教材](shared-amplification-learning-note.md)采用这一构造：节点发送上限由固定最大倍率与接收量确定，区域额度约束各节点超出自身截断接收量的发送部分之和，再在同一个优化问题中分配控制。
-
-该候选复用 §2.1—2.2 的特征与局部评分、§2.4.1 的匹配投影和 §3 的评分公式。Describe 改为传递接收量、评分与额度特征，SelStep 配套读取这些字段；区域 query 固定按接收量汇集。完整描述类型、接收决定的总和下界、求解及反向均由共享额度教材定义。本章第 6—8 节的求解分支与性质仍对应本章式 (7)—(14)，共享额度按自己的命题核对。
-
 ## 5. 例子与恢复关系
 
 ### 5.1 贯穿例子的区域计算
@@ -699,7 +693,6 @@ selection_mode 指定发送函数：
 | 区域总量分配 | pooled_attention | 式 (12) |
 | 按比例分配 | proportional | 式 (13) |
 | 硬选择 | hard_selection | 式 (14) |
-| 区域共享放大额度 | shared_amplification | [共享额度教材 §2—4](shared-amplification-learning-note.md#2-describe供评分与额度使用的证据)；同时绑定其 Describe |
 
 其余配置对应已定义的参数与函数选择：
 
@@ -708,15 +701,15 @@ selection_mode 指定发送函数：
 | local_score | cat、match，式 (1)、(2) |
 | region_score | ind、att，§2.4 的描述空间与 §3 的区域评分 |
 | send_gain | fixed、context，式 (3)、(4) |
-| query_weight | mu、received：式 (6) 分别使用 $\mu_v,w_v$；本章候选默认 mu，共享额度的 att 固定 received |
+| query_weight | mu、received：式 (6) 分别使用 $\mu_v,w_v$；默认 mu |
 | allocation_base | direct_attention 使用 mu 或 received，默认 mu；unit_attention 使用 uniform 或 mu，默认 uniform；pooled_attention 固定 mu |
 | regularizer、ent_alpha | constrained 的 quad／bern／ent；ent 另指定固定 $\alpha\in[1,2]$ |
-| allocation_temperature | constrained、shared_amplification、direct_attention、unit_attention、pooled_attention 使用的正温度，与正典描述模式 $\tau_j$ 分别命名 |
-| k | constrained、shared_amplification、proportional 的总发送强度上限；hard_selection 的激活数量上限 |
-| eta | constrained、shared_amplification、hard_selection 的共同评分阈值；其余规则不使用 |
+| allocation_temperature | constrained、direct_attention、unit_attention、pooled_attention 使用的正温度，与正典描述模式 $\tau_j$ 分别命名 |
+| k | constrained、proportional 的总发送强度上限；hard_selection 的激活数量上限 |
+| eta | constrained、hard_selection 的共同评分阈值；其余规则不使用 |
 | alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度 |
 
-constrained 是式 (8) 的配置名称，包含持续稠密和可精确稀疏的族。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。shared_amplification 的生效参数见[其配置表](shared-amplification-learning-note.md#附录-s配置与求值对应)：它使用 k、eta 和 quad／ent，另指定区域额度，不使用 send_gain 或 allocation_base。参数的无效分支须能由配置检查识别。
+constrained 是约束优化函数的配置名称，包含持续稠密和可精确稀疏的族。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。参数的无效分支须能由配置检查识别。
 
 ### S.2 标量求解与隐式反向
 

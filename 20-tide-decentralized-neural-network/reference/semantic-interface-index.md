@@ -21,7 +21,6 @@ tags:
 | [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
 | [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 完整计算过程、模块组合、局部条件到整网性质的推导、精确继续与联合求值 |
 | [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定增益、评分和发送函数 | Describe 与 SelStep 的具体定义、求解与导数、局部极限及单位输入的整网软硬关系 |
-| [区域共享放大额度](../local-semantics/weighted-message/shared-amplification-learning-note.md) | 固定节点最大倍率、区域共享放大量约束 | 配套 Describe 与 SelStep、两乘子求解、额度反向与自身的软硬比较条件 |
 | [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
 | [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
@@ -29,7 +28,7 @@ tags:
 
 SettleGraph 向 TimedDAG 保留图对象、端口和局部函数，重索引位置坐标并补齐空档状态；TimedDAG 记录逐切面限制后得到 PositiveDelayGraph 的相容记录族。分块求值研究固定语义下的联合函数。
 
-局部架构是这些正典允许的一条特化支线。[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)给出局部条件与组合结论；[区域分配 §7—8](../local-semantics/weighted-message/region-allocation-learning-note.md#7-温度极限与硬选择)与[共享额度 §7](../local-semantics/weighted-message/shared-amplification-learning-note.md#7-数值性质与软硬关系)分别验证具体发送函数的适用范围。
+局部架构是这些正典允许的一条特化支线。[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)给出局部条件与组合结论；[区域分配 §7—8](../local-semantics/weighted-message/region-allocation-learning-note.md#7-温度极限与硬选择)验证具体发送函数的适用范围。
 
 ## 基础对象与时间
 
@@ -49,7 +48,7 @@ SettleGraph 向 TimedDAG 保留图对象、端口和局部函数，重索引位�
 
 SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt}$、$y_j^{[t]}=y_j^{Dt}$ 是位置边界状态。其简写 $h_{v,t}$ 等均表示时间 $\theta_{v,t}$ 的同名坐标。一般图的状态上标 $\theta$ 始终为逻辑时间。
 
-局部支线的正典容量 $K_j$ 由所选发送函数绑定：硬选择取 $k_j$，其余已定义函数取区域大小。$k_j$ 在约束分配、共享额度和按比例分配中限制发送强度之和，在硬选择中限制激活数。选择温度 $\tau_{\mathrm{sel}}$ 与描述模式 $\tau_j$ 分别命名。
+局部支线的正典容量 $K_j$ 由所选发送函数绑定：硬选择取 $k_j$，其余已定义函数取区域大小。$k_j$ 在约束分配和按比例分配中限制发送强度之和，在硬选择中限制激活数。选择温度 $\tau_{\mathrm{sel}}$ 与描述模式 $\tau_j$ 分别命名。
 
 ## 局部支线的符号与定义归属
 
@@ -78,16 +77,6 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $x_v^{\mathrm{resp}},a_v^{\mathrm{resp}},e_v^{\mathrm{resp}}$ | [区域分配 §6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#62-约束分配的反向)：实际响应点 $t_v-\lambda$ 及在此处对自变量、发送上限的响应导数 |
 | $x_v^{\mathrm{bracket}}$ | [区域分配附录 S.2](../local-semantics/weighted-message/region-allocation-learning-note.md#s2-标量求解与隐式反向)：用于构造求根区间的逆响应点 |
 
-区域共享放大额度使用另一组描述结构，复用上表的特征、局部评分和 received query；其新增量如下。
-
-| 符号或函数 | 含义与定义入口 |
-|---|---|
-| $\mu_v^{\max}$ | [共享额度 §1](../local-semantics/weighted-message/shared-amplification-learning-note.md#1-输入与发送上限)：固定最大倍率下的节点发送上限 $\min(1,\gamma_{\max}w_v)$ |
-| $D_v^{E,\mathrm{ind}},D_v^{E,\mathrm{att}},z_v^E$ | [共享额度 §2](../local-semantics/weighted-message/shared-amplification-learning-note.md#2-describe供评分与额度使用的证据)：配套描述空间与逐节点额度特征；不按原描述的字段顺序解读 |
-| $W_j^{\mathrm{recv}},E_j^{\max},\bar z_j^E,a_j^E,E_j$ | [共享额度 §3](../local-semantics/weighted-message/shared-amplification-learning-note.md#3-selstep区域评分与共享额度)：截断接收总量、最大可用放大量、区域摘要、允许比例与实际额度上限 |
-| $\operatorname{Amp}(c,w),F_E(w)$ | [共享额度 §4](../local-semantics/weighted-message/shared-amplification-learning-note.md#4-共同分配与完整返回)：逐节点正增加量之和与可行集；总和下界为 $\min(1,\sum w_v)$ |
-| $\lambda,\xi,h,\chi_v^{\mathrm{amp}}$ | [共享额度 §6](../local-semantics/weighted-message/shared-amplification-learning-note.md#6-求解与反向)：总和净乘子、放大量乘子、带额度惩罚的响应、使用放大量的指示；响应导数继续记 $a_v^{\mathrm{resp}}$ |
-
 ### 记忆模块与共用部件
 
 | 符号或函数 | 含义与定义入口 |
@@ -108,8 +97,6 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 取 kv／affine／delta／gated_delta／ssd；memory_read 选择该模块定义的记忆描述读取函数，read_mode 对应描述模式 $\tau_j$，指定 Read 所用的状态快照。region_score 选择区域评分方式，selection_mode 选择发送函数。conv_stride 的逻辑时间单位与卷积接口映射见[短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续)；GDN 的 head_k_dim 与 SSD 的 state_dim 均对应各自 $d_k$。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
 
 SettleGraph 的 $r_v$ 保持节点秩的含义；带权消息的接收强度统一记为 $r_v^{\mathrm{in}}$。边集沿用 $A$，激活集合沿用 $\mathcal A$。
-
-selection_mode=shared_amplification 配套使用 $D_v^{E,\mathrm{ind}}$／$D_v^{E,\mathrm{att}}$，att 的 query_weight 固定 received。amplification_mode 选择固定比例或上下文额度，amplification_fraction、amplification_width 与 gamma_max 按[共享额度配置表](../local-semantics/weighted-message/shared-amplification-learning-note.md#附录-s配置与求值对应)绑定；send_gain、allocation_base 不参与这一候选。
 
 ## 局部函数
 

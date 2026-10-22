@@ -13,7 +13,7 @@ tags:
 
 # HB-Lattice 上的带权消息实例
 
-本文在 [HB-Lattice 拓扑](../topologies/hb-lattice.md)上绑定[共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md)，给出 KV、稠密发送、共享放大额度与混合记忆实例。候选传播、发送强度和计算量由图与所选函数共同决定；[全连接分层实例](fully-connected-layered-weighted-message.md)提供另一种拓扑下的组合。
+本文在 [HB-Lattice 拓扑](../topologies/hb-lattice.md)上绑定[共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md)，给出 KV、稠密发送与混合记忆实例。候选传播、发送强度和计算量由图与所选函数共同决定；[全连接分层实例](fully-connected-layered-weighted-message.md)提供另一种拓扑下的组合。
 
 ## 1. 完整的 KV 基础绑定
 
@@ -127,7 +127,7 @@ $$
 
 ## 3. 区域到达与节点稀疏
 
-固定第 1 节的图、单位入口及广播规则。各区域可分别采用区域教材的约束分配、直接 Attention、固定总强度 Attention、区域总量分配、按比例分配或硬选择，也可采用[共享放大额度](../local-semantics/weighted-message/shared-amplification-learning-note.md)，并满足所选函数的参数条件。以下先给出这些组合共有的区域传播，再分别研究发送总量与节点覆盖。
+固定第 1 节的图、单位入口及广播规则。各区域可分别采用区域教材的约束分配、直接 Attention、固定总强度 Attention、区域总量分配、按比例分配或硬选择，并满足所选函数的参数条件。以下先给出这些组合共有的区域传播，再分别研究发送总量与节点覆盖。
 
 ### 3.1 每个区域都有正发送
 
@@ -144,9 +144,7 @@ M_j=\sum_{v\in\mathcal R_j}\min(1,\gamma_v r_v^{\mathrm{in}})
 \ge\min\left(1,\sum_{v\in\mathcal R_j}r_v^{\mathrm{in}}\right)=1,
 $$
 
-其中未接收节点按 $r_v^{\mathrm{in}}=0$ 计。总和下限于是为 $1$，逐层归纳成立。
-
-共享额度的下界使用截断接收总量 $W_j^{\mathrm{recv}}=\sum_vw_v$。同一归纳中有 $W_j^{\mathrm{recv}}\ge\min(1,\sum_vr_v^{\mathrm{in}})=1$，因此每区同样至少发送总强度 $1$。各区域可混合采用这两种约束分配，保持该结论；单节点的 $w_v$ 仍可小于 $1$。其他发送绑定的结论分别为：
+其中未接收节点按 $r_v^{\mathrm{in}}=0$ 计。总和下限于是为 $1$，逐层归纳成立。其他发送绑定的结论分别为：
 
 | 发送绑定 | 发送强度结论 |
 |---|---|
@@ -158,7 +156,7 @@ $$
 
 ### 3.3 全部节点激活的条件
 
-若全部区域在正温度使用固定总强度 Attention、直接 Attention、区域总量分配、按比例分配、bern 或 ent 的 $\alpha=1$，第一层全部节点都发送，零偏移边让下一层全部节点都有正接收，归纳得到全图所有节点均激活；消息仍只沿既定 HB 边传播。共享额度的 Shannon 同样在正接收候选上全正，故可纳入这一归纳。两种约束分配的 quad 与 ent 的 $\alpha>1$ 可以在正温度通过精确零减少这里的激活数量。各选择函数的写入仍按实际 $w(r^{\mathrm{in}})$；发送强度另由所选函数决定。
+若全部区域在正温度使用固定总强度 Attention、直接 Attention、区域总量分配、按比例分配、bern 或 ent 的 $\alpha=1$，第一层全部节点都发送，零偏移边让下一层全部节点都有正接收，归纳得到全图所有节点均激活；消息仍只沿既定 HB 边传播。quad 与 ent 的 $\alpha>1$ 可以在正温度通过精确零减少这里的激活数量。各选择函数的写入仍按实际 $w(r^{\mathrm{in}})$；发送强度另由所选函数决定。
 
 ## 4. 局部选择与配置实例
 
@@ -169,7 +167,6 @@ $$
 | §4.1 三层发送比较 | 第 1 节 KV 基线 | 三层图与单一横向偏移、单位增益、相等评分，分别选取发送函数 |
 | §4.2 七层 KV 配置 | 第 1 节 KV 基线 | 七层尺寸、各层记忆描述、区域评分、窗口与位置；发送仍为二次正则约束分配 |
 | §4.3 七层混合记忆 | §4.2 的配置 | 中间层各区域的记忆模块及读取方式；其余层继续使用 §4.2 的 KV |
-| §4.4 区域共享放大额度 | §4.2 或 §4.3，先选定一份 | 全部区域的描述与发送改为共享额度，固定或上下文比例；记忆与内容保持所选绑定 |
 
 这些选择也可组合：例如在七层配置中另指定稠密发送。组合时逐区域确定最终字段，按所选记忆重定参数形状，并核对第 5 节的描述相容性与容量条件。§4.1 的数值传播表使用自己的三层图与相等评分条件。
 
@@ -246,22 +243,6 @@ HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 
 
 按层取得完整驱动后，调用各区域自己的状态与 Full 契约。带短卷积的模块先求卷积，随后求矩阵递归。消息宽度、描述类型和拓扑时间均匹配，组合是合法 SettleGraph，并保留正典切面继续。数值性质应用共同架构 §6，各记忆分别提供局部引理。
 
-### 4.4 区域共享放大额度
-
-先选择 §4.2 的 KV 配置或 §4.3 的混合记忆配置。图、时间、聚合、记忆、内容、局部评分和各层 ind／att 评分均继承所选配置，全部区域改用[共享额度教材](../local-semantics/weighted-message/shared-amplification-learning-note.md)的 Describe 与 SelStep：
-
-| 对象 | 本例绑定 |
-|---|---|
-| 节点最大倍率 | $\gamma_{\max}=2$，$\mu_v^{\max}=\min(1,2w_v)$；不再使用逐节点 send_gain |
-| 描述与评分 | 额度特征宽度 $d_E=32$；ind／att 使用该教材式 (3) 的相应元组；att 的 query_weight=received |
-| 分配 | selection_mode=shared_amplification，quad，$k_j=2$、$K_j=64$；$\eta_j$ 与正温度继承所选配置 |
-| 固定比例候选 | amplification_mode=fixed，amplification_fraction=$1/2$，额度特征为零 |
-| 上下文比例候选 | amplification_mode=context；逐节点额度投影和区域头按 $d_E=d_r=32$ 给定有限参数 |
-
-最后两行择一，得到完整参数族；上下文候选不使用固定比例字段。Read 模式、全部候选的更新保留及广播继续使用共同架构。两个候选均在同一个分配问题中使用评分与额度，无需增加区域持久状态。
-
-由 §3.2，每区总发送至少为 $1$；HB 的稀疏邻域仍可使部分节点只有弱接收，于是 $\mu_v^{\max}-w_v>0$，区域额度可以起作用。增加额度只扩大可行发送范围，是否使用以及由谁使用由评分和正则共同决定。若某次接收全部为零或一，可用放大量为零，该次额度头不影响控制。
-
 ## 5. 组合条件与分段继续
 
 ### 5.1 类型与容量
@@ -278,9 +259,9 @@ HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 
 
 ### 5.3 数值性质的附加条件
 
-固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。KV 与循环模块分别验证状态条件，区域控制按区域分配 §8 或共享额度 §7 核对。单位输入的软硬关系分别使用[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-单位输入的整网软硬关系)与[共享额度 §7.3](../local-semantics/weighted-message/shared-amplification-learning-note.md#73-单位输入与配对硬选择)的配对函数及评分条件；后者在两份运行中保留同一套额度描述。有限时间的组合结论覆盖本实例的稀疏邻域。
+固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。KV 与循环模块分别验证状态条件，区域控制按区域分配 §8 核对。单位输入的软硬关系使用[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-单位输入的整网软硬关系)的发送函数及评分条件。有限时间的组合结论覆盖本实例的稀疏邻域。
 
-若全部区域采用上述两种约束分配的 quad 或固定 $\alpha>1$ 的 ent，且对应硬运行满足评分条件，则各自的有限温度结论给出：在本实例的单位外部输入、固定参数和有限时间范围内，充分小正温度使完整记录及切面继续状态精确等于配对硬运行。所需温度界按该次硬运行确定。
+若全部区域采用 quad 或固定 $\alpha>1$ 的 ent，且对应硬运行满足评分条件，则区域分配 §7.4 的推论给出：在本实例的单位外部输入、固定参数和有限时间范围内，充分小正温度使完整记录及切面继续状态精确等于硬运行。所需温度界按该次硬运行确定。
 
 硬选择每个区域每位置激活 $1$ 至 $k_j$ 个候选，激活者随输入和历史改变。既有空间边可在其他位置继续使用。连接较丰富的 HB 和较稀疏的 HB 各自在自己的固定图上使用同一结论。永久删边改变空间图；在同一图上，局部选择决定各次实际使用的边。
 
@@ -321,7 +302,7 @@ $$
 
 对 §4.2 的七层形状，各区域改用 $k_j=2$ 的硬选择时，每位置 Full 数在 $22$ 至 $44$ 之间。第一层全体 $64$ 个节点准备，其中一至两个激活；第二层的两个区域都会到达，总候选至多为 $2\times4=8$。后续各区的节点覆盖由实际选择及邻域重叠决定，所有区域始终有非空候选。
 
-同一形状若全部区域采用固定总强度 Attention、直接 Attention、区域总量分配、按比例分配、bern 或两种约束分配中的 ent 的 $\alpha=1$，正温度下每位置为 $1408$ 个候选、$1408$ 次 Full、$3584$ 条内部消息。发送强度即使很小，这些工作仍然存在；各节点的写入权重可小于 $1$。混合选择时按式 (4) 逐层计数，不能直接套用全稠密或硬运行数字。
+同一形状若全部区域采用固定总强度 Attention、直接 Attention、区域总量分配、按比例分配、bern 或 ent 的 $\alpha=1$，正温度下每位置为 $1408$ 个候选、$1408$ 次 Full、$3584$ 条内部消息。发送强度即使很小，这些工作仍然存在；各节点的写入权重可小于 $1$。混合选择时按式 (4) 逐层计数，不能直接套用全稠密或硬运行数字。
 
 ### 6.3 一次发送对下游准备的影响
 
@@ -348,5 +329,3 @@ $$
 第 1 节采用 memory_family=kv、read_mode=+、local_score=cat、send_gain=fixed、selection_mode=constrained、regularizer=quad。第 4.2 节按层给出 memory_read=sum／qry 和 region_score=ind／att；query_weight 未另声明时取 mu。第 4.3 节中间层逐区域选 memory_family=affine／delta／gated_delta／ssd、memory_read=state，其余绑定按表给出。
 
 固定尺度的稠密区域 Attention 使用 region_score=att、alpha_loc=0、alpha_sel=1 及固定正 allocation_temperature。发送可取 unit_attention、direct_attention、pooled_attention 或约束 Shannon；它们在弱接收处按第 4.1 节产生不同结果。unit_attention 的 allocation_base 为 uniform／mu，direct_attention 为 mu／received，pooled_attention 固定 mu。其余取值和参数生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
-
-第 4.4 节使用 shared_amplification、amplification_mode=fixed／context、amplification_width=32、gamma_max=2，att 固定 query_weight=received。它替换原 send_gain 和 Describe，记忆及内容参数按所继承的配置保留；额度参数见[共享额度附录 S](../local-semantics/weighted-message/shared-amplification-learning-note.md#附录-s配置与求值对应)。
