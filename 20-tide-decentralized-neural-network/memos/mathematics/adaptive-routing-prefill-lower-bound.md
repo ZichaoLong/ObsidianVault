@@ -138,8 +138,10 @@ $$
 对式 (1) 构造有限图
 
 $$
-V=\{(t,q):0\le t\le L,\ q\in\Omega_N\},\qquad
-E=\{((t,q),(t+1,F_t(q))):t<L,\ q\in\Omega_N\}.
+\begin{aligned}
+V&=\{(t,q):0\le t\le L,\ q\in\Omega_N\},\\
+E&=\{((t,q),(t+1,F_t(q))):t<L,\ q\in\Omega_N\}.
+\end{aligned}
 \tag{4}
 $$
 

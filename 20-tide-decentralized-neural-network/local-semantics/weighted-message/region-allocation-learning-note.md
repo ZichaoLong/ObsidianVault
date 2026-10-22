@@ -115,9 +115,11 @@ $f_v$ 的宽度为 $d+4d_s+3$。两个逐分量乘积提供当前内容与记忆
 分组匹配评分与分组区域证据先分别处理当前内容、记忆与统计量；内容 key 只使用其中的记忆编码。共同输入为
 
 $$
-z^{\mathrm{cur}}=\mathcal N_d(u),\quad
-z^{\mathrm{mem}}=[M_{\mathrm{short}};M_{\mathrm{long}}],\quad
-z^{\mathrm{stat}}=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})].
+\begin{aligned}
+z^{\mathrm{cur}}&=\mathcal N_d(u),\\
+z^{\mathrm{mem}}&=[M_{\mathrm{short}};M_{\mathrm{long}}],\\
+z^{\mathrm{stat}}&=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})].
+\end{aligned}
 $$
 
 令组别 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的输入宽度为 $d_{\mathrm{cur}}=d$、$d_{\mathrm{mem}}=2d_s$、$d_{\mathrm{stat}}=3$。用途标记 $h\in\{\mathrm{score},\mathrm{reg},\mathrm{key}\}$ 分别表示局部评分、区域证据和内容 key。对各用途实际使用的组别，取
@@ -154,11 +156,13 @@ $$
 
 $$
 \begin{aligned}
-x_v&=E_v^{\mathrm{score,cur}}(z^{\mathrm{cur}}),\quad e_v=E_v^{\mathrm{score,mem}}(z^{\mathrm{mem}}),
- \quad z_v=E_v^{\mathrm{score,stat}}(z^{\mathrm{stat}}),\quad f_v^{\mathrm{match}}=[x_v;e_v;z_v],\\
+x_v&=E_v^{\mathrm{score,cur}}(z^{\mathrm{cur}}),\quad
+ e_v=E_v^{\mathrm{score,mem}}(z^{\mathrm{mem}}),\\
+z_v&=E_v^{\mathrm{score,stat}}(z^{\mathrm{stat}}),\quad
+ f_v^{\mathrm{match}}=[x_v;e_v;z_v],\\
 F_v^{\mathrm{match}}(f)&=(w_v^{\mathrm{match}})^\top
- [\operatorname{SiLU}(W_v^{\mathrm{match,gate}}f+b_v^{\mathrm{match,gate}})
- \odot(W_v^{\mathrm{match,up}}f+b_v^{\mathrm{match,up}})],\\
+ \big[\operatorname{SiLU}(W_v^{\mathrm{match,gate}}f+b_v^{\mathrm{match,gate}})\\
+ &\qquad{}\odot(W_v^{\mathrm{match,up}}f+b_v^{\mathrm{match,up}})\big],\\
 s_v^{\mathrm{match}}&=b_v^{\mathrm{match}}+
  \alpha_v^{\mathrm{match}}x_v^\top e_v/\sqrt{d_{\mathrm{sel}}}
  +\alpha_v^{\mathrm{res}}F_v^{\mathrm{match}}(f_v^{\mathrm{match}}).
@@ -437,11 +441,12 @@ $$
 定义区域头的输入与允许的总量范围：
 
 $$
-f_j^{\mathrm{reg}}=
- [\bar z_j^{\mathrm{reg}};\log(1+W^{\mathrm{recv}});\log(1+M^{\max})],
-\qquad
-b^{\mathrm{recv}}=\min(1,W^{\mathrm{recv}}),\quad
-U=\min(k,M^{\max}).
+\begin{aligned}
+f_j^{\mathrm{reg}}&=
+ [\bar z_j^{\mathrm{reg}};\log(1+W^{\mathrm{recv}});\log(1+M^{\max})],\\
+b^{\mathrm{recv}}&=\min(1,W^{\mathrm{recv}}),\quad
+ U=\min(k,M^{\max}).
+\end{aligned}
 $$
 
 由 $w_v\le\mu_v^{\max}$ 得 $0\le b^{\mathrm{recv}}\le U$。零接收节点对三个和均无贡献；趋弱节点的有界证据在摘要中的影响趋零。区域评分与控制头从同一描述族分别计算。
@@ -859,17 +864,21 @@ $x_v^{\mathrm{resp}}=t_v-\lambda$，并在此处求响应导数 $a_v^{\mathrm{re
 若总和在本分支由一个等式确定，将其值记为 $T$：它可以是起作用的下界、上界，或指定总量 $B$。当 $A_0=\sum_va_v^{\mathrm{resp}}>0$ 时，微分给出
 
 $$
-d\lambda=\frac{\sum_va_v^{\mathrm{resp}}dt_v+\sum_ve_v^{\mathrm{resp}}d\mu_v-dT}{A_0},\qquad
-dc_v=a_v^{\mathrm{resp}}(dt_v-d\lambda)+e_v^{\mathrm{resp}}d\mu_v.
+\begin{aligned}
+d\lambda&=\frac{\sum_va_v^{\mathrm{resp}}dt_v+\sum_ve_v^{\mathrm{resp}}d\mu_v-dT}{A_0},\\
+dc_v&=a_v^{\mathrm{resp}}(dt_v-d\lambda)+e_v^{\mathrm{resp}}d\mu_v.
+\end{aligned}
 \tag{17}
 $$
 
 对标量目标 $\mathcal L$，记 $g_v^{\mathcal L}=\partial\mathcal L/\partial c_v$、$\bar g=\sum_va_v^{\mathrm{resp}}g_v^{\mathcal L}/A_0$，则
 
 $$
-\frac{\partial\mathcal L}{\partial t_v}=a_v^{\mathrm{resp}}(g_v^{\mathcal L}-\bar g),\qquad
-\frac{\partial\mathcal L}{\partial\mu_v}=e_v^{\mathrm{resp}}(g_v^{\mathcal L}-\bar g),\qquad
-\frac{\partial\mathcal L}{\partial T}=\bar g.
+\begin{aligned}
+\frac{\partial\mathcal L}{\partial t_v}&=a_v^{\mathrm{resp}}(g_v^{\mathcal L}-\bar g),\\
+\frac{\partial\mathcal L}{\partial\mu_v}&=e_v^{\mathrm{resp}}(g_v^{\mathcal L}-\bar g),\\
+\frac{\partial\mathcal L}{\partial T}&=\bar g.
+\end{aligned}
 \tag{18}
 $$
 
@@ -893,11 +902,12 @@ $$
 **区域头的反向。** 固定评分和节点上限，在上述非退化等式分支，指定总量满足
 
 $$
-\frac{\partial c_v}{\partial B}=\frac{a_v^{\mathrm{resp}}}{A_0},
-\qquad
-\frac{\partial\mathcal L}{\partial B}=\bar g,\qquad
+\begin{gathered}
+\frac{\partial c_v}{\partial B}=\frac{a_v^{\mathrm{resp}}}{A_0},\qquad
+\frac{\partial\mathcal L}{\partial B}=\bar g,\\
 dB=(1-\rho_j)\,db^{\mathrm{recv}}+\rho_j\,dU+
        (U-b^{\mathrm{recv}})\,d\rho_j.
+\end{gathered}
 $$
 
 quad 的未饱和节点集 $\mathcal I$ 上，$\partial c_v/\partial B=1/|\mathcal I|$。总量头在 $U=b^{\mathrm{recv}}$ 时无作用；上下文 sigmoid 饱和或任务边际影响相消也可能使反馈很弱。

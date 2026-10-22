@@ -219,11 +219,13 @@ Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当
 对每个头固定 $W^Q_{v,h}\in\mathbb R^{d_h\times d}$，定义当前 query 为 $Q_{v,h}(u)=W^Q_{v,h}\mathcal N_d(u)$。另取非负距离偏置斜率 $b^{\mathrm{pos}}_{v,h}$，为完整内容读取定义匹配分数
 
 $$
-\ell_{i,h}=\frac{
+\begin{aligned}
+\ell_{i,h}&=\frac{
  [\operatorname{Rot}_{v,h}(\operatorname{Pos}_v(\theta))Q_{v,h}(u)]^\top
- [\operatorname{Rot}_{v,h}(\operatorname{Pos}_v(\xi_i))k_{i,h}]}{\sqrt{d_h}}
- -b^{\mathrm{pos}}_{v,h}
+ [\operatorname{Rot}_{v,h}(\operatorname{Pos}_v(\xi_i))k_{i,h}]}{\sqrt{d_h}}\\
+ &\quad{}-b^{\mathrm{pos}}_{v,h}
    (\operatorname{Pos}_v(\theta)-\operatorname{Pos}_v(\xi_i))_+.
+\end{aligned}
 \tag{6}
 $$
 

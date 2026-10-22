@@ -88,9 +88,11 @@ Delta 形式也写作 $\widetilde H_a=gH_a^-+\beta(\nu-gH_a^-k)k^\top$：先预�
 选定矩阵更新后，两种模块均按下式更新摘要与权重，并返回完整状态：
 
 $$
-\widetilde Z_a=Z_a^-+wp_v(u),\qquad \widetilde W_a=W_a^-+w,\qquad
+\begin{gathered}
+\widetilde Z_a=Z_a^-+wp_v(u),\qquad \widetilde W_a=W_a^-+w,\\
 \operatorname{Upd}_v(q,\theta,(r^{\mathrm{in}},u))=
  \bigl(\theta,(\widetilde H_a,\widetilde Z_a,\widetilde W_a)_a\bigr).
+\end{gathered}
 \tag{5}
 $$
 
