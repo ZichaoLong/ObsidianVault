@@ -39,7 +39,7 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 | 文档 | 定义与证明的分工 |
 |---|---|
 | [共同局部架构](local-semantics/weighted-message/architecture-learning-note.md) | 完整计算过程、模块接口与组合，局部条件如何支持整网性质，精确继续与联合求值 |
-| [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | Describe 与 SelStep 的具体定义，评分和发送候选，求解与导数，单位输入的软硬关系 |
+| [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 描述与评分、节点上限、区域阈值和指定总量；发送候选、求解与导数，以及各候选的温度极限 |
 | [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
 | [基础循环记忆](local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) | affine／delta 的完整局部定义，循环候选共用的仿射复合 |
 | [固定逻辑时间短卷积](local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 带权历史槽、当前读取、空档与弱事件；供完整循环候选复用的部件 |
@@ -49,6 +49,8 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 recurrent-memory/ 汇集三份循环记忆候选教材及共用的短卷积部件。三份教材分别定义可独立绑定的状态与读取；接口和组合条件由共同架构给出，仿射复合的推导集中在[基础循环 §4.1](local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md#41-仿射复合)。
 
 第一次阅读可先读共同架构 §1—5，掌握完整计算和模块位置；随后沿区域分配 §1—4 构造描述、评分和控制，再用 §5.1 的例子核对完整返回；读 KV §1—5.1，完成同一例子的记忆与内容计算。三篇沿用相同的 $a,b,c$ 节点和消息。架构第 6—7 节给出组合性质的条件；具体模块各自验证这些条件。
+
+区域控制的两种候选共用节点证据、接收相关上限和正则求解：一种产生共同阈值，另一种直接指定总发送量。区域教材 §5.5 对照两者的完整计算，§7.5—7.6 分别给出配对硬选择与指定总量极限；两份实例 §4.4 将它们绑定到具体图和记忆。
 
 学习矩阵记忆可先读基础循环。完整 Gated DeltaNet 与 SSD 使用短卷积部件，再定义自己的更新、描述与内容；它们填入同一套架构函数。
 

@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-10-21
+as-of: 2026-10-22
 tags:
   - tide
   - semantic-version
@@ -36,8 +36,28 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-20 局部名称迁移与正温度精确性 | 局部函数及默认数值保持，配置名称和局部符号按下表迁移。共同架构补入有限正温度精确运行推论，适用范围见各函数条件 |
 | 2026-10-20 完整循环记忆候选 | 增加 memory_family=gated_delta／ssd 与固定逻辑时间短卷积；原模型对应和新增实现内容见下表。既有 affine／delta／kv、评分与发送函数保持 |
 | 2026-10-20 响应点与时间对应澄清 | 数值函数和配置取值保持。求根区间使用 $x^{\mathrm{bracket}}$，反向在实际 $x^{\mathrm{resp}}=t-\lambda$ 处求值；conv_stride 表示抽头的逻辑时间间距，原模型对应要求接收间隔与之匹配。联合求值以完整内部输入纤维为前提 |
+| 2026-10-22 区域阈值与指定总量 | 增加 regional_threshold／regional_total，配套区域证据、控制头与描述类型；共同 Alloc 接口覆盖三种约束候选。原 constrained、其他发送函数及默认配置数值保持；新增绑定与极限目标见下节 |
 
 编辑过程、正文重排和正典引用清理的逐篇差异见[修订记录](history/document-revisions.md)；文件更名及旧路径的现行落点见[迁移索引](history/migration-map.md)。局部 Attention 份额沿用 $p_v^{\mathrm{sel}}$，响应点与导数沿用 resp 上标；区间构造点单独使用 bracket 上标。
+
+## 区域控制候选的采用范围（2026-10-22）
+
+以 [6d3b6e3](https://github.com/ZichaoLong/ObsidianVault/commit/6d3b6e3) 为基线增加两个候选。四份正典、记忆函数和拓扑定义保持，核心版本继续为 tide-core-5。前次共享放大额度方案已由该基线撤回；本次新增函数分别控制阈值和实际发送总量。
+
+| 变化 | 采用时核对 |
+|---|---|
+| regional_threshold | 使用区域给出的 $\eta_j$ 和接收下界，向共同 Alloc 传入 $s-\eta_j,\mu^{\max},[b^{\mathrm{recv}},k]$；保留阈值头的配对硬函数及其条件见区域教材 §7.5 |
+| regional_total | 区域直接给出 $B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}})$，传入 $s,\mu^{\max},[B,B]$；§7.6 的零温函数逐个填满，可保留小数发送，容量仍取区域大小 |
+| 节点上限与下界 | $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$、$b^{\mathrm{recv}}=\min(1,\sum w_v)$、$U=\min(k,\sum\mu_v^{\max})$；原 constrained 的下界仍为 $\min(1,\sum\mu_v)$ |
+| 描述结构 | 原 ind／att 三元组／五元组保持；新候选分别为 $(w,\mu^{\max},s^{\mathrm{loc}},z^{\mathrm{reg}})$ 和 $(w,\mu^{\max},x^{\mathrm{sel}},K^{\mathrm{sel}},s^{\mathrm{loc}},z^{\mathrm{reg}})$ |
+| 控制配置 | region_control_mode=fixed／context，region_control_width 指定证据宽度；fixed 分别读取 eta 或 total_fraction，context 给定证据及区域头参数 |
+| 参数生效范围 | 新候选不使用 send_gain、allocation_base；att 固定 query_weight=received；regional_total 不使用 eta；既有 att 的默认 query_weight=mu 保持 |
+| 求解与反向 | 复用一个标量乘子，支持 quad／bern／ent；同时回传节点上限、实际等式总量及其上下界，不能复用旧 $M\le1$ 全上限捷径 |
+| 显示名称 | pooled_attention 称为“总量缩放 Attention”，配置名及 $c=\min(1,M)p^{\mathrm{sel}}$ 保持；新“指定总量分配”单独对应 regional_total |
+
+完整定义与参数范围见[区域分配教材](../local-semantics/weighted-message/region-allocation-learning-note.md)，完整图绑定见两份实例 §4.4。新候选均无新增持久状态，仍由选定记忆与正典切面继续；更换已运行模型的发送规则后，旧状态不自动等于新模型从头运行的状态。
+
+本次进行了文档检查和有限数值核对，未审计下游采用，也未验证训练效果或加速。实现要求见[区域控制核对](../reference/weighted-message-implementation-checks.md#35-区域阈值与指定总量)，比较依据与可选研究内容分别由设计和训练备忘录承载。
 
 ## 完整循环候选的采用范围（2026-10-20）
 
@@ -62,7 +82,7 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | selection_mode=soft | selection_mode=constrained | 约束分配，包含稠密与可稀疏的正则族 |
 | selection_mode=direct | selection_mode=direct_attention | 直接 Attention |
 | selection_mode=attention | selection_mode=unit_attention | 固定总强度 Attention |
-| selection_mode=pooled | selection_mode=pooled_attention | 区域总量分配 |
+| selection_mode=pooled | selection_mode=pooled_attention | 总量缩放 Attention |
 | selection_mode=dense | selection_mode=proportional | 按比例分配 |
 | selection_mode=hard | selection_mode=hard_selection | 硬选择 |
 | budget_family | regularizer | 约束分配的正则函数 |

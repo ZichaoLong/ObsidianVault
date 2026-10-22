@@ -124,9 +124,11 @@ $\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$ 的两个隐藏单元。其�
 
 ### 3.1 传播条件与逐层归纳
 
-固定第 1 节的图、单位入口和广播规则。各区域可分别采用区域教材的约束分配、直接 Attention、固定总强度 Attention、区域总量分配、按比例分配或硬选择，并满足所选函数的参数条件。下面先证明这些组合共有的接收性质，再说明对状态和发送的推论。
+固定第 1 节的图、单位入口和广播规则。各区域可分别采用区域教材的三种约束分配、直接 Attention、固定总强度 Attention、总量缩放 Attention、按比例分配或硬选择，并满足所选函数的参数条件。下面先证明这些组合共有的接收性质，再说明对状态和发送的推论。
 
-在每个输入位置 $t$，所有层的全部节点都会收到正强度消息。第一层接收强度为 $1$，故 $w=\mu=1$。若某层全体节点有 $\mu=1$，则约束分配的发送强度之和在 $[1,k_j]$ 内，直接 Attention、固定总强度 Attention 和区域总量分配的总和均为 $1$，按比例分配的总和为 $\min(k_j,n)\ge1$，硬选择激活 $1$ 至 $k_j$ 个节点并各自产生单位强度载荷。每个下一层节点收到全部激活者的广播，接收强度至少为 $1$，于是仍有 $w=\mu=1$。逐层归纳即可到达终端。
+在每个输入位置 $t$，所有层的全部节点都会收到正强度消息。先看使用基础描述的函数。第一层接收强度为 $1$，故 $w=\mu=1$。若某层全体节点有 $\mu=1$，则固定阈值分配的发送强度之和在 $[1,k_j]$ 内，直接 Attention、固定总强度 Attention 和总量缩放 Attention 的总和均为 $1$，按比例分配的总和为 $\min(k_j,n)\ge1$，硬选择激活 $1$ 至 $k_j$ 个节点并各自产生单位强度载荷。每个下一层节点收到全部激活者的广播，接收强度至少为 $1$，于是仍有 $w=\mu=1$。逐层归纳即可到达终端。
+
+两个区域控制候选使用相同的归纳：单位截断接收给出 $\mu^{\max}=1$、$b^{\mathrm{recv}}=1$、$U=k_j$，实际总量在 $[1,k_j]$ 内。下层接收仍至少为 $1$，所以它们也保持各节点的单位写入权重。
 
 ### 3.2 对状态与发送的推论
 
@@ -147,12 +149,13 @@ $\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$ 的两个隐藏单元。其�
 | §4.1 稠密 Attention | 第 1 节 KV 基线 | 选定区域的区域评分、描述结构、发送函数与固定正温度 |
 | §4.2 八层 KV 配置 A、B | 第 1 节 KV 基线 | 八层尺寸、各区域的 KV 窗口与位置参数；评分与发送沿用基线 |
 | §4.3 八层混合记忆 | §4.2 的配置 B | 区域 $4,8$ 的记忆模块及读取方式；其余区域继续使用配置 B 的 KV |
+| §4.4 区域控制 | §4.2 的配置 B 或 §4.3，先选定一份 | 配套区域描述、阈值或总量头、分配函数；将 $k_j$ 改为 $2$ |
 
 这些选择也可组合：例如在八层混合记忆中另采用 §4.1 的评分与发送。组合时逐区域确定最终字段，按所选记忆重定参数形状，并核对第 5 节的描述相容性与容量条件。各例的层数和尺寸只限定该例。
 
 ### 4.1 固定尺度的稠密 Attention 组合
 
-在选定区域将独立评分替换为区域 Attention 评分，Describe 同时改为五元组，给定相应投影与 query 参数，取 $\alpha_j^{\mathrm{loc}}=0,\alpha_j^{\mathrm{sel}}=1$。发送选择直接 Attention、固定总强度 Attention、区域总量分配或 $k_j=1$ 的约束 Shannon，采用固定正温度与正典容量 $K_j=n$。其余字段继承第 1 节。
+在选定区域将独立评分替换为区域 Attention 评分，Describe 同时改为五元组，给定相应投影与 query 参数，取 $\alpha_j^{\mathrm{loc}}=0,\alpha_j^{\mathrm{sel}}=1$。发送选择直接 Attention、固定总强度 Attention、总量缩放 Attention 或 $k_j=1$ 的约束 Shannon，采用固定正温度与正典容量 $K_j=n$。其余字段继承第 1 节。
 
 四种选择均由 §3 得到 $w_v=\mu_v=1$，所以在这些区域共同满足
 
@@ -214,6 +217,23 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 
 联合求值使用 KV 前缀或对应循环模块的仿射复合；带短卷积的模块先按完整驱动计算卷积，再求矩阵递归。按层取得完整输入后，可应用第 6.1 节的整窗口策略。相同载荷、相容描述和原有图时间使组合成为合法 SettleGraph。数值性质按共同架构 §6 应用，各记忆分别提供局部引理。
 
+### 4.4 区域阈值与指定总量
+
+选择 §4.2 的配置 B 或 §4.3 的混合记忆配置，保留图、时间、聚合、记忆、内容、Read 模式、拼接评分与独立区域评分。所有区域使用[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-describe-的返回值)的 $D^{\mathrm{reg,ind}}$，取 $d_r=d_{\mathrm{reg}}=32$、gamma_max=$2$、quad、$k_j=2$、$K_j=4$，正温度继承所选配置。局部评分与新增区域头按该宽度给定全部有限参数，原 send_gain 不参与。
+
+每个区域选择下列一行；context 使用同一行对应的独立区域头，固定控制返回零证据：
+
+| 发送函数 | 固定控制 | 上下文控制 |
+|---|---|---|
+| regional_threshold | region_control_mode=fixed、eta=$0$ | region_control_mode=context，给定节点证据投影与阈值头参数 |
+| regional_total | region_control_mode=fixed、total_fraction=$0.4$ | region_control_mode=context，给定节点证据投影与总量头参数 |
+
+region_control_width=$32$。两个候选分别绑定教材 §4.1.3、§4.1.4，保留全部候选的更新和共同广播。各行配合所选参数是一份完整模型，不增加区域持久状态。
+
+由第 3 节，每次区域都有 $b^{\mathrm{recv}}=1,U=2$。指定总量的固定比例给出 $B=1.4$；上下文比例使 $B=1+\rho_j$。节点上限虽然全部为 $1$，区域头仍能改变发送总量和分配。阈值头在总量约束松弛时也能起作用。若把 $k_j$ 改回 $1$，两个头都失去调节总量的空间。
+
+KV 写入时间与循环更新时钟继续满足 §3。区域阈值的单位输入硬化按教材 §7.5 核对；指定总量按 §7.6 比较自身零温分配，所选节点可以发送小数强度。
+
 ## 5. 组合成立的条件
 
 图与时间满足拓扑教材的单次结算条件。所有相连节点共用 $P=\mathbb R^{1+d}$，各记忆提供相容的描述，区域分配返回控制与激活集合；因此所选函数可以代入正典递归。除硬选择取 $K_j=k_j$ 外，各发送函数均取 $K_j=n$。数值性质分别使用下表的条件。
@@ -221,12 +241,14 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 | 对象或性质 | 本实例的绑定与依据 |
 |---|---|
 | 输出比较 | §1.4 声明有限槽集合和连续数值读出，缺席组读出零 |
-| 正温度连续性 | 各区域使用约束分配、直接 Attention、区域总量分配或按比例分配时，按共同架构 §6.2 的条件使用，各记忆模块验证其状态假设 |
+| 正温度连续性 | 各区域使用约束分配、直接 Attention、总量缩放 Attention 或按比例分配时，按共同架构 §6.2 的条件使用，各记忆模块验证其状态假设 |
 | 非空传播 | §3 保证每层全体节点接收并写入，每位置有正强度终端输出 |
-| 硬化连续性 | 按[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-单位输入的整网软硬关系)比较约束分配与配对硬选择，核对对应硬运行的评分条件 |
-| 正温度精确硬化 | 满足上一行条件且全部区域取 quad 或固定 $\alpha>1$ 的 ent 时，充分小正温度使完整记录和切面与硬运行相同 |
+| 温度极限 | 固定阈值按[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-单位输入的整网软硬关系)，区域阈值按[§7.5](../local-semantics/weighted-message/region-allocation-learning-note.md#75-区域阈值与单位强度硬选择)，指定总量按[§7.6](../local-semantics/weighted-message/region-allocation-learning-note.md#76-指定总量的零温分配)选定比较运行并核对唯一性 |
+| 正温度精确性 | 满足所选比较的条件且全部区域取 quad 或固定 $\alpha>1$ 的 ent 时，充分小正温度使完整记录和切面与该极限运行相同 |
 
 给定上述配置即可直接应用共同的 P/S/U/F 递归。硬化所需的评分间隔取决于参数与输入，须在所考察硬运行上核对。拓扑允许相同局部函数在不同尺寸下组合，各性质按自己的前提使用。
+
+区域控制的比较保留同一 Describe 与控制头。混合不同发送候选时，按共同架构逐区域核对所选极限函数；指定总量的零温函数具有自己的控制幅度和容量约定。
 
 ## 6. 整窗口求值与架构成本
 
@@ -257,7 +279,7 @@ $$
 
 §3 保证每层都有正强度发送，下一层全部 $n$ 个节点始终成为候选并写入。区域宽度增加时，准备、状态与消息成本仍可能增长。工作分类见共同架构附录 S.2，具体状态与算术成本按所选记忆模块计算；KV 窗口按 §1.2 换算，循环状态大小由矩阵宽度确定。
 
-若全部区域采用固定总强度 Attention、直接 Attention、区域总量分配、按比例分配、bern 或 ent 的 $\alpha=1$，正温度下每位置有 $Ln$ 次 Full 和 $(L-1)n^2$ 条内部消息。可稀疏的约束分配按实际激活数量计数；全部区域使用硬选择时满足式 (3)。两种局部评分及内容检索的准备成本另计，不能由发送强度之和推算。
+若全部区域采用固定总强度 Attention、直接 Attention、总量缩放 Attention、按比例分配、bern 或 ent 的 $\alpha=1$，正温度下每位置有 $Ln$ 次 Full 和 $(L-1)n^2$ 条内部消息。可稀疏的约束分配按实际激活数量计数；全部区域使用硬选择时满足式 (3)。两种局部评分及内容检索的准备成本另计，不能由发送强度之和推算。
 
 整段求值使用各模块的精确联合算法；逐位置继续仍承担候选准备、记忆读取和消息工作。本实例减少激活时可减少 Full 和消息条数，各层候选与写入次数保持不变。
 
@@ -266,5 +288,7 @@ $$
 基线使用 memory_family=kv、memory_read=sum、read_mode=+、local_score=cat、region_score=ind、send_gain=fixed、selection_mode=constrained、regularizer=quad。所有节点的初态、来源与矩阵形状由第 1 节确定；位置绑定对应 KV 教材的 Pos、窗口与旋转配置。
 
 第 4.1 节在选定区域使用 region_score=att、alpha_loc=0、alpha_sel=1 和固定 allocation_temperature。四种等值发送分别取 direct_attention、unit_attention、pooled_attention，以及 constrained／ent／ent_alpha=1／k=1。第 4.2 节的 A、B 继承基线的评分与发送；第 4.3 节继承 B，再替换区域 $4,8$ 的 memory_family、memory_read 及对应参数形状。组合采用第 4.1 节时另声明相应区域。完整取值与生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
+
+第 4.4 节使用 regional_threshold／regional_total 及其配套描述，region_control_mode 选择 fixed／context，region_control_width=$32$、gamma_max=$2$、$k_j=2$。固定分支分别读取 eta 或 total_fraction，context 使用区域头；send_gain 与 allocation_base 不参与。参数形状和无效字段按区域分配附录 S.1 核对。
 
 实现核对见[局部架构实现对应](../reference/weighted-message-implementation-checks.md)，任务与训练比较见[可选研究问题](../memos/training/weighted-message-research-questions.md)。
