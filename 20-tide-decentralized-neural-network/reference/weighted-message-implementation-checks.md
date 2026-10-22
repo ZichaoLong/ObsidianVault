@@ -55,11 +55,11 @@ tags:
 
 ### 3.2 指定总量与区域阈值
 
-正温度的两个候选使用同一 Alloc：指定总量见[区域分配 §2.3—2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#23-区域发送总量)，区域阈值见[§4.1.2](../local-semantics/weighted-message/region-allocation-learning-note.md#412-区域阈值分配)，共同求解见该教材 §6。按以下依赖逐步核对：
+正温度的两个候选使用同一 Alloc：指定总量见[区域分配 §2.2—2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#22-由节点特征确定发送总量)，区域阈值见[§4.1.2](../local-semantics/weighted-message/region-allocation-learning-note.md#412-区域阈值分配)，共同求解见该教材 §6。按以下依赖逐步核对：
 
 | 步骤 | 核对内容 |
 |---|---|
-| Describe | $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$；区域证据按 §2.2、§2.5 使用当前接收及所选 Mem，cat 另使用 $p_v$ 的乘积特征；fixed 返回零证据，context 绑定 cat／grouped 的全部参数 |
+| Describe | $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$；区域证据按区域教材 §2.2、§3.4 使用当前接收及所选 Mem，cat 另使用 $p_v$ 的乘积特征；fixed 返回零证据，context 绑定 cat／grouped 的全部参数 |
 | 汇集与控制头 | 按 $w_v$ 汇集证据，分母为 $\max(1,W^{\mathrm{recv}})$；att 的 query 同样按 received；零接收证据对汇集无贡献 |
 | 总量范围 | $b^{\mathrm{recv}}=\min(1,\sum w_v)$、$U=\min(k,\sum\mu_v^{\max})$；覆盖 $b^{\mathrm{recv}}=U$、节点截断及弱总接收 |
 | regional_total | $B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}})$，传入 $t=s,[B,B]$；求解乘子可为任意符号，共同评分平移不改变控制 |
@@ -68,14 +68,14 @@ tags:
 
 证据构造核对下列内容：
 
-- cat 保留原拼接投影；grouped 的三组输入、编码宽度、四个输出矩阵及匹配乘积按教材 §2.2.2、§2.5.2 对应。局部评分与证据可交叉选择，描述字段和输出宽度保持相容；fixed 不执行证据编码。
+- cat 保留原拼接投影；grouped 的三组输入、编码宽度、四个输出矩阵及匹配乘积按区域教材 §3.2、§3.4.1 对应。局部评分与证据可交叉选择，描述字段和输出宽度保持相容；fixed 不执行证据编码。
 - 固定输入与记忆描述时，独立改变证据参数不得改变评分，独立改变评分参数不得改变证据。显式共享编码时，前向使用同一绑定，反向汇总各使用者的梯度。
 - 两种证据都满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$；接收趋零时检查 $w_vz_v^{\mathrm{reg}}\to0$，包括内容方向改变或记忆描述不收敛的序列。精确零接收候选的增删不改变汇集结果。
 - 在不跨接收截断与总量分支的输入上，对编码参数、当前内容、记忆与统计量作方向差分，核对经证据、汇集、区域头到发送的完整反向。分组构造的归一化与乘积也须参与；总量范围退化或阈值被约束抵消时允许控制路径梯度为零。
 
 按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)另核对 regional_total_zero 与 regional_threshold_hard：保留对应 Describe、评分和区域头，直接执行区域教材 §4.4.2、§4.4.3 的配对函数。前者保持总量 $B$ 和区域大小容量；后者以 $k_j$ 限制激活数。两者与 hard_selection 均不读取温度或正则，不调用正温度求根器；覆盖全零接收、平票次序及非单位上限。一般非二元接收下，区域阈值硬函数未必保持 $b^{\mathrm{recv}}$，按其自身函数核对。
 
-复现区域教材 §2.5 的指定总量计算、§5.2 的阈值比较和 §5.3 的弱接收例子。两个候选不能套用 constrained 的“$M\le1$ 返回全部上限”捷径；全上限分支由实际下界等于节点上限之和判定。单节点也可能在 $b^{\mathrm{recv}}<U$ 时由区域头改变发送。$k=1$ 在弱总接收时未必消除这项余量。
+复现区域教材 §2.5 的指定总量计算、§5.2 的阈值比较和 §5.3 的弱接收例子。首例使用 §3.4—3.5 的证据投影与区域头参数，核对证据变化到 $B$ 及分配的完整计算。两个候选不能套用 constrained 的“$M\le1$ 返回全部上限”捷径；全上限分支由实际下界等于节点上限之和判定。单节点也可能在 $b^{\mathrm{recv}}<U$ 时由区域头改变发送。$k=1$ 在弱总接收时未必消除这项余量。
 
 反向把响应输入 $t$、节点上限 $\mu$ 和当前等式总量 $T$ 先作为独立变量，再回传其依赖。指定总量在非退化分支核对 $dc_v/dB=a_v^{\mathrm{resp}}/\sum_u a_u^{\mathrm{resp}}$，并对 $B$ 的下界、上界及比例使用完整链式法则。区域阈值核对总量约束松弛时 $dc_v/d\eta_j=-a_v^{\mathrm{resp}}$，总量固定时该项为零；起作用的接收下界仍须回传。头、证据、接收、评分与记忆的共享输入贡献相加。
 

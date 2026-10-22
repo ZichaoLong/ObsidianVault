@@ -224,7 +224,7 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 
 ### 4.4 指定总量与区域阈值
 
-本例取 $L=8,n=4,d=512$。记忆布局选择全部 B 型 KV，或仅在区域 $4,8$ 使用循环记忆；KV 的 sum、窗口、位置与头尺寸见 §4.2，循环的 state 与参数见 §4.3。全部区域取 cat 局部评分、ind 区域评分，使用[区域分配 §2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#22-节点评分与区域信息)的 $D^{\mathrm{reg,ind}}$，取 $d_r=d_{\mathrm{reg}}=32$、gamma_max=$2$、quad、$k_j=2$、$K_j=4$，各区域给定正温度。局部评分与区域头按该宽度给定全部有限参数，发送使用区域控制描述中的节点上限。
+本例取 $L=8,n=4,d=512$。记忆布局选择全部 B 型 KV，或仅在区域 $4,8$ 使用循环记忆；KV 的 sum、窗口、位置与头尺寸见 §4.2，循环的 state 与参数见 §4.3。全部区域取 cat 局部评分、ind 区域评分，使用[区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-节点评分与节点描述)的 $D^{\mathrm{reg,ind}}$，取 $d_r=d_{\mathrm{reg}}=32$、gamma_max=$2$、quad、$k_j=2$、$K_j=4$，各区域给定正温度。局部评分与区域头按该宽度给定全部有限参数，发送使用区域控制描述中的节点上限。
 
 每个区域选择下列一行；context 使用同一行对应的独立区域头，固定控制返回零证据：
 
@@ -233,7 +233,7 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 | regional_total | region_control_mode=fixed、total_fraction=$0.4$ | region_control_mode=context，给定节点证据构造与总量头参数 |
 | regional_threshold | region_control_mode=fixed、eta=$0$ | region_control_mode=context，给定节点证据构造与阈值头参数 |
 
-region_control_width=$32$。context 分支逐区域选择 region_evidence=cat／grouped，未另声明时取 cat。grouped 另取 $d_{\mathrm{sel}}=32$，给定教材 §2.2.2 的证据编码与 §2.5.2 的输出参数；局部评分继续使用 cat。fixed 不使用 region_evidence。两个发送候选分别绑定教材 §4.1.3、§4.1.4，保留全部候选的更新和共同广播。各行配合所选参数是一份完整模型，不增加区域持久状态。
+region_control_width=$32$。context 分支逐区域选择 region_evidence=cat／grouped，未另声明时取 cat。grouped 另取 $d_{\mathrm{sel}}=32$，给定区域教材 §3.2 的证据编码与 §3.4.1 的输出参数；局部评分继续使用 cat。fixed 不使用 region_evidence。两个发送候选分别绑定区域教材 §4.1.1、§4.1.2，保留全部候选的更新和共同广播。各行配合所选参数是一份完整模型，不增加区域持久状态。
 
 由第 3 节，每次区域都有 $b^{\mathrm{recv}}=1,U=2$。指定总量的固定比例给出 $B=1.4$；上下文比例使 $B=1+\rho_j$。节点上限虽然全部为 $1$，区域头仍能改变发送总量和分配。阈值头在总量约束松弛时也能起作用。若把 $k_j$ 改回 $1$，两个头都失去调节总量的空间。
 

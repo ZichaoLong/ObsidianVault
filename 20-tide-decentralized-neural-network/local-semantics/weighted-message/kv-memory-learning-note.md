@@ -310,7 +310,7 @@ $$
 
 **发送绑定。** 两种绑定均使用 quad、正典容量 $K_j=3$，先取 $\tau_{\mathrm{sel}}=2$：
 
-- 指定总量按[区域教材 §2.5](region-allocation-learning-note.md#25-三个候选的一次计算)取 $\gamma_{\max}=2,d_{\mathrm{reg}}=1$、固定控制 $\rho_j=0.4,k_j=2$。此时 $\mu^{\max}=(1,1,0)$、$B=1.4$；Describe 返回四元组，SelStep 得到 $(0.95,0.45,0)$。
+- 指定总量按[区域教材 §2.5](region-allocation-learning-note.md#25-三个候选的一次计算)取 $\gamma_{\max}=2,d_{\mathrm{reg}}=1,k_j=2$，使用该例的上下文控制：证据为 $(-1/2,-1/2,0)$，区域头给出 $\rho_j=0.4$。此时 $\mu^{\max}=(1,1,0)$、$B=1.4$；Describe 返回四元组，SelStep 得到 $(0.95,0.45,0)$。
 - 节点增益与固定阈值按[区域教材 §5.2](region-allocation-learning-note.md#52-更换阈值与节点增益)取固定 $\gamma_v=1,\eta_j=0,k_j=1$。此时 $\mu=(1,1,0)$；Describe 返回三元组，SelStep 得到 $(0.75,0.25,0)$。
 
 **共同的内容与返回。** 三个候选均保留接收后的状态。令 $W_v^O=1,\alpha_{\mathrm{att}}=1,\alpha_{\mathrm{ff}}=0$；$a,b$ 激活时，Attention 分别读出 $1,-1$，得到内容 $G_a=2,G_b=-2$。节点 $c$ 在两种绑定中上限均为零，始终不调用 Full。

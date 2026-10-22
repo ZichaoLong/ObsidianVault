@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Finite checks for the regional allocation textbook, sections 4--7.
+"""Finite checks for the regional allocation textbook, sections 2--7.
 
 Python 3.10+, standard library only. Scores, caps and total bounds are inputs;
 this is not a neural selector or a Tide graph implementation. The quadratic
 solver is checked against independent enumeration of lower/free/upper faces.
-Textbook examples and smooth-branch directional derivatives are also checked.
-Other regularizers, neural heads, whole-graph limits and training are outside
-this program's scope; the textbooks supply the general proofs.
+Textbook examples, including one explicit evidence/head construction, and
+smooth-branch directional derivatives are also checked. Other regularizers,
+general neural heads, whole-graph limits and training are outside this
+program's scope; the textbooks supply the general proofs.
 """
 
 from itertools import product
@@ -132,12 +133,13 @@ def check_textbook_examples() -> int:
     # Sections 2.5 and 5.2: total control and the fixed-threshold rule.
     scores, caps = (2.0, 1.0, 100.0), (1.0, 1.0, 0.0)
     for total, expected in (
-        (1.0, (0.75, 0.25, 0.0)),
         (1.4, (0.95, 0.45, 0.0)),
-        (1.8, (1.0, 0.8, 0.0)),
+        (1.5, (1.0, 0.5, 0.0)),
+        (1.6, (1.0, 0.6, 0.0)),
     ):
         cases.append((scores, caps, total, total, 2.0, expected))
     cases.extend([
+        (scores, caps, 1.0, 1.0, 2.0, (0.75, 0.25, 0.0)),
         (scores, caps, 1.4, 1.4, 0.5, (1.0, 0.4, 0.0)),
         (tuple(s - 0.8 for s in scores), caps, 1.0, 2.0, 0.5, (1.0, 0.4, 0.0)),
         (scores, caps, 1.0, 1.0, 0.5, (1.0, 0.0, 0.0)),
@@ -163,6 +165,35 @@ def check_textbook_examples() -> int:
         close(quad_alloc(scores, caps, lower, upper, tau), expected)
         close(face_oracle(scores, caps, lower, upper, tau), expected)
     return len(cases)
+
+
+def check_evidence_example() -> int:
+    """Sections 2.5 and 3.4--3.5: actual cat projection and two-unit SiLU head."""
+    def normalize(x: float) -> float:
+        return x / math.sqrt(1 + x*x)  # d=1, epsilon=1
+
+    def silu(x: float) -> float:
+        return x / (1 + math.exp(-x))
+
+    content, received = (1.0, -1.0, 0.0), (1.0, 1.0, 0.0)
+    projection = (-math.sqrt(2/3), math.sqrt(2/3), 0.0)
+    for scale, expected_z, expected_fraction, expected_control in (
+        (1.0, -0.5, 0.4, (0.95, 0.45, 0.0)),
+        (0.0, 0.0, 0.5, (1.0, 0.5, 0.0)),
+        (-1.0, 0.5, 0.6, (1.0, 0.6, 0.0)),
+    ):
+        evidence = tuple(normalize(scale*a*normalize(u)) for a, u in zip(projection, content))
+        close(evidence, (expected_z, expected_z, 0.0))
+        pooled = sum(w*z for w, z in zip(received, evidence)) / max(1, sum(received))
+        hidden = 2*math.log(3/2)*pooled
+        head = silu(hidden) - silu(-hidden)
+        fraction = 1 / (1 + math.exp(-head))
+        close((pooled, fraction), (expected_z, expected_fraction))
+        total = 1 + fraction
+        scores, caps = (2.0, 1.0, 100.0), (1.0, 1.0, 0.0)
+        close(quad_alloc(scores, caps, total, total, 2.0), expected_control)
+        close(face_oracle(scores, caps, total, total, 2.0), expected_control)
+    return 3
 
 
 def check_small_regions() -> tuple[int, float]:
@@ -255,10 +286,12 @@ def check_zero_and_hard() -> int:
 
 def main() -> None:
     examples = check_textbook_examples()
+    evidence = check_evidence_example()
     regions, solver_error = check_small_regions()
     derivatives, derivative_error = check_derivatives()
     limits = check_zero_and_hard()
     print(f"PASS: {examples} textbook allocation examples")
+    print(f"PASS: {evidence} evidence/head examples from content through allocation")
     print(f"PASS: {regions} small regions vs independent face enumeration; max error {solver_error:.3g}")
     print(f"PASS: {derivatives} smooth-branch derivatives; max error {derivative_error:.3g}")
     print(f"PASS: {limits} zero/hard values and limit counterexample checks")

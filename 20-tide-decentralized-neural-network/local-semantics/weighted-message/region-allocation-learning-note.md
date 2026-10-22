@@ -66,17 +66,58 @@ $$
 
 因此 $w_v\le\mu_v^{\max}\le\gamma_{\max}w_v$。正接收允许有界放大；接收趋零时，上限也趋零。记忆写入仍由所选 Upd 决定，例如 KV 的写入量取 $w_v$。
 
-### 2.2 节点评分与区域信息
+取整数 $1\le k\le|\mathcal R_j|$ 作为区域发送总和的上限。以下求和均遍历 $v\in C$，定义
 
-为了在节点之间分配发送量，每个节点提供一个实数 $s_v^{\mathrm{loc}}$，称为局部评分。先给定一个从 $h_v$、$p_v(u_v)$ 和本次 Mem 返回值计算该实数的函数；它只使用本节点的信息。这里采用独立评分（ind），区域直接令
+$$
+\begin{aligned}
+W^{\mathrm{recv}}&=\sum_vw_v,& M^{\max}&=\sum_v\mu_v^{\max},\\
+b^{\mathrm{recv}}&=\min(1,W^{\mathrm{recv}}),& U&=\min(k,M^{\max}).
+\end{aligned}
+$$
+
+本次总量允许在 $[b^{\mathrm{recv}},U]$ 中取值。下限随接收变化；上限同时受 $k$ 和各节点上限之和限制。由 $w_v\le\mu_v^{\max}$ 得 $0\le b^{\mathrm{recv}}\le U$。
+
+### 2.2 由节点特征确定发送总量
+
+用当前内容与记忆决定发送总量在上述区间中的位置。取正整数 $d_{\mathrm{reg}}$，为每个节点选定连续函数 $\Phi_v$，计算
+
+$$
+z_v^{\mathrm{reg}}=
+ \Phi_v\bigl(h_v,p_v(u_v),\operatorname{Mem}_v(q_v^{\mathrm{read}},\theta,u_v)\bigr)
+ \in\mathbb R^{d_{\mathrm{reg}}}.
+$$
+
+要求输出满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$。区域按接收量汇集这些向量，并附上两项总量统计：
+
+$$
+\begin{aligned}
+\bar z_j^{\mathrm{reg}}&=
+ \frac{\sum_vw_vz_v^{\mathrm{reg}}}{\max(1,W^{\mathrm{recv}})},\\
+f_j^{\mathrm{reg}}&=
+ [\bar z_j^{\mathrm{reg}};\log(1+W^{\mathrm{recv}});\log(1+M^{\max})].
+\end{aligned}
+$$
+
+再选定连续函数 $H_j:\mathbb R^{d_{\mathrm{reg}}+2}\to\mathbb R$，计算区间内的比例及发送总量：
+
+$$
+\rho_j=\sigma(H_j(f_j^{\mathrm{reg}})),\qquad
+B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}}).
+$$
+
+向量 $z_v^{\mathrm{reg}}$ 称为**区域证据**，函数 $H_j$ 称为**区域头**。上述构造称为**上下文控制**；§3.4—3.5 给出 $\Phi_v$ 与 $H_j$ 的具体函数。接收加权与证据的有界性使零接收节点对汇集无贡献，趋弱节点的贡献趋零。
+
+也可直接给定比例 $\rho_j\in[0,1]$，仍用同一公式计算 $B$，称为**固定控制**。此时取 $z_v^{\mathrm{reg}}=0$，无需计算 $\Phi_v$ 与 $H_j$。两种控制均满足 $B\in[b^{\mathrm{recv}},U]$；有正接收时 $B>0$，全零接收时 $B=0$。
+
+### 2.3 节点评分与节点描述
+
+总量还需分配到各节点。给定从 $h_v$、$p_v(u_v)$ 和本次 Mem 返回值计算实数 $s_v^{\mathrm{loc}}$ 的函数，称为局部评分函数。这里采用独立评分（ind），区域直接令
 
 $$
 s_v=s_v^{\mathrm{loc}}.
 $$
 
-区域可根据收到的内容与记忆调节总量，称为上下文控制；也可使用预先给定的比例，称为固定控制。上下文控制需要每个节点提供一个 $d_{\mathrm{reg}}$ 维向量 $z_v^{\mathrm{reg}}$，称为区域证据，$d_{\mathrm{reg}}$ 是固定正整数。先给定从上述同一组本地信息计算证据的函数，要求它连续且满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$。固定控制取 $z_v^{\mathrm{reg}}=0$。局部评分与证据的具体构造分别在 §3.1—3.4 给出。
-
-接收量、上限、评分和证据组成传给区域的四元组：
+评分函数的具体构造见 §3.1—3.3。接收量、上限、评分和证据组成传给区域的四元组：
 
 $$
 d_v=(w_v,\mu_v^{\max},s_v^{\mathrm{loc}},z_v^{\mathrm{reg}}).
@@ -92,48 +133,7 @@ D_v^{\mathrm{reg,ind}}=\{(w,\mu,s,z):{}&0\le w\le1,\quad
 \end{aligned}
 $$
 
-选定评分与证据函数后，上式定义了本构造的 Describe。下面的区域计算只使用收到的四元组。
-
-### 2.3 区域发送总量
-
-区域先统计收到多少，以及全部节点一共允许发送多少。取整数 $1\le k\le|\mathcal R_j|$ 作为发送总和的上限，以下求和均遍历 $v\in C$，定义
-
-$$
-\begin{aligned}
-W^{\mathrm{recv}}&=\sum_vw_v,& M^{\max}&=\sum_v\mu_v^{\max},\\
-b^{\mathrm{recv}}&=\min(1,W^{\mathrm{recv}}),& U&=\min(k,M^{\max}).
-\end{aligned}
-$$
-
-本次总量允许在 $[b^{\mathrm{recv}},U]$ 中取值。下限随接收变化；上限同时受 $k$ 和各节点上限之和限制。由 $w_v\le\mu_v^{\max}$ 得 $0\le b^{\mathrm{recv}}\le U$。
-
-区域按接收量汇集节点证据，并附上两项总量统计：
-
-$$
-\begin{aligned}
-\bar z_j^{\mathrm{reg}}&=
- \frac{\sum_vw_vz_v^{\mathrm{reg}}}{\max(1,W^{\mathrm{recv}})},\\
-f_j^{\mathrm{reg}}&=
- [\bar z_j^{\mathrm{reg}};\log(1+W^{\mathrm{recv}});\log(1+M^{\max})].
-\end{aligned}
-$$
-
-零接收节点对这些和没有贡献，趋弱节点的有界证据在摘要中的影响趋零。为从这组区域信息得到一个实数，给定连续函数 $H_j:\mathbb R^{d_{\mathrm{reg}}+2}\to\mathbb R$，称为区域头；本文的具体函数见 §3.5。
-
-在允许区间中取一个比例，定义
-
-$$
-\begin{gathered}
-\rho_j=
-\begin{cases}
-\text{给定的 }[0,1]\text{ 中的数},&\text{固定控制},\\
-\sigma(H_j(f_j^{\mathrm{reg}})),&\text{上下文控制},
-\end{cases}\\
-B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}}).
-\end{gathered}
-$$
-
-$B$ 就是本次指定的发送总量。固定控制无需计算证据与区域头；上下文控制用内容和记忆决定比例。两者均满足 $B\in[b^{\mathrm{recv}},U]$，有正接收时 $B>0$，全零接收时 $B=0$。
+选定评分与证据函数后，Describe 计算并返回上述四元组。SelStep 收齐描述，从中取出 $w,\mu,z$ 按 §2.1—2.2 计算 $B$，再用评分 $s$ 完成分配。
 
 ### 2.4 按评分分配并返回
 
@@ -159,18 +159,27 @@ $$
 
 ### 2.5 三个候选的一次计算
 
-沿用[架构 §4.5](architecture-learning-note.md#45-一组贯穿例子)的三个候选 $a,b,c$，聚合分别为 $(1,1),(1,-1),(0,0)$。取 $\gamma_{\max}=2$、$d_{\mathrm{reg}}=1$，局部评分函数分别恒为 $2,1,100$。区域使用独立评分与固定控制，比例为 $\rho_j=0.4$，证据为零。因此
+沿用[架构 §4.5](architecture-learning-note.md#45-一组贯穿例子)的三个候选 $a,b,c$，聚合分别为 $(1,1),(1,-1),(0,0)$。取 $\gamma_{\max}=2$、$d_{\mathrm{reg}}=1$，使用独立评分与上下文控制。局部评分函数分别恒为 $2,1,100$；选定的证据函数在本次输入上给出 $(-1/2,-1/2,0)$，具体参数见 §3.4.2。因此
 
 $$
 (w_v)_v=(\mu_v^{\max})_v=(1,1,0),\qquad
 (s_v^{\mathrm{loc}})_v=(s_v)_v=(2,1,100).
 $$
 
-Describe 返回 $d_a=(1,1,2,0)$、$d_b=(1,1,1,0)$、$d_c=(0,0,100,0)$。区域取 $k=2$、$K_j=3$，从描述族计算
+Describe 返回 $d_a=(1,1,2,-1/2)$、$d_b=(1,1,1,-1/2)$、$d_c=(0,0,100,0)$。区域取 $k=2$、$K_j=3$，从描述族计算
 
 $$
-W^{\mathrm{recv}}=M^{\max}=2,\qquad
-b^{\mathrm{recv}}=1,\quad U=2,\qquad
+\begin{aligned}
+W^{\mathrm{recv}}&=M^{\max}=2,\qquad b^{\mathrm{recv}}=1,\quad U=2,\\
+\bar z_j^{\mathrm{reg}}&=-1/2,\qquad
+f_j^{\mathrm{reg}}=[-1/2;\log3;\log3].
+\end{aligned}
+$$
+
+区域头取 $H_j(f)=2\log(3/2)f_1$，其中 $f_1$ 是输入向量的第一分量；§3.5 给出它的网络参数。于是
+
+$$
+H_j(f_j^{\mathrm{reg}})=\log(2/3),\qquad \rho_j=0.4,\qquad
 B=1+0.4(2-1)=1.4.
 $$
 
@@ -186,21 +195,21 @@ $$
 
 两个正控制进入共同 Full；三个候选均按 Next 保留接收更新。高分的零接收节点 $c$ 对发送无影响。[KV §5.1](kv-memory-learning-note.md#51-从接收到输出)用这组控制继续计算记忆、完整内容与端口读出。
 
-固定评分和温度，只改区域比例，得到
+固定接收、评分、区域头及温度 $\tau=2$，改变节点证据，得到
 
-| $\rho_j$ | 指定总量 $B$ | 控制 $(c_a,c_b,c_c)$ |
-|---|---|---|
-| $0$ | $1$ | $(0.75,0.25,0)$ |
-| $0.4$ | $1.4$ | $(0.95,0.45,0)$ |
-| $0.8$ | $1.8$ | $(1,0.8,0)$ |
+| $(z_a^{\mathrm{reg}},z_b^{\mathrm{reg}})$ | $\bar z_j^{\mathrm{reg}}$ | $\rho_j$ | $B$ | 控制 $(c_a,c_b,c_c)$ |
+|---|---|---|---|---|
+| $(-1/2,-1/2)$ | $-1/2$ | $0.4$ | $1.4$ | $(0.95,0.45,0)$ |
+| $(0,0)$ | $0$ | $0.5$ | $1.5$ | $(1,0.5,0)$ |
+| $(1/2,1/2)$ | $1/2$ | $0.6$ | $1.6$ | $(1,0.6,0)$ |
 
-保持 $\rho_j=0.4$，将温度降到 $0.5$，控制变为 $(1,0.4,0)$，总量仍是 $1.4$。若把 $k$ 改为 $1$，则 $b^{\mathrm{recv}}=U=1$，总量头失去调节空间，评分仍可改变节点之间的分配。
+表中证据通过区域头改变总量；评分决定该总量在节点之间的分配。保持第一行的证据，将温度降到 $0.5$，控制变为 $(1,0.4,0)$，总量仍是 $1.4$。若把 $k$ 改为 $1$，则 $b^{\mathrm{recv}}=U=1$，总量头失去调节空间，评分仍可改变节点之间的分配。
 
 ## 3. 从当前接收与记忆构造评分和总量
 
 第 2 节把局部评分、区域证据与区域头作为已选函数使用。现在给出这些函数的具体构造。矩阵、偏置与尺度均为有限参数；计算本节点时省略接收及记忆量的节点下标，它们均在本次选定状态和当前 $\theta,u$ 上求值。
 
-局部评分可在下面两种函数中选择；二者都实现 §2.2 所需的实数评分。
+局部评分可在下面两种函数中选择；二者都实现 §2.3 所需的实数评分。
 
 ### 3.1 拼接评分
 
@@ -223,7 +232,7 @@ s_v^{\mathrm{cat}}=b_v+(a_v^{\mathrm{cat}})^\top\operatorname{SiLU}(W_v^r f_v+b_
 \tag{1}
 $$
 
-这实现了 §2.2 所需的实数评分。例如将输出权重 $a_v^{\mathrm{cat}}$ 置零、偏置 $b_v$ 取为 $2,1,100$，就得到 §2.5 使用的三个常值评分；任意相容记忆均可接入该例。
+这实现了 §2.3 所需的实数评分。例如将输出权重 $a_v^{\mathrm{cat}}$ 置零、偏置 $b_v$ 取为 $2,1,100$，就得到 §2.5 使用的三个常值评分；任意相容记忆均可接入该例。
 
 ### 3.2 分组匹配评分
 
@@ -284,7 +293,7 @@ $$
 
 ### 3.4 区域证据
 
-区域证据向 §2.3 的总量计算提供节点内容与记忆信息。它与实数评分分别产生，返回同一区域共用宽度 $d_{\mathrm{reg}}$ 的向量。上下文控制可选择以下一种构造。
+下面实现 §2.2 的节点函数 $\Phi_v$，将当前接收、当前特征与记忆描述变为 $d_{\mathrm{reg}}$ 维区域证据。上下文控制可选择以下一种构造。
 
 #### 3.4.1 候选构造
 
@@ -336,13 +345,25 @@ z_v^{\mathrm{reg,grouped}},&\text{上下文控制，选择分组区域证据}.
 \end{cases}
 $$
 
-两种证据均保留内容、统计及内容与记忆的交互。拼接构造直接投影已有特征；分组构造先独立编码，再组合各组与匹配乘积。两者连续且满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$，同一区域的证据宽度相同。§2.3 汇集该向量并据此确定总量。
+两种上下文构造分别给出函数 $\Phi_v$：拼接构造直接投影已有特征；分组构造先独立编码，再组合各组与匹配乘积。两者均保留内容、统计及内容与记忆的交互，连续且满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$。§2.2 按接收量汇集所得向量并计算总量。
 
-局部评分与证据独立选择，例如 match 评分可配拼接证据。二者的参数默认独立，共享同形参数时显式声明。所选证据与评分一起完成 §2.2 的四元组。
+局部评分与证据独立选择，例如 match 评分可配拼接证据。二者的参数默认独立，共享同形参数时显式声明。所选证据与评分一起完成 §2.3 的四元组。
+
+§2.5 的证据可由拼接构造产生。取 $d=d_{\mathrm{reg}}=1$、归一化常数 $\epsilon=1$，令偏置为零，投影只读取 $f_v$ 的第一分量 $\mathcal N_1(u_v)$，其系数分别为 $-\sqrt{2/3},\sqrt{2/3},0$。于是
+
+$$
+\begin{aligned}
+z_a^{\mathrm{reg}}&=\mathcal N_1(-\sqrt{2/3}\,\mathcal N_1(1))=-1/2,\\
+z_b^{\mathrm{reg}}&=\mathcal N_1(\sqrt{2/3}\,\mathcal N_1(-1))=-1/2,\\
+z_c^{\mathrm{reg}}&=0.
+\end{aligned}
+$$
+
+将前两个投影系数置零或反号，即得到该节表中的另两组证据；评分参数保持。
 
 ### 3.5 区域头函数
 
-§2.3 的区域头将汇集后的 $f_j^{\mathrm{reg}}$ 变为实数，经过 sigmoid 后决定区间内的比例。取
+下面实现 §2.2 的区域头 $H_j$。取
 $W_j^H\in\mathbb R^{d_r\times(d_{\mathrm{reg}}+2)}$、
 $a_j^H,b_j^{H,h}\in\mathbb R^{d_r}$ 和标量 $b_j^{H,\mathrm{out}}$，定义
 
@@ -351,13 +372,24 @@ H_j(f)=b_j^{H,\mathrm{out}}+
  (a_j^H)^\top\operatorname{SiLU}(W_j^H f+b_j^{H,h}).
 $$
 
-它连续依赖输入，参数与评分参数分别给定，不使用选择温度，也不增加持久状态。此式补全了 §2.3 上下文控制的具体计算。
+它连续依赖输入，参数与评分参数分别给定，不使用选择温度，也不增加持久状态。将它代入 §2.2 的 $\rho_j=\sigma(H_j(f_j^{\mathrm{reg}}))$，便补全了上下文控制。
 
-§2.5 的 $\rho_j=0.4$ 也可由上下文控制实现：取拼接区域证据且投影为零，将区域头输出权重置零、输出偏置取 $\log(2/3)$。此时 $\sigma(H_j)=0.4$，改变输出偏置会改变 $B$。
+§2.5 的线性头只需两个隐藏单元。取 $d_r=2$、两个偏置均为零，并令
+
+$$
+W_j^H=
+\begin{pmatrix}
+2\log(3/2)&0&0\\
+-2\log(3/2)&0&0
+\end{pmatrix},\qquad
+a_j^H=\begin{pmatrix}1\\-1\end{pmatrix}.
+$$
+
+由 $\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，得到 $H_j(f)=2\log(3/2)f_1$。配合上一节的证据参数，就得到 §2.5 中从当前内容到发送总量的完整计算。
 
 ### 3.6 区域 Attention 评分
 
-独立评分直接使用各节点给出的 $s_v^{\mathrm{loc}}$。若希望每个节点评分还依赖区域共同收到的内容，可以汇集当前内容形成一个 query，再与各节点的记忆 key 匹配。这定义区域 Attention 评分（att）；总量计算保持 §2.3 的规则。
+独立评分直接使用各节点给出的 $s_v^{\mathrm{loc}}$。若希望每个节点评分还依赖区域共同收到的内容，可以汇集当前内容形成一个 query，再与各节点的记忆 key 匹配。这定义区域 Attention 评分（att）；总量计算保持 §2.2 的规则。
 
 #### 3.6.1 当前内容投影
 
@@ -500,7 +532,7 @@ $$
 
 #### 4.1.2 区域阈值分配
 
-也可以让区域用一个共同阈值调节发送意愿，在允许范围内同时决定总量与分配。沿用 §2.3 的区域输入和总量范围，以及 §3.5 的区域头构造，定义
+也可以让区域用一个共同阈值调节发送意愿，在允许范围内同时决定总量与分配。沿用 §2.1—2.2 的总量范围与区域输入，以及 §3.5 的区域头构造，定义
 
 $$
 \eta_j=
@@ -510,7 +542,7 @@ H_j(f_j^{\mathrm{reg}}),&\text{上下文控制}.
 \end{cases}
 $$
 
-使用 §2.2 或 §3.6.3 的描述及上述阈值，定义
+使用 §2.3 或 §3.6.3 的描述及上述阈值，定义
 
 $$
 t_v=s_v-\eta_j,\qquad
@@ -699,7 +731,7 @@ $$
 
 ### 5.1 从所选函数得到完整返回
 
-指定总量和区域阈值使用 §2.2 的四元组描述；采用区域 Attention 评分时，按 §3.6.3 扩为六元组。其他发送规则使用 §4.1.3 的节点增益描述。局部评分、区域评分、key 与所需证据或增益分别选择，其输出按相应元组组装。
+指定总量和区域阈值使用 §2.3 的四元组描述；采用区域 Attention 评分时，按 §3.6.3 扩为六元组。其他发送规则使用 §4.1.3 的节点增益描述。局部评分、区域评分、key 与所需证据或增益分别选择，其输出按相应元组组装。
 
 由此确定 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$：一次求值使用 $(q,\theta,h)$，读取本节点记忆并返回所需描述。架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。SelStep 收齐描述后使用已绑定的评分与发送函数。
 
@@ -1166,7 +1198,7 @@ selection_mode 指定完整发送函数及其求值方式。正温度函数与�
 
 | 函数 | 配置值 | 定义 | 正典容量 $K_j$ |
 |---|---|---|---|
-| 指定总量分配 | regional_total | §2.3—2.4；其他正则见 §4.1.1 | $\lvert\mathcal R_j\rvert$ |
+| 指定总量分配 | regional_total | §2.2—2.4；其他正则见 §4.1.1 | $\lvert\mathcal R_j\rvert$ |
 | 指定总量的零温分配 | regional_total_zero | §4.4.2 的排序填入 | $\lvert\mathcal R_j\rvert$ |
 | 区域阈值分配 | regional_threshold | §4.1.2 | $\lvert\mathcal R_j\rvert$ |
 | 区域阈值的配对硬选择 | regional_threshold_hard | §4.4.3，保留区域阈值函数 | $k_j$ |
@@ -1177,7 +1209,7 @@ selection_mode 指定完整发送函数及其求值方式。正温度函数与�
 | 总量缩放 Attention | pooled_attention | 式 (12) | $\lvert\mathcal R_j\rvert$ |
 | 按比例分配 | proportional | 式 (13) | $\lvert\mathcal R_j\rvert$ |
 
-regional_total 与 regional_total_zero 保留同一 Describe、评分和总量头；regional_threshold 与 regional_threshold_hard 保留同一 Describe、评分和阈值头。两组都使用 §2.2、§3.6.3 的区域控制描述。constrained 与 hard_selection 使用 §4.1.3 的节点增益描述。下表中“指定总量”“区域阈值”的描述与控制参数同时适用于各自的配对函数。
+regional_total 与 regional_total_zero 保留同一 Describe、评分和总量头；regional_threshold 与 regional_threshold_hard 保留同一 Describe、评分和阈值头。两组都使用 §2.3、§3.6.3 的区域控制描述。constrained 与 hard_selection 使用 §4.1.3 的节点增益描述。下表中“指定总量”“区域阈值”的描述与控制参数同时适用于各自的配对函数。
 
 其余配置对应已定义的参数与函数选择：
 
@@ -1194,7 +1226,7 @@ regional_total 与 regional_total_zero 保留同一 Describe、评分和总量�
 | allocation_temperature | 上述三个正温度函数及 Attention 份额候选的正温度，与正典描述模式 $\tau_j$ 分别命名 |
 | k | 三个约束候选、regional_total_zero、proportional 的总发送强度上限；regional_threshold_hard、hard_selection 的激活数量上限 |
 | eta | constrained、hard_selection 的固定阈值；区域阈值在 fixed 控制时使用 |
-| region_control_mode | 指定总量、区域阈值的 fixed／context，分别见 §2.3、§4.1.2 |
+| region_control_mode | 指定总量、区域阈值的 fixed／context，分别见 §2.2、§4.1.2 |
 | region_evidence | context 控制下的 cat／grouped，§3.4，默认 cat；与 local_score 独立选择 |
 | region_control_width | $d_{\mathrm{reg}}$，指定总量、区域阈值的描述证据宽度 |
 | total_fraction | 指定总量在 fixed 控制时的 $\rho_j\in[0,1]$；context 由区域头给出比例 |

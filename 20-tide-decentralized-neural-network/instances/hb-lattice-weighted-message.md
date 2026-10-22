@@ -254,14 +254,14 @@ HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 
 
 ### 4.4 指定总量与区域阈值
 
-本例的七层图与共同尺寸取 §4.2 的表。记忆布局选择七层 KV，或仅在层 $4$ 使用循环记忆；KV 的读取、窗口和位置使用 §4.2 的表，循环的 state 与参数使用 §4.3。全部区域取 cat，层 $4$ 使用 ind，其余层使用 att 评分及记忆与统计 key。发送参数取 gamma_max=$2$、region_control_width=$32$、$d_r=32$、quad、$k_j=2$、$K_j=64$，各区域给定正温度。Describe 使用[区域分配 §2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#22-节点评分与区域信息)、[§3.6.3](../local-semantics/weighted-message/region-allocation-learning-note.md#363-扩展节点描述)的相应 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，att 固定 query_weight=received，逐节点 send_gain 不参与。
+本例的七层图与共同尺寸取 §4.2 的表。记忆布局选择七层 KV，或仅在层 $4$ 使用循环记忆；KV 的读取、窗口和位置使用 §4.2 的表，循环的 state 与参数使用 §4.3。全部区域取 cat，层 $4$ 使用 ind，其余层使用 att 评分及记忆与统计 key。发送参数取 gamma_max=$2$、region_control_width=$32$、$d_r=32$、quad、$k_j=2$、$K_j=64$，各区域给定正温度。Describe 使用[区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-节点评分与节点描述)、[§3.6.3](../local-semantics/weighted-message/region-allocation-learning-note.md#363-扩展节点描述)的相应 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，att 固定 query_weight=received，逐节点 send_gain 不参与。
 
 | 发送函数 | region_control_mode=fixed | region_control_mode=context |
 |---|---|---|
 | regional_total | total_fraction=$1/2$，零证据 | 给定节点证据构造与总量头 |
 | regional_threshold | eta=$0$，零证据 | 给定节点证据构造与阈值头 |
 
-context 分支逐区域选择 region_evidence=cat／grouped，未另声明时取 cat；grouped 沿用 $d_{\mathrm{sel}}=32$，给定教材 §2.2.2 的证据编码与 §2.5.2 的输出参数，局部评分与区域评分按本节的层别给定。fixed 不使用 region_evidence。每个区域选择一行及一种控制形式，并给定对应全部有限参数，即得到完整绑定。指定总量与区域阈值分别按教材 §3.4 产生 $B_j$ 或 $\eta_j$，再调用 §4.1.3 或 §4.1.4；其余函数按共同架构计算。
+context 分支逐区域选择 region_evidence=cat／grouped，未另声明时取 cat；grouped 沿用 $d_{\mathrm{sel}}=32$，给定区域教材 §3.2 的证据编码与 §3.4.1 的输出参数，局部评分与区域评分按本节的层别给定。fixed 不使用 region_evidence。每个区域选择一行及一种控制形式，并给定对应全部有限参数，即得到完整绑定。指定总量按区域教材 §2.2 产生 $B_j$ 并调用 §4.1.1；区域阈值按该教材 §4.1.2 产生 $\eta_j$ 并完成分配；其余函数按共同架构计算。
 
 由 §3.2，各区域 $b_j^{\mathrm{recv}}=1$，而节点接收与 $\mu_v^{\max}$ 可不相同。指定总量的固定比例给
 $B_j=(1+\min(2,\sum_v\mu_v^{\max}))/2$；区域头能否调节取决于区间是否有余量。阈值候选允许总和在同一区间内由评分与阈值共同确定。局部弱接收的数值例子见[区域分配 §5.3](../local-semantics/weighted-message/region-allocation-learning-note.md#53-弱接收的发送范围)。
