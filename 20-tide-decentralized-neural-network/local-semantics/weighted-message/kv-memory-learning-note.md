@@ -208,7 +208,7 @@ $$
 
 sum 使用式 (2) 的摘要投影，当前内容在后续评分中与摘要交互；qry 从已写入的 K/V 再投影，并由当前内容参与检索。两者改变描述向量的来源，保持相同的四元组形状与写入量统计。
 
-Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#24-describe-的返回值)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
+Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#27-完成-describe-的构造)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
 
 ## 4. 激活后的内容读取
 
@@ -282,7 +282,7 @@ $$
 
 ### 5.1 从接收到输出
 
-本例完成[架构 §4.5](architecture-learning-note.md#45-一组贯穿例子)与[区域教材 §5.1](region-allocation-learning-note.md#51-贯穿例子的区域计算)的函数绑定。取共享聚合、Read$^+$、时间摘要、cat 局部评分、ind 区域评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
+本例完成[架构 §4.5](architecture-learning-note.md#45-一组贯穿例子)与[区域教材 §5.2](region-allocation-learning-note.md#52-更换阈值与节点增益)的函数绑定。取共享聚合、Read$^+$、时间摘要、cat 局部评分、ind 区域评分、固定增益和约束 quad 分配。取无内部边的区域 $\{a,b,c\}$，初始缓存为空，$d=d_s=H_{\mathrm{att}}=1$、$\epsilon=1$、$\alpha_{\mathrm{agg}}=0$、$\gamma_v=1$，Attention 只按内容匹配。本次 $a$ 收到 $(0.5,1),(0.5,1)$，$b$ 收到 $(1,-1)$，$c$ 收到 $(0,9)$。三个节点都是候选。令 key、query 为零，value 与摘要投影均为 $\sqrt2$，故单位内容的归一化投影仍是 $\pm1$。
 
 本次新状态上，两种时间摘要均只读到当前写入；因此
 
@@ -304,7 +304,7 @@ $$
 | $b$ | $(1,-1)$ | $(0,-1,-1,1)$ | $1$ | $1$ | $0.25$ |
 | $c$ | $(0,0)$ | 不追加 | $0$ | $100$ | $0$ |
 
-节点 $c$ 的发送上限为零，其高分不影响选择。Describe 返回的三元组及 SelStep 的控制计算已在[区域教材的同一例子](region-allocation-learning-note.md#51-贯穿例子的区域计算)中展开。三者均保留接收后的状态，随后计算激活者的 Full。
+节点 $c$ 的发送上限为零，其高分不影响选择。Describe 返回的三元组及 SelStep 的控制计算已在[区域教材的同一例子](region-allocation-learning-note.md#52-更换阈值与节点增益)中展开。三者均保留接收后的状态，随后计算激活者的 Full。
 
 令 $W_v^O=1,\alpha_{\mathrm{att}}=1,\alpha_{\mathrm{ff}}=0$，记同刻端口的 ReadOut 为 $O$。$a,b$ 的 Attention 分别读出 $1,-1$，Full 内容为 $2,-2$，发送 $(0.75,2),(0.25,-2)$。若直接作为终端，$O=1$；若共同到达采用[共同聚合](architecture-learning-note.md#2-接收聚合) 且 $\alpha_{\mathrm{agg}}=0$ 的下游，则下游得到 $(r^{\mathrm{in}},u)=(1,1)$，再开始自己的接收流程。
 
@@ -319,7 +319,7 @@ s_a=0.5,\qquad
 s_b=0.75-M_{\mathrm{long}}^{\mathrm{sum}}(\widetilde q_b,\theta).
 $$
 
-这属于[拼接评分](region-allocation-learning-note.md#22-局部评分的候选)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
+这属于[拼接评分](region-allocation-learning-note.md#23-局部评分的候选)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
 
 | 位置 | 两节点新写入的 $(\xi,\nu,p,w)$ | $M_{\mathrm{long}}$ | $(s_a,s_b)$ | 激活者 | 终端 $O$ |
 |---|---|---|---|---|---|
@@ -371,7 +371,7 @@ $$
 <a id="7-有效状态与正温度连续性"></a>
 <a id="8-单位输入的整网软硬极限"></a>
 
-该引理验证记忆一侧的条件。区域控制另按[区域教材 §8](region-allocation-learning-note.md#8-发送规则如何满足架构条件)核对，再应用共同架构的零消息删除与连续性命题；约束分配与硬选择的单位输入结论见[区域教材 §7.4](region-allocation-learning-note.md#74-单位输入的整网软硬关系)。与循环模块混合时，各节点分别验证自己的记忆条件。
+该引理验证记忆一侧的条件。区域控制另按[区域教材 §8](region-allocation-learning-note.md#8-发送规则如何满足架构条件)核对，再应用共同架构的零消息删除与连续性命题；约束分配与硬选择的单位输入结论见[区域教材 §7.5](region-allocation-learning-note.md#75-节点增益与固定阈值的硬化)。与循环模块混合时，各节点分别验证自己的记忆条件。
 
 ## 附录 A：局部性质的证明
 

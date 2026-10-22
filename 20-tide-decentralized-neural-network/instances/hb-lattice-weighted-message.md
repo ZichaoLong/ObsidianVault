@@ -172,7 +172,7 @@ $W_j^{\mathrm{recv}}=\sum_v\min(1,r_v^{\mathrm{in}})
 | §4.1 三层发送比较 | 第 1 节 KV 基线 | 三层图与单一横向偏移、单位增益、相等评分，分别选取发送函数 |
 | §4.2 七层 KV 配置 | 第 1 节 KV 基线 | 七层尺寸、各层记忆描述、区域评分、窗口与位置；发送仍为二次正则约束分配 |
 | §4.3 七层混合记忆 | §4.2 的配置 | 中间层各区域的记忆模块及读取方式；其余层继续使用 §4.2 的 KV |
-| §4.4 区域控制 | §4.2 或 §4.3，先选定一份 | 配套区域描述、阈值或总量头与分配函数；图和记忆保持所选绑定 |
+| §4.4 区域控制 | §4.2 或 §4.3，先选定一份 | 配套区域描述、总量或阈值头与分配函数；图和记忆保持所选绑定 |
 
 这些选择也可组合：例如在七层配置中另指定稠密发送。组合时逐区域确定最终字段，按所选记忆重定参数形状，并核对第 5 节的描述相容性与容量条件。§4.1 的数值传播表使用自己的三层图与相等评分条件。
 
@@ -249,19 +249,19 @@ HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 
 
 按层取得完整驱动后，调用各区域自己的状态与 Full 契约。带短卷积的模块先求卷积，随后求矩阵递归。消息宽度、描述类型和拓扑时间均匹配，组合是合法 SettleGraph，并保留正典切面继续。数值性质应用共同架构 §6，各记忆分别提供局部引理。
 
-### 4.4 区域阈值与指定总量
+### 4.4 指定总量与区域阈值
 
-选择 §4.2 的 KV 配置或 §4.3 的混合记忆配置，保留图、时间、聚合、记忆、内容、Read 模式、局部评分及各层 ind／att 评分。全部区域取 gamma_max=$2$、region_control_width=$32$、quad、$k_j=2$、$K_j=64$，正温度继承所选配置。Describe 改为[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-describe-的返回值)的相应 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，att 固定 query_weight=received，逐节点 send_gain 不参与。
+选择 §4.2 的 KV 配置或 §4.3 的混合记忆配置，保留图、时间、聚合、记忆、内容、Read 模式、局部评分及各层 ind／att 评分。全部区域取 gamma_max=$2$、region_control_width=$32$、$d_r=32$、quad、$k_j=2$、$K_j=64$，正温度继承所选配置。Describe 改为[区域分配 §2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)的相应 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，att 固定 query_weight=received，逐节点 send_gain 不参与。
 
 | 发送函数 | region_control_mode=fixed | region_control_mode=context |
 |---|---|---|
-| regional_threshold | eta=$0$，零证据 | 按 $d_{\mathrm{reg}}=d_r=32$ 给定节点证据投影与阈值头 |
-| regional_total | total_fraction=$1/2$，零证据 | 按相同宽度给定节点证据投影与总量头 |
+| regional_total | total_fraction=$1/2$，零证据 | 给定节点证据投影与总量头 |
+| regional_threshold | eta=$0$，零证据 | 给定节点证据投影与阈值头 |
 
-每个区域选择一行及一种控制形式，并给定对应全部有限参数，即得到完整绑定。固定与上下文形式分别按教材 §3.4 产生 $\eta_j$ 或 $B_j$，再调用 §4.1.3 或 §4.1.4；其余函数按共同架构计算。
+每个区域选择一行及一种控制形式，并给定对应全部有限参数，即得到完整绑定。指定总量与区域阈值分别按教材 §3.4 产生 $B_j$ 或 $\eta_j$，再调用 §4.1.2 或 §4.1.3；其余函数按共同架构计算。
 
 由 §3.2，各区域 $b_j^{\mathrm{recv}}=1$，而节点接收与 $\mu_v^{\max}$ 可不相同。指定总量的固定比例给
-$B_j=(1+\min(2,\sum_v\mu_v^{\max}))/2$；区域头能否调节取决于区间是否有余量。阈值候选允许总和在同一区间内由评分与阈值共同确定。局部弱接收的数值例子见[区域分配 §5.5](../local-semantics/weighted-message/region-allocation-learning-note.md#55-区域输出与发送总量)。
+$B_j=(1+\min(2,\sum_v\mu_v^{\max}))/2$；区域头能否调节取决于区间是否有余量。阈值候选允许总和在同一区间内由评分与阈值共同确定。局部弱接收的数值例子见[区域分配 §5.3](../local-semantics/weighted-message/region-allocation-learning-note.md#53-弱接收的发送范围)。
 
 两个候选均保持接收趋零时本节点发送趋零。正温度支持取决于正则；零温比较保留各自的区域头及描述，按 §5.3 区分目标。控制证据不会增加节点记忆或区域持久状态。
 
@@ -281,11 +281,13 @@ $B_j=(1+\min(2,\sum_v\mu_v^{\max}))/2$；区域头能否调节取决于区间是
 
 ### 5.3 数值性质的附加条件
 
-固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。KV 与循环模块分别验证状态条件，区域控制按区域分配 §8 核对。全图采用固定阈值时，单位输入软硬关系使用[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-单位输入的整网软硬关系)；全图采用区域阈值时使用[§7.5](../local-semantics/weighted-message/region-allocation-learning-note.md#75-区域阈值与单位强度硬选择)。有限时间的组合结论覆盖本实例的稀疏邻域。
+固定 $\mathcal H_\ell,\mathcal D_\ell$、区域、时间和局部配置后，数值性质应用[共同架构 §6](../local-semantics/weighted-message/architecture-learning-note.md#6-数值性质的组合)。KV 与循环模块分别验证状态条件，区域控制按区域分配 §8 核对。有限时间的组合结论覆盖本实例的稀疏邻域。
 
-在上述固定阈值或区域阈值组合中，若全部区域采用 quad 或固定 $\alpha>1$ 的 ent，且对应硬运行满足评分条件，则区域分配 §7.4 或 §7.5 的推论给出：在本实例的单位外部输入、固定参数和有限时间范围内，充分小正温度使完整记录及切面继续状态精确等于硬运行。所需温度界按该次硬运行确定。
+全图采用指定总量时，使用[区域分配 §7.2](../local-semantics/weighted-message/region-allocation-learning-note.md#72-指定总量的零温分配)：在各次线性最优解唯一的条件下收敛到自身零温运行；quad 与固定 $\alpha>1$ 的 ent 同样可在充分小正温度精确达到它。该运行可能发送小数强度，不能据外部单位输入推出后续节点上限二元。
 
-全图采用指定总量时，使用[区域分配 §7.6](../local-semantics/weighted-message/region-allocation-learning-note.md#76-指定总量的零温分配)：在各次线性最优解唯一的条件下收敛到自身零温运行；quad 与固定 $\alpha>1$ 的 ent 同样可在充分小正温度精确达到它。该运行可能发送小数强度，不能据外部单位输入推出后续节点上限二元。混合不同发送函数时，逐区域验证共同架构的局部极限条件。
+全图采用区域阈值时，单位输入软硬关系使用[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-区域阈值与单位强度硬选择)；全图采用固定阈值时使用[§7.5](../local-semantics/weighted-message/region-allocation-learning-note.md#75-节点增益与固定阈值的硬化)。若全部区域采用 quad 或固定 $\alpha>1$ 的 ent，且对应硬运行满足评分条件，则在本实例的单位外部输入、固定参数和有限时间范围内，充分小正温度使完整记录及切面继续状态精确等于硬运行。所需温度界按该次硬运行确定。
+
+混合不同发送函数时，逐区域验证共同架构的局部极限条件。
 
 硬选择每个区域每位置激活 $1$ 至 $k_j$ 个候选，激活者随输入和历史改变。既有空间边可在其他位置继续使用。连接较丰富的 HB 和较稀疏的 HB 各自在自己的固定图上使用同一结论。永久删边改变空间图；在同一图上，局部选择决定各次实际使用的边。
 
@@ -354,4 +356,4 @@ $$
 
 固定尺度的稠密区域 Attention 使用 region_score=att、alpha_loc=0、alpha_sel=1 及固定正 allocation_temperature。发送可取 unit_attention、direct_attention、pooled_attention 或约束 Shannon；它们在弱接收处按第 4.1 节产生不同结果。unit_attention 的 allocation_base 为 uniform／mu，direct_attention 为 mu／received，pooled_attention 固定 mu。
 
-第 4.4 节使用 regional_threshold／regional_total，配套区域描述与 region_control_mode=fixed／context；固定控制分别读取 eta 或 total_fraction，上下文控制读取区域头。region_control_width=$32$，gamma_max=$2$；att 使用 received，send_gain、allocation_base 不参与。其余取值和参数生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
+第 4.4 节使用 regional_total／regional_threshold，配套区域描述与 region_control_mode=fixed／context；固定控制分别读取 total_fraction 或 eta，上下文控制读取区域头。region_control_width=$32$，gamma_max=$2$；att 使用 received，send_gain、allocation_base 不参与。其余取值和参数生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。

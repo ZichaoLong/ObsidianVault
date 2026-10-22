@@ -201,7 +201,7 @@ $$
 
 空候选返回 $(\varnothing,(),*)$。固定整数容量 $1\le K_j\le|\mathcal R_j|$，要求每次返回的激活集合满足 $|\mathcal A|\le K_j$。SelStep 可以先求评分再分配强度，也可以直接从描述确定控制量；具体函数须给出所有候选集合上的返回值。
 
-区域控制可从描述族计算共同阈值，或直接指定本次发送强度之和，再由评分完成分配。这些中间量属于同一次 SelStep；描述需要提供足够的内容与记忆证据，节点上限、总量范围和激活容量各按所选函数绑定。完整定义见[区域分配 §3—4](region-allocation-learning-note.md#33-区域控制的共同输入)。
+区域控制可从描述族指定本次发送强度之和，或计算共同阈值，再由评分完成分配。这些中间量属于同一次 SelStep；描述需要提供足够的内容与记忆证据，节点上限、总量范围和激活容量各按所选函数绑定。完整定义见[区域分配 §3—4](region-allocation-learning-note.md#33-区域控制的共同输入)。
 
 ### 4.2 完整内容与广播
 
@@ -282,7 +282,7 @@ r^{\mathrm{in}}=0.75+0.25=1,\qquad
 u=\frac{0.75\cdot2+0.25\cdot(-2)}1=1.
 $$
 
-若直接读出这两个端口，式 (11) 同样给出 $1$。[区域分配 §5.1](region-allocation-learning-note.md#51-贯穿例子的区域计算)推导表中控制量，[KV §5.1](kv-memory-learning-note.md#51-从接收到输出)给出记忆、描述与内容函数的完整参数绑定。
+若直接读出这两个端口，式 (11) 同样给出 $1$。[区域分配 §5.2](region-allocation-learning-note.md#52-更换阈值与节点增益)推导表中控制量，[KV §5.1](kv-memory-learning-note.md#51-从接收到输出)给出记忆、描述与内容函数的完整参数绑定。
 
 ## 5. 如何组成一个模型
 
@@ -372,7 +372,7 @@ $$
 
 **推论：充分小正温度的精确运行。** 进一步，设一族控制由各区域正温度参数化。在极限运行的每次实际区域选择中，固定该次原始输入后，存在正温度界，使界内的控制精确等于极限控制。则存在共同正界，使全部区域温度位于该界内时，整网在切面以前的实际作用、原始状态、消息、端口记录和继续状态都精确相同。
 
-推论比较同一固定输入、参数与有限时间范围。区域分配教材的[单位输入软硬结论](region-allocation-learning-note.md#74-单位输入的整网软硬关系)、[区域阈值配对](region-allocation-learning-note.md#75-区域阈值与单位强度硬选择)和[指定总量极限](region-allocation-learning-note.md#76-指定总量的零温分配)分别验证所选函数如何满足本节条件。各自的评分间隔、线性最优性与正则条件由该教材给定；训练过程中参数的变化另行分析。
+推论比较同一固定输入、参数与有限时间范围。区域分配教材的[指定总量极限](region-allocation-learning-note.md#72-指定总量的零温分配)、[区域阈值配对](region-allocation-learning-note.md#74-区域阈值与单位强度硬选择)和[节点增益与固定阈值的硬化](region-allocation-learning-note.md#75-节点增益与固定阈值的硬化)分别验证所选函数如何满足本节条件。各自的评分间隔、线性最优性与正则条件由该教材给定；训练过程中参数的变化另行分析。
 
 ### 6.4 从局部条件到组合结论
 
@@ -485,7 +485,7 @@ KV 的条目前缀、循环记忆的仿射复合分别构造这些联合函数�
 | local_score、region_score | 区域分配教材的 cat／match、ind／att |
 | send_gain、query_weight | 发送增益与区域 query 的汇集权重，分别指定 |
 | selection_mode | 区域分配教材附录 S.1 所列发送函数 |
-| region_control_mode、region_control_width | regional_threshold／regional_total 的 fixed／context 控制及描述证据宽度；配套扩充 Describe |
+| region_control_mode、region_control_width | regional_total／regional_threshold 的 fixed／context 控制及描述证据宽度；绑定相应 Describe |
 | eta、total_fraction | 固定阈值或固定总量比例，各自的生效分支见区域分配附录 S.1；上下文控制使用区域头 |
 
 其余参数包括宽度、矩阵、偏置、共享关系、窗口、时钟与位置。参数空间和状态空间随这些绑定确定。默认 KV 例子保留 sum、cat、ind、fixed、quad 及 Read$^+$ 的完整组合。函数名称对应数学定义；下游可按配置构造模型，其已支持形状和求值内核由实现声明。
