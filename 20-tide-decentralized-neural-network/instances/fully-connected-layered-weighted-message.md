@@ -227,10 +227,10 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 
 | 发送函数 | 固定控制 | 上下文控制 |
 |---|---|---|
-| regional_total | region_control_mode=fixed、total_fraction=$0.4$ | region_control_mode=context，给定节点证据投影与总量头参数 |
-| regional_threshold | region_control_mode=fixed、eta=$0$ | region_control_mode=context，给定节点证据投影与阈值头参数 |
+| regional_total | region_control_mode=fixed、total_fraction=$0.4$ | region_control_mode=context，给定节点证据构造与总量头参数 |
+| regional_threshold | region_control_mode=fixed、eta=$0$ | region_control_mode=context，给定节点证据构造与阈值头参数 |
 
-region_control_width=$32$。两个候选分别绑定教材 §4.1.2、§4.1.3，保留全部候选的更新和共同广播。各行配合所选参数是一份完整模型，不增加区域持久状态。
+region_control_width=$32$。context 分支逐区域选择 region_evidence=cat／grouped，未另声明时取 cat。grouped 另取 $d_{\mathrm{sel}}=32$，给定教材 §2.2.2 的证据编码与 §2.5.2 的输出参数；局部评分继续使用 cat。fixed 不使用 region_evidence。两个发送候选分别绑定教材 §4.1.2、§4.1.3，保留全部候选的更新和共同广播。各行配合所选参数是一份完整模型，不增加区域持久状态。
 
 由第 3 节，每次区域都有 $b^{\mathrm{recv}}=1,U=2$。指定总量的固定比例给出 $B=1.4$；上下文比例使 $B=1+\rho_j$。节点上限虽然全部为 $1$，区域头仍能改变发送总量和分配。阈值头在总量约束松弛时也能起作用。若把 $k_j$ 改回 $1$，两个头都失去调节总量的空间。
 
@@ -291,6 +291,6 @@ $$
 
 第 4.1 节在选定区域使用 region_score=att、alpha_loc=0、alpha_sel=1 和固定 allocation_temperature。四种等值发送分别取 direct_attention、unit_attention、pooled_attention，以及 constrained／ent／ent_alpha=1／k=1。第 4.2 节的 A、B 继承基线的评分与发送；第 4.3 节继承 B，再替换区域 $4,8$ 的 memory_family、memory_read 及对应参数形状。组合采用第 4.1 节时另声明相应区域。完整取值与生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
 
-第 4.4 节使用 regional_threshold／regional_total 及其配套描述，region_control_mode 选择 fixed／context，region_control_width=$32$、gamma_max=$2$、$k_j=2$。固定分支分别读取 eta 或 total_fraction，context 使用区域头；send_gain 与 allocation_base 不参与。参数形状和无效字段按区域分配附录 S.1 核对。
+第 4.4 节使用 regional_threshold／regional_total 及其配套描述，region_control_mode 选择 fixed／context，region_control_width=$32$、gamma_max=$2$、$k_j=2$。固定分支分别读取 eta 或 total_fraction，context 使用区域头并按 region_evidence 选择 cat／grouped 证据；send_gain 与 allocation_base 不参与。参数形状和无效字段按区域分配附录 S.1 核对。
 
 实现核对见[局部架构实现对应](../reference/weighted-message-implementation-checks.md)，任务与训练比较见[可选研究问题](../memos/training/weighted-message-research-questions.md)。

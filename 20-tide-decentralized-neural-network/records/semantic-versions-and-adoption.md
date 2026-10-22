@@ -37,9 +37,24 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-20 完整循环记忆候选 | 增加 memory_family=gated_delta／ssd 与固定逻辑时间短卷积；原模型对应和新增实现内容见下表。既有 affine／delta／kv、评分与发送函数保持 |
 | 2026-10-20 响应点与时间对应澄清 | 数值函数和配置取值保持。求根区间使用 $x^{\mathrm{bracket}}$，反向在实际 $x^{\mathrm{resp}}=t-\lambda$ 处求值；conv_stride 表示抽头的逻辑时间间距，原模型对应要求接收间隔与之匹配。联合求值以完整内部输入纤维为前提 |
 | 2026-10-22 区域阈值与指定总量 | 增加 regional_threshold／regional_total，配套区域证据、控制头与描述类型；共同 Alloc 接口覆盖三种约束候选。原 constrained、其他发送函数及默认配置数值保持；新增绑定与极限目标见“区域控制候选的采用范围” |
-| 2026-10-22 配对函数配置补全 | 为已定义的零温分配与区域阈值硬函数分别增加 regional_total_zero、regional_threshold_hard；既有数学函数和配置含义保持，容量及参数范围见下节 |
+| 2026-10-22 配对函数配置补全 | 为已定义的零温分配与区域阈值硬函数分别增加 regional_total_zero、regional_threshold_hard；既有数学函数和配置含义保持，容量及参数范围见“配对函数的配置对应” |
+| 2026-10-22 分组区域证据 | 增加 region_evidence=cat／grouped，默认 cat 保留原证据函数；评分与证据分别绑定，描述类型、发送规则及核心版本保持 |
 
 编辑过程、正文重排和正典引用清理的逐篇差异见[修订记录](history/document-revisions.md)；文件更名及旧路径的现行落点见[迁移索引](history/migration-map.md)。局部 Attention 份额沿用 $p_v^{\mathrm{sel}}$，响应点与导数沿用 resp 上标；区间构造点单独使用 bracket 上标。
+
+## 分组区域证据的采用范围（2026-10-22）
+
+以 [3bdee09](https://github.com/ZichaoLong/ObsidianVault/commit/3bdee09) 为基线，新增[区域分配 §2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)的 grouped 证据。四份正典、记忆模块、发送函数及原 cat 证据数值保持，核心版本仍为 tide-core-5。
+
+| 变化 | 采用时核对 |
+|---|---|
+| region_evidence | 仅用于上下文指定总量、区域阈值及各自配对函数；cat 保留原拼接投影，grouped 使用三组独立编码与匹配乘积，默认 cat |
+| 分组编码 | 共同构造移至 §2.2.2，以 $E_v^{h,g}$ 区分 score／reg 用途；原 match 的编码数值保持，旧 $B^{\mathrm{enc},g},C^{\mathrm{enc},g},b^{\mathrm{enc},g},d^{\mathrm{enc},g}$ 分别对应 $B^{\mathrm{score},g},C^{\mathrm{score},g},b^{\mathrm{score},g},a^{\mathrm{score},g}$ |
+| 类型与参数 | 证据输出仍为 $d_{\mathrm{reg}}$ 维；grouped 另需 $d_r,d_{\mathrm{sel}}$ 及编码、组合参数。与局部评分默认参数独立，共享须显式绑定 |
+| 数值性质 | 两种证据均连续有界，接收加权贡献在弱接收处趋零；整网极限仍使用所选发送函数的原条件 |
+| 实例与继续 | 两份实例 §4.4 均可逐区域选择 cat／grouped；无新增持久状态。更换证据会改变未来控制，旧状态与新模型从头运行的状态仍须区分 |
+
+教材 §2.2、§2.5 的内部小节重排，既有公式编号保持。配置、成本与反向核对见[实现对应](../reference/weighted-message-implementation-checks.md#32-指定总量与区域阈值)。本次未核验下游支持或训练效果。
 
 ## 配对函数的配置对应（2026-10-22）
 

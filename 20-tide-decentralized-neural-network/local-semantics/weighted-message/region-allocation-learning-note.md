@@ -78,11 +78,15 @@ $$
 
 取正整数隐藏宽度 $d_r$ 和匹配宽度 $d_{\mathrm{sel}}$。以下计算本节点时省略接收和记忆量的节点下标；记忆量均在所选状态及当前 $\theta,u$ 上求值。
 
-评分与区域证据都可使用这些信息。下面先定义被若干部件复用的拼接构造，再定义局部评分与区域匹配向量。§2.5 给出指定总量、区域阈值的完整描述；使用节点增益的规则按 §2.6 构造描述。
+评分与区域证据分别选择如何处理这些信息。下面先给出拼接特征与分组编码，再构造局部评分、区域匹配向量与区域证据。§2.5 给出指定总量、区域阈值的完整描述；使用节点增益的规则按 §2.6 构造描述。
 
-### 2.2 拼接特征及其用途
+### 2.2 拼接特征与分组编码
 
-拼接评分、上下文区域证据和拼接上下文增益使用以下向量：
+这两种构造从当前接收与记忆取得内部特征，随后由各自的输出函数形成评分或证据。不同用途分别给定参数。
+
+#### 2.2.1 拼接特征
+
+拼接评分、拼接区域证据和拼接上下文增益使用以下向量：
 
 $$
 \begin{aligned}
@@ -92,15 +96,38 @@ f_v=\big[&\mathcal N_d(u);\log(1+(r^{\mathrm{in}})_+);M_{\mathrm{short}};M_{\mat
 \end{aligned}
 $$
 
-$f_v$ 的宽度为 $d+4d_s+3$。两个逐分量乘积提供当前内容与记忆的交互，其余分量保留内容和接收统计。分组匹配评分在 §2.3 中另行编码内容、记忆与统计量。
+$f_v$ 的宽度为 $d+4d_s+3$。两个逐分量乘积提供当前内容与记忆的交互，其余分量保留内容和接收统计。
 
 | 部件 | 对 $f_v$ 的使用 |
 |---|---|
 | 拼接评分 | 输入评分网络，得到标量 $s_v^{\mathrm{cat}}$ |
-| 上下文区域证据 | 投影并归一化，得到向量 $z_v^{\mathrm{reg}}$ |
+| 拼接区域证据 | 投影并归一化，得到向量 $z_v^{\mathrm{reg,cat}}$ |
 | 拼接上下文增益 | 输入独立增益网络，得到 $\gamma_v$ |
 
-这些部件使用各自的参数。选用 match 评分时，若区域证据或上下文增益采用上述拼接构造，仍按其用途计算 $f_v$。固定区域控制取零证据，固定增益直接给定，二者均无需这项特征计算。
+这些部件使用各自的参数。按所选函数计算所需特征；固定区域控制取零证据，固定增益直接给定，二者均无需 $f_v$。
+
+#### 2.2.2 分组编码
+
+分组匹配评分与分组区域证据先分别处理当前内容、记忆与统计量。共同输入为
+
+$$
+z^{\mathrm{cur}}=\mathcal N_d(u),\quad
+z^{\mathrm{mem}}=[M_{\mathrm{short}};M_{\mathrm{long}}],\quad
+z^{\mathrm{stat}}=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})].
+$$
+
+令组别 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的输入宽度为 $d_{\mathrm{cur}}=d$、$d_{\mathrm{mem}}=2d_s$、$d_{\mathrm{stat}}=3$。用途标记 $h\in\{\mathrm{score},\mathrm{reg}\}$ 分别表示评分与区域证据。对每个节点、用途及组别，取
+$B_v^{h,g}\in\mathbb R^{d_r\times d_g}$、
+$C_v^{h,g}\in\mathbb R^{d_{\mathrm{sel}}\times d_r}$、
+$b_v^{h,g}\in\mathbb R^{d_r}$、
+$a_v^{h,g}\in\mathbb R^{d_{\mathrm{sel}}}$，定义
+
+$$
+E_v^{h,g}(z)=\mathcal N_{d_{\mathrm{sel}}}
+\left(C_v^{h,g}\operatorname{SiLU}(B_v^{h,g}z+b_v^{h,g})+a_v^{h,g}\right).
+$$
+
+各组输出均为 $d_{\mathrm{sel}}$ 维向量，连续依赖输入且范数不超过 $\sqrt{d_{\mathrm{sel}}}$。评分使用 $h=\mathrm{score}$，区域证据使用 $h=\mathrm{reg}$；两套编码默认参数独立。同形参数的共享须在模型绑定中明确给出。
 
 ### 2.3 局部评分的候选
 
@@ -119,21 +146,12 @@ $$
 
 ##### 分组匹配评分（match）
 
-另一种评分对当前内容、记忆向量与统计量分别编码。令
-
-$$
-z^{\mathrm{cur}}=\mathcal N_d(u),\quad
-z^{\mathrm{mem}}=[M_{\mathrm{short}};M_{\mathrm{long}}],\quad
-z^{\mathrm{stat}}=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(1+W_{\mathrm{long}})].
-$$
-
-对 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$，取相容形状的矩阵与偏置，定义两层编码
-$E_v^g(z)=\mathcal N_{d_{\mathrm{sel}}}(C_v^{\mathrm{enc},g}\operatorname{SiLU}(B_v^{\mathrm{enc},g}z+b_v^{\mathrm{enc},g})+d_v^{\mathrm{enc},g})$，中间宽度为 $d_r$。另取隐藏宽度为 $d_r$ 的门控残差参数，以及非负尺度 $\alpha_v^{\mathrm{match}},\alpha_v^{\mathrm{res}}$，定义
+使用 §2.2.2 的分组输入与评分编码。取隐藏宽度为 $d_r$ 的门控残差参数，以及非负尺度 $\alpha_v^{\mathrm{match}},\alpha_v^{\mathrm{res}}$，定义
 
 $$
 \begin{aligned}
-x_v&=E_v^{\mathrm{cur}}(z^{\mathrm{cur}}),\quad e_v=E_v^{\mathrm{mem}}(z^{\mathrm{mem}}),
- \quad z_v=E_v^{\mathrm{stat}}(z^{\mathrm{stat}}),\quad f_v^{\mathrm{match}}=[x_v;e_v;z_v],\\
+x_v&=E_v^{\mathrm{score,cur}}(z^{\mathrm{cur}}),\quad e_v=E_v^{\mathrm{score,mem}}(z^{\mathrm{mem}}),
+ \quad z_v=E_v^{\mathrm{score,stat}}(z^{\mathrm{stat}}),\quad f_v^{\mathrm{match}}=[x_v;e_v;z_v],\\
 F_v^{\mathrm{match}}(f)&=(w_v^{\mathrm{match}})^\top
  [\operatorname{SiLU}(W_v^{\mathrm{match,gate}}f+b_v^{\mathrm{match,gate}})
  \odot(W_v^{\mathrm{match,up}}f+b_v^{\mathrm{match,up}})],\\
@@ -181,7 +199,7 @@ $$
 
 这两个候选用区域信息决定发送强弱。节点提供接收相关上限、评分及控制证据；选择 att 时还提供 §2.4 的匹配向量。
 
-#### 2.5.1 节点上限与区域证据
+#### 2.5.1 节点发送上限
 
 固定第 1 节的最大倍率，定义每节点发送上限
 
@@ -191,19 +209,59 @@ $$
 
 因此 $w_v\le\mu_v^{\max}\le\gamma_{\max}w_v$。区域在这些上限内分配；记忆写入仍由所选 Upd 决定，例如 KV 的写入量取 $w_v$。
 
-上下文控制将节点的内容与记忆信息汇集到区域。节点先用 §2.2 的拼接特征产生有界证据：
+#### 2.5.2 区域证据的候选
+
+区域证据把节点的当前内容、记忆与统计信息交给区域，用于决定发送总量或阈值。上下文控制选择以下一种构造，均返回 $d_{\mathrm{reg}}$ 维向量；局部评分与证据构造分别选择。
+
+##### 拼接区域证据（cat）
+
+使用 §2.2.1 的拼接特征，取投影矩阵与偏置，定义
 
 $$
-z_v^{\mathrm{reg}}=\mathcal N_{d_{\mathrm{reg}}}
+z_v^{\mathrm{reg,cat}}=\mathcal N_{d_{\mathrm{reg}}}
  (W_v^{\mathrm{reg}}f_v+b_v^{\mathrm{reg}}),
 \qquad
 W_v^{\mathrm{reg}}\in\mathbb R^{d_{\mathrm{reg}}\times(d+4d_s+3)},
 \quad b_v^{\mathrm{reg}}\in\mathbb R^{d_{\mathrm{reg}}}.
 $$
 
-归一化使 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$。固定控制取 $z_v^{\mathrm{reg}}=0$，省去该投影；区域如何使用固定或上下文控制见 §3.4。证据投影使用自己的参数，同一区域的证据宽度相同。
+##### 分组区域证据（grouped）
 
-#### 2.5.2 描述空间与字段
+使用 §2.2.2 的独立证据编码，先得到当前内容、记忆和统计的表示：
+
+$$
+x_v^{\mathrm{reg}}=E_v^{\mathrm{reg,cur}}(z^{\mathrm{cur}}),\quad
+e_v^{\mathrm{reg}}=E_v^{\mathrm{reg,mem}}(z^{\mathrm{mem}}),\quad
+\ell_v^{\mathrm{reg}}=E_v^{\mathrm{reg,stat}}(z^{\mathrm{stat}}).
+$$
+
+取四个矩阵 $A_v^{\mathrm{reg,cur}},A_v^{\mathrm{reg,mem}},A_v^{\mathrm{reg,stat}},A_v^{\mathrm{reg,int}}\in\mathbb R^{d_{\mathrm{reg}}\times d_{\mathrm{sel}}}$ 与 $b_v^{\mathrm{reg,grouped}}\in\mathbb R^{d_{\mathrm{reg}}}$，定义
+
+$$
+\begin{aligned}
+z_v^{\mathrm{reg,grouped}}=\mathcal N_{d_{\mathrm{reg}}}\big(&
+A_v^{\mathrm{reg,cur}}x_v^{\mathrm{reg}}
++A_v^{\mathrm{reg,mem}}e_v^{\mathrm{reg}}
++A_v^{\mathrm{reg,stat}}\ell_v^{\mathrm{reg}}\\
+&+A_v^{\mathrm{reg,int}}(x_v^{\mathrm{reg}}\odot e_v^{\mathrm{reg}})
++b_v^{\mathrm{reg,grouped}}\big).
+\end{aligned}
+$$
+
+#### 2.5.3 所选证据与完整描述
+
+固定控制直接使用给定的比例或阈值，无需节点证据；上下文控制使用所选向量：
+
+$$
+z_v^{\mathrm{reg}}=
+\begin{cases}
+0,&\text{固定控制},\\
+z_v^{\mathrm{reg,cat}},&\text{上下文控制，选择拼接区域证据},\\
+z_v^{\mathrm{reg,grouped}},&\text{上下文控制，选择分组区域证据}.
+\end{cases}
+$$
+
+两种证据均保留内容、统计及内容与记忆的交互。拼接构造直接投影已有特征；分组构造先独立编码，再组合各组与匹配乘积。两者连续且满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$，同一区域的证据宽度相同。§3.3 汇集该向量，§3.4 据此计算区域控制。
 
 按区域评分选择下面的描述空间：
 
@@ -292,7 +350,7 @@ $$
 
 ### 2.7 完成 Describe 的构造
 
-给定 Mem、$p_v$、局部评分、区域评分方式、发送候选及参数后，§2.5 或 §2.6 确定了函数 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。一次求值使用 $(q,\theta,h)$，返回对应元组；架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。
+给定 Mem、$p_v$、局部评分、区域评分方式、发送候选及其所需的证据或增益构造和参数后，§2.5 或 §2.6 确定了函数 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。一次求值使用 $(q,\theta,h)$，返回对应元组；架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。
 
 局部评分进入 $s_v^{\mathrm{loc}}$ 字段；att 的两个匹配向量由 §2.4 给出。指定总量、区域阈值还传入节点上限与区域证据；使用节点增益的规则传入由所选增益得到的 $\mu_v$。这些构造分别从当前内容与记忆取得所需信息，第 3 节开始使用完整描述族。
 
@@ -622,7 +680,7 @@ $$
 | $0.4$ | $1.4$ | $(0.95,0.45,0)$ |
 | $0.8$ | $1.8$ | $(1,0.8,0)$ |
 
-上下文控制也可给出中间一行：将区域头输出权重置零，输出偏置取 $\log(2/3)$，即可令 $\sigma(H_j)=0.4$；节点证据投影可取零。此时改变头的输出偏置会改变 $B$。保持 $\rho_j=0.4$，将温度降到 $0.5$，控制为 $(1,0.4,0)$，总量仍是 $1.4$。
+上下文控制也可给出中间一行：将区域头输出权重置零，输出偏置取 $\log(2/3)$，即可令 $\sigma(H_j)=0.4$；选择拼接区域证据，其投影可取零。此时改变头的输出偏置会改变 $B$。保持 $\rho_j=0.4$，将温度降到 $0.5$，控制为 $(1,0.4,0)$，总量仍是 $1.4$。
 
 若把 $k$ 改为 $1$，则 $b^{\mathrm{recv}}=U=1$，总量头失去调节空间，评分仍可改变节点之间的分配。
 
@@ -810,7 +868,7 @@ $$
  =\begin{pmatrix}0&0\\0&2\end{pmatrix}.
 $$
 
-这些偏导描述固定分支；完整反向还经过 $b^{\mathrm{recv}},U,\mu^{\max}$、区域摘要、证据投影、评分和记忆。截断接收、节点上限及 min 的转折分别声明边界导数。所有分量都固定在边界时，指定总量的独立变化可能立即切换分支，此时不能使用除以 $A_0$ 的公式。
+这些偏导描述固定分支；完整反向还经过 $b^{\mathrm{recv}},U,\mu^{\max}$、区域摘要、所选证据构造、评分和记忆。截断接收、节点上限及 min 的转折分别声明边界导数。所有分量都固定在边界时，指定总量的独立变化可能立即切换分支，此时不能使用除以 $A_0$ 的公式。
 
 ### 6.3 Attention 分配的反向
 
@@ -965,7 +1023,13 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 
 架构的区域条件针对 Read 与 SelStep 的完整复合。先看评分：两种 query 汇集权重均随接收趋零；零接收候选对 query 无贡献，正极限接收处的评分连续。有界记忆描述、当前内容和有限参数给出有界评分与增益。
 
-区域控制摘要按接收加权，两个控制头在固定参数下连续且有界。它们的节点上限、总量边界及指定总量也连续；零接收节点不改变这些量。然后核对各发送函数，下表各项分别配合其引用处的条件。
+§2.5 的两种区域证据都是连续函数的复合；归一化给出共同界
+
+$$
+\|w_vz_v^{\mathrm{reg}}\|\le w_v\sqrt{d_{\mathrm{reg}}}.
+$$
+
+因此零接收节点对区域摘要无贡献；接收趋零时，即使该节点的内容或记忆描述没有极限，其证据贡献仍趋零。在正极限接收节点的输入与记忆描述收敛时，区域摘要连续。两个控制头在固定参数、固定有限区域上连续且有界，节点上限、总量边界及指定总量也连续。固定控制直接满足相同条件。然后核对各发送函数，下表各项分别配合其引用处的条件。
 
 | 发送规则 | 零接收条件 | 正温度连续条件 | 零温比较 |
 |---|---|---|---|
@@ -1094,11 +1158,14 @@ regional_total 与 regional_total_zero 保留同一 Describe、评分和总量�
 | k | 三个约束候选、regional_total_zero、proportional 的总发送强度上限；regional_threshold_hard、hard_selection 的激活数量上限 |
 | eta | constrained、hard_selection 的固定阈值；区域阈值在 fixed 控制时使用 |
 | region_control_mode | 指定总量、区域阈值的 fixed／context，§3.4 |
+| region_evidence | context 控制下的 cat／grouped，§2.5.2，默认 cat；与 local_score 独立选择 |
 | region_control_width | $d_{\mathrm{reg}}$，指定总量、区域阈值的描述证据宽度 |
 | total_fraction | 指定总量在 fixed 控制时的 $\rho_j\in[0,1]$；context 由区域头给出比例 |
 | alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度 |
 
-三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，按 $d_{\mathrm{reg}}$ 与 $d_r$ 给定节点证据投影和区域头全部参数；fixed 返回零证据，只使用指定的 eta 或 total_fraction。指定总量、区域阈值及各自配对函数均不使用 send_gain 或 allocation_base；指定总量不叠加 eta。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。
+三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，region_evidence=cat 给定拼接证据投影；grouped 给定 §2.2.2 的三组证据编码及 §2.5.2 的组合矩阵与偏置，编码使用 $d_r,d_{\mathrm{sel}}$，输出宽度为 $d_{\mathrm{reg}}$。两种构造都另给同型区域头的全部参数。local_score=match 与 region_evidence=grouped 的编码参数默认独立，共享关系须显式绑定。
+
+fixed 返回零证据，只使用指定的 eta 或 total_fraction，region_evidence 不参与求值。指定总量、区域阈值及各自配对函数均不使用 send_gain 或 allocation_base；指定总量不叠加 eta。其他发送函数不使用 region_evidence。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。
 
 regional_total_zero、regional_threshold_hard、hard_selection 直接计算各自的排序规则，不使用 allocation_temperature、regularizer 或 ent_alpha。配置检查须识别不适用的字段；显式选择配对函数时移除这些求解参数，正温度函数的温度仍要求严格为正。
 

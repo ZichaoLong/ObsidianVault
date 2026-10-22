@@ -13,9 +13,9 @@ tags:
 
 ## 1. 采用声明与比较对象
 
-实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
+实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、region_evidence、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
 
-采用实例中的配置时，按其继承表展开每个区域的最终绑定，再核对被替换的状态、初态、Upd、Mem、当前特征与内容函数。KV 的窗口和旋转参数只用于 KV 区域。指定总量与区域阈值按 ind／att 使用四元组／六元组描述；使用节点增益的规则按 ind／att 使用三元组／五元组。按所选描述给定匹配及证据投影；拼接特征 $f_v$ 的三个使用者分别采用自己的参数，match 评分本身不依赖 $f_v$。
+采用实例中的配置时，按其继承表展开每个区域的最终绑定，再核对被替换的状态、初态、Upd、Mem、当前特征与内容函数。KV 的窗口和旋转参数只用于 KV 区域。指定总量与区域阈值按 ind／att 使用四元组／六元组描述；使用节点增益的规则按 ind／att 使用三元组／五元组。按所选描述给定匹配及证据构造；$f_v$ 的三个使用者为 cat 评分、cat 证据和拼接上下文增益，各自采用独立参数。match 评分与 grouped 证据使用各自的分组编码，均不依赖 $f_v$。
 
 | 比较 | 必须保留的对象 |
 |---|---|
@@ -59,12 +59,19 @@ tags:
 
 | 步骤 | 核对内容 |
 |---|---|
-| Describe | $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$；区域证据使用所选 Mem 与 $p_v$；fixed 返回零证据，context 给定独立投影参数 |
+| Describe | $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$；区域证据按 §2.2、§2.5 使用当前接收及所选 Mem，cat 另使用 $p_v$ 的乘积特征；fixed 返回零证据，context 绑定 cat／grouped 的全部参数 |
 | 汇集与控制头 | 按 $w_v$ 汇集证据，分母为 $\max(1,W^{\mathrm{recv}})$；att 的 query 同样按 received；零接收证据对汇集无贡献 |
 | 总量范围 | $b^{\mathrm{recv}}=\min(1,\sum w_v)$、$U=\min(k,\sum\mu_v^{\max})$；覆盖 $b^{\mathrm{recv}}=U$、节点截断及弱总接收 |
 | regional_total | $B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}})$，传入 $t=s,[B,B]$；求解乘子可为任意符号，共同评分平移不改变控制 |
 | regional_threshold | $t=s-\eta_j$，总量范围 $[b^{\mathrm{recv}},k]$；固定其他输入，提高阈值使总发送单调不增 |
 | 配置与状态 | 两者不使用 send_gain、allocation_base；regional_total 不使用 eta；正温度容量取区域大小，无新增持久状态 |
+
+证据构造核对下列内容：
+
+- cat 保留原拼接投影；grouped 的三组输入、编码宽度、四个输出矩阵及匹配乘积按教材 §2.2.2、§2.5.2 对应。局部评分与证据可交叉选择，描述字段和输出宽度保持相容；fixed 不执行证据编码。
+- 固定输入与记忆描述时，独立改变证据参数不得改变评分，独立改变评分参数不得改变证据。显式共享编码时，前向使用同一绑定，反向汇总各使用者的梯度。
+- 两种证据都满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$；接收趋零时检查 $w_vz_v^{\mathrm{reg}}\to0$，包括内容方向改变或记忆描述不收敛的序列。精确零接收候选的增删不改变汇集结果。
+- 在不跨接收截断与总量分支的输入上，对编码参数、当前内容、记忆与统计量作方向差分，核对经证据、汇集、区域头到发送的完整反向。分组构造的归一化与乘积也须参与；总量范围退化或阈值被约束抵消时允许控制路径梯度为零。
 
 按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)另核对 regional_total_zero 与 regional_threshold_hard：保留对应 Describe、评分和区域头，直接执行 §7.2、§7.4 的排序规则。前者保持总量 $B$ 和区域大小容量；后者以 $k_j$ 限制激活数。两者与 hard_selection 均不读取温度或正则，不调用正温度求根器；覆盖全零接收、平票次序及非单位上限。一般非二元接收下，区域阈值硬函数未必保持 $b^{\mathrm{recv}}$，按其自身函数核对。
 

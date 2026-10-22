@@ -255,10 +255,10 @@ HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 
 
 | 发送函数 | region_control_mode=fixed | region_control_mode=context |
 |---|---|---|
-| regional_total | total_fraction=$1/2$，零证据 | 给定节点证据投影与总量头 |
-| regional_threshold | eta=$0$，零证据 | 给定节点证据投影与阈值头 |
+| regional_total | total_fraction=$1/2$，零证据 | 给定节点证据构造与总量头 |
+| regional_threshold | eta=$0$，零证据 | 给定节点证据构造与阈值头 |
 
-每个区域选择一行及一种控制形式，并给定对应全部有限参数，即得到完整绑定。指定总量与区域阈值分别按教材 §3.4 产生 $B_j$ 或 $\eta_j$，再调用 §4.1.2 或 §4.1.3；其余函数按共同架构计算。
+context 分支逐区域选择 region_evidence=cat／grouped，未另声明时取 cat；grouped 沿用 $d_{\mathrm{sel}}=32$，给定教材 §2.2.2 的证据编码与 §2.5.2 的输出参数，保持局部评分及区域评分原绑定。fixed 不使用 region_evidence。每个区域选择一行及一种控制形式，并给定对应全部有限参数，即得到完整绑定。指定总量与区域阈值分别按教材 §3.4 产生 $B_j$ 或 $\eta_j$，再调用 §4.1.2 或 §4.1.3；其余函数按共同架构计算。
 
 由 §3.2，各区域 $b_j^{\mathrm{recv}}=1$，而节点接收与 $\mu_v^{\max}$ 可不相同。指定总量的固定比例给
 $B_j=(1+\min(2,\sum_v\mu_v^{\max}))/2$；区域头能否调节取决于区间是否有余量。阈值候选允许总和在同一区间内由评分与阈值共同确定。局部弱接收的数值例子见[区域分配 §5.3](../local-semantics/weighted-message/region-allocation-learning-note.md#53-弱接收的发送范围)。
@@ -358,4 +358,4 @@ $$
 
 固定尺度的稠密区域 Attention 使用 region_score=att、alpha_loc=0、alpha_sel=1 及固定正 allocation_temperature。发送可取 unit_attention、direct_attention、pooled_attention 或约束 Shannon；它们在弱接收处按第 4.1 节产生不同结果。unit_attention 的 allocation_base 为 uniform／mu，direct_attention 为 mu／received，pooled_attention 固定 mu。
 
-第 4.4 节使用 regional_total／regional_threshold，配套区域描述与 region_control_mode=fixed／context；固定控制分别读取 total_fraction 或 eta，上下文控制读取区域头。region_control_width=$32$，gamma_max=$2$；att 使用 received，send_gain、allocation_base 不参与。其余取值和参数生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
+第 4.4 节使用 regional_total／regional_threshold，配套区域描述与 region_control_mode=fixed／context；固定控制分别读取 total_fraction 或 eta，上下文控制读取区域头并按 region_evidence 选择 cat／grouped 证据。region_control_width=$32$，gamma_max=$2$；att 使用 received，send_gain、allocation_base 不参与。其余取值和参数生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
