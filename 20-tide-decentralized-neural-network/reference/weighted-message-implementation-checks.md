@@ -15,7 +15,7 @@ tags:
 
 实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、region_key、region_evidence、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
 
-采用实例中的配置时，按其继承表展开每个区域的最终绑定，再核对被替换的状态、初态、Upd、Mem、当前特征与内容函数。KV 的窗口和旋转参数只用于 KV 区域。指定总量与区域阈值按 ind／att 使用四元组／六元组描述；使用节点增益的规则按 ind／att 使用三元组／五元组。按所选描述给定匹配及证据构造；$f_v$ 的三个使用者为 cat 评分、cat 证据和拼接上下文增益，各自采用独立参数。match 评分与 grouped 证据使用各自的分组编码，均不依赖 $f_v$。
+采用实例中的配置时，按其最终绑定表确定各区域的函数选择，再核对所选状态、初态、Upd、Mem、当前特征与内容函数。KV 的窗口和旋转参数只用于 KV 区域。指定总量与区域阈值按 ind／att 使用四元组／六元组描述；使用节点增益的规则按 ind／att 使用三元组／五元组。按所选描述给定匹配及证据构造；$f_v$ 的三个使用者为 cat 评分、cat 证据和拼接上下文增益，各自采用独立参数。match 评分与 grouped 证据使用各自的分组编码，均不依赖 $f_v$。
 
 | 比较 | 必须保留的对象 |
 |---|---|
@@ -73,7 +73,7 @@ tags:
 - 两种证据都满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$；接收趋零时检查 $w_vz_v^{\mathrm{reg}}\to0$，包括内容方向改变或记忆描述不收敛的序列。精确零接收候选的增删不改变汇集结果。
 - 在不跨接收截断与总量分支的输入上，对编码参数、当前内容、记忆与统计量作方向差分，核对经证据、汇集、区域头到发送的完整反向。分组构造的归一化与乘积也须参与；总量范围退化或阈值被约束抵消时允许控制路径梯度为零。
 
-按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)另核对 regional_total_zero 与 regional_threshold_hard：保留对应 Describe、评分和区域头，直接执行 §7.2、§7.4 的排序规则。前者保持总量 $B$ 和区域大小容量；后者以 $k_j$ 限制激活数。两者与 hard_selection 均不读取温度或正则，不调用正温度求根器；覆盖全零接收、平票次序及非单位上限。一般非二元接收下，区域阈值硬函数未必保持 $b^{\mathrm{recv}}$，按其自身函数核对。
+按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)另核对 regional_total_zero 与 regional_threshold_hard：保留对应 Describe、评分和区域头，直接执行区域教材 §4.1.3、§4.1.4 的配对函数。前者保持总量 $B$ 和区域大小容量；后者以 $k_j$ 限制激活数。两者与 hard_selection 均不读取温度或正则，不调用正温度求根器；覆盖全零接收、平票次序及非单位上限。一般非二元接收下，区域阈值硬函数未必保持 $b^{\mathrm{recv}}$，按其自身函数核对。
 
 复现区域教材 §5.1 的指定总量计算、§5.2 的阈值比较和 §5.3 的弱接收例子。两个候选不能套用 constrained 的“$M\le1$ 返回全部上限”捷径；全上限分支由实际下界等于节点上限之和判定。单节点也可能在 $b^{\mathrm{recv}}<U$ 时由区域头改变发送。$k=1$ 在弱总接收时未必消除这项余量。
 
@@ -189,6 +189,16 @@ python -B 20-tide-decentralized-neural-network/tools/check_documents.py
 正典的预期哈希对应已审阅版本。确需修改正典时，先审阅差异并记入修订记录，再更新预期哈希。结构检查不判定数学命题的真假；神经函数的验证仍使用前述比较对象。
 
 ## 附录：教学参考程序的对应
+
+### 区域分配的有限公式核对
+
+[region_allocation_checks.py](../examples/region_allocation_checks.py)从已给定的评分、节点上限和总量范围出发，用标量二分实现 quad，并与独立枚举各分量处于零、内部或上限的求解比较。程序复现区域教材 §5.1—5.3、§5.5 的分配算例，核对 §6.2 的总量、阈值、评分和温度导数，以及 §7.3、§7.6 的有限温度稀疏性、非二元上限和平票反例。
+
+程序只使用标准库，随机例子固定种子，方向差分取不跨分支的扰动。它覆盖有限的二次分配公式；其他正则、神经评分与区域头、完整图的连续性和训练效果按各自定义另行验证。
+
+```bash
+python -B 20-tide-decentralized-neural-network/examples/region_allocation_checks.py
+```
 
 ### 循环记忆的有限公式核对
 

@@ -26,103 +26,26 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 
 ## 局部支线的采用要点
 
-| 修订 | 影响 |
-|---|---|
-| 2026-10-14 非空约束分配 | 数值语义改变：总发送下限为 $\min(1,\sum_v\mu_v)$；配对硬函数在全低分时保留最高分候选 |
-| 2026-10-17 稠密 Attention | 增加 direct 与固定总强度 attention；各自的发送上限、零边界和总量性质分别使用，整网软硬极限仅覆盖约束分配与配对硬函数 |
-| 2026-10-19 模块组合 | 分开 memory_family、memory_read、region_score 与 selection_mode；增加循环模块、received 权重、pooled 和 Read 模式组合。既有默认数值保持，迁移见下表 |
-| 2026-10-20 有限温度条件勘误 | 既有函数及默认数值保持。区域分配 [§7.3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#732-正温度的精确性)／[附录 A.2](../local-semantics/weighted-message/region-allocation-learning-note.md#a2-二元上限与有限温度)的有限温度条件使用第二名评分 $t_{(2)}$；旧 $t_{(4)}$ 条件不足 |
-| 2026-10-20 反向与零消息条件勘误 | 函数定义保持。quad 总和松弛时使用独立响应导数；固定总强度 mu 支持零消息删除，uniform 须区分缺席与零消息；softmax 的前向等值与边界反向分别判定。下游核对范围见实现检查 §3、§5 |
-| 2026-10-20 局部名称迁移与正温度精确性 | 局部函数及默认数值保持，配置名称和局部符号按下表迁移。共同架构补入有限正温度精确运行推论，适用范围见各函数条件 |
-| 2026-10-20 完整循环记忆候选 | 增加 memory_family=gated_delta／ssd 与固定逻辑时间短卷积；原模型对应和新增实现内容见下表。既有 affine／delta／kv、评分与发送函数保持 |
-| 2026-10-20 响应点与时间对应澄清 | 数值函数和配置取值保持。求根区间使用 $x^{\mathrm{bracket}}$，反向在实际 $x^{\mathrm{resp}}=t-\lambda$ 处求值；conv_stride 表示抽头的逻辑时间间距，原模型对应要求接收间隔与之匹配。联合求值以完整内部输入纤维为前提 |
-| 2026-10-22 区域阈值与指定总量 | 增加 regional_threshold／regional_total，配套区域证据、控制头与描述类型；共同 Alloc 接口覆盖三种约束候选。原 constrained、其他发送函数及默认配置数值保持；新增绑定与极限目标见“区域控制候选的采用范围” |
-| 2026-10-22 配对函数配置补全 | 为已定义的零温分配与区域阈值硬函数分别增加 regional_total_zero、regional_threshold_hard；既有数学函数和配置含义保持，容量及参数范围见“配对函数的配置对应” |
-| 2026-10-22 分组区域证据 | 增加 region_evidence=cat／grouped，默认 cat 保留原证据函数；评分与证据分别绑定，描述类型、发送规则及核心版本保持 |
-| 2026-10-22 内容 key | 增加 region_key=content_stats／content，默认 content_stats 保留原 key；content 采用独立记忆编码，显式写入统计仍可经局部评分影响选择 |
+下表只记录变化及采用影响。完整函数与当前参数范围由对应教材定义；章节重排、编号和检查过程见[修订记录](history/document-revisions.md)，旧路径见[迁移索引](history/migration-map.md)。
 
-编辑过程、正文重排和正典引用清理的逐篇差异见[修订记录](history/document-revisions.md)；文件更名及旧路径的现行落点见[迁移索引](history/migration-map.md)。局部 Attention 份额沿用 $p_v^{\mathrm{sel}}$，响应点与导数沿用 resp 上标；区间构造点单独使用 bracket 上标。
-
-## 内容 key 的采用范围（2026-10-22）
-
-以 [fefbf7b](https://github.com/ZichaoLong/ObsidianVault/commit/fefbf7b) 为基线，新增[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)的内容 key。四份正典、记忆模块、query、已有评分及发送函数保持，核心版本仍为 tide-core-5。
-
-| 变化 | 采用时核对 |
-|---|---|
-| region_key | att 的 content_stats／content，默认 content_stats；前者保留原记忆与统计投影，后者仅编码两个 Mem 向量。ind 不使用此键 |
-| 编码与参数 | content 使用 $E_v^{\mathrm{key,mem}}$，输入宽度 $2d_s$、中间宽度 $d_r$、输出宽度 $d_{\mathrm{sel}}$，默认独立于评分与证据参数 |
-| 评分与统计 | 共同评分公式和描述类型保持；非零 alpha_loc 保留已有局部评分通路，alpha_loc=0 关闭该项。Mem、query 权重、节点上限及区域控制的统计依赖仍按所选函数计算 |
-| 数值性质 | 内容 key 连续且范数有界；零记忆不强制零 key。原组合条件继续适用，硬化间隔须按新评分检查 |
-| 实例 | 两份实例 §4.5 给出区域控制之上的 content key＋非零局部评分绑定；既有实例仍默认 content_stats |
-
-式 (3) 现为所选 key 的分支定义，原当前内容投影移到同节之前，其他编号公式保持。内容 key 同时改变显式输入、编码和归一化，不能把完整比较仅解释为移除统计量的效果。实现核对见[记忆 key 检查](../reference/weighted-message-implementation-checks.md#36-区域-attention-的记忆-key)。本次未核验下游支持或训练效果。
-
-## 分组区域证据的采用范围（2026-10-22）
-
-以 [3bdee09](https://github.com/ZichaoLong/ObsidianVault/commit/3bdee09) 为基线，新增[区域分配 §2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)的 grouped 证据。四份正典、记忆模块、发送函数及原 cat 证据数值保持，核心版本仍为 tide-core-5。
-
-| 变化 | 采用时核对 |
-|---|---|
-| region_evidence | 仅用于上下文指定总量、区域阈值及各自配对函数；cat 保留原拼接投影，grouped 使用三组独立编码与匹配乘积，默认 cat |
-| 分组编码 | 共同构造移至 §2.2.2，以 $E_v^{h,g}$ 区分 score／reg 用途；原 match 的编码数值保持，旧 $B^{\mathrm{enc},g},C^{\mathrm{enc},g},b^{\mathrm{enc},g},d^{\mathrm{enc},g}$ 分别对应 $B^{\mathrm{score},g},C^{\mathrm{score},g},b^{\mathrm{score},g},a^{\mathrm{score},g}$ |
-| 类型与参数 | 证据输出仍为 $d_{\mathrm{reg}}$ 维；grouped 另需 $d_r,d_{\mathrm{sel}}$ 及编码、组合参数。与局部评分默认参数独立，共享须显式绑定 |
-| 数值性质 | 两种证据均连续有界，接收加权贡献在弱接收处趋零；整网极限仍使用所选发送函数的原条件 |
-| 实例与继续 | 两份实例 §4.4 均可逐区域选择 cat／grouped；无新增持久状态。更换证据会改变未来控制，旧状态与新模型从头运行的状态仍须区分 |
-
-教材 §2.2、§2.5 的内部小节重排，既有公式编号保持。配置、成本与反向核对见[实现对应](../reference/weighted-message-implementation-checks.md#32-指定总量与区域阈值)。本次未核验下游支持或训练效果。
-
-## 配对函数的配置对应（2026-10-22）
-
-以 [0ad390e](https://github.com/ZichaoLong/ObsidianVault/commit/0ad390e) 为基线，为区域教材 §7.2、§7.4 已定义的函数补齐 selection_mode 名称。四份正典、局部数值函数、实例既有参数及核心版本保持。
-
-| 正温度配置 | 配对配置 | 采用时核对 |
+| 修订 | 变化与兼容性 | 采用时核对 |
 |---|---|---|
-| regional_total | regional_total_zero | 保留区域描述、评分和总量头；排序填入保持 $B$，容量仍为区域大小，可有小数发送 |
-| regional_threshold | regional_threshold_hard | 保留区域描述、评分和阈值头；容量取 $K_j=k_j$，一般非二元接收下未必保持原总量下界 |
-| constrained | hard_selection（既有） | 保留节点增益描述、评分及固定阈值；容量取 $K_j=k_j$ |
+| 2026-10-14 非空约束分配 | 数值语义改变：constrained 的总发送下限为 $\min(1,\sum_v\mu_v)$；配对硬函数全低分时保留最高分候选 | 全低分、单候选及低接收分支；定义见[区域分配 §4.1.5](../local-semantics/weighted-message/region-allocation-learning-note.md#415-节点增益与固定阈值分配) |
+| 2026-10-17 稠密 Attention | 新增无求根发送规则，既有约束函数保持 | 按各自发送上限、总量与零边界实现；见[Attention 份额分配](../local-semantics/weighted-message/region-allocation-learning-note.md#42-通过-attention-份额分配) |
+| 2026-10-19 模块组合 | 分开记忆族、记忆描述读取、区域评分与发送；增加基础循环、received 权重、总量缩放及 Read 模式组合 | 既有默认数值保持；新增描述字段及旧键的对应见下方迁移表 |
+| 2026-10-20 有限温度条件勘误 | 函数保持；旧 $t_{(4)}$ 条件不足，改用第二名评分 $t_{(2)}$ | 更新采用的充分条件，见[§7.3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#732-正温度的精确性)与附录 A.2 |
+| 2026-10-20 反向与零消息勘误 | 函数保持；区分 quad 的固定／松弛总和导数，以及固定总强度 Attention 的两种基权重 | 核对零消息删除、softmax 等值范围与边界反向，见[实现核对 §3](../reference/weighted-message-implementation-checks.md#3-区域分配) |
+| 2026-10-20 名称与精确性补充 | 配置名称按下表迁移；补入满足条件的有限正温度精确运行结论 | 旧函数与默认值保持；结论按[架构 §6.3](../local-semantics/weighted-message/architecture-learning-note.md#63-局部分配极限与整网极限)的条件使用 |
+| 2026-10-20 完整循环候选 | 新增 gated_delta、ssd 与固定逻辑时间短卷积；原 affine／delta／kv 保持 | 新状态与参数按 [Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md#附录-s配置原模型对应与工作量)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md#附录-s配置原模型对应与工作量)附录绑定；state 描述为短期摘要加多头矩阵查询 |
+| 2026-10-20 求值对应澄清 | 函数保持；区分求根区间点与实际响应点，明确卷积抽头的逻辑时间单位 | 反向在实际响应点求值；原序列混合器对应须满足抽头与接收间距条件，见[实现核对](../reference/weighted-message-implementation-checks.md) |
+| 2026-10-22 区域控制，基线 [6d3b6e3](https://github.com/ZichaoLong/ObsidianVault/commit/6d3b6e3) | 新增 regional_total／regional_threshold、区域控制描述及头；旧 constrained 与默认数值保持 | 两者采用接收下界和最大倍率上限，分别控制实际总量与阈值；完整参数及配对目标见[区域分配第4节](../local-semantics/weighted-message/region-allocation-learning-note.md#4-发送分配与-selstep-返回) |
+| 2026-10-22 配对函数配置，基线 [0ad390e](https://github.com/ZichaoLong/ObsidianVault/commit/0ad390e) | 为已定义函数增加 regional_total_zero、regional_threshold_hard 名称 | 保留各自描述与区域头；容量和不适用参数按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)核对 |
+| 2026-10-22 分组证据，基线 [3bdee09](https://github.com/ZichaoLong/ObsidianVault/commit/3bdee09) | 新增 region_evidence=grouped；默认 cat 保留原函数，描述类型保持 | 证据与评分分别绑定；原 match 编码参数的名称对应见下段；定义见[§2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述) |
+| 2026-10-22 内容 key，基线 [fefbf7b](https://github.com/ZichaoLong/ObsidianVault/commit/fefbf7b) | 新增 region_key=content；默认 content_stats 保留原 key，描述类型保持 | content 另给独立编码参数；定义见[§2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)，统计通路与反向见[实现核对 §3.6](../reference/weighted-message-implementation-checks.md#36-区域-attention-的记忆-key) |
 
-三种配对函数均直接求值排序规则，不使用温度或正则参数。切换时明确选定函数并移除不适用字段；分别从初态运行才能比较相应定理中的完整轨迹。完整字段范围见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。本次未核验下游是否已支持这些配置。
+分组编码统一名称时，原 match 的 $B^{\mathrm{enc},g},C^{\mathrm{enc},g},b^{\mathrm{enc},g},d^{\mathrm{enc},g}$ 分别对应 $B^{\mathrm{score},g},C^{\mathrm{score},g},b^{\mathrm{score},g},a^{\mathrm{score},g}$；数值保持。区域证据和内容 key 使用各自参数。更换函数会改变后续状态；保留旧缓存继续与新模型从初态运行是两种比较，按[架构附录 S.1](../local-semantics/weighted-message/architecture-learning-note.md#s1-配置对应)声明。
 
-当前正文统一称 constrained 为“节点增益与固定阈值分配”，其 §4.1.4 标题锚点同步更新；unit_attention、pooled_attention 分别沿用“固定总强度 Attention”“总量缩放 Attention”。其他章节与公式编号保持。
-
-## 区域教材的阅读顺序与编号（2026-10-22）
-
-以 [6ee24d8](https://github.com/ZichaoLong/ObsidianVault/commit/6ee24d8) 为基线，按指定总量、区域阈值、节点增益与固定阈值重排描述、分配、算例及极限。拼接特征的使用范围与各头的独立参数集中说明；既有数值函数、配置名称、默认值和实例参数保持，核心版本仍为 tide-core-5。
-
-采用时更新章节引用：三个约束分配依次为 §4.1.2—4.1.4；指定总量、区域阈值、固定阈值的整网极限分别为 §7.2、§7.4、§7.5。原式 (3)、(4) 顺移为 (4)、(5)，原式 (5) 拆为式 (3) 的匹配向量与 §2.6 的描述空间及返回值；式 (1)、(2)、(6)—(22) 保持。节点增益描述与区域控制描述分别直接定义，各自的元组字段与次序保持。
-
-## 区域控制候选的采用范围（2026-10-22）
-
-以 [6d3b6e3](https://github.com/ZichaoLong/ObsidianVault/commit/6d3b6e3) 为基线增加两个候选。四份正典、记忆函数和拓扑定义保持，核心版本继续为 tide-core-5。前次共享放大额度方案已由该基线撤回；本次新增函数分别控制阈值和实际发送总量。
-
-| 变化 | 采用时核对 |
-|---|---|
-| regional_threshold | 使用区域给出的 $\eta_j$ 和接收下界，向共同 Alloc 传入 $s-\eta_j,\mu^{\max},[b^{\mathrm{recv}},k]$；保留阈值头的配对硬函数及其条件见区域教材 §7.4 |
-| regional_total | 区域直接给出 $B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}})$，传入 $s,\mu^{\max},[B,B]$；§7.2 的零温函数逐个填满，可保留小数发送，容量仍取区域大小 |
-| 节点上限与下界 | $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$、$b^{\mathrm{recv}}=\min(1,\sum w_v)$、$U=\min(k,\sum\mu_v^{\max})$；原 constrained 的下界仍为 $\min(1,\sum\mu_v)$ |
-| 描述结构 | 原 ind／att 三元组／五元组保持；新候选分别为 $(w,\mu^{\max},s^{\mathrm{loc}},z^{\mathrm{reg}})$ 和 $(w,\mu^{\max},x^{\mathrm{sel}},K^{\mathrm{sel}},s^{\mathrm{loc}},z^{\mathrm{reg}})$ |
-| 控制配置 | region_control_mode=fixed／context，region_control_width 指定证据宽度；fixed 分别读取 eta 或 total_fraction，context 给定证据及区域头参数 |
-| 参数生效范围 | 新候选不使用 send_gain、allocation_base；att 固定 query_weight=received；regional_total 不使用 eta；既有 att 的默认 query_weight=mu 保持 |
-| 求解与反向 | 复用一个标量乘子，支持 quad／bern／ent；同时回传节点上限、实际等式总量及其上下界，不能复用旧 $M\le1$ 全上限捷径 |
-| 显示名称 | pooled_attention 称为“总量缩放 Attention”，配置名及 $c=\min(1,M)p^{\mathrm{sel}}$ 保持；新“指定总量分配”单独对应 regional_total |
-
-完整定义与参数范围见[区域分配教材](../local-semantics/weighted-message/region-allocation-learning-note.md)，完整图绑定见两份实例 §4.4。新候选均无新增持久状态，仍由选定记忆与正典切面继续；更换已运行模型的发送规则后，旧状态不自动等于新模型从头运行的状态。
-
-本次进行了文档检查和有限数值核对，未审计下游采用，也未验证训练效果或加速。实现要求见[区域控制核对](../reference/weighted-message-implementation-checks.md#32-指定总量与区域阈值)，比较依据与可选研究内容分别由设计和训练备忘录承载。
-
-## 完整循环候选的采用范围（2026-10-20）
-
-核心版本继续为 tide-core-5。基础 delta 没有被重命名或替换；新配置选择不同的状态、参数和数值函数。memory_read=state 在新模块中表示短期摘要与矩阵查询两个通道，具体定义见相应教材 §3。
-
-| 新配置 | 定义与对应范围 | 下游需新增的内容 |
-|---|---|---|
-| gated_delta | [Gated DeltaNet 局部教材](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)，在附录 S 的接收、初态与参数条件下，对照 FLA [9d478fac](https://github.com/fla-org/flash-linear-attention/tree/9d478facb282410dc150051d5f57205cd3812f31) 指定开关的记忆混合器 | 多头矩阵、Q/K/V 短卷积、L2、保留／写入／输出门、逐头输出 RMS、描述与完整状态 |
-| ssd | [SSD 局部教材](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)，在附录 S 的接收、初态与参数条件下，对照 Mamba [e9594ce1](https://github.com/state-spaces/mamba/tree/e9594ce1c732d97440f0332fdc43170a2294dbfa) 的 Mamba2Simple | x/B/C 短卷积、头组映射、标量门与 dt 写入、D 直通、先门控后整体 RMS |
-| conv_size／conv_stride | [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md)的抽头数与抽头的逻辑时间间距 | 原始时间槽、带权历史、快照重建、空档与分段状态；分层绑定取 conv_stride=$D$，在输入位置上相隔一格读取历史 |
-
-对原模型的对应是指定实数公式与参数形状的对应；源码版本、门开关、归一化常数及参考输入由各教材附录 S 固定。带权接收、逻辑空档、selector 摘要与图广播为 Tide 的显式适配。旧模型的缓存不自动成为新模型从头运行的状态，切换配置后的继续须重算或声明转换。
-
-本次未审计下游对新候选的支持，也未做训练、吞吐或 GPU 内核一致性验证。实现核对集中在[记忆模块检查](../reference/weighted-message-implementation-checks.md#4-记忆模块)，论文证据与推断边界集中在[设计总览](../memos/design/weighted-message-design.md#8-外部证据)。
+完整循环模块的普通序列对应固定到各自附录中的源码提交与开关。局部候选的上述增补均未据此声明下游已经支持，也未据此声明训练或设备性能结果；采用证据见本页下方。
 
 ## 局部名称迁移（2026-10-20）
 

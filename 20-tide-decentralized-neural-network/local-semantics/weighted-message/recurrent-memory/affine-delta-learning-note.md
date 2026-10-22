@@ -100,7 +100,7 @@ $r^{\mathrm{in}}\le0$ 时直接定义 Upd 返回原 $q$。正接收后的状态�
 
 ### 3.1 两种记忆描述
 
-本节用时间摘要或矩阵查询实现架构的 Mem 接口，为评分提供本节点的记忆信息。
+本节用时间摘要或矩阵查询实现架构的 Mem 接口，为 Describe 提供本节点的记忆信息；评分与发送分配怎样使用这些信息，由区域教材定义。
 
 给定一次读取的 $(q,\theta,u)$，两种方式共用写入量统计 $W_{v,a}=W_a^-(q,\theta)$。矩阵查询另取 $Q_v^r\in\mathbb R^{d_k\times d}$、$L_{v,a}\in\mathbb R^{d_s\times d_m}$，定义 $Q_v^{\mathrm{read}}(u)=Q_v^r\mathcal N_d(u)$。两种描述向量为
 

@@ -17,7 +17,7 @@ tags:
 
 ## 1. 从整体看各个选择
 
-先选择[全连接分层](../../topologies/fully-connected-layered.md)、[HB-Lattice](../../topologies/hb-lattice.md)或其他合法图，确定谁能向谁发送、何时汇合，以及哪些节点共同选择。固定一次区域作用，候选节点 $v$ 的旧状态为 $q_v$，接收聚合为 $(r_v^{\mathrm{in}},u_v)$；Upd 得到新状态 $\widetilde q_v$。全部候选保留这次更新，描述模式选择用于评分的状态：Read$^+$ 取新状态，Read$^-$ 取旧状态，Read$^0$ 取初态。
+先选择[全连接分层](../../topologies/fully-connected-layered.md)、[HB-Lattice](../../topologies/hb-lattice.md)或其他合法图，确定谁能向谁发送、何时汇合，以及哪些节点共同选择。固定一次区域作用，候选节点 $v$ 的旧状态为 $q_v$，接收聚合为 $(r_v^{\mathrm{in}},u_v)$；Upd 得到新状态 $\widetilde q_v$。全部候选保留这次更新，描述模式选择 Describe 所读的状态：Read$^+$ 取新状态，Read$^-$ 取旧状态，Read$^0$ 取初态。
 
 记忆模块从所选状态取得 Mem 四元组，并提供当前内容特征 $p_v(u_v)$。Describe 使用它们形成局部评分 $s_v^{\mathrm{loc}}$，并按所选发送函数提供区域证据或节点增益相关量。区域 Attention 评分还需要当前内容投影与记忆 key。
 
@@ -64,7 +64,7 @@ GDN 沿用基础 Delta 的矩阵误差修正形式，另定义卷积特征、多
 
 ### 2.2 描述读取与 Full 读取
 
-共同 Mem 接口返回 $(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$。两个 $M$ 都有宽度 $d_s$，供相同的评分函数使用。下表每一行对应一份记忆描述绑定，两个向量按所选行一起取得；各教材先定义候选向量，再显式组装这个四元组。
+共同 Mem 接口返回 $(M_{\mathrm{short}},M_{\mathrm{long}},W_{\mathrm{short}},W_{\mathrm{long}})$。两个 $M$ 都有宽度 $d_s$，可接入相容的 Describe 构造，参与评分与发送控制。下表每一行对应一份记忆描述绑定，两个向量按所选行一起取得；各教材先定义候选向量，再显式组装这个四元组。
 
 | 记忆与描述方式 | $M_{\mathrm{short}}$ | $M_{\mathrm{long}}$ |
 |---|---|---|
@@ -201,7 +201,7 @@ Mem 已有自己的读取过程：KV qry 和循环 state 先由当前内容读�
 
 ## 5. 发送规则的取舍
 
-发送函数使用接收相关量及所需评分，产生控制 $c_v$；正分量对应本次激活节点。约束优化先选指定总量、区域阈值或节点增益与固定阈值分配，再选择正则；下表的约束行比较正则本身，区域控制的区别见 §3.1。Attention 规则共用归一化份额，分别定义如何变为发送强度。按比例分配不使用评分，硬选择单独给出激活集合。完整函数与性质见[区域分配教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#45-完成区域返回与性质对照)。
+发送函数使用接收相关量及所需评分，产生控制 $c_v$；正分量对应本次激活节点。约束优化先选指定总量、区域阈值或节点增益与固定阈值分配，再选择正则；下表的约束行比较正则本身，区域控制的区别见 §3.1。Attention 规则共用归一化份额，分别定义如何变为发送强度。按比例分配不使用评分，硬选择单独给出激活集合。完整函数与性质见[区域分配教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#44-完成区域返回与性质对照)。
 
 | 方法组 | 候选 | 有利特性 | 风险与成本 |
 |---|---|---|---|
