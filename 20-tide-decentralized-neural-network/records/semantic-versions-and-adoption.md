@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-10-21
+as-of: 2026-10-22
 tags:
   - tide
   - semantic-version
@@ -36,8 +36,23 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-20 局部名称迁移与正温度精确性 | 局部函数及默认数值保持，配置名称和局部符号按下表迁移。共同架构补入有限正温度精确运行推论，适用范围见各函数条件 |
 | 2026-10-20 完整循环记忆候选 | 增加 memory_family=gated_delta／ssd 与固定逻辑时间短卷积；原模型对应和新增实现内容见下表。既有 affine／delta／kv、评分与发送函数保持 |
 | 2026-10-20 响应点与时间对应澄清 | 数值函数和配置取值保持。求根区间使用 $x^{\mathrm{bracket}}$，反向在实际 $x^{\mathrm{resp}}=t-\lambda$ 处求值；conv_stride 表示抽头的逻辑时间间距，原模型对应要求接收间隔与之匹配。联合求值以完整内部输入纤维为前提 |
+| 2026-10-22 区域共享放大额度 | 新增 shared_amplification，区域根据固定或上下文比例给出放大量上限，与评分共同分配发送；配套描述、下界、求解及反向独立定义，既有候选保持 |
 
 编辑过程、正文重排和正典引用清理的逐篇差异见[修订记录](history/document-revisions.md)；文件更名及旧路径的现行落点见[迁移索引](history/migration-map.md)。局部 Attention 份额沿用 $p_v^{\mathrm{sel}}$，响应点与导数沿用 resp 上标；区间构造点单独使用 bracket 上标。
+
+## 区域共享放大额度的采用范围（2026-10-22）
+
+定义见[共享额度教材](../local-semantics/weighted-message/shared-amplification-learning-note.md)。核心版本仍为 tide-core-5，四份正典及既有局部数值函数保持。新候选复用记忆、特征与评分，替换配套的 Describe、描述空间和 SelStep；不增加持久状态。
+
+| 新绑定 | 采用时核对 |
+|---|---|
+| selection_mode=shared_amplification | 节点上限 $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$，总和下界 $\min(1,\sum w_v)$，总和上界 $k$，另有 $\sum_v(c_v-w_v)_+\le E_j$；$K_j$ 取区域大小 |
+| amplification_mode=fixed／context | 前者使用 amplification_fraction；后者以 amplification_width 指定节点证据宽度，汇集后求额度比例；两者均乘最大可用放大量 |
+| Describe 与评分 | ind／att 使用新类型；cat／match 和匹配投影复用；att 固定 query_weight=received；send_gain、allocation_base 不参与 |
+| regularizer=quad／ent | ent 固定形状 $\alpha\in[1,2]$；本候选未定义 bern；两个乘子的求解与精确解反向分别实现 |
+| 继续与软硬比较 | 完整状态继续保持；单位输入软硬比较保留同一 Describe；一般非二元接收的排序硬函数不自动满足额度 |
+
+旧 constrained 配置的可行集、单点快捷返回和反向不能直接用于新候选。两份实例增加可选绑定；全连接单位输入时可用放大量为零，HB 可出现额度有作用的弱接收。数学性质、训练取舍和可选观测分别见教材、设计备忘与研究问题；实现检查见[§3.5](../reference/weighted-message-implementation-checks.md#35-区域共享放大额度)。本次未审计下游支持或进行训练验证。
 
 ## 完整循环候选的采用范围（2026-10-20）
 

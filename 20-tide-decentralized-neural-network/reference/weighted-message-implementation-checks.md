@@ -15,7 +15,7 @@ tags:
 
 实现记录不可变上游提交、具体函数组合、图、时间、参数与状态表示。列出支持的 memory_family、memory_read、read_mode、评分、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
 
-采用实例中的配置时，按其继承表展开每个区域的最终绑定，再核对被替换的状态、初态、Upd、Mem、当前特征与内容函数。KV 的窗口和旋转参数只用于 KV 区域；新增区域 Attention 评分同时要求相容的五元组描述及投影参数。
+采用实例中的配置时，按其继承表展开每个区域的最终绑定，再核对被替换的状态、初态、Upd、Mem、当前特征与内容函数。KV 的窗口和旋转参数只用于 KV 区域；新增区域 Attention 评分同时要求相容的描述及投影参数。共享额度的 ind／att 使用自己的描述类型和字段顺序，须与 SelStep 一起绑定。
 
 | 比较 | 必须保留的对象 |
 |---|---|
@@ -40,7 +40,7 @@ tags:
 | Full | 正控制才激活；$(c,G)$ 的强度只在数值投影中乘一次；返回边与端口两个族 |
 | 广播与读出 | 出度不除分强度；端口记录保留身份；空读出、相消与正强度存在分别核对 |
 
-增益检查 $1\le\gamma\le\gamma_{\max}$、$\mu=\min(1,\gamma (r^{\mathrm{in}})_+)$。query_weight=received 时，固定接收与记忆特征，改变增益不能改变 query；direct_attention 且 allocation_base=received 时，固定评分后只经外乘 $\mu$ 生效。query_weight=mu 的原依赖继续保留。
+采用逐节点增益时，检查 $1\le\gamma\le\gamma_{\max}$、$\mu=\min(1,\gamma (r^{\mathrm{in}})_+)$。query_weight=received 时，固定接收与记忆特征，改变增益不能改变 query；direct_attention 且 allocation_base=received 时，固定评分后只经外乘 $\mu$ 生效。query_weight=mu 的原依赖继续保留。共享额度的固定最大倍率与区域头另按 §3.5 核对。
 
 相同参数与输入的共享求值只记一次工作，仍须恢复各节点的原始状态。前向移除依赖与 stop-gradient 的反向约定分别检查。
 
@@ -77,6 +77,24 @@ tags:
 Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则。对 direct_attention 的 allocation_base=mu，验证两条直接上限依赖；received 只在固定接收和评分时移除基权重中的增益通路。pooled_attention 在 $M<1$ 有总量导数，$M>1$ 无该项，$M=1$ 声明边界约定。
 
 完整链路检查 query、key、评分头、增益头、记忆描述及写入。全零基权重处一般没有通常 Jacobian，遮罩自动微分与方向导数分别记录。跳过零 Full 和求内容后乘零的边界反向分别说明。
+
+### 3.5 区域共享放大额度
+
+定义见[共享额度教材](../local-semantics/weighted-message/shared-amplification-learning-note.md)。对 selection_mode=shared_amplification，核对以下对象：
+
+| 核对项 | 覆盖情形 |
+|---|---|
+| 描述与区域头 | 两种配套描述；cat／match 与 ind／att 的组合；att 固定 received；额度摘要也按 $w_v$ 汇集；改变额度头参数不直接改变评分 |
+| 上限与额度 | $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$；固定比例及上下文比例；$E_j=a_j^E\sum_v(\mu_v^{\max}-w_v)$；$\gamma_{\max}=1$ 与二元 $w$ 时额度为零 |
+| 可行域 | 总发送在 $[\min(1,\sum w_v),k]$；逐节点上限；$\sum_v(c_v-w_v)_+\le E_j$；少发不抵扣别人的放大；空候选、零额度、正额度与 $E_j\ge k$ 的冗余约束 |
+| 求解 | quad／ent；总和乘子 $\lambda$、额度乘子 $\xi$；响应、可行性和互补残差；放大量随外层乘子单调不增；平台、节点上限与退化总和 |
+| 反向 | 教材式 (12)—(14)；总和与额度分别松弛或取等号；零、节点上限、$c=w$ 平台及自由分量；接收同时改变上限、下界、摘要与额度的完整链路 |
+
+复现教材第 5 节的两节点例子：$E_j=0.1$ 时 $c=(0.5,0.5)$，额度导数为 $(-1,1)$，两个节点都未触及自己的发送上限，而固定额度的评分 Jacobian 为零；$E_j=0.6$ 时额度严格松弛，额度导数为零。自由分支中的评分、额度和接收方向导数用不跨界差分核对；进入或离开 $c=w$ 平台、截断边界及退化矩阵使用另行声明的反向。有限精度求根可能在数学零坐标留下微小正残差，数值误差、数学支持与实际执行支持分别记录；人为裁剪须声明其函数与反向。
+
+旧分配的单点快捷返回不能复用。例如 $w=(0.2,0.2)$、$\gamma_{\max}=2$、$E_j=0.1$、$k=1$ 时，$\sum\mu_v^{\max}=0.8<1$，但 $c=w$ 可行而 $c=\mu^{\max}$ 超额度。零额度时可将节点上限改为 $w$，总和下界仍为 $\min(1,\sum w)$。
+
+逐个插入零接收候选与趋弱候选，核对 query、额度摘要、发送及后续记忆；精确继续不增加区域持久状态。单位输入的软硬比较按共享额度 §7.3 保留同一 Describe，仅替换 SelStep；一般非二元接收的排序硬函数可能超额度。全连接单位输入中 $E_j^{\max}=0$，这一场景只能检验退化等值，不能检验额度头是否学到放大。
 
 ## 4. 记忆模块
 
@@ -116,7 +134,7 @@ GDN 与 SSD 的正接收全候选都执行 Upd。测试本次未激活、下次�
 
 ## 5. 数值性质、图与继续
 
-数值比较按共同架构 §6 的固定图、参数、原始时间槽和有限切面进行，状态模块分别核对该节的局部假设。精确零消息增删与弱输入极限分别依照[性质对照](../local-semantics/weighted-message/region-allocation-learning-note.md#81-零接收与正温度连续性)选择函数范围，覆盖弱消息、弱候选、全零接收、空档和正时延反馈。
+数值比较按共同架构 §6 的固定图、参数、原始时间槽和有限切面进行，状态模块分别核对该节的局部假设。精确零消息增删与弱输入极限分别依照[区域分配性质对照](../local-semantics/weighted-message/region-allocation-learning-note.md#81-零接收与正温度连续性)和[共享额度 §7](../local-semantics/weighted-message/shared-amplification-learning-note.md#7-数值性质与软硬关系)选择函数范围，覆盖弱消息、弱候选、全零接收、空档和正时延反馈。
 
 复现区域分配 §8.1 的固定总强度 Attention 算例，分别检查 mu 与 uniform 的零候选行为。混合组合使用全候选参考计算时，保留消息存在掩码；只有满足零消息删除条件时，才以显式零消息替代缺席并比较相同数值。
 

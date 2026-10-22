@@ -12,7 +12,7 @@ tags:
 
 # 全连接分层图上的带权消息实例
 
-本文在[全连接分层拓扑](../topologies/fully-connected-layered.md)上绑定带权消息的局部函数，给出 KV、稠密 Attention 和混合记忆实例，并推导各自的传播、继续与计算量。局部函数的定义与证明分别见[共同架构](../local-semantics/weighted-message/architecture-learning-note.md)、[区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md)及各记忆教材。第 4.3 节包含基础循环、Gated DeltaNet 和 SSD 的完整替换绑定。
+本文在[全连接分层拓扑](../topologies/fully-connected-layered.md)上绑定带权消息的局部函数，给出 KV、稠密 Attention、共享放大额度和混合记忆实例，并推导各自的传播、继续与计算量。局部函数的定义与证明分别见[共同架构](../local-semantics/weighted-message/architecture-learning-note.md)、[区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md)及各记忆教材。第 4.3 节包含基础循环、Gated DeltaNet 和 SSD 的完整替换绑定。
 
 ## 1. 完整的 KV 基础绑定
 
@@ -147,6 +147,7 @@ $\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$ 的两个隐藏单元。其�
 | §4.1 稠密 Attention | 第 1 节 KV 基线 | 选定区域的区域评分、描述结构、发送函数与固定正温度 |
 | §4.2 八层 KV 配置 A、B | 第 1 节 KV 基线 | 八层尺寸、各区域的 KV 窗口与位置参数；评分与发送沿用基线 |
 | §4.3 八层混合记忆 | §4.2 的配置 B | 区域 $4,8$ 的记忆模块及读取方式；其余区域继续使用配置 B 的 KV |
+| §4.4 区域共享放大额度 | §4.2 的配置 B 或 §4.3，先选定一份 | 描述与分配改为区域共享额度；单位输入下推导其退化等值 |
 
 这些选择也可组合：例如在八层混合记忆中另采用 §4.1 的评分与发送。组合时逐区域确定最终字段，按所选记忆重定参数形状，并核对第 5 节的描述相容性与容量条件。各例的层数和尺寸只限定该例。
 
@@ -214,6 +215,16 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 
 联合求值使用 KV 前缀或对应循环模块的仿射复合；带短卷积的模块先按完整驱动计算卷积，再求矩阵递归。按层取得完整输入后，可应用第 6.1 节的整窗口策略。相同载荷、相容描述和原有图时间使组合成为合法 SettleGraph。数值性质按共同架构 §6 应用，各记忆分别提供局部引理。
 
+### 4.4 区域共享放大额度
+
+先选择 §4.2 的配置 B 或 §4.3 的混合记忆配置，保留图、时间、聚合、记忆、内容、局部评分、独立区域评分与 Read 模式。全部区域使用[共享额度教材](../local-semantics/weighted-message/shared-amplification-learning-note.md)的 $D_v^{E,\mathrm{ind}}$、Describe 与 SelStep，取 gamma_max=$2$、amplification_width=$32$、selection_mode=shared_amplification、quad、$k_j=1$、$K_j=4$。阈值与正温度继承所选配置，原 send_gain 不参与求值。
+
+额度可取 amplification_mode=fixed、amplification_fraction=$1/2$；也可取 context，按 $d_E=32$ 与所选评分隐藏宽度 $d_r$ 给定全部额度投影和区域头参数。两种绑定都给出完整模型。
+
+单位入口使第一层各节点 $w_v=\mu_v^{\max}=1$，于是可用放大量 $E_j^{\max}=0$，分配的总和为 $1$。全连接广播使下一层每节点仍收到总强度 $1$，逐层归纳可得所有区域的 $E_j^{\max}=E_j=0$。因此固定或上下文额度在本实例中均不影响控制；同一评分和正则下，控制、状态与消息数值等于原单位上限约束分配。两种 Describe 的字段仍按各自类型解释。
+
+这个形状可核对退化等值和完整接口，但不提供额度头的学习信号。[HB 共享额度实例](hb-lattice-weighted-message.md#44-区域共享放大额度)允许单节点弱接收，额度才可能影响发送。更换图或输入强度后，须按新的完整绑定重新判断。
+
 ## 5. 组合成立的条件
 
 图与时间满足拓扑教材的单次结算条件。所有相连节点共用 $P=\mathbb R^{1+d}$，各记忆提供相容的描述，区域分配返回控制与激活集合；因此所选函数可以代入正典递归。除硬选择取 $K_j=k_j$ 外，各发送函数均取 $K_j=n$。数值性质分别使用下表的条件。
@@ -221,9 +232,9 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 | 对象或性质 | 本实例的绑定与依据 |
 |---|---|
 | 输出比较 | §1.4 声明有限槽集合和连续数值读出，缺席组读出零 |
-| 正温度连续性 | 各区域使用约束分配、直接 Attention、区域总量分配或按比例分配时，按共同架构 §6.2 的条件使用，各记忆模块验证其状态假设 |
+| 正温度连续性 | 各区域使用约束分配、共享额度、直接 Attention、区域总量分配或按比例分配时，按共同架构 §6.2 的条件使用，各记忆模块验证其状态假设 |
 | 非空传播 | §3 保证每层全体节点接收并写入，每位置有正强度终端输出 |
-| 硬化连续性 | 按[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-单位输入的整网软硬关系)比较约束分配与配对硬选择，核对对应硬运行的评分条件 |
+| 硬化连续性 | 原约束分配按[区域分配 §7.4](../local-semantics/weighted-message/region-allocation-learning-note.md#74-单位输入的整网软硬关系)，共享额度按[其 §7.3](../local-semantics/weighted-message/shared-amplification-learning-note.md#73-单位输入与配对硬选择)比较配对硬选择，核对对应硬运行的评分条件 |
 | 正温度精确硬化 | 满足上一行条件且全部区域取 quad 或固定 $\alpha>1$ 的 ent 时，充分小正温度使完整记录和切面与硬运行相同 |
 
 给定上述配置即可直接应用共同的 P/S/U/F 递归。硬化所需的评分间隔取决于参数与输入，须在所考察硬运行上核对。拓扑允许相同局部函数在不同尺寸下组合，各性质按自己的前提使用。
@@ -266,5 +277,7 @@ $$
 基线使用 memory_family=kv、memory_read=sum、read_mode=+、local_score=cat、region_score=ind、send_gain=fixed、selection_mode=constrained、regularizer=quad。所有节点的初态、来源与矩阵形状由第 1 节确定；位置绑定对应 KV 教材的 Pos、窗口与旋转配置。
 
 第 4.1 节在选定区域使用 region_score=att、alpha_loc=0、alpha_sel=1 和固定 allocation_temperature。四种等值发送分别取 direct_attention、unit_attention、pooled_attention，以及 constrained／ent／ent_alpha=1／k=1。第 4.2 节的 A、B 继承基线的评分与发送；第 4.3 节继承 B，再替换区域 $4,8$ 的 memory_family、memory_read 及对应参数形状。组合采用第 4.1 节时另声明相应区域。完整取值与生效范围统一见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。
+
+第 4.4 节同时替换 Describe 与 SelStep，使用 shared_amplification 及其 fixed／context 额度字段；节点最大倍率固定，原 send_gain 不生效。该实例的单位接收使额度恒为零，仍按完整绑定解释参数与返回类型。
 
 实现核对见[局部架构实现对应](../reference/weighted-message-implementation-checks.md)，任务与训练比较见[可选研究问题](../memos/training/weighted-message-research-questions.md)。

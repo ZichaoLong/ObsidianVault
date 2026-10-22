@@ -159,7 +159,7 @@ $$
 
 这些信息只来自本节点；区域随后同时使用所有候选的 $d_v$。绑定上述函数后，简记为 $\operatorname{Describe}_v(q,\theta,h)$。
 
-具体的 Describe 与区域选择须配套定义。节点可以先将当前内容与记忆变为局部评分，也可以同时提供区域匹配所需的向量。当前特征与记忆描述是构造 $d_v$ 的依据，$D_v$ 规定传给区域的描述结构。
+具体的 Describe 与区域选择须配套定义。节点可以先将当前内容与记忆变为局部评分，也可以同时提供区域匹配或共享放大额度所需的向量。当前特征与记忆描述是构造 $d_v$ 的依据，$D_v$ 规定传给区域的描述结构。
 
 正典 Read 按描述模式 $\tau_j\in\{0,-,+\}$ 选取状态，再调用已绑定的 Describe：
 
@@ -303,11 +303,12 @@ $$
 | 教材 | 填入的函数或对象 | 接入共同过程的位置 |
 |---|---|---|
 | [区域评分与发送分配](region-allocation-learning-note.md) | $D_v$、Describe、SelStep 及其参数 | 使用当前接收、$p_v(u)$ 与 Mem 构造 $d_v$，再从区域描述族得到 $(\mathcal A,(c_v),*)$ |
+| [区域共享放大额度](shared-amplification-learning-note.md) | 另一组配套的 $D_v$、Describe、SelStep | 描述提供本地证据；区域共同确定放大额度，在一个优化问题中分配发送 |
 | [带权 KV](kv-memory-learning-note.md) | $S_v,q_v^{\mathrm{init}}$、Upd、Mem、$p_v,G_v$ | 以带权序列保存接收，实现当前内容特征、记忆描述与完整内容 |
 | [基础循环记忆](recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](recurrent-memory/gated-delta-learning-note.md)、[SSD](recurrent-memory/ssd-learning-note.md) | 同上 | 以矩阵及辅助状态保存接收，实现同型的当前内容特征、记忆描述与完整内容 |
 | [固定逻辑时间短卷积](recurrent-memory/causal-convolution-learning-note.md) | Conv、ConvWrite | 作为 Gated DeltaNet 与 SSD 更新、读取中的部件 |
 
-记忆教材给出 Mem 与当前特征 $p_v$，区域教材给出 Describe 如何组合它们；选定后得到 §3.3 的 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。更换区域评分或发送函数时，Upd 与 $G_v$ 仍按各自定义计算。式 (7) 的两个描述通道是这里复用评分族的接口；采用其他描述形式时须同时指定相容的 Describe 与 SelStep。
+记忆教材给出 Mem 与当前特征 $p_v$，描述与分配教材给出 Describe 如何组合它们；选定后得到 §3.3 的 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$。更换区域评分或发送函数时，Upd 与 $G_v$ 仍按各自定义计算。式 (7) 的两个描述通道是这里复用评分族的接口；采用其他描述形式时须同时指定相容的 Describe 与 SelStep。
 
 三个图层级使用同一组 Agg、Upd、Read、SelStep、Next、Full。正时延图允许反馈；图无环时得到 TimedDAG；进一步满足区域严格分层和到达对齐时得到 SettleGraph。[全连接分层](../../topologies/fully-connected-layered.md)与 [HB-Lattice](../../topologies/hb-lattice.md)分别给出独立的图与时间定义；[完整实例](../../README.md#具体拓扑与完整实例)将它们与本支线的局部函数绑定。
 
@@ -383,7 +384,7 @@ $$
 | 小正温度即精确相同 | 原始函数固定 | 固定极限运行输入时，控制在小正温度精确相同 | §6.3 推论 |
 | 精确分段继续或联合求值 | 保存完整状态、返回完整作用值 | 保留区域选择所需的全部输入和结果 | 第 7 节 |
 
-具体发送规则的适用情况由[区域分配 §8](region-allocation-learning-note.md#8-发送规则如何满足架构条件)逐项验证。不同区域可选择不同记忆与发送函数，每个组合结论按本表分别核对。
+具体发送规则的适用情况由[区域分配 §8](region-allocation-learning-note.md#8-发送规则如何满足架构条件)与[共享额度 §7](shared-amplification-learning-note.md#7-数值性质与软硬关系)分别验证。不同区域可选择不同记忆与发送函数，每个组合结论按本表分别核对。
 
 ## 7. 切面与联合求值
 
@@ -482,7 +483,8 @@ KV 的条目前缀、循环记忆的仿射复合分别构造这些联合函数�
 | read_mode | 正典描述模式 $\tau_j\in\{0,-,+\}$；[KV 完整例子](kv-memory-learning-note.md#5-完整例子)取 $+$ |
 | local_score、region_score | 区域分配教材的 cat／match、ind／att |
 | send_gain、query_weight | 发送增益与区域 query 的汇集权重，分别指定 |
-| selection_mode | 区域分配教材附录 S.1 所列发送函数 |
+| selection_mode | 区域分配教材附录 S.1 所列发送函数；shared_amplification 使用共享额度教材的配套描述与分配 |
+| amplification_mode、amplification_fraction、amplification_width | 共享额度的 fixed／context、固定比例及特征宽度；该候选另绑定固定 gamma_max，不使用 send_gain |
 
 其余参数包括宽度、矩阵、偏置、共享关系、窗口、时钟与位置。参数空间和状态空间随这些绑定确定。默认 KV 例子保留 sum、cat、ind、fixed、quad 及 Read$^+$ 的完整组合。函数名称对应数学定义；下游可按配置构造模型，其已支持形状和求值内核由实现声明。
 
