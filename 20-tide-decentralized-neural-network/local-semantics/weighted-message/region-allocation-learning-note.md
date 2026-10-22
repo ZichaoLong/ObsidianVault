@@ -36,7 +36,7 @@ $$
 |---|---|---|
 | 局部评分 $s_v^{\mathrm{loc}}\in\mathbb R$ | 提供本节点的相关性评分，随后形成区域评分 $s_v$ | 使用评分的各候选 |
 | 区域证据 $z_v^{\mathrm{reg}}\in\mathbb R^{d_{\mathrm{reg}}}$ | 向区域提供内容与记忆信息，供其决定发送总量或阈值 | 指定总量、区域阈值 |
-| 节点增益 $\gamma_v\in[1,\gamma_{\max}]$ | 调节本节点由接收得到的发送量 $\mu_v$，其上限或权重用途由分配给定 | 固定阈值及使用 $\mu_v$ 的其他规则 |
+| 节点增益 $\gamma_v\in[1,\gamma_{\max}]$ | 调节本节点由接收得到的发送量 $\mu_v$，其上限或权重用途由分配给定 | 节点增益与固定阈值分配及使用 $\mu_v$ 的其他规则 |
 
 $d_{\mathrm{reg}}$ 是正整数证据宽度，$\gamma_{\max}\ge1$ 是有限最大倍率。区域评分另可使用本节点的当前内容投影与记忆 key。各量按所选候选计算，输出参数分别给定。
 
@@ -62,7 +62,7 @@ $$
 |---|---|---|
 | 指定总量 | 发送强度之和 $B$ | 在指定总量下按评分分配 |
 | 区域阈值 | 从全部评分减去的共同阈值 $\eta_j$ | 评分与阈值共同决定总量及分配 |
-| 固定阈值 | 固定 $\eta$，各节点另给增益相关量 $\mu_v$ | 在对应节点上限和总量范围内分配 |
+| 节点增益与固定阈值 | 固定 $\eta$，各节点另给增益相关量 $\mu_v$ | 在对应节点上限和总量范围内分配 |
 
 第 2 节构造节点描述，第 3 节从描述族计算评分与区域控制，第 4 节完成 SelStep。第 5 节先算指定总量的完整例子，再在相同输入上更换分配。按比例与 Attention 等其他发送规则也在第 4 节定义。
 
@@ -233,7 +233,7 @@ $$
 
 ### 2.6 使用节点增益的描述
 
-固定阈值及第 4 节使用 $\mu_v$ 的其他规则，允许节点用固定或上下文增益调节接收相关发送量。下面定义增益，再组装这些规则所需的描述。
+节点增益与固定阈值分配及第 4 节使用 $\mu_v$ 的其他规则，允许节点用固定或上下文增益调节接收相关发送量。下面定义增益，再组装这些规则所需的描述。
 
 #### 2.6.1 增益与接收相关发送量
 
@@ -245,7 +245,7 @@ $$
 \tag{4}
 $$
 
-$w_v$ 描述本次接收，$\mu_v$ 允许有界放大。固定阈值分配、直接 Attention 与硬选择将 $\mu_v$ 用作节点发送上限；其他规则按自己的定义使用它作为权重或总量依据。始终有 $w_v\le\mu_v\le\gamma_{\max}w_v$，两者具有相同的正分量位置。
+$w_v$ 描述本次接收，$\mu_v$ 允许有界放大。节点增益与固定阈值分配、直接 Attention 与硬选择将 $\mu_v$ 用作节点发送上限；其他规则按自己的定义使用它作为权重或总量依据。始终有 $w_v\le\mu_v\le\gamma_{\max}w_v$，两者具有相同的正分量位置。
 
 以下两种增益可分别与 cat 或 match 评分组合。
 
@@ -466,7 +466,7 @@ $$
 
 这是配置 regional_threshold 的完整定义。评分和阈值共同决定实际总量，范围为 $[b^{\mathrm{recv}},U]$。固定其他输入时，提高共同阈值使总发送单调不增；在同一可微分支上如何改变各分量见 §6.2。下界使用截断接收之和，允许放大上限增加而最低发送量保持。
 
-#### 4.1.4 固定阈值分配
+#### 4.1.4 节点增益与固定阈值分配
 
 使用 §2.6 节点增益描述中的 $\mu_v$，取整数 $1\le k\le|\mathcal R_j|$ 和固定阈值 $\eta\in\mathbb R$，令
 
@@ -480,7 +480,7 @@ $$
 
 #### 4.1.5 发送总量与激活数量
 
-三个候选都在有正接收时产生正总量。指定总量与区域阈值使用 $b^{\mathrm{recv}}$ 为下界，固定阈值候选使用 $\min(1,M)$。若 $W^{\mathrm{recv}}\ge1$ 且 $k=1$，两个区域控制候选的总量均固定为 $1$；弱总接收时，$k=1$ 仍可能有 $b^{\mathrm{recv}}<U$。
+三个候选都在有正接收时产生正总量。指定总量与区域阈值使用 $b^{\mathrm{recv}}$ 为下界，节点增益与固定阈值分配使用 $\min(1,M)$。若 $W^{\mathrm{recv}}\ge1$ 且 $k=1$，两个区域控制候选的总量均固定为 $1$；弱总接收时，$k=1$ 仍可能有 $b^{\mathrm{recv}}<U$。
 
 每个 $c_v\le1$ 给出 $\sum c_v\le|\mathcal A|$，所以 $k$ 不限制正分量个数。例如 $(0.8,0.6,0.4,0.2)$ 的总和为 $2$，激活四个节点。给定正总量 $S$ 和节点上限 $\mu$，还必有
 
@@ -573,8 +573,8 @@ $$
 |---|---|---|---|---|
 | 指定总量分配 | $\mu_v^{\max}$ | $B$ | quad／ent 的 $\alpha>1$ 可稀疏；Shannon／bern 全有效 | $\lvert\mathcal R_j\rvert$ |
 | 区域阈值分配 | $\mu_v^{\max}$ | $[b^{\mathrm{recv}},U]$ | 同上一行 | $\lvert\mathcal R_j\rvert$ |
-| 固定阈值 quad／ent，$\alpha>1$ | $\mu_v$ | $[\min(1,M),\min(k,M)]$ | 可以精确稀疏 | $\lvert \mathcal R_j\rvert$ |
-| 固定阈值 Shannon／bern | $\mu_v$ | 同上 | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
+| 节点增益与固定阈值，quad／ent，$\alpha>1$ | $\mu_v$ | $[\min(1,M),\min(k,M)]$ | 可以精确稀疏 | $\lvert \mathcal R_j\rvert$ |
+| 节点增益与固定阈值，Shannon／bern | $\mu_v$ | 同上 | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 直接 Attention，两种基权重 | $\mu_v$ | $(0,\max\mu]$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 固定总强度 Attention | $1$ | $1$ | 全部真实或全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 总量缩放 Attention | $1$ | $\min(1,M)$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
@@ -612,7 +612,7 @@ $$
 =(\{a,b\},(0.95,0.45,0),*).
 $$
 
-两个正控制进入共同 Full；三个候选均按 Next 保留接收更新。高分的零接收节点 $c$ 对发送无影响。
+两个正控制进入共同 Full；三个候选均按 Next 保留接收更新。高分的零接收节点 $c$ 对发送无影响。[KV §5.1](kv-memory-learning-note.md#51-从接收到输出)用这组控制继续计算记忆、完整内容与端口读出。
 
 固定评分和温度，只改区域比例，结果为：
 
@@ -632,9 +632,9 @@ $$
 
 再采用节点增益描述，取固定 $\gamma_v=1$，于是 $\mu=(1,1,0)$。Describe 返回
 $d_a=(1,1,2)$、$d_b=(1,1,1)$、$d_c=(0,0,100)$。
-固定阈值分配取 $k=2,\eta=0.8$、温度 $0.5$，仍给出 $(1,0.4,0)$。这里接收已使节点上限饱和，不同分配在这些参数上数值相同。
+节点增益与固定阈值分配取 $k=2,\eta=0.8$、温度 $0.5$，仍给出 $(1,0.4,0)$。这里接收已使节点上限饱和，不同分配在这些参数上数值相同。
 
-固定阈值候选再取 $k=1,\eta=0,\tau_{\mathrm{sel}}=2$，总和被约束为 $1$。由 $c_a+c_b=1$ 得
+节点增益与固定阈值分配再取 $k=1,\eta=0,\tau_{\mathrm{sel}}=2$，总和被约束为 $1$。由 $c_a+c_b=1$ 得
 
 $$
 c_a=\tfrac12+\frac{2-1}{2\cdot2}=\tfrac34,\qquad
@@ -643,7 +643,7 @@ c_b=\tfrac14,\qquad
 =(\{a,b\},(3/4,1/4,0),*).
 $$
 
-这组控制正是[架构 §4.5](architecture-learning-note.md#45-一组贯穿例子)给定的数值；[KV §5.1](kv-memory-learning-note.md#51-从接收到输出)继续给出其状态、记忆描述及完整内容。保持这个 $k=1$ 的配置，只将温度降到 $0.5$，控制变为 $(1,0,0)$。它与指定 $B=1.4$ 的温度变化使用不同的总量条件。
+这组控制对应[架构 §4.5](architecture-learning-note.md#45-一组贯穿例子)的节点增益与固定阈值一行；[KV §5.1](kv-memory-learning-note.md#51-从接收到输出)在共同记忆与内容上分别完成本分支和 §5.1 的指定总量分支。保持这个 $k=1$ 的配置，只将温度降到 $0.5$，控制变为 $(1,0,0)$。它与指定 $B=1.4$ 的温度变化使用不同的总量条件。
 
 ### 5.3 弱接收的发送范围
 
@@ -658,11 +658,11 @@ $\mu^{\max}=(0.4,0.4)$、$b^{\mathrm{recv}}=0.4$、$U=0.8$。
 | $1/2$ | $0.6$ | $(0.4,0.2)$ |
 | $1$ | $0.8$ | $(0.4,0.4)$ |
 
-在 $0.4<B<0.8$ 内，第一节点已达上限，增加总量全部进入第二节点。即使两个节点上限之和小于 $1$，也不能直接返回全部上限。作为比较，固定阈值候选在相同节点上限下的下界为 $0.8$，因而强制 $(0.4,0.4)$。
+在 $0.4<B<0.8$ 内，第一节点已达上限，增加总量全部进入第二节点。即使两个节点上限之和小于 $1$，也不能直接返回全部上限。作为比较，节点增益与固定阈值分配在相同节点上限下的下界为 $0.8$，因而强制 $(0.4,0.4)$。
 
 ### 5.4 同一组输入下的稠密规则
 
-取 $\mu=w=(0.2,1)$、相等评分；表中的约束 Shannon 使用固定阈值分配，$k=1$：
+取 $\mu=w=(0.2,1)$、相等评分；表中的约束 Shannon 使用节点增益与固定阈值分配，$k=1$：
 
 | 规则 | $c$ |
 |---|---|
@@ -676,7 +676,7 @@ $\mu^{\max}=(0.4,0.4)$、$b^{\mathrm{recv}}=0.4$、$U=0.8$。
 
 ### 5.5 分配与饱和
 
-本节使用固定阈值分配。记 $\operatorname{clip}(x,l,h)=\min(h,\max(l,x))$。取 $\mu=(1,1),k=1$，评分差 $\Delta=s_1-s_2$，quad 的解为
+本节使用节点增益与固定阈值分配。记 $\operatorname{clip}(x,l,h)=\min(h,\max(l,x))$。取 $\mu=(1,1),k=1$，评分差 $\Delta=s_1-s_2$，quad 的解为
 
 $$
 c_1=\operatorname{clip}\left(\tfrac12+\tfrac\Delta{2\tau},0,1\right),\qquad c_2=1-c_1,
@@ -688,7 +688,7 @@ $|\Delta|<\tau$ 时两者均激活；$\Delta>\tau$ 时分配保持 $(1,0)$，小
 
 ### 5.6 与 softmax、sparsemax、entmax 的关系
 
-有效候选非空、各自的 $\mu_v=1$ 且 $k=1$ 时，固定阈值可行集 $F(\mu)$ 为概率单纯形 $\{c:c_v\ge0,\sum_vc_v=1\}$。ent 在此集合上的解称为 $\alpha$-entmax；$\alpha=1$ 给出 softmax，$\alpha=2$ 给出称为 sparsemax 的欧氏投影 $\arg\min_{c\in F(\mu)}\|c-s/\tau\|_2^2$，quad 也给出同一投影。最高分唯一时，零温极限只选该候选，称为 Top-1。
+有效候选非空、各自的 $\mu_v=1$ 且 $k=1$ 时，节点增益与固定阈值分配的可行集 $F(\mu)$ 为概率单纯形 $\{c:c_v\ge0,\sum_vc_v=1\}$。ent 在此集合上的解称为 $\alpha$-entmax；$\alpha=1$ 给出 softmax，$\alpha=2$ 给出称为 sparsemax 的欧氏投影 $\arg\min_{c\in F(\mu)}\|c-s/\tau\|_2^2$，quad 也给出同一投影。最高分唯一时，零温极限只选该候选，称为 Top-1。
 
 上限全为 $1$ 保证上述等式对任意评分成立。对给定评分，更一般的 Shannon 判定是：取 $k=1$，在非空有效候选集上令 $p=\operatorname{softmax}(s/\tau_{\mathrm{sel}})$；若每个 $p_v\le\mu_v$，则 $c=p$。这些不等式蕴含 $M\ge1$，故总和为 $1$，而 $p$ 已在整个概率单纯形上最大化 Shannon 目标。例如 $\mu=(0.6,0.6)$、相等评分给出 $c=(0.5,0.5)$。
 
@@ -763,7 +763,7 @@ $$
 \tag{18}
 $$
 
-式 (18) 将 $t,\mu,T$ 当作独立输入求偏导，再沿其定义使用链式法则。指定总量候选取 $T=B$；区域阈值候选的下界 $T=b^{\mathrm{recv}}$ 随接收变化；固定阈值候选在 $M>1$ 时，$T=1$ 或 $k$ 为常数。提高一个未饱和评分会在可响应的候选之间重新分配；其负梯度方向比较该候选与加权平均的任务边际影响。总和上下限都松弛时，$\lambda=0$ 固定，直接用 $dc_v=a_v^{\mathrm{resp}}dt_v+e_v^{\mathrm{resp}}d\mu_v$。
+式 (18) 将 $t,\mu,T$ 当作独立输入求偏导，再沿其定义使用链式法则。指定总量候选取 $T=B$；区域阈值候选的下界 $T=b^{\mathrm{recv}}$ 随接收变化；节点增益与固定阈值分配在 $M>1$ 时，$T=1$ 或 $k$ 为常数。提高一个未饱和评分会在可响应的候选之间重新分配；其负梯度方向比较该候选与加权平均的任务边际影响。总和上下限都松弛时，$\lambda=0$ 固定，直接用 $dc_v=a_v^{\mathrm{resp}}dt_v+e_v^{\mathrm{resp}}d\mu_v$。
 
 对 quad，固定上限并令 $\mathcal I=\{v:0<c_v<\mu_v\}$，记 $I$ 为 $|\mathcal I|$ 维单位矩阵，$\mathbf1$ 为同维的全一向量。在 $\mathcal I\ne\varnothing$ 且约束状态保持的光滑分支上，未饱和分量对其评分的 Jacobian 为
 
@@ -776,7 +776,7 @@ $$
 \end{cases}
 $$
 
-例如固定阈值候选取 $\mu=(1,1,1),k=3,\tau=1,t=(0.4,0.5,0.6)$ 时，$c=t$ 且 $1<\sum c_v<3$；全部评分同时小幅增加，全部控制量随之增加。
+例如节点增益与固定阈值分配取 $\mu=(1,1,1),k=3,\tau=1,t=(0.4,0.5,0.6)$ 时，$c=t$ 且 $1<\sum c_v<3$；全部评分同时小幅增加，全部控制量随之增加。
 
 总和固定且只有一个未饱和候选时，评分导数为零；式 (18) 中各可响应候选的任务边际影响相同时，评分梯度也为零。$A_0=0$ 时不得除零，应沿严格饱和分支求导。分支切换处另给单侧或广义导数。
 
@@ -899,7 +899,7 @@ $$
 
 #### 7.3.1 评分条件
 
-固定阈值与区域阈值的硬化都使用二元上限，即每个节点上限为 $0$ 或 $1$。取总量下界为 $\min(1,\sum_v\mu_v)$、上界为整数 $k\ge1$，以下评分条件使式 (22) 的唯一解恰为 §4.4 的硬选择：
+节点增益与固定阈值、区域阈值的硬化都使用二元上限，即每个节点上限为 $0$ 或 $1$。取总量下界为 $\min(1,\sum_v\mu_v)$、上界为整数 $k\ge1$，以下评分条件使式 (22) 的唯一解恰为 §4.4 的硬选择：
 
 - 有效候选至多一个，无评分条件。
 - $k=1$ 且至少两个有效候选，最高分唯一。
@@ -935,7 +935,7 @@ $$
 
 固定有限正时延图、有限切面、参数和初态。各记忆模块满足[架构 §6.1](architecture-learning-note.md#61-比较对象与局部条件)的四项条件。两份运行使用相同的输入、评分、增益、$k_j,\eta_j$、记忆与内容函数；全部外部输入强度为 $1$。
 
-一份在各区域使用 §4.1.4 的固定阈值分配，正则形状固定，正典容量取 $K_j=|\mathcal R_j|$；另一份使用硬选择，容量取 $K_j=k_j$。
+一份在各区域使用 §4.1.4 的节点增益与固定阈值分配，正则形状固定，正典容量取 $K_j=|\mathcal R_j|$；另一份使用硬选择，容量取 $K_j=k_j$。
 
 **命题。** 若硬运行在切面以前的每次区域选择满足 §7.3.1 的评分条件，则各区域温度共同趋零时，约束运行的消息投影、有效状态与 ReadOut 收敛到硬运行。各区域可使用不同的趋零序列及固定正则形状。
 
@@ -953,7 +953,7 @@ $$
 
 ### 7.6 条件与反例
 
-使用固定阈值候选，固定 $\mu=(0.9,0.8),t=(-2,-1),k=1$ 时，线性问题的唯一解是 $(0.2,0.8)$，硬选择给 $(0,0.8)$。这里的上限始终是这两个介于零和一之间的数。
+使用节点增益与固定阈值分配，固定 $\mu=(0.9,0.8),t=(-2,-1),k=1$ 时，线性问题的唯一解是 $(0.2,0.8)$，硬选择给 $(0,0.8)$。这里的上限始终是这两个介于零和一之间的数。
 
 $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分别送到两个单节点区域且增益为 $1$，下游也保持半强度。单位外部输入仍需评分条件才能推出整网软硬相等的极限。
 
@@ -971,7 +971,7 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 |---|---|---|---|
 | 指定总量分配 | 满足 | 满足 | §7.2：自身的唯一线性最优分配 |
 | 区域阈值分配 | 满足 | 满足 | §7.4：单位输入的配对硬选择 |
-| 固定阈值分配 | 满足 | 满足 | §7.5：单位输入的配对硬选择 |
+| 节点增益与固定阈值分配 | 满足 | 满足 | §7.5：单位输入的配对硬选择 |
 | 直接 Attention，两种基权重 | 满足 | 满足 | 未纳入 |
 | 固定总强度 Attention，$a=\mu$ | 满足 | 一般不满足 | 未纳入 |
 | 固定总强度 Attention，$a=1$ | 一般不满足 | 一般不满足 | 未纳入 |
@@ -1035,11 +1035,11 @@ $$
 
 固定候选槽、$\tau_n\to\tau_*>0$。设 $w^{(n)},\mu^{(n)}$ 收敛且满足 $w\le\mu\le\gamma_{\max}w$，评分有界并在正极限接收处收敛。直接 Attention 的两种基权重、总量缩放 Attention、按比例分配均连续，并允许增删零接收坐标。
 
-**证明。** 有正极限接收时，式 (9) 中相应项收敛到正值，零极限项因有界指数趋零，故分母趋正，份额收敛。全部接收趋零时，直接规则用 $c\le\mu$，总量规则用 $\sum c=\min(1,M)$，均得 $c\to0$。按比例规则在 $M>0$ 直接连续，零处仍有 $c\le\mu$。零接收坐标对各分母、总量和发送均无贡献。$\square$
+**证明。** 有正极限接收时，式 (9) 中相应项收敛到正值，零极限项因有界指数趋零，故分母趋正，份额收敛。全部接收趋零时，直接 Attention 用 $c\le\mu$，总量缩放 Attention 用 $\sum c=\min(1,M)$，均得 $c\to0$。按比例规则在 $M>0$ 直接连续，零处仍有 $c\le\mu$。零接收坐标对各分母、总量和发送均无贡献。$\square$
 
-在有正极限接收的情形，总量规则还有 $c_v\to0$ 对应于 $r_v^{\mathrm{in}}\to0$；这是组合消息连续性所需的单候选结论。固定总强度 $a=\mu$ 允许增删精确零接收坐标：它们对分母与发送均无贡献；但分母趋零时一般不连续。固定总强度 $a=1$ 把真实零接收候选计入分母，增删它们一般改变其他份额。两种比较分别对应共同架构的零接收条件和正温度连续条件，具体反例见 §8.1。
+在有正极限接收的情形，总量缩放 Attention 还有 $c_v\to0$ 对应于 $r_v^{\mathrm{in}}\to0$；这是组合消息连续性所需的单候选结论。固定总强度 $a=\mu$ 允许增删精确零接收坐标：它们对分母与发送均无贡献；但分母趋零时一般不连续。固定总强度 $a=1$ 把真实零接收候选计入分母，增删它们一般改变其他份额。两种比较分别对应共同架构的零接收条件和正温度连续条件，具体反例见 §8.1。
 
-正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量规则使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；§7.5 的单位输入软硬结论使用约束分配与式 (14)。
+正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量缩放 Attention 使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；§7.5 的单位输入软硬结论使用约束分配与式 (14)。
 
 ### A.4 指定总量的正温度精确性
 
@@ -1062,18 +1062,22 @@ Shannon 与 bern 在端点的斜率无界，不能使用这个证明。它们在
 
 ### S.1 配置名称
 
-selection_mode 指定发送函数：
+selection_mode 指定完整发送函数及其求值方式。正温度函数与第 7 节的配对函数分别绑定：
 
-| 函数 | 配置值 | 定义 |
-|---|---|---|
-| 指定总量分配 | regional_total | §3.4.1 的总量与 §4.1.2 |
-| 区域阈值分配 | regional_threshold | §3.4.2 的阈值与 §4.1.3 |
-| 固定阈值分配 | constrained | §2.6 的节点增益与 §4.1.4 |
-| 直接 Attention | direct_attention | 式 (10) |
-| 固定总强度 Attention | unit_attention | 式 (11) |
-| 总量缩放 Attention | pooled_attention | 式 (12) |
-| 按比例分配 | proportional | 式 (13) |
-| 硬选择 | hard_selection | 式 (14) |
+| 函数 | 配置值 | 定义 | 正典容量 $K_j$ |
+|---|---|---|---|
+| 指定总量分配 | regional_total | §3.4.1 的总量与 §4.1.2 | $\lvert\mathcal R_j\rvert$ |
+| 指定总量的零温分配 | regional_total_zero | §7.2 的排序填入 | $\lvert\mathcal R_j\rvert$ |
+| 区域阈值分配 | regional_threshold | §3.4.2 的阈值与 §4.1.3 | $\lvert\mathcal R_j\rvert$ |
+| 区域阈值的配对硬选择 | regional_threshold_hard | §7.4，保留区域阈值函数 | $k_j$ |
+| 节点增益与固定阈值分配 | constrained | §2.6 的节点增益与 §4.1.4 | $\lvert\mathcal R_j\rvert$ |
+| 节点增益与固定阈值的硬选择 | hard_selection | §2.6 的节点增益与式 (14) | $k_j$ |
+| 直接 Attention | direct_attention | 式 (10) | $\lvert\mathcal R_j\rvert$ |
+| 固定总强度 Attention | unit_attention | 式 (11) | $\lvert\mathcal R_j\rvert$ |
+| 总量缩放 Attention | pooled_attention | 式 (12) | $\lvert\mathcal R_j\rvert$ |
+| 按比例分配 | proportional | 式 (13) | $\lvert\mathcal R_j\rvert$ |
+
+regional_total 与 regional_total_zero 保留同一 Describe、评分和总量头；regional_threshold 与 regional_threshold_hard 保留同一 Describe、评分和阈值头。两组都使用 §2.5 的区域控制描述。constrained 与 hard_selection 使用 §2.6 的节点增益描述。下表中“指定总量”“区域阈值”的描述与控制参数同时适用于各自的配对函数。
 
 其余配置对应已定义的参数与函数选择：
 
@@ -1081,22 +1085,24 @@ selection_mode 指定发送函数：
 |---|---|
 | local_score | cat、match，式 (1)、(2) |
 | region_score | ind、att；指定总量、区域阈值配套使用 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，其余使用节点增益描述 |
-| send_gain | fixed、context，式 (4)、(5)；两个区域控制候选不使用 |
-| gamma_max | 有限最大倍率；两个区域控制候选直接使用固定 $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$ |
+| send_gain | fixed、context，式 (4)、(5)，用于节点增益描述；区域控制描述不使用 |
+| gamma_max | 有限最大倍率；指定总量与区域阈值直接使用 $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$ |
 | query_weight | 节点增益描述的 att mu／received 分别使用 $\mu_v,w_v$，默认 mu；区域控制 att 固定 received |
 | allocation_base | direct_attention 使用 mu 或 received，默认 mu；unit_attention 使用 uniform 或 mu，默认 uniform；pooled_attention 固定 mu |
-| regularizer、ent_alpha | 三个约束候选的 quad／bern／ent；ent 另指定固定 $\alpha\in[1,2]$ |
-| allocation_temperature | 三个约束候选及 Attention 份额候选的正温度，与正典描述模式 $\tau_j$ 分别命名 |
-| k | 三个约束候选、proportional 的总发送强度上限；hard_selection 的激活数量上限 |
-| eta | constrained、hard_selection 的固定阈值；regional_threshold 在 fixed 控制时使用；regional_total 不使用 |
-| region_control_mode | 两个区域控制候选的 fixed／context，§3.4；其他候选不使用 |
-| region_control_width | $d_{\mathrm{reg}}$，两个区域控制候选的描述证据宽度 |
-| total_fraction | regional_total 在 fixed 控制时的 $\rho_j\in[0,1]$；context 由区域头给出比例 |
+| regularizer、ent_alpha | regional_total、regional_threshold、constrained 的 quad／bern／ent；ent 另指定固定 $\alpha\in[1,2]$ |
+| allocation_temperature | 上述三个正温度函数及 Attention 份额候选的正温度，与正典描述模式 $\tau_j$ 分别命名 |
+| k | 三个约束候选、regional_total_zero、proportional 的总发送强度上限；regional_threshold_hard、hard_selection 的激活数量上限 |
+| eta | constrained、hard_selection 的固定阈值；区域阈值在 fixed 控制时使用 |
+| region_control_mode | 指定总量、区域阈值的 fixed／context，§3.4 |
+| region_control_width | $d_{\mathrm{reg}}$，指定总量、区域阈值的描述证据宽度 |
+| total_fraction | 指定总量在 fixed 控制时的 $\rho_j\in[0,1]$；context 由区域头给出比例 |
 | alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度 |
 
-三个约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，按 $d_{\mathrm{reg}}$ 与 $d_r$ 给定节点证据投影和区域头全部参数；fixed 返回零证据，只使用指定的 eta 或 total_fraction。两个区域控制候选不使用 send_gain 或 allocation_base；regional_total 不叠加 eta。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。参数的无效分支须能由配置检查识别。
+三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，按 $d_{\mathrm{reg}}$ 与 $d_r$ 给定节点证据投影和区域头全部参数；fixed 返回零证据，只使用指定的 eta 或 total_fraction。指定总量、区域阈值及各自配对函数均不使用 send_gain 或 allocation_base；指定总量不叠加 eta。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。
 
-表中的 regional_total 与 regional_threshold 绑定正温度函数。指定总量的零温运行按 §7.2 保留总量头及容量；区域阈值的配对硬运行按 §7.4 保留区域描述、评分和阈值头，仅替换分配。这些配对函数使用各自的描述与控制头，hard_selection 的节点增益描述按 §2.6 绑定。
+regional_total_zero、regional_threshold_hard、hard_selection 直接计算各自的排序规则，不使用 allocation_temperature、regularizer 或 ent_alpha。配置检查须识别不适用的字段；显式选择配对函数时移除这些求解参数，正温度函数的温度仍要求严格为正。
+
+regional_total_zero 精确保持 $B$，可有小数发送，激活数一般可超过 $k_j$。两种 hard 配置对所有输入均限制至多 $k_j$ 个激活；它们与正温度函数的收敛关系分别使用 §7.4、§7.5 的单位输入及评分条件。配置切换选择了另一份运行函数，各自从初态产生状态；保留旧缓存后切换的结果另行比较。
 
 ### S.2 标量求解与隐式反向
 
@@ -1117,7 +1123,7 @@ selection_mode 指定发送函数：
 
 ### S.3 稳定求值与支持
 
-式 (9) 在正基权重上计算 $s_v/\tau+\log a_v$，减去最大值后 softmax；全零权重直接返回零。uniform 的候选掩码按输入存在性确定。总量与直接规则按自己的公式外乘，正分量支持按精确数学函数确定。
+式 (9) 在正基权重上计算 $s_v/\tau+\log a_v$，减去最大值后 softmax；全零权重直接返回零。uniform 的候选掩码按输入存在性确定。总量缩放 Attention 与直接 Attention 按自己的公式外乘，正分量支持按精确数学函数确定。
 
 指数响应先在对数域与上限比较；达到上限时直接返回原上限。sigmoid 采用稳定形式；ent 在 $\alpha$ 接近 $1$ 时使用 log1p／expm1 形式。数学零、浮点下溢零与人为裁剪零分别记录。
 

@@ -20,7 +20,7 @@ tags:
 | [PositiveDelayGraph](../positive-delay-graph-finite-cut-learning-note.md) | 有限正时延消息图，输入局部有限，允许空间有环 | 相容有限切面、区间组合与强连通分量求值 |
 | [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
 | [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 完整计算过程、模块组合、局部条件到整网性质的推导、精确继续与联合求值 |
-| [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定评分、节点上限、区域控制与发送函数 | Describe 与 SelStep 的具体定义、求解与导数；指定总量的线性最优极限，区域／固定阈值的单位输入硬化 |
+| [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定评分、节点上限、区域控制与发送函数 | Describe 与 SelStep 的具体定义、求解与导数；指定总量的线性最优极限，区域阈值、节点增益与固定阈值的单位输入硬化 |
 | [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
 | [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
@@ -79,7 +79,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $b^{\mathrm{recv}},U,H_j,\rho_j,B,\eta_j$ | [区域分配 §3.3—3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#33-区域控制的共同输入)：允许的总量范围、上下文头、范围内比例、指定总量和共同阈值；$B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}})$ |
 | $c_v,\mathcal A,M,S$ | [区域分配 §4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-发送分配与-selstep-返回)：发送强度（本支线的控制量）、激活集合、$\mu$ 总和与实际发送总和 |
 | $\mathcal F(\mu;\underline S,\overline S),\operatorname{Alloc}_\tau$ | [区域分配 §4.1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#411-共同问题与正则)：以节点上限和总量范围为参数的共同可行集与正则分配；指定总量取两端均为 $B$ |
-| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [区域分配 §4.1.4](../local-semantics/weighted-message/region-allocation-learning-note.md#414-固定阈值分配)：固定阈值候选的可行集、总量下限 $b=\min(1,M)$、上限、阈值、调整后评分和温度 |
+| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [区域分配 §4.1.4](../local-semantics/weighted-message/region-allocation-learning-note.md#414-节点增益与固定阈值分配)：节点增益与固定阈值分配的可行集、总量下限 $b=\min(1,M)$、上限、阈值、调整后评分和温度 |
 | $a_v,Z,p_v^{\mathrm{sel}}$ | [Attention 份额](../local-semantics/weighted-message/region-allocation-learning-note.md#42-通过-attention-份额分配)：三种 Attention 发送规则共同使用的基权重、归一化分母与内部份额 |
 | $\lambda,T$ | [区域分配 §6.1—6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#61-一个标量乘子)：求解器乘子与当前由等式固定的总量；$T$ 可为起作用的上下界或模型指定的 $B$ |
 | $x_v^{\mathrm{resp}},a_v^{\mathrm{resp}},e_v^{\mathrm{resp}}$ | [区域分配 §6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#62-约束分配的反向)：实际响应点 $t_v-\lambda$ 及在此处对自变量、发送上限的响应导数 |
@@ -104,7 +104,9 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 配置名见共同架构附录 S.1、区域分配附录 S.1 及各记忆模块附录。memory_family 取 kv／affine／delta／gated_delta／ssd；memory_read 选择该模块定义的记忆描述读取函数，read_mode 对应描述模式 $\tau_j$，指定 Read 所用的状态快照。region_score 选择区域评分方式，selection_mode 选择发送函数。conv_stride 的逻辑时间单位与卷积接口映射见[短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续)；GDN 的 head_k_dim 与 SSD 的 state_dim 均对应各自 $d_k$。相容性由共同架构 §5 检查。记忆状态、描述读取与内容变换分别绑定。
 
-regional_total 与 regional_threshold 配套使用区域控制描述；region_control_mode 选择 fixed／context，region_control_width 指定证据宽度。固定分支分别读取 total_fraction 或 eta，上下文分支使用区域头。两者不使用 send_gain、allocation_base，att 固定 query_weight=received。constrained 及 Attention 函数使用节点增益描述，各字段按所选函数参与计算。
+regional_total 与 regional_threshold 配套使用区域控制描述；region_control_mode 选择 fixed／context，region_control_width 指定证据宽度。固定分支分别读取 total_fraction 或 eta，上下文分支使用区域头。它们的 regional_total_zero、regional_threshold_hard 分别保留相同描述和控制头，只替换分配；四种配置均不使用 send_gain、allocation_base，att 固定 query_weight=received。constrained、hard_selection 及 Attention 函数使用节点增益描述，各字段按所选函数参与计算。
+
+regional_total_zero 保持指定总量，容量为区域大小；regional_threshold_hard 与 hard_selection 限制激活数量，容量为 $k_j$。三种配对函数均不读取温度和正则参数，具体定义与适用条件以[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)为准。
 
 SettleGraph 的 $r_v$ 保持节点秩的含义；带权消息的接收强度统一记为 $r_v^{\mathrm{in}}$。边集沿用 $A$，激活集合沿用 $\mathcal A$。
 

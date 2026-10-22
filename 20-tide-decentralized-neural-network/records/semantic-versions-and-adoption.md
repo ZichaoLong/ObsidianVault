@@ -37,8 +37,23 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-20 完整循环记忆候选 | 增加 memory_family=gated_delta／ssd 与固定逻辑时间短卷积；原模型对应和新增实现内容见下表。既有 affine／delta／kv、评分与发送函数保持 |
 | 2026-10-20 响应点与时间对应澄清 | 数值函数和配置取值保持。求根区间使用 $x^{\mathrm{bracket}}$，反向在实际 $x^{\mathrm{resp}}=t-\lambda$ 处求值；conv_stride 表示抽头的逻辑时间间距，原模型对应要求接收间隔与之匹配。联合求值以完整内部输入纤维为前提 |
 | 2026-10-22 区域阈值与指定总量 | 增加 regional_threshold／regional_total，配套区域证据、控制头与描述类型；共同 Alloc 接口覆盖三种约束候选。原 constrained、其他发送函数及默认配置数值保持；新增绑定与极限目标见“区域控制候选的采用范围” |
+| 2026-10-22 配对函数配置补全 | 为已定义的零温分配与区域阈值硬函数分别增加 regional_total_zero、regional_threshold_hard；既有数学函数和配置含义保持，容量及参数范围见下节 |
 
 编辑过程、正文重排和正典引用清理的逐篇差异见[修订记录](history/document-revisions.md)；文件更名及旧路径的现行落点见[迁移索引](history/migration-map.md)。局部 Attention 份额沿用 $p_v^{\mathrm{sel}}$，响应点与导数沿用 resp 上标；区间构造点单独使用 bracket 上标。
+
+## 配对函数的配置对应（2026-10-22）
+
+以 [0ad390e](https://github.com/ZichaoLong/ObsidianVault/commit/0ad390e) 为基线，为区域教材 §7.2、§7.4 已定义的函数补齐 selection_mode 名称。四份正典、局部数值函数、实例既有参数及核心版本保持。
+
+| 正温度配置 | 配对配置 | 采用时核对 |
+|---|---|---|
+| regional_total | regional_total_zero | 保留区域描述、评分和总量头；排序填入保持 $B$，容量仍为区域大小，可有小数发送 |
+| regional_threshold | regional_threshold_hard | 保留区域描述、评分和阈值头；容量取 $K_j=k_j$，一般非二元接收下未必保持原总量下界 |
+| constrained | hard_selection（既有） | 保留节点增益描述、评分及固定阈值；容量取 $K_j=k_j$ |
+
+三种配对函数均直接求值排序规则，不使用温度或正则参数。切换时明确选定函数并移除不适用字段；分别从初态运行才能比较相应定理中的完整轨迹。完整字段范围见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)。本次未核验下游是否已支持这些配置。
+
+当前正文统一称 constrained 为“节点增益与固定阈值分配”，其 §4.1.4 标题锚点同步更新；unit_attention、pooled_attention 分别沿用“固定总强度 Attention”“总量缩放 Attention”。其他章节与公式编号保持。
 
 ## 区域教材的阅读顺序与编号（2026-10-22）
 
