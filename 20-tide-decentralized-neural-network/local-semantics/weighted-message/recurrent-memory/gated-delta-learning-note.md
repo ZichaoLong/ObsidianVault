@@ -25,7 +25,7 @@ tags:
 | §1 的当前特征 $p_v(u)$，§3.2 的 Mem | 从当前内容取得特征，从描述模式指定的状态取得记忆描述，供 Describe 使用 |
 | §3.3 的 $G_v$ | 区域返回 $c_v$ 后，激活节点在 $\widetilde q_v$ 上计算完整内容 |
 
-Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §2—4](../region-allocation-learning-note.md#2-构造节点描述)。
+Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §2](../region-allocation-learning-note.md#2-指定总量的一次分配)。
 
 ## 1. 输入、参数与状态
 
@@ -177,7 +177,7 @@ $$
 
 两种方式共用短期描述和写入量统计；选择 state 时，long 描述由当前内容查询多头矩阵取得。基础循环的 state 分别查询两种时间尺度的矩阵，本文使用一组多头矩阵，其历史保留与修正由 $\lambda_h,g_h,\beta_h$ 共同决定。$W_a$ 始终表示相应衰减规则下的接收写入量，不能由它推出矩阵还保存多少信息。
 
-Read$^+$／$^-$／$^0$ 分别选择新状态、旧状态和零初态，在该状态上求式 (9)。[区域教材定义的 Describe](../region-allocation-learning-note.md#27-完成-describe-的构造)使用这个 Mem 返回值、式 (1) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$；SelStep 再从区域描述族形成评分及控制 $c_v$。默认使用 state 描述与 Read$^+$。
+Read$^+$／$^-$／$^0$ 分别选择新状态、旧状态和零初态，在该状态上求式 (9)。[区域教材定义的 Describe](../region-allocation-learning-note.md#51-从所选函数得到完整返回)使用这个 Mem 返回值、式 (1) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$；SelStep 再从区域描述族形成评分及控制 $c_v$。默认使用 state 描述与 Read$^+$。
 
 ### 3.3 完整内容
 

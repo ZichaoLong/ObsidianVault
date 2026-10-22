@@ -96,7 +96,7 @@ GDN 与 SSD 的短卷积按固定逻辑时间取槽，并以 $w$ 写入历史；
 
 ### 3.1 指定总量与区域阈值
 
-两者都表达区域共同调节发送、评分决定相对分工。定义见[区域分配 §3—4](../../local-semantics/weighted-message/region-allocation-learning-note.md#33-区域控制的共同输入)。相同的节点上限保护弱输入边界，相同的接收加权摘要提供区域内容与记忆证据；两者都只求一个总量乘子。
+两者都表达区域共同调节发送、评分决定相对分工。定义分别见区域教材的[指定总量](../../local-semantics/weighted-message/region-allocation-learning-note.md#2-指定总量的一次分配)与[区域阈值](../../local-semantics/weighted-message/region-allocation-learning-note.md#412-区域阈值分配)。相同的节点上限保护弱输入边界，相同的接收加权摘要提供区域内容与记忆证据；两者都只求一个总量乘子。
 
 | 方面 | 指定总量 | 区域阈值 |
 |---|---|---|
@@ -147,7 +147,7 @@ GDN 与 SSD 的短卷积按固定逻辑时间取槽，并以 $w$ 写入历史；
 
 ### 4.2 区域证据
 
-上下文区域控制需要节点提供向量，再按接收汇集，用于判断发送总量或共同阈值。[区域教材 §2.5](../../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)给出两种同型构造：
+上下文区域控制需要节点提供向量，再按接收汇集，用于判断发送总量或共同阈值。[区域教材 §3.4](../../local-semantics/weighted-message/region-allocation-learning-note.md#34-区域证据)给出两种同型构造：
 
 | 区域证据 | 有利特性 | 限制与代价 |
 |---|---|---|
@@ -175,7 +175,7 @@ GDN 与 SSD 的短卷积按固定逻辑时间取槽，并以 $w$ 写入历史；
 
 ### 4.4 记忆 key 与统计信息
 
-[区域教材 §2.4](../../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)给出两种 key，均用于与同一个区域 query 匹配，并可配合 cat 或 match 局部评分：
+[区域教材 §3.6](../../local-semantics/weighted-message/region-allocation-learning-note.md#36-区域-attention-评分)给出两种 key，均用于与同一个区域 query 匹配，并可配合 cat 或 match 局部评分：
 
 | 记忆 key | 所保留的作用 | 取舍 |
 |---|---|---|
@@ -201,7 +201,7 @@ Mem 已有自己的读取过程：KV qry 和循环 state 先由当前内容读�
 
 ## 5. 发送规则的取舍
 
-发送函数使用接收相关量及所需评分，产生控制 $c_v$；正分量对应本次激活节点。约束优化先选指定总量、区域阈值或节点增益与固定阈值分配，再选择正则；下表的约束行比较正则本身，区域控制的区别见 §3.1。Attention 规则共用归一化份额，分别定义如何变为发送强度。按比例分配不使用评分，硬选择单独给出激活集合。完整函数与性质见[区域分配教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#44-完成区域返回与性质对照)。
+发送函数使用接收相关量及所需评分，产生控制 $c_v$；正分量对应本次激活节点。约束优化先选指定总量、区域阈值或节点增益与固定阈值分配，再选择正则；下表的约束行比较正则本身，区域控制的区别见 §3.1。Attention 规则共用归一化份额，分别定义如何变为发送强度。按比例分配不使用评分，硬选择单独给出激活集合。完整函数与性质见[区域分配教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#51-从所选函数得到完整返回)。
 
 | 方法组 | 候选 | 有利特性 | 风险与成本 |
 |---|---|---|---|

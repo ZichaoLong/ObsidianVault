@@ -67,22 +67,25 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 
 | 符号或函数 | 含义与定义入口 |
 |---|---|
-| $w_v$ | [区域分配 §2.1](../local-semantics/weighted-message/region-allocation-learning-note.md#21-当前接收与记忆信息)：截断接收量 $\min(1,(r_v^{\mathrm{in}})_+)$ |
-| $f_v$ | [区域分配 §2.2.1](../local-semantics/weighted-message/region-allocation-learning-note.md#221-拼接特征)：供拼接评分、拼接区域证据和拼接上下文增益使用的特征 |
-| $E_v^{h,g}$ | [区域分配 §2.2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#222-分组编码)：当前内容、记忆、统计的分组编码；score、reg、key 用途默认参数独立，key 只使用 mem 组 |
-| $s_v^{\mathrm{cat}},s_v^{\mathrm{match}},s_v^{\mathrm{loc}}$ | [区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-局部评分的候选)：两种评分函数与所选局部评分；match 独立编码内容、记忆与统计量 |
-| $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)：区域 Attention 评分所需的当前内容投影与记忆 key；后者选择 content_stats／content，宽度相同 |
-| $\mu_v^{\max},z_v^{\mathrm{reg}},D_v^{\mathrm{reg,ind}},D_v^{\mathrm{reg,att}}$ | [区域分配 §2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)：指定总量、区域阈值的节点上限、区域证据与四元组／六元组描述；上下文控制选择 cat／grouped 证据，固定控制取零证据 |
-| $\gamma_v,\mu_v,D_v^{\mathrm{ind}},D_v^{\mathrm{att}}$ | [区域分配 §2.6](../local-semantics/weighted-message/region-allocation-learning-note.md#26-使用节点增益的描述)：固定或拼接上下文增益、接收相关发送量与三元组／五元组描述 |
-| $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$ | [区域分配 §2.7](../local-semantics/weighted-message/region-allocation-learning-note.md#27-完成-describe-的构造)：选定各部件后，组装所需描述的完整函数 |
-| $Q_j^{\mathrm{sel}},s_v$ | [区域分配 §3.1—3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#3-从描述族得到区域评分与控制)：区域 query 与最终评分；ind 直接取 $s_v=s_v^{\mathrm{loc}}$，区域控制的 att 按 $w_v$ 汇集 query |
-| $W^{\mathrm{recv}},M^{\max},\bar z_j^{\mathrm{reg}},f_j^{\mathrm{reg}}$ | [区域分配 §3.3](../local-semantics/weighted-message/region-allocation-learning-note.md#33-区域控制的共同输入)：截断接收之和、节点上限之和、接收加权证据及区域头输入 |
-| $b^{\mathrm{recv}},U,H_j,\rho_j,B,\eta_j$ | [区域分配 §3.3—3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#33-区域控制的共同输入)：允许的总量范围、上下文头、范围内比例、指定总量和共同阈值；$B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}})$ |
-| $c_v,\mathcal A,M,S$ | [区域分配 §4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-发送分配与-selstep-返回)：发送强度（本支线的控制量）、激活集合、$\mu$ 总和与实际发送总和 |
-| $\mathcal F(\mu;\underline S,\overline S),\operatorname{Alloc}_\tau$ | [区域分配 §4.1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#411-共同问题与正则)：以节点上限和总量范围为参数的共同可行集与正则分配；指定总量取两端均为 $B$ |
-| $c^{\mathrm{hard}}$ | [区域分配 §4.1.2](../local-semantics/weighted-message/region-allocation-learning-note.md#412-两种硬函数共用的排序规则)：区域阈值与节点增益的硬函数共用排序规则，分别代入各自评分及上限 |
-| $c^0$ | [区域分配 §4.1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#413-指定总量分配)：指定总量的零温分配，按评分依次填入节点允许的发送量 |
-| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [区域分配 §4.1.5](../local-semantics/weighted-message/region-allocation-learning-note.md#415-节点增益与固定阈值分配)：节点增益与固定阈值分配的可行集、总量下限 $b=\min(1,M)$、上限、阈值、调整后评分和温度 |
+| $w_v,\mu_v^{\max}$ | [区域分配 §2.1](../local-semantics/weighted-message/region-allocation-learning-note.md#21-接收与发送上限)：截断接收量与固定最大倍率给出的节点发送上限 |
+| $f_v$ | [区域分配 §3.1](../local-semantics/weighted-message/region-allocation-learning-note.md#31-拼接评分)：供拼接评分、拼接区域证据和拼接上下文增益使用的特征 |
+| $E_v^{h,g}$ | [区域分配 §3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#32-分组匹配评分)：当前内容、记忆、统计的分组编码；score、reg、key 用途默认参数独立，key 只使用 mem 组 |
+| $s_v^{\mathrm{cat}},s_v^{\mathrm{match}},s_v^{\mathrm{loc}}$ | [区域分配 §3.1—3.3](../local-semantics/weighted-message/region-allocation-learning-note.md#33-所选局部评分)：两种评分函数与所选局部评分；match 独立编码内容、记忆与统计量 |
+| $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §3.6](../local-semantics/weighted-message/region-allocation-learning-note.md#36-区域-attention-评分)：区域 Attention 评分所需的当前内容投影与记忆 key；后者选择 content_stats／content，宽度相同 |
+| $z_v^{\mathrm{reg}}$ | [区域分配 §3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#34-区域证据)：上下文控制的节点证据，选择 cat／grouped；固定控制取零向量 |
+| $D_v^{\mathrm{reg,ind}},D_v^{\mathrm{reg,att}}$ | [§2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#22-节点评分与区域信息)的四元组与[§3.6.3](../local-semantics/weighted-message/region-allocation-learning-note.md#363-扩展节点描述)的六元组：供指定总量与区域阈值使用的节点描述 |
+| $\gamma_v,\mu_v,D_v^{\mathrm{ind}},D_v^{\mathrm{att}}$ | [区域分配 §4.1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#413-节点增益与固定阈值分配)：固定或拼接上下文增益、接收相关发送量与三元组／五元组描述 |
+| $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$ | [区域分配 §5.1](../local-semantics/weighted-message/region-allocation-learning-note.md#51-从所选函数得到完整返回)：选定各部件后，组装所需描述的完整函数 |
+| $Q_j^{\mathrm{sel}},s_v$ | [区域分配 §3.6.4](../local-semantics/weighted-message/region-allocation-learning-note.md#364-query-与最终评分)：区域 query 与最终评分；ind 直接取 $s_v=s_v^{\mathrm{loc}}$，区域控制的 att 按 $w_v$ 汇集 query |
+| $W^{\mathrm{recv}},M^{\max},\bar z_j^{\mathrm{reg}},f_j^{\mathrm{reg}}$ | [区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-区域发送总量)：截断接收之和、节点上限之和、接收加权证据及区域头输入 |
+| $b^{\mathrm{recv}},U,\rho_j,B$ | [区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-区域发送总量)：允许的总量范围、范围内比例与指定总量；$B=b^{\mathrm{recv}}+\rho_j(U-b^{\mathrm{recv}})$ |
+| $H_j,\eta_j$ | 区域头的具体函数见[§3.5](../local-semantics/weighted-message/region-allocation-learning-note.md#35-区域头函数)，将其用于共同阈值见[§4.1.2](../local-semantics/weighted-message/region-allocation-learning-note.md#412-区域阈值分配) |
+| $c_v,\mathcal A$ | [区域分配 §1](../local-semantics/weighted-message/region-allocation-learning-note.md#1-输入与返回)：发送强度（本支线的控制量）与正发送节点组成的激活集合 |
+| $M,S$ | $M=\sum_v\mu_v$ 为节点上限之和，见[§4.1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#413-节点增益与固定阈值分配)；$S=\sum_vc_v$ 为实际发送总量，见[§4](../local-semantics/weighted-message/region-allocation-learning-note.md#4-发送规则的其他选择) |
+| $\mathcal F(\mu;\underline S,\overline S),\operatorname{Alloc}_\tau$ | [区域分配 §4.1.1](../local-semantics/weighted-message/region-allocation-learning-note.md#411-共同优化问题与正则)：以节点上限和总量范围为参数的共同可行集与正则分配；指定总量取两端均为 $B$ |
+| $c^{\mathrm{hard}}$ | [区域分配 §4.4.1](../local-semantics/weighted-message/region-allocation-learning-note.md#441-按评分选择节点)：区域阈值与节点增益的硬函数共用排序规则，分别代入各自评分及上限 |
+| $c^0$ | [区域分配 §4.4.2](../local-semantics/weighted-message/region-allocation-learning-note.md#442-指定总量的零温分配)：指定总量的零温分配，按评分依次填入节点允许的发送量 |
+| $F(\mu),b,k,\eta,(t_v),\tau_{\mathrm{sel}}$ | [区域分配 §4.1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#413-节点增益与固定阈值分配)：节点增益与固定阈值分配的可行集、总量下限 $b=\min(1,M)$、上限、阈值、调整后评分和温度 |
 | $a_v,Z,p_v^{\mathrm{sel}}$ | [Attention 份额](../local-semantics/weighted-message/region-allocation-learning-note.md#42-通过-attention-份额分配)：三种 Attention 发送规则共同使用的基权重、归一化分母与内部份额 |
 | $\lambda,T$ | [区域分配 §6.1—6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#61-一个标量乘子)：求解器乘子与当前由等式固定的总量；$T$ 可为起作用的上下界或模型指定的 $B$ |
 | $x_v^{\mathrm{resp}},a_v^{\mathrm{resp}},e_v^{\mathrm{resp}}$ | [区域分配 §6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#62-约束分配的反向)：实际响应点 $t_v-\lambda$ 及在此处对自变量、发送上限的响应导数 |

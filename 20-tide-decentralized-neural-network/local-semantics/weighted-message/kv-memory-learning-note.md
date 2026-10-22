@@ -208,7 +208,7 @@ $$
 
 sum 使用式 (2) 的摘要投影，当前内容在后续评分中与摘要交互；qry 从已写入的 K/V 再投影，并由当前内容参与检索。两者改变描述向量的来源，保持相同的四元组形状与写入量统计。
 
-Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#27-完成-describe-的构造)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
+Read$^+$ 在新状态 $\widetilde q$ 上求 Mem，Read$^-$ 在旧状态上按当前时间读取，Read$^0$ 使用空序列。Full 始终在 $\widetilde q$ 上读取。[区域教材的 Describe](region-allocation-learning-note.md#51-从所选函数得到完整返回)使用这些 Mem 返回值、式 (2) 的当前特征 $p_v(u_v)$ 及接收 $(r_v^{\mathrm{in}},u_v)$，计算节点描述 $d_v$；SelStep 收齐区域描述后得到 $c_v$ 与激活集合。sum／qry 改变记忆信息的取得方式，区域评分和发送函数仍可分别选择。
 
 ## 4. 激活后的内容读取
 
@@ -310,7 +310,7 @@ $$
 
 **发送绑定。** 两种绑定均使用 quad、正典容量 $K_j=3$，先取 $\tau_{\mathrm{sel}}=2$：
 
-- 指定总量按[区域教材 §5.1](region-allocation-learning-note.md#51-指定总量的完整计算)取 $\gamma_{\max}=2,d_{\mathrm{reg}}=1$、固定控制 $\rho_j=0.4,k_j=2$。此时 $\mu^{\max}=(1,1,0)$、$B=1.4$；Describe 返回四元组，SelStep 得到 $(0.95,0.45,0)$。
+- 指定总量按[区域教材 §2.5](region-allocation-learning-note.md#25-三个候选的一次计算)取 $\gamma_{\max}=2,d_{\mathrm{reg}}=1$、固定控制 $\rho_j=0.4,k_j=2$。此时 $\mu^{\max}=(1,1,0)$、$B=1.4$；Describe 返回四元组，SelStep 得到 $(0.95,0.45,0)$。
 - 节点增益与固定阈值按[区域教材 §5.2](region-allocation-learning-note.md#52-更换阈值与节点增益)取固定 $\gamma_v=1,\eta_j=0,k_j=1$。此时 $\mu=(1,1,0)$；Describe 返回三元组，SelStep 得到 $(0.75,0.25,0)$。
 
 **共同的内容与返回。** 三个候选均保留接收后的状态。令 $W_v^O=1,\alpha_{\mathrm{att}}=1,\alpha_{\mathrm{ff}}=0$；$a,b$ 激活时，Attention 分别读出 $1,-1$，得到内容 $G_a=2,G_b=-2$。节点 $c$ 在两种绑定中上限均为零，始终不调用 Full。
@@ -335,7 +335,7 @@ s_a=0.5,\qquad
 s_b=0.75-M_{\mathrm{long}}^{\mathrm{sum}}(\widetilde q_b,\theta).
 $$
 
-这属于[拼接评分](region-allocation-learning-note.md#23-局部评分的候选)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
+这属于[拼接评分](region-allocation-learning-note.md#31-拼接评分)的网络：$\operatorname{SiLU}(x)-\operatorname{SiLU}(-x)=x$，两个隐藏单元即可表达该线性项。
 
 | 位置 | 两节点新写入的 $(\xi,\nu,p,w)$ | $M_{\mathrm{long}}$ | $(s_a,s_b)$ | 激活者 | 终端 $O$ |
 |---|---|---|---|---|---|

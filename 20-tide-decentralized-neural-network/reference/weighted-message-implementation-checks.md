@@ -55,7 +55,7 @@ tags:
 
 ### 3.2 指定总量与区域阈值
 
-正温度的两个候选使用同一 Alloc，参数绑定及求解见[区域分配 §3—6](../local-semantics/weighted-message/region-allocation-learning-note.md#33-区域控制的共同输入)。按以下依赖逐步核对：
+正温度的两个候选使用同一 Alloc：指定总量见[区域分配 §2.3—2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#23-区域发送总量)，区域阈值见[§4.1.2](../local-semantics/weighted-message/region-allocation-learning-note.md#412-区域阈值分配)，共同求解见该教材 §6。按以下依赖逐步核对：
 
 | 步骤 | 核对内容 |
 |---|---|
@@ -73,9 +73,9 @@ tags:
 - 两种证据都满足 $\|z_v^{\mathrm{reg}}\|\le\sqrt{d_{\mathrm{reg}}}$；接收趋零时检查 $w_vz_v^{\mathrm{reg}}\to0$，包括内容方向改变或记忆描述不收敛的序列。精确零接收候选的增删不改变汇集结果。
 - 在不跨接收截断与总量分支的输入上，对编码参数、当前内容、记忆与统计量作方向差分，核对经证据、汇集、区域头到发送的完整反向。分组构造的归一化与乘积也须参与；总量范围退化或阈值被约束抵消时允许控制路径梯度为零。
 
-按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)另核对 regional_total_zero 与 regional_threshold_hard：保留对应 Describe、评分和区域头，直接执行区域教材 §4.1.3、§4.1.4 的配对函数。前者保持总量 $B$ 和区域大小容量；后者以 $k_j$ 限制激活数。两者与 hard_selection 均不读取温度或正则，不调用正温度求根器；覆盖全零接收、平票次序及非单位上限。一般非二元接收下，区域阈值硬函数未必保持 $b^{\mathrm{recv}}$，按其自身函数核对。
+按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)另核对 regional_total_zero 与 regional_threshold_hard：保留对应 Describe、评分和区域头，直接执行区域教材 §4.4.2、§4.4.3 的配对函数。前者保持总量 $B$ 和区域大小容量；后者以 $k_j$ 限制激活数。两者与 hard_selection 均不读取温度或正则，不调用正温度求根器；覆盖全零接收、平票次序及非单位上限。一般非二元接收下，区域阈值硬函数未必保持 $b^{\mathrm{recv}}$，按其自身函数核对。
 
-复现区域教材 §5.1 的指定总量计算、§5.2 的阈值比较和 §5.3 的弱接收例子。两个候选不能套用 constrained 的“$M\le1$ 返回全部上限”捷径；全上限分支由实际下界等于节点上限之和判定。单节点也可能在 $b^{\mathrm{recv}}<U$ 时由区域头改变发送。$k=1$ 在弱总接收时未必消除这项余量。
+复现区域教材 §2.5 的指定总量计算、§5.2 的阈值比较和 §5.3 的弱接收例子。两个候选不能套用 constrained 的“$M\le1$ 返回全部上限”捷径；全上限分支由实际下界等于节点上限之和判定。单节点也可能在 $b^{\mathrm{recv}}<U$ 时由区域头改变发送。$k=1$ 在弱总接收时未必消除这项余量。
 
 反向把响应输入 $t$、节点上限 $\mu$ 和当前等式总量 $T$ 先作为独立变量，再回传其依赖。指定总量在非退化分支核对 $dc_v/dB=a_v^{\mathrm{resp}}/\sum_u a_u^{\mathrm{resp}}$，并对 $B$ 的下界、上界及比例使用完整链式法则。区域阈值核对总量约束松弛时 $dc_v/d\eta_j=-a_v^{\mathrm{resp}}$，总量固定时该项为零；起作用的接收下界仍须回传。头、证据、接收、评分与记忆的共享输入贡献相加。
 
@@ -109,7 +109,7 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ### 3.6 区域 Attention 的记忆 key
 
-按[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)与 §3.2 核对 region_key=content_stats／content；二者均返回原描述字段中的 $d_{\mathrm{sel}}$ 维 key。
+按[区域分配 §3.6](../local-semantics/weighted-message/region-allocation-learning-note.md#36-区域-attention-评分)核对两种 key 及其区域匹配：region_key=content_stats／content 均返回原描述字段中的 $d_{\mathrm{sel}}$ 维 key。
 
 | 核对项 | 覆盖情形 |
 |---|---|
@@ -192,7 +192,7 @@ python -B 20-tide-decentralized-neural-network/tools/check_documents.py
 
 ### 区域分配的有限公式核对
 
-[region_allocation_checks.py](../examples/region_allocation_checks.py)从已给定的评分、节点上限和总量范围出发，用标量二分实现 quad，并与独立枚举各分量处于零、内部或上限的求解比较。程序复现区域教材 §5.1—5.3、§5.5 的分配算例，核对 §6.2 的总量、阈值、评分和温度导数，以及 §7.3、§7.6 的有限温度稀疏性、非二元上限和平票反例。
+[region_allocation_checks.py](../examples/region_allocation_checks.py)从已给定的评分、节点上限和总量范围出发，用标量二分实现 quad，并与独立枚举各分量处于零、内部或上限的求解比较。程序复现区域教材 §2.5、§5.2—5.3、§5.5 的分配算例，核对 §6.2 的总量、阈值、评分和温度导数，以及 §7.3、§7.6 的有限温度稀疏性、非二元上限和平票反例。
 
 程序只使用标准库，随机例子固定种子，方向差分取不跨分支的扰动。它覆盖有限的二次分配公式；其他正则、神经评分与区域头、完整图的连续性和训练效果按各自定义另行验证。
 

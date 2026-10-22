@@ -30,7 +30,7 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 
 | 修订 | 变化与兼容性 | 采用时核对 |
 |---|---|---|
-| 2026-10-14 非空约束分配 | 数值语义改变：constrained 的总发送下限为 $\min(1,\sum_v\mu_v)$；配对硬函数全低分时保留最高分候选 | 全低分、单候选及低接收分支；定义见[区域分配 §4.1.5](../local-semantics/weighted-message/region-allocation-learning-note.md#415-节点增益与固定阈值分配) |
+| 2026-10-14 非空约束分配 | 数值语义改变：constrained 的总发送下限为 $\min(1,\sum_v\mu_v)$；配对硬函数全低分时保留最高分候选 | 全低分、单候选及低接收分支；定义见[区域分配 §4.1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#413-节点增益与固定阈值分配) |
 | 2026-10-17 稠密 Attention | 新增无求根发送规则，既有约束函数保持 | 按各自发送上限、总量与零边界实现；见[Attention 份额分配](../local-semantics/weighted-message/region-allocation-learning-note.md#42-通过-attention-份额分配) |
 | 2026-10-19 模块组合 | 分开记忆族、记忆描述读取、区域评分与发送；增加基础循环、received 权重、总量缩放及 Read 模式组合 | 既有默认数值保持；新增描述字段及旧键的对应见下方迁移表 |
 | 2026-10-20 有限温度条件勘误 | 函数保持；旧 $t_{(4)}$ 条件不足，改用第二名评分 $t_{(2)}$ | 更新采用的充分条件，见[§7.3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#732-正温度的精确性)与附录 A.2 |
@@ -38,10 +38,10 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-20 名称与精确性补充 | 配置名称按下表迁移；补入满足条件的有限正温度精确运行结论 | 旧函数与默认值保持；结论按[架构 §6.3](../local-semantics/weighted-message/architecture-learning-note.md#63-局部分配极限与整网极限)的条件使用 |
 | 2026-10-20 完整循环候选 | 新增 gated_delta、ssd 与固定逻辑时间短卷积；原 affine／delta／kv 保持 | 新状态与参数按 [Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md#附录-s配置原模型对应与工作量)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md#附录-s配置原模型对应与工作量)附录绑定；state 描述为短期摘要加多头矩阵查询 |
 | 2026-10-20 求值对应澄清 | 函数保持；区分求根区间点与实际响应点，明确卷积抽头的逻辑时间单位 | 反向在实际响应点求值；原序列混合器对应须满足抽头与接收间距条件，见[实现核对](../reference/weighted-message-implementation-checks.md) |
-| 2026-10-22 区域控制，基线 [6d3b6e3](https://github.com/ZichaoLong/ObsidianVault/commit/6d3b6e3) | 新增 regional_total／regional_threshold、区域控制描述及头；旧 constrained 与默认数值保持 | 两者采用接收下界和最大倍率上限，分别控制实际总量与阈值；完整参数及配对目标见[区域分配第4节](../local-semantics/weighted-message/region-allocation-learning-note.md#4-发送分配与-selstep-返回) |
+| 2026-10-22 区域控制，基线 [6d3b6e3](https://github.com/ZichaoLong/ObsidianVault/commit/6d3b6e3) | 新增 regional_total／regional_threshold、区域控制描述及头；旧 constrained 与默认数值保持 | 两者采用接收下界和最大倍率上限，分别控制实际总量与阈值；完整参数及配对函数见[区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称) |
 | 2026-10-22 配对函数配置，基线 [0ad390e](https://github.com/ZichaoLong/ObsidianVault/commit/0ad390e) | 为已定义函数增加 regional_total_zero、regional_threshold_hard 名称 | 保留各自描述与区域头；容量和不适用参数按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)核对 |
-| 2026-10-22 分组证据，基线 [3bdee09](https://github.com/ZichaoLong/ObsidianVault/commit/3bdee09) | 新增 region_evidence=grouped；默认 cat 保留原函数，描述类型保持 | 证据与评分分别绑定；原 match 编码参数的名称对应见下段；定义见[§2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述) |
-| 2026-10-22 内容 key，基线 [fefbf7b](https://github.com/ZichaoLong/ObsidianVault/commit/fefbf7b) | 新增 region_key=content；默认 content_stats 保留原 key，描述类型保持 | content 另给独立编码参数；定义见[§2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)，统计通路与反向见[实现核对 §3.6](../reference/weighted-message-implementation-checks.md#36-区域-attention-的记忆-key) |
+| 2026-10-22 分组证据，基线 [3bdee09](https://github.com/ZichaoLong/ObsidianVault/commit/3bdee09) | 新增 region_evidence=grouped；默认 cat 保留原函数，描述类型保持 | 证据与评分分别绑定；原 match 编码参数的名称对应见下段；定义见[§3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#34-区域证据) |
+| 2026-10-22 内容 key，基线 [fefbf7b](https://github.com/ZichaoLong/ObsidianVault/commit/fefbf7b) | 新增 region_key=content；默认 content_stats 保留原 key，描述类型保持 | content 另给独立编码参数；定义见[§3.6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#362-记忆-key)，统计通路与反向见[实现核对 §3.6](../reference/weighted-message-implementation-checks.md#36-区域-attention-的记忆-key) |
 
 分组编码统一名称时，原 match 的 $B^{\mathrm{enc},g},C^{\mathrm{enc},g},b^{\mathrm{enc},g},d^{\mathrm{enc},g}$ 分别对应 $B^{\mathrm{score},g},C^{\mathrm{score},g},b^{\mathrm{score},g},a^{\mathrm{score},g}$；数值保持。区域证据和内容 key 使用各自参数。更换函数会改变后续状态；保留旧缓存继续与新模型从初态运行是两种比较，按[架构附录 S.1](../local-semantics/weighted-message/architecture-learning-note.md#s1-配置对应)声明。
 

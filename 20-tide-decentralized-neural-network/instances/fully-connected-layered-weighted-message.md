@@ -224,7 +224,7 @@ Gated DeltaNet 与 SSD 的摘要短期率取 $\log2/D$、长期率为零，conv_
 
 ### 4.4 指定总量与区域阈值
 
-本例取 $L=8,n=4,d=512$。记忆布局选择全部 B 型 KV，或仅在区域 $4,8$ 使用循环记忆；KV 的 sum、窗口、位置与头尺寸见 §4.2，循环的 state 与参数见 §4.3。全部区域取 cat 局部评分、ind 区域评分，使用[区域分配 §2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)的 $D^{\mathrm{reg,ind}}$，取 $d_r=d_{\mathrm{reg}}=32$、gamma_max=$2$、quad、$k_j=2$、$K_j=4$，各区域给定正温度。局部评分与区域头按该宽度给定全部有限参数，发送使用区域控制描述中的节点上限。
+本例取 $L=8,n=4,d=512$。记忆布局选择全部 B 型 KV，或仅在区域 $4,8$ 使用循环记忆；KV 的 sum、窗口、位置与头尺寸见 §4.2，循环的 state 与参数见 §4.3。全部区域取 cat 局部评分、ind 区域评分，使用[区域分配 §2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#22-节点评分与区域信息)的 $D^{\mathrm{reg,ind}}$，取 $d_r=d_{\mathrm{reg}}=32$、gamma_max=$2$、quad、$k_j=2$、$K_j=4$，各区域给定正温度。局部评分与区域头按该宽度给定全部有限参数，发送使用区域控制描述中的节点上限。
 
 每个区域选择下列一行；context 使用同一行对应的独立区域头，固定控制返回零证据：
 
@@ -243,7 +243,7 @@ KV 写入时间与循环更新时钟继续满足 §3。指定总量按教材 §7
 
 本例取 $L=8,n=4,d=512$，记忆布局为全部 B 型 KV，或仅在区域 $4,8$ 使用循环记忆。KV 的 sum、窗口、位置与头尺寸取 §4.2 的 B 行，循环的 state 与参数取 §4.3。所有区域使用 cat 局部评分，隐藏宽度 $d_r=32$。
 
-在选定区域取 region_score=att、region_key=content、alpha_loc=alpha_sel=$1$、query_weight=received，$d_r=d_{\mathrm{sel}}=32$。描述使用 $D^{\mathrm{reg,att}}$，给定[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)的当前内容投影、独立内容 key 编码，以及该教材 §3.2 的区域 query 参数。其余区域取 ind，描述使用 $D^{\mathrm{reg,ind}}$。
+在选定区域取 region_score=att、region_key=content、alpha_loc=alpha_sel=$1$、query_weight=received，$d_r=d_{\mathrm{sel}}=32$。描述使用 $D^{\mathrm{reg,att}}$，给定[区域分配 §3.6](../local-semantics/weighted-message/region-allocation-learning-note.md#36-区域-attention-评分)的当前内容投影、独立内容 key 编码，以及该教材 §3.6.4 的区域 query 参数。其余区域取 ind，描述使用 $D^{\mathrm{reg,ind}}$。
 
 每个区域的发送独立选择指定总量或区域阈值，控制参数使用 §4.4 的控制表：gamma_max=$2$、$d_{\mathrm{reg}}=32$、$k_j=2$，fixed 使用表中的固定值；context 逐区域选择 cat／grouped 证据，并给定证据及头参数，未另声明时取 cat。正温度分配取 quad、$K_j=4$；显式使用配对函数时，指定总量零温分配仍取 $K_j=4$，区域阈值硬选择取 $K_j=2$。各函数的温度参数按其定义给定。
 

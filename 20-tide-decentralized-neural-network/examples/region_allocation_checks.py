@@ -129,7 +129,7 @@ def central_difference(function, step: float = 1e-5) -> Vector:
 
 def check_textbook_examples() -> int:
     cases = []
-    # Sections 5.1--5.2: total control and the old fixed-threshold rule.
+    # Sections 2.5 and 5.2: total control and the fixed-threshold rule.
     scores, caps = (2.0, 1.0, 100.0), (1.0, 1.0, 0.0)
     for total, expected in (
         (1.0, (0.75, 0.25, 0.0)),

@@ -25,7 +25,7 @@ tags:
 | §2 的当前特征 $p_v(u)$，§3.1 的 Mem | 从当前内容取得特征，从描述模式指定的状态取得记忆描述，供 Describe 使用 |
 | §3.2 的 $G_v$ | 区域返回 $c_v$ 后，激活节点在 $\widetilde q_v$ 上计算完整内容 |
 
-Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §2—4](../region-allocation-learning-note.md#2-构造节点描述)。
+Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §2](../region-allocation-learning-note.md#2-指定总量的一次分配)。
 
 ## 1. 状态与逻辑时间
 
@@ -130,7 +130,7 @@ $$
 
 sum 按时间汇集独立摘要，state 让当前内容分别查询两份矩阵。读取方式与 §2 的 affine／delta 更新可独立组合；选定后，每次调用在给定状态与时间上使用同一组函数。
 
-在描述模式指定的状态上求这个四元组。[区域教材定义的 Describe](../region-allocation-learning-note.md#27-完成-describe-的构造)使用它、式 (3) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$。区域 SelStep 随后将完整描述族变为控制 $c_v$ 与激活集合。
+在描述模式指定的状态上求这个四元组。[区域教材定义的 Describe](../region-allocation-learning-note.md#51-从所选函数得到完整返回)使用它、式 (3) 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$。区域 SelStep 随后将完整描述族变为控制 $c_v$ 与激活集合。
 
 这里 $W_a$ 是衰减后的接收写入量之和；Delta 会覆盖或抵消矩阵中的部分内容，故 $W_a$ 不表示可恢复的记忆条数，也不度量矩阵存储的精确信息量。
 

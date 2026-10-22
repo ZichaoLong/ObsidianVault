@@ -157,7 +157,7 @@ $W_j^{\mathrm{recv}}=\sum_v\min(1,r_v^{\mathrm{in}})
 | 某区域使用固定总强度 Attention | 由 §3.1，该区域有正接收，故发送总强度为 $1$ |
 | 直接 Attention 或其他混合组合 | §3.1 保证每区有正发送；总强度按各区域所选函数计算 |
 
-区域内的候选可只占一小部分，具体节点随上游选择与邻域变化。正温度运行中，单节点接收强度和写入权重可以小于 $1$；KV 节点的缓存长度也可不同。全图采用三种约束分配时，单节点弱接收与区域发送总量至少为 $1$ 可以同时成立，区域内可调整的分配范围由[区域分配的可行集与求解](../local-semantics/weighted-message/region-allocation-learning-note.md#41-约束分配及其配对函数) 判断。
+区域内的候选可只占一小部分，具体节点随上游选择与邻域变化。正温度运行中，单节点接收强度和写入权重可以小于 $1$；KV 节点的缓存长度也可不同。全图采用三种约束分配时，单节点弱接收与区域发送总量至少为 $1$ 可以同时成立，区域内可调整的分配范围由[区域分配的可行集与求解](../local-semantics/weighted-message/region-allocation-learning-note.md#41-约束分配) 判断。
 
 ### 3.3 全部节点激活的条件
 
@@ -254,7 +254,7 @@ HB 的节点可能在一些位置没有接收。短卷积仍按 $t,t-1,t-2,t-3$ 
 
 ### 4.4 指定总量与区域阈值
 
-本例的七层图与共同尺寸取 §4.2 的表。记忆布局选择七层 KV，或仅在层 $4$ 使用循环记忆；KV 的读取、窗口和位置使用 §4.2 的表，循环的 state 与参数使用 §4.3。全部区域取 cat，层 $4$ 使用 ind，其余层使用 att 评分及记忆与统计 key。发送参数取 gamma_max=$2$、region_control_width=$32$、$d_r=32$、quad、$k_j=2$、$K_j=64$，各区域给定正温度。Describe 使用[区域分配 §2.5](../local-semantics/weighted-message/region-allocation-learning-note.md#25-指定总量与区域阈值所用的描述)的相应 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，att 固定 query_weight=received，逐节点 send_gain 不参与。
+本例的七层图与共同尺寸取 §4.2 的表。记忆布局选择七层 KV，或仅在层 $4$ 使用循环记忆；KV 的读取、窗口和位置使用 §4.2 的表，循环的 state 与参数使用 §4.3。全部区域取 cat，层 $4$ 使用 ind，其余层使用 att 评分及记忆与统计 key。发送参数取 gamma_max=$2$、region_control_width=$32$、$d_r=32$、quad、$k_j=2$、$K_j=64$，各区域给定正温度。Describe 使用[区域分配 §2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#22-节点评分与区域信息)、[§3.6.3](../local-semantics/weighted-message/region-allocation-learning-note.md#363-扩展节点描述)的相应 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，att 固定 query_weight=received，逐节点 send_gain 不参与。
 
 | 发送函数 | region_control_mode=fixed | region_control_mode=context |
 |---|---|---|
@@ -274,7 +274,7 @@ $B_j=(1+\min(2,\sum_v\mu_v^{\max}))/2$；区域头能否调节取决于区间是
 
 本例的七层图与共同尺寸取 §4.2 的表，记忆布局选择七层 KV，或仅在层 $4$ 使用循环记忆。KV 的读取、窗口与位置取 §4.2，循环的 state 与参数取 §4.3。所有区域使用 cat 局部评分，隐藏宽度 $d_r=32$。
 
-在选定区域取 region_score=att、region_key=content、alpha_loc=alpha_sel=$1$、query_weight=received，$d_r=d_{\mathrm{sel}}=32$；描述使用 $D^{\mathrm{reg,att}}$，给定[区域分配 §2.4](../local-semantics/weighted-message/region-allocation-learning-note.md#24-区域匹配所用的向量)的当前内容投影、独立内容 key 编码，以及该教材 §3.2 的区域 query 参数。其余区域中，层 $4$ 使用 ind 与 $D^{\mathrm{reg,ind}}$，其他层使用 att、记忆与统计 key 及 $D^{\mathrm{reg,att}}$；所有 att 的 query 权重取 received。
+在选定区域取 region_score=att、region_key=content、alpha_loc=alpha_sel=$1$、query_weight=received，$d_r=d_{\mathrm{sel}}=32$；描述使用 $D^{\mathrm{reg,att}}$，给定[区域分配 §3.6](../local-semantics/weighted-message/region-allocation-learning-note.md#36-区域-attention-评分)的当前内容投影、独立内容 key 编码，以及该教材 §3.6.4 的区域 query 参数。其余区域中，层 $4$ 使用 ind 与 $D^{\mathrm{reg,ind}}$，其他层使用 att、记忆与统计 key 及 $D^{\mathrm{reg,att}}$；所有 att 的 query 权重取 received。
 
 每个区域的发送独立选择指定总量或区域阈值，控制参数使用 §4.4 的控制表：gamma_max=$2$、$d_{\mathrm{reg}}=32$、$k_j=2$，fixed 使用表中的固定值；context 逐区域选择 cat／grouped 证据，并给定证据及头参数，未另声明时取 cat。正温度分配取 quad、$K_j=64$；显式使用配对函数时，指定总量零温分配仍取 $K_j=64$，区域阈值硬选择取 $K_j=2$。各函数的温度参数按其定义给定。
 

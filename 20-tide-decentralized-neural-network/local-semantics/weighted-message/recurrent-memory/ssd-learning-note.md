@@ -25,7 +25,7 @@ tags:
 | §2 的当前特征 $p_v(u)$，§3.2 的 Mem | 从当前内容取得特征，从描述模式指定的状态取得记忆描述，供 Describe 使用 |
 | §3.3 的 $G_v$ | 区域返回 $c_v$ 后，激活节点在 $\widetilde q_v$ 上计算完整内容 |
 
-Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §2—4](../region-allocation-learning-note.md#2-构造节点描述)。
+Describe 如何使用这些记忆量，以及 SelStep 如何形成评分和控制，见[区域教材 §2](../region-allocation-learning-note.md#2-指定总量的一次分配)。
 
 ## 1. 尺寸、状态与时钟
 
@@ -169,7 +169,7 @@ $$
 
 两种方式共用短期描述和写入量统计；选择 state 时，long 描述由当前内容查询多头矩阵取得。这与 Gated DeltaNet 的通道安排相同；基础循环的 state 则分别查询两种时间尺度的矩阵。本文矩阵按保留比例 $g_h$、有效步长 $d_h$ 和被动衰减更新；$W_a$ 统计接收写入量，矩阵的遗忘、相消和压缩并不由它精确计量。
 
-Read$^+$／$^-$／$^0$ 分别在新、旧和初始状态上求式 (9)。[区域教材定义的 Describe](../region-allocation-learning-note.md#27-完成-describe-的构造)使用这个 Mem 返回值、§2 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$；SelStep 再从区域描述族形成评分及控制 $c_v$。默认使用 state 描述与 Read$^+$。本次卷积可以从旧缓存或新缓存得到相同值，矩阵读取仍按指定状态进行。
+Read$^+$／$^-$／$^0$ 分别在新、旧和初始状态上求式 (9)。[区域教材定义的 Describe](../region-allocation-learning-note.md#51-从所选函数得到完整返回)使用这个 Mem 返回值、§2 的 $p_v(u)$ 及当前接收 $(r^{\mathrm{in}},u)$ 计算 $d_v$；SelStep 再从区域描述族形成评分及控制 $c_v$。默认使用 state 描述与 Read$^+$。本次卷积可以从旧缓存或新缓存得到相同值，矩阵读取仍按指定状态进行。
 
 ### 3.3 直通项、输出门与前馈
 
