@@ -111,7 +111,15 @@ $$
 
 ### 2.3 节点评分与节点描述
 
-总量还需分配到各节点。给定从 $h_v$、$p_v(u_v)$ 和本次 Mem 返回值计算实数 $s_v^{\mathrm{loc}}$ 的函数，称为局部评分函数。这里采用独立评分（ind），区域直接令
+总量还需分配到各节点。为每个节点选定局部评分函数 $\operatorname{Score}_v$，计算
+
+$$
+s_v^{\mathrm{loc}}=
+ \operatorname{Score}_v\bigl(h_v,p_v(u_v),\operatorname{Mem}_v(q_v^{\mathrm{read}},\theta,u_v)\bigr)
+ \in\mathbb R.
+$$
+
+这里采用独立评分（ind），区域直接令
 
 $$
 s_v=s_v^{\mathrm{loc}}.
@@ -209,7 +217,7 @@ $$
 
 第 2 节把局部评分、区域证据与区域头作为已选函数使用。现在给出这些函数的具体构造。矩阵、偏置与尺度均为有限参数；计算本节点时省略接收及记忆量的节点下标，它们均在本次选定状态和当前 $\theta,u$ 上求值。
 
-局部评分可在下面两种函数中选择；二者都实现 §2.3 所需的实数评分。
+局部评分可在下面两种函数中选择；二者都实现 §2.3 的 $\operatorname{Score}_v$。
 
 ### 3.1 拼接评分
 
@@ -232,7 +240,7 @@ s_v^{\mathrm{cat}}=b_v+(a_v^{\mathrm{cat}})^\top\operatorname{SiLU}(W_v^r f_v+b_
 \tag{1}
 $$
 
-这实现了 §2.3 所需的实数评分。例如将输出权重 $a_v^{\mathrm{cat}}$ 置零、偏置 $b_v$ 取为 $2,1,100$，就得到 §2.5 使用的三个常值评分；任意相容记忆均可接入该例。
+例如将输出权重 $a_v^{\mathrm{cat}}$ 置零、偏置 $b_v$ 取为 $2,1,100$，就得到 §2.5 使用的三个常值评分；任意相容记忆均可接入该例。
 
 ### 3.2 分组匹配评分
 
@@ -246,7 +254,7 @@ z^{\mathrm{stat}}&=[\log(1+(r^{\mathrm{in}})_+);\log(1+W_{\mathrm{short}});\log(
 \end{aligned}
 $$
 
-令组别 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的输入宽度分别为 $d_{\mathrm{cur}}=d$、$d_{\mathrm{mem}}=2d_s$、$d_{\mathrm{stat}}=3$。取正整数匹配宽度 $d_{\mathrm{sel}}$。下面的编码也可用于其他部件，用标记 $h$ 区分各自参数；当前评分取 $h=\mathrm{score}$。对实际使用的组别，取
+令组别 $g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的输入宽度分别为 $d_{\mathrm{cur}}=d$、$d_{\mathrm{mem}}=2d_s$、$d_{\mathrm{stat}}=3$。取正整数匹配宽度 $d_{\mathrm{sel}}$。下面的编码也可用于其他部件，用标记 $h$ 区分各自参数。对实际使用的组别，取
 $B_v^{h,g}\in\mathbb R^{d_r\times d_g}$、
 $C_v^{h,g}\in\mathbb R^{d_{\mathrm{sel}}\times d_r}$、
 $b_v^{h,g}\in\mathbb R^{d_r}$、
@@ -255,9 +263,10 @@ $a_v^{h,g}\in\mathbb R^{d_{\mathrm{sel}}}$，定义
 $$
 E_v^{h,g}(z)=\mathcal N_{d_{\mathrm{sel}}}
 \left(C_v^{h,g}\operatorname{SiLU}(B_v^{h,g}z+b_v^{h,g})+a_v^{h,g}\right).
+\tag{2}
 $$
 
-各组输出连续且范数不超过 $\sqrt{d_{\mathrm{sel}}}$。取隐藏宽度为 $d_r$ 的门控残差参数，以及非负尺度 $\alpha_v^{\mathrm{match}},\alpha_v^{\mathrm{res}}$，定义
+各组输出连续且范数不超过 $\sqrt{d_{\mathrm{sel}}}$。在式 (2) 中取 $h=\mathrm{score}$、$g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$。再取隐藏宽度为 $d_r$ 的门控残差参数，以及非负尺度 $\alpha_v^{\mathrm{match}},\alpha_v^{\mathrm{res}}$，定义
 
 $$
 \begin{aligned}
@@ -272,12 +281,12 @@ s_v^{\mathrm{match}}&=b_v^{\mathrm{match}}+
  \alpha_v^{\mathrm{match}}x_v^\top e_v/\sqrt{d_{\mathrm{sel}}}
  +\alpha_v^{\mathrm{res}}F_v^{\mathrm{match}}(f_v^{\mathrm{match}}).
 \end{aligned}
-\tag{2}
+\tag{3}
 $$
 
 ### 3.3 所选局部评分
 
-选定一种函数后，本节点的局部评分为
+选定拼接或分组匹配构造作为 §2.3 的 $\operatorname{Score}_v$ 后，本节点的局部评分为
 
 $$
 s_v^{\mathrm{loc}}=
@@ -287,7 +296,7 @@ s_v^{\mathrm{match}},&\text{选择分组匹配评分}.
 \end{cases}
 $$
 
-两种函数的参数默认按节点独立，允许显式共享同形参数。给定当前特征与记忆描述后，式 (1)、(2) 均连续依赖于所用的数值输入。
+两种函数的参数默认按节点独立，允许显式共享同形参数。给定当前特征与记忆描述后，式 (1)、(3) 均连续依赖于所用的数值输入。
 
 拼接评分将内容、统计量及当前内容与记忆的逐分量乘积一起送入非线性变换。分组匹配评分先分别编码内容、记忆和统计量，再将内容与记忆的内积同门控残差相加。两者均提供当前内容与记忆的交互，区别在于如何组织这些交互。所选 $s_v^{\mathrm{loc}}$ 写入节点描述；采用独立评分时，区域直接使用这个实数。
 
@@ -311,7 +320,7 @@ $$
 
 ##### 分组区域证据（grouped）
 
-使用 §3.2 的编码公式，并取独立的用途标记 $h=\mathrm{reg}$，先得到当前内容、记忆和统计的表示：
+在式 (2) 中取 $h=\mathrm{reg}$、$g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$，使用独立参数，得到当前内容、记忆和统计的表示：
 
 $$
 x_v^{\mathrm{reg}}=E_v^{\mathrm{reg,cur}}(z^{\mathrm{cur}}),\quad
@@ -403,7 +412,7 @@ $$
 
 记忆 key 向共同 query 提供本节点参与匹配的信息。记忆与统计 key 使用 Mem 的全部四项；内容 key 编码两个记忆向量，写入统计仍可由已有局部评分使用。两者都返回 $d_{\mathrm{sel}}$ 维向量。
 
-使用 §3.2 的记忆向量 $z^{\mathrm{mem}}$。记忆与统计 key 取 $W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$、$b_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}}$；内容 key 按该节公式另取 $h=\mathrm{key},g=\mathrm{mem}$ 的独立编码 $E_v^{\mathrm{key,mem}}$。选定构造后，
+使用 §3.2 的记忆向量 $z^{\mathrm{mem}}$。记忆与统计 key 取 $W_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}\times(2d_s+2)}$、$b_v^{\mathrm{mem}}\in\mathbb R^{d_{\mathrm{sel}}}$；内容 key 在式 (2) 中取 $h=\mathrm{key}$、$g=\mathrm{mem}$，使用独立参数得到 $E_v^{\mathrm{key,mem}}$。选定构造后，
 
 $$
 K_v^{\mathrm{sel}}=
@@ -415,7 +424,7 @@ W_v^{\mathrm{mem}}
 E_v^{\mathrm{key,mem}}(z^{\mathrm{mem}}),
  &\text{内容 key}.
 \end{cases}
-\tag{3}
+\tag{4}
 $$
 
 两种 key 均连续依赖其数值输入；内容 key 另满足 $\|K_v^{\mathrm{sel}}\|\le\sqrt{d_{\mathrm{sel}}}$。固定两个记忆向量时，内容 key 对 $W_{v,\mathrm{short}},W_{v,\mathrm{long}}$ 无直接依赖。编码含偏置，零记忆向量不强制得到零 key。
@@ -458,7 +467,7 @@ Q_j^{\mathrm{sel}}&=\psi_j(\bar x_j),\quad
 s_v&=\alpha_j^{\mathrm{loc}}s_v^{\mathrm{loc}}+
  \alpha_j^{\mathrm{sel}}(Q_j^{\mathrm{sel}})^\top K_v^{\mathrm{sel}}/\sqrt{d_{\mathrm{sel}}}.
 \end{aligned}
-\tag{4}
+\tag{5}
 $$
 
 取 $(\alpha_j^{\mathrm{loc}},\alpha_j^{\mathrm{sel}})=(1,0)$ 恢复独立评分的数值。汇集权重 $w_v$ 使零接收候选对 query 无影响，弱候选的影响趋零。
@@ -500,7 +509,7 @@ $$
 \mathcal F(\mu;\underline S,\overline S)
  =\{c:0\le c_v\le\mu_v,\quad
        \underline S\le\sum_vc_v\le\overline S\}.
-\tag{5}
+\tag{6}
 $$
 
 先定义二元熵 $h_B(p)=-p\log p-(1-p)\log(1-p)$、Shannon 熵项 $h_1(c)=-c\log c$，以及 $\alpha>1$ 时的 $h_\alpha(c)=(c-c^\alpha)/[\alpha(\alpha-1)]$。端点按 $0\log0=0$ 延拓。正则函数 $R$ 取下表中的一种：
@@ -517,7 +526,7 @@ $$
 \operatorname{Alloc}_\tau(t,\mu;\underline S,\overline S)
  =\arg\max_{c\in\mathcal F(\mu;\underline S,\overline S)}
    \{t\cdot c+\tau R(c;\mu)\}.
-\tag{6}
+\tag{7}
 $$
 
 可行集非空、紧且凸，目标在可改变的分量上严格凹，故分配唯一。ent 的 $\alpha=1$ 称为约束 Shannon 选择。指定总量对应 $\underline S=\overline S$，仍使用同一个函数。
@@ -561,7 +570,7 @@ $$
 $$
 1\le\gamma_v\le\gamma_{\max},\qquad
 \mu_v=\min(1,\gamma_v(r_v^{\mathrm{in}})_+).
-\tag{7}
+\tag{8}
 $$
 
 $w_v$ 描述本次接收，$\mu_v$ 允许有界放大，满足 $w_v\le\mu_v\le\gamma_{\max}w_v$。这里将 $\mu_v$ 用作节点发送上限。
@@ -576,12 +585,12 @@ $\gamma_v=1+(\gamma_{\max}-1)\sigma(\zeta_v)$。它在一次调用中不依赖�
 $$
 \gamma_v=1+(\gamma_{\max}-1)\sigma\bigl(b_v^\gamma+
  (a_v^\gamma)^\top\operatorname{SiLU}(W_v^\gamma f_v+b_v^{\gamma,h})\bigr).
-\tag{8}
+\tag{9}
 $$
 
 ##### 节点描述与发送分配
 
-选定增益后，用式 (7) 得到 $\mu_v$。评分与增益采用不同参数，可分别选择函数；固定增益无需 $f_v$。取 $\gamma_v=\gamma_{\max}$ 时，$\mu_v$ 与 §2.1 的 $\mu_v^{\max}$ 数值相同。
+选定增益后，用式 (8) 得到 $\mu_v$。评分与增益采用不同参数，可分别选择函数；固定增益无需 $f_v$。取 $\gamma_v=\gamma_{\max}$ 时，$\mu_v$ 与 §2.1 的 $\mu_v^{\max}$ 数值相同。
 
 两种增益均可配 cat 或 match 局部评分。采用 ind 或 att 时，分别取
 
@@ -640,7 +649,7 @@ $$
 $$
 Z=\sum_ua_ue^{s_u/\tau_{\mathrm{sel}}},\qquad
 p_v^{\mathrm{sel}}=\begin{cases}a_ve^{s_v/\tau_{\mathrm{sel}}}/Z,&Z>0,\\0,&Z=0.\end{cases}
-\tag{9}
+\tag{10}
 $$
 
 记 $p=(p_v^{\mathrm{sel}})_{v\in C}$。有正基权重时，$p$ 的和为 $1$，正分量恰在 $a_v>0$ 的候选上。非空候选集上取全部 $a_v=1$，得到通常的 $\operatorname{softmax}(s/\tau_{\mathrm{sel}})$。$p_v^{\mathrm{sel}}$ 是共同的中间量；各候选最终给出的 $c_v$ 才是 SelStep 的控制。
@@ -651,12 +660,12 @@ $$
 
 $$
 c_v=\mu_vp_v^{\mathrm{sel}}.
-\tag{10}
+\tag{11}
 $$
 
 两种基权重的支持相同，均激活全部有效候选。有效候选非空时，总和是各节点上限的加权平均：$0<S\le\max_v\mu_v\le1$；无有效候选时 $S=0$。每个节点保留 $c_v\le\mu_v$，区域不施加约束优化中的总量下限。只有一个有效候选时发送 $c_v=\mu_v$。
 
-使用 $\mu$ 时，增益既参与份额又参与幅度；使用 $w$ 时，固定评分和接收后，增益只通过本节点外乘的 $\mu_v$ 生效。再将式 (4) 的 query 权重取为 $w$，就同时移除了增益经 query 影响其他评分的直接依赖。后续消息和未来记忆仍连接整个网络。
+使用 $\mu$ 时，增益既参与份额又参与幅度；使用 $w$ 时，固定评分和接收后，增益只通过本节点外乘的 $\mu_v$ 生效。再将式 (5) 的 query 权重取为 $w$，就同时移除了增益经 query 影响其他评分的直接依赖。后续消息和未来记忆仍连接整个网络。
 
 #### 4.2.2 固定总强度 Attention
 
@@ -664,7 +673,7 @@ $$
 
 $$
 c_v=p_v^{\mathrm{sel}}.
-\tag{11}
+\tag{12}
 $$
 
 有正基权重时 $S=1$，每节点只受 $c_v\le1$ 限制。$a=1$ 激活全部真实候选，包括只收到零强度消息的候选；$a=\mu$ 激活全部有效候选，全零接收时返回零。两种函数均为固定正温度的稠密设计。
@@ -677,7 +686,7 @@ $$
 
 $$
 c_v=Bp_v^{\mathrm{sel}}.
-\tag{12}
+\tag{13}
 $$
 
 $M>0$ 时全部有效候选激活，总和为 $B$；$M=0$ 时全部为零。这里 $\mu_v$ 决定份额及区域总量，单节点上限为 $1$。例如 $\mu=(0.1,0.1)$、$p=(0.9,0.1)$ 时，$c=(0.18,0.02)$，第一项超过本节点的 $\mu_1$。
@@ -690,7 +699,7 @@ $M>0$ 时全部有效候选激活，总和为 $B$；$M=0$ 时全部为零。这�
 
 $$
 c_v=\begin{cases}\mu_v\min(k,M)/M,&M>0,\\0,&M=0.\end{cases}
-\tag{13}
+\tag{14}
 $$
 
 它将总量 $\min(k,M)$ 按各节点 $\mu_v$ 所占的比例分配，属于 $F(\mu)$，在有效候选上全正。评分不参与该函数，因此没有从分配到评分的直接导数。它可以组成完整模型，也可用于研究中的稠密参照。
@@ -705,7 +714,7 @@ $$
 
 $$
 c_v^{\mathrm{hard}}=\mu_v\mathbf1[v\in\mathcal A].
-\tag{14}
+\tag{15}
 $$
 
 这里的 $\mu$ 是规则的上限参数；下文分别传入 $\mu^{\max}$ 或节点增益得到的 $\mu$。两种绑定都使 $k$ 限制激活数量，选中节点发送其对应上限。
@@ -827,7 +836,7 @@ $|\Delta|<\tau$ 时两者均激活；$\Delta>\tau$ 时分配保持 $(1,0)$，小
 
 $$
 R^{\mathrm{ent}}_{\alpha=2}=R^{\mathrm{quad}}+\tfrac12\sum_vc_v.
-\tag{15}
+\tag{16}
 $$
 
 要取得相同分配，取 $\eta_{\mathrm{ent},2}=\eta_{\mathrm{quad}}+\tau/2$；总和固定时无需这项移位。固定评分和上限令温度趋于无穷时，解趋于可行集上正则的唯一最大点，见附录 A。
@@ -853,7 +862,7 @@ c_v&=g(t_v-\lambda,\mu_v;\tau),\qquad\lambda=\lambda_U-\lambda_L,\\
 \lambda_U,\lambda_L&\ge0,\quad
  \lambda_U(S-\overline S)=0,\quad\lambda_L(\underline S-S)=0.
 \end{aligned}
-\tag{16}
+\tag{17}
 $$
 
 先用 $\lambda=0$；总和过大时求 $S(\lambda)=\overline S$ 的非负根，过小时求 $S(\lambda)=\underline S$ 的非正根。指定总量时两端均为 $B$，求 $S(\lambda)=B$，乘子可取任意符号。响应单调，二分或有区间保护的 Newton 法即可求解。quad 还可排序断点。乘子可能不唯一，发送向量仍唯一。
@@ -882,7 +891,7 @@ $$
 d\lambda&=\frac{\sum_va_v^{\mathrm{resp}}dt_v+\sum_ve_v^{\mathrm{resp}}d\mu_v-dT}{A_0},\\
 dc_v&=a_v^{\mathrm{resp}}(dt_v-d\lambda)+e_v^{\mathrm{resp}}d\mu_v.
 \end{aligned}
-\tag{17}
+\tag{18}
 $$
 
 对标量目标 $\mathcal L$，记 $g_v^{\mathcal L}=\partial\mathcal L/\partial c_v$、$\bar g=\sum_va_v^{\mathrm{resp}}g_v^{\mathcal L}/A_0$，则
@@ -893,10 +902,10 @@ $$
 \frac{\partial\mathcal L}{\partial\mu_v}&=e_v^{\mathrm{resp}}(g_v^{\mathcal L}-\bar g),\\
 \frac{\partial\mathcal L}{\partial T}&=\bar g.
 \end{aligned}
-\tag{18}
+\tag{19}
 $$
 
-式 (18) 将 $t,\mu,T$ 当作独立输入求偏导，再沿其定义使用链式法则。指定总量候选取 $T=B$；区域阈值候选的下界 $T=b^{\mathrm{recv}}$ 随接收变化；节点增益与固定阈值分配在 $M>1$ 时，$T=1$ 或 $k$ 为常数。提高一个未饱和评分会在可响应的候选之间重新分配；其负梯度方向比较该候选与加权平均的任务边际影响。总和上下限都松弛时，$\lambda=0$ 固定，直接用 $dc_v=a_v^{\mathrm{resp}}dt_v+e_v^{\mathrm{resp}}d\mu_v$。
+式 (19) 将 $t,\mu,T$ 当作独立输入求偏导，再沿其定义使用链式法则。指定总量候选取 $T=B$；区域阈值候选的下界 $T=b^{\mathrm{recv}}$ 随接收变化；节点增益与固定阈值分配在 $M>1$ 时，$T=1$ 或 $k$ 为常数。提高一个未饱和评分会在可响应的候选之间重新分配；其负梯度方向比较该候选与加权平均的任务边际影响。总和上下限都松弛时，$\lambda=0$ 固定，直接用 $dc_v=a_v^{\mathrm{resp}}dt_v+e_v^{\mathrm{resp}}d\mu_v$。
 
 对 quad，固定上限并令 $\mathcal I=\{v:0<c_v<\mu_v\}$，记 $I$ 为 $|\mathcal I|$ 维单位矩阵，$\mathbf1$ 为同维的全一向量。在 $\mathcal I\ne\varnothing$ 且约束状态保持的光滑分支上，未饱和分量对其评分的 Jacobian 为
 
@@ -911,7 +920,7 @@ $$
 
 例如节点增益与固定阈值分配取 $\mu=(1,1,1),k=3,\tau=1,t=(0.4,0.5,0.6)$ 时，$c=t$ 且 $1<\sum c_v<3$；全部评分同时小幅增加，全部控制量随之增加。
 
-总和固定且只有一个未饱和候选时，评分导数为零；式 (18) 中各可响应候选的任务边际影响相同时，评分梯度也为零。$A_0=0$ 时不得除零，应沿严格饱和分支求导。分支切换处另给单侧或广义导数。
+总和固定且只有一个未饱和候选时，评分导数为零；式 (19) 中各可响应候选的任务边际影响相同时，评分梯度也为零。$A_0=0$ 时不得除零，应沿严格饱和分支求导。分支切换处另给单侧或广义导数。
 
 **区域头的反向。** 固定评分和节点上限，在上述非退化等式分支，指定总量满足
 
@@ -948,12 +957,12 @@ $$
 
 ### 6.3 Attention 分配的反向
 
-在式 (9) 的 $Z>0$ 分支，把评分和基权重看作独立输入，记 $J_p=\operatorname{diag}(p)-pp^\top$，有
+在式 (10) 的 $Z>0$ 分支，把评分和基权重看作独立输入，记 $J_p=\operatorname{diag}(p)-pp^\top$，有
 
 $$
 \frac{\partial p_v^{\mathrm{sel}}}{\partial s_u}=\frac{p_v^{\mathrm{sel}}}{\tau}(\mathbf1[v=u]-p_u^{\mathrm{sel}}),\qquad
 \frac{\partial p_v^{\mathrm{sel}}}{\partial a_u}=\frac{e^{s_u/\tau}}Z(\mathbf1[v=u]-p_v^{\mathrm{sel}}).
-\tag{19}
+\tag{20}
 $$
 
 零基权重处第二式表示向正值移动的右导数。各发送规则再使用
@@ -964,7 +973,7 @@ $$
 \text{固定总强度：}&dc_v=dp_v^{\mathrm{sel}},\\
 \text{总量缩放 Attention：}&dc_v=p_v^{\mathrm{sel}}dB+Bdp_v^{\mathrm{sel}},\quad B=\min(1,M).
 \end{array}
-\tag{20}
+\tag{21}
 $$
 
 对直接 Attention 的 $a=\mu$，这给出
@@ -986,7 +995,7 @@ $$
 \nabla_{Q_j^{\mathrm{sel}}}\mathcal L=
  \frac{\alpha_j^{\mathrm{sel}}}{\sqrt{d_{\mathrm{sel}}}}
  \sum_v\frac{\partial\mathcal L}{\partial s_v}K_v^{\mathrm{sel}}.
-\tag{21}
+\tag{22}
 $$
 
 完整反向还经过 query 汇集、keys、局部评分、记忆读取、写入与消息。正接收但零发送的候选可以通过 query 或未来记忆获得反馈；未执行的 Full 不提供该步替代分支的内容反馈。
@@ -1001,10 +1010,10 @@ $$
 
 $$
 \arg\max_{c\in\mathcal F(\mu^*;\underline S^*,\overline S^*)}t^*\cdot c
-\tag{22}
+\tag{23}
 $$
 
-有唯一解，式 (6) 的解收敛到它。零上限处的评分任取有限值。此命题覆盖三个约束候选，证明见附录 A.1。
+有唯一解，式 (7) 的解收敛到它。零上限处的评分任取有限值。此命题覆盖三个约束候选，证明见附录 A.1。
 
 ### 7.2 指定总量的零温分配
 
@@ -1025,7 +1034,7 @@ $\max\{s\cdot c:0\le c_v\le\mu_v^{\max},\ \sum c_v=B\}$。
 
 #### 7.3.1 评分条件
 
-节点增益与固定阈值、区域阈值的硬化都使用二元上限，即每个节点上限为 $0$ 或 $1$。取总量下界为 $\min(1,\sum_v\mu_v)$、上界为整数 $k\ge1$，以下评分条件使式 (22) 的唯一解恰为 §4.4.1 的排序结果：
+节点增益与固定阈值、区域阈值的硬化都使用二元上限，即每个节点上限为 $0$ 或 $1$。取总量下界为 $\min(1,\sum_v\mu_v)$、上界为整数 $k\ge1$，以下评分条件使式 (23) 的唯一解恰为 §4.4.1 的排序结果：
 
 - 有效候选至多一个，无评分条件。
 - $k=1$ 且至少两个有效候选，最高分唯一。
@@ -1055,7 +1064,7 @@ $\max\{s\cdot c:0\le c_v\le\mu_v^{\max},\ \sum c_v=B\}$。
 
 **证明。** 硬运行每条实际发送均为 $1$，故 $w,\mu^{\max}$ 二元；有效候选非空时 $b^{\mathrm{recv}}=1$。该次可行集正是 §7.3.1 的二元可行集。接收加权摘要使上下文阈值随有效状态和正接收内容连续，弱候选的贡献消失；$c_v\le\gamma_{\max}w_v$ 保证弱发送趋零。因此 §7.1 验证共同架构命题 3 的局部前提。固定硬运行的输入后，§7.3.2 的正温度界仍适用，再用共同架构的精确运行推论。$\square$
 
-这项结论保留同一阈值函数，运行时的阈值可以随输入和历史变化。一般非二元接收上的排序硬函数未必满足 $b^{\mathrm{recv}}$，其分配极限仍须按式 (22) 判断。
+这项结论保留同一阈值函数，运行时的阈值可以随输入和历史变化。一般非二元接收上的排序硬函数未必满足 $b^{\mathrm{recv}}$，其分配极限仍须按式 (23) 判断。
 
 ### 7.5 节点增益与固定阈值的硬化
 
@@ -1138,7 +1147,7 @@ $$
 
 ### A.1 约束解的连续性
 
-固定候选槽和正则形状。设 $\mu^{(n)},\underline S_n,\overline S_n$ 收敛，共同可行集均非空，评分一致有界且在正极限上限处收敛。温度趋向正值时，解趋向相应正温度解；温度趋零且式 (22) 唯一时，解趋向该线性最优解。
+固定候选槽和正则形状。设 $\mu^{(n)},\underline S_n,\overline S_n$ 收敛，共同可行集均非空，评分一致有界且在正极限上限处收敛。温度趋向正值时，解趋向相应正温度解；温度趋零且式 (23) 唯一时，解趋向该线性最优解。
 
 **证明。** 可行向量均在紧集 $[0,1]^{|C|}$ 中，任何可行收敛列的极限仍可行。反之，对极限可行向量 $d$，先取 $a_v^{(n)}=\min(d_v,\mu_v^{(n)})$。若其和超过 $\overline S_n$，按同一比例缩至该上界；若随后低于 $\underline S_n$，按剩余容量 $\mu_v^{(n)}-a_v^{(n)}$ 的比例补到下界。可行性保证容量足够；两次修改的总量均趋零，且下界不超过上界。因此得到各次可行的 $d^{(n)}\to d$，也覆盖上下界重合。
 
@@ -1152,7 +1161,7 @@ $$
 
 **证明 §7.3.1 的硬向量唯一性。** 零上限坐标固定。无有效候选或只有一个时可行集为单点；$k=1$ 时最高分唯一使单位总量集中于它。$k>1$ 且全负时，总和取下限 $1$，再由最高分唯一决定分配。有正评分时，负分量可移向未满的正分量，或在正分量全满后直接删除，从而严格提高目标。正评分数不超过 $k$ 时它们全部取 $1$；超过 $k$ 时严格截断间隔唯一确定前 $k$ 个。$\square$
 
-**证明 §7.3.2。** quad 中，选最高分一个时取 $\lambda=t_{(2)}$，选全部正评分时取 $\lambda=0$，选前 $k$ 个正评分时取 $\lambda=t_{(k+1)}$。表中温度界使式 (16) 逐坐标为所需的零或一，并满足乘子符号和互补条件。总和上下限同时取等号时，$\lambda$ 可为任意符号。
+**证明 §7.3.2。** quad 中，选最高分一个时取 $\lambda=t_{(2)}$，选全部正评分时取 $\lambda=0$，选前 $k$ 个正评分时取 $\lambda=t_{(k+1)}$。表中温度界使式 (17) 逐坐标为所需的零或一，并满足乘子符号和互补条件。总和上下限同时取等号时，$\lambda$ 可为任意符号。
 
 ent 的 $\alpha>1$ 在单位上限处，响应为 $1$ 和 $0$ 的条件分别是
 
@@ -1167,11 +1176,11 @@ $$
 
 固定候选槽、$\tau_n\to\tau_*>0$。设 $w^{(n)},\mu^{(n)}$ 收敛且满足 $w\le\mu\le\gamma_{\max}w$，评分有界并在正极限接收处收敛。直接 Attention 的两种基权重、总量缩放 Attention、按比例分配均连续，并允许增删零接收坐标。
 
-**证明。** 有正极限接收时，式 (9) 中相应项收敛到正值，零极限项因有界指数趋零，故分母趋正，份额收敛。全部接收趋零时，直接 Attention 用 $c\le\mu$，总量缩放 Attention 用 $\sum c=\min(1,M)$，均得 $c\to0$。按比例规则在 $M>0$ 直接连续，零处仍有 $c\le\mu$。零接收坐标对各分母、总量和发送均无贡献。$\square$
+**证明。** 有正极限接收时，式 (10) 中相应项收敛到正值，零极限项因有界指数趋零，故分母趋正，份额收敛。全部接收趋零时，直接 Attention 用 $c\le\mu$，总量缩放 Attention 用 $\sum c=\min(1,M)$，均得 $c\to0$。按比例规则在 $M>0$ 直接连续，零处仍有 $c\le\mu$。零接收坐标对各分母、总量和发送均无贡献。$\square$
 
 在有正极限接收的情形，总量缩放 Attention 还有 $c_v\to0$ 对应于 $r_v^{\mathrm{in}}\to0$；这是组合消息连续性所需的单候选结论。固定总强度 $a=\mu$ 允许增删精确零接收坐标：它们对分母与发送均无贡献；但分母趋零时一般不连续。固定总强度 $a=1$ 把真实零接收候选计入分母，增删它们一般改变其他份额。两种比较分别对应共同架构的零接收条件和正温度连续条件，具体反例见 §8.1。
 
-正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量缩放 Attention 使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；§7.5 的单位输入软硬结论使用约束分配与式 (14)。
+正温度连续性不能直接用于温度同时趋零：例如 $\mu=(1,\varepsilon_\tau)$、$s=(0,1)$、$\varepsilon_\tau=e^{-1/(2\tau)}$，总量缩放 Attention 使第二候选份额趋于 $1$，尽管它的接收权重趋零。对这类分配的整网温度极限需另外给出条件；§7.5 的单位输入软硬结论使用约束分配与式 (15)。
 
 ### A.4 指定总量的正温度精确性
 
@@ -1204,10 +1213,10 @@ selection_mode 指定完整发送函数及其求值方式。正温度函数与�
 | 区域阈值的配对硬选择 | regional_threshold_hard | §4.4.3，保留区域阈值函数 | $k_j$ |
 | 节点增益与固定阈值分配 | constrained | §4.1.3 | $\lvert\mathcal R_j\rvert$ |
 | 节点增益与固定阈值的硬选择 | hard_selection | §4.4.3，保留节点增益与固定阈值 | $k_j$ |
-| 直接 Attention | direct_attention | 式 (10) | $\lvert\mathcal R_j\rvert$ |
-| 固定总强度 Attention | unit_attention | 式 (11) | $\lvert\mathcal R_j\rvert$ |
-| 总量缩放 Attention | pooled_attention | 式 (12) | $\lvert\mathcal R_j\rvert$ |
-| 按比例分配 | proportional | 式 (13) | $\lvert\mathcal R_j\rvert$ |
+| 直接 Attention | direct_attention | 式 (11) | $\lvert\mathcal R_j\rvert$ |
+| 固定总强度 Attention | unit_attention | 式 (12) | $\lvert\mathcal R_j\rvert$ |
+| 总量缩放 Attention | pooled_attention | 式 (13) | $\lvert\mathcal R_j\rvert$ |
+| 按比例分配 | proportional | 式 (14) | $\lvert\mathcal R_j\rvert$ |
 
 regional_total 与 regional_total_zero 保留同一 Describe、评分和总量头；regional_threshold 与 regional_threshold_hard 保留同一 Describe、评分和阈值头。两组都使用 §2.3、§3.6.3 的区域控制描述。constrained 与 hard_selection 使用 §4.1.3 的节点增益描述。下表中“指定总量”“区域阈值”的描述与控制参数同时适用于各自的配对函数。
 
@@ -1215,10 +1224,10 @@ regional_total 与 regional_total_zero 保留同一 Describe、评分和总量�
 
 | 名称 | 取值与含义 |
 |---|---|
-| local_score | cat、match，式 (1)、(2) |
+| local_score | cat、match，式 (1)、(3) |
 | region_score | ind、att；指定总量、区域阈值配套使用 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，其余使用节点增益描述 |
 | region_key | att 使用 content_stats／content，分别对应 §3.6.2 的记忆与统计 key、内容 key；默认 content_stats |
-| send_gain | fixed、context，式 (7)、(8)，用于节点增益描述；区域控制描述不使用 |
+| send_gain | fixed、context，式 (8)、(9)，用于节点增益描述；区域控制描述不使用 |
 | gamma_max | 有限最大倍率；指定总量与区域阈值直接使用 $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$ |
 | query_weight | 节点增益描述的 att mu／received 分别使用 $\mu_v,w_v$，默认 mu；区域控制 att 固定 received |
 | allocation_base | direct_attention 使用 mu 或 received，默认 mu；unit_attention 使用 uniform 或 mu，默认 uniform；pooled_attention 固定 mu |
@@ -1232,11 +1241,11 @@ regional_total 与 regional_total_zero 保留同一 Describe、评分和总量�
 | total_fraction | 指定总量在 fixed 控制时的 $\rho_j\in[0,1]$；context 由区域头给出比例 |
 | alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度；content key 配非零 alpha_loc 时保留已有局部评分通路 |
 
-三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，region_evidence=cat 给定拼接证据投影；grouped 给定 §3.2 的三组证据编码及 §3.4 的组合矩阵与偏置，编码使用 $d_r,d_{\mathrm{sel}}$，输出宽度为 $d_{\mathrm{reg}}$。两种构造都另给同型区域头的全部参数。local_score=match 与 region_evidence=grouped 的编码参数默认独立，共享关系须显式绑定。
+三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，region_evidence=cat 给定拼接证据投影；grouped 给定式 (2) 中 $h=\mathrm{reg}$、$g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的编码参数及 §3.4 的组合矩阵与偏置，编码使用 $d_r,d_{\mathrm{sel}}$，输出宽度为 $d_{\mathrm{reg}}$。两种构造都另给同型区域头的全部参数。local_score=match 与 region_evidence=grouped 的编码参数默认独立，共享关系须显式绑定。
 
 fixed 返回零证据，只使用指定的 eta 或 total_fraction，region_evidence 不参与求值。指定总量、区域阈值及各自配对函数均不使用 send_gain 或 allocation_base；指定总量不叠加 eta。其他发送函数不使用 region_evidence。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。
 
-region_key 仅用于 att。content_stats 给定 $W_v^{\mathrm{mem}},b_v^{\mathrm{mem}}$；content 给定 $E_v^{\mathrm{key,mem}}$ 的两个矩阵与两个偏置，输入宽度为 $2d_s$，中间宽度为 $d_r$，输出宽度为 $d_{\mathrm{sel}}$。两者均使用相同的当前内容投影与区域 query，描述元组形状保持。key 编码与局部评分、区域证据的参数默认独立；同形共享须显式声明。ind 不读取 region_key。
+region_key 仅用于 att。content_stats 给定 $W_v^{\mathrm{mem}},b_v^{\mathrm{mem}}$；content 给定式 (2) 中 $h=\mathrm{key}$、$g=\mathrm{mem}$ 的两个矩阵与两个偏置，输入宽度为 $2d_s$，中间宽度为 $d_r$，输出宽度为 $d_{\mathrm{sel}}$。两者均使用相同的当前内容投影与区域 query，描述元组形状保持。key 编码与局部评分、区域证据的参数默认独立；同形共享须显式声明。ind 不读取 region_key。
 
 regional_total_zero、regional_threshold_hard、hard_selection 直接计算各自的排序规则，不使用 allocation_temperature、regularizer 或 ent_alpha。配置检查须识别不适用的字段；显式选择配对函数时移除这些求解参数，正温度函数的温度仍要求严格为正。
 
@@ -1255,14 +1264,14 @@ regional_total_zero 精确保持 $B$，可有小数发送，激活数一般可�
 
 令 $\lambda_{\mathrm{lo}}=\min_v(t_v-x_v^{\mathrm{bracket}})$、$\lambda_{\mathrm{hi}}=\max_v(t_v-x_v^{\mathrm{bracket}})$。单调性给出 $S(\lambda_{\mathrm{lo}})\ge T\ge S(\lambda_{\mathrm{hi}})$。二分维持此区间；Newton 候选步为 $\lambda+(S(\lambda)-T)/\sum_va_v^{\mathrm{resp}}$，其中导数在本轮的 $t_v-\lambda$ 处求值，仅在斜率非零且候选步落入保留区间时使用。上下界不同且某一边起作用时可与对应半轴相交；指定总量不限制乘子符号。
 
-每轮工作量为 $O(|C|)$。初始区间宽度 $D$ 到精度 $\varepsilon_\lambda$ 所需轮数为 $O(\max(1,\log_2(D/\varepsilon_\lambda)))$；同宽零区间直接求值。终止同时检查坐标误差、可行性及最优性残差，低温时相同乘子误差可造成更大坐标误差。quad 可排序 $t_v-\tau\mu_v,t_v$ 后扫描断点，工作量 $O(|C|\log|C|)$；ent 的 $\alpha=2$ 先按式 (15) 移位。
+每轮工作量为 $O(|C|)$。初始区间宽度 $D$ 到精度 $\varepsilon_\lambda$ 所需轮数为 $O(\max(1,\log_2(D/\varepsilon_\lambda)))$；同宽零区间直接求值。终止同时检查坐标误差、可行性及最优性残差，低温时相同乘子误差可造成更大坐标误差。quad 可排序 $t_v-\tau\mu_v,t_v$ 后扫描断点，工作量 $O(|C|\log|C|)$；ent 的 $\alpha=2$ 先按式 (16) 移位。
 
 反向使用 §6.2 的最优解映射导数，在求得的最优乘子处取 $x_v^{\mathrm{resp}}=t_v-\lambda$，保存分配、分支及响应统计，工作量 $O(|C|)$。对有限次迭代自动求导定义了另一种反向目标。单点可行集、精确断点、总和约束松紧交界、上下界重合和增益截断均需声明边界约定。若训练温度，在光滑分支上固定 $x,\mu$ 时有 $\partial g/\partial\tau=-a_v^{\mathrm{resp}}x_v^{\mathrm{resp}}/\tau$，再按总和约束修正；两个区域控制头不直接使用温度。可训练 $\alpha$ 的反向须另行定义。
 
 ### S.3 稳定求值与支持
 
-式 (9) 在正基权重上计算 $s_v/\tau+\log a_v$，减去最大值后 softmax；全零权重直接返回零。uniform 的候选掩码按输入存在性确定。总量缩放 Attention 与直接 Attention 按自己的公式外乘，正分量支持按精确数学函数确定。
+式 (10) 在正基权重上计算 $s_v/\tau+\log a_v$，减去最大值后 softmax；全零权重直接返回零。uniform 的候选掩码按输入存在性确定。总量缩放 Attention 与直接 Attention 按自己的公式外乘，正分量支持按精确数学函数确定。
 
 指数响应先在对数域与上限比较；达到上限时直接返回原上限。sigmoid 采用稳定形式；ent 在 $\alpha$ 接近 $1$ 时使用 log1p／expm1 形式。数学零、浮点下溢零与人为裁剪零分别记录。
 
-Attention 规则的 $Z>0$ 边界按式 (19) 核对右导数。全零分支一般没有通常 Jacobian；实现可声明返回零反向，须与方向导数分别记录。跳过 Full 与求出内容再乘零的边界反向也需按所选目标比较。具体核对项见[实现对应](../../reference/weighted-message-implementation-checks.md)。
+Attention 规则的 $Z>0$ 边界按式 (20) 核对右导数。全零分支一般没有通常 Jacobian；实现可声明返回零反向，须与方向导数分别记录。跳过 Full 与求出内容再乘零的边界反向也需按所选目标比较。具体核对项见[实现对应](../../reference/weighted-message-implementation-checks.md)。

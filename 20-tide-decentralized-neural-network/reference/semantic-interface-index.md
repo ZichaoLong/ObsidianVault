@@ -68,9 +68,10 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | 符号或函数 | 含义与定义入口 |
 |---|---|
 | $w_v,\mu_v^{\max}$ | [区域分配 §2.1](../local-semantics/weighted-message/region-allocation-learning-note.md#21-接收与发送上限)：截断接收量与固定最大倍率给出的节点发送上限 |
+| $\operatorname{Score}_v,s_v^{\mathrm{loc}}$ | [区域分配 §2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-节点评分与节点描述)：从当前接收、当前特征与记忆描述产生实数评分的函数及其输出 |
 | $f_v$ | [区域分配 §3.1](../local-semantics/weighted-message/region-allocation-learning-note.md#31-拼接评分)：供拼接评分、拼接区域证据和拼接上下文增益使用的特征 |
 | $E_v^{h,g}$ | [区域分配 §3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#32-分组匹配评分)：当前内容、记忆、统计的分组编码；score、reg、key 用途默认参数独立，key 只使用 mem 组 |
-| $s_v^{\mathrm{cat}},s_v^{\mathrm{match}},s_v^{\mathrm{loc}}$ | [区域分配 §3.1—3.3](../local-semantics/weighted-message/region-allocation-learning-note.md#33-所选局部评分)：两种评分函数与所选局部评分；match 独立编码内容、记忆与统计量 |
+| $s_v^{\mathrm{cat}},s_v^{\mathrm{match}}$ | [区域分配 §3.1—3.3](../local-semantics/weighted-message/region-allocation-learning-note.md#33-所选局部评分)：$\operatorname{Score}_v$ 的两种具体构造所得评分；match 独立编码内容、记忆与统计量 |
 | $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §3.6](../local-semantics/weighted-message/region-allocation-learning-note.md#36-区域-attention-评分)：区域 Attention 评分所需的当前内容投影与记忆 key；后者选择 content_stats／content，宽度相同 |
 | $\Phi_v,z_v^{\mathrm{reg}}$ | [区域分配 §2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#22-由节点特征确定发送总量)：从当前接收、当前特征与记忆描述产生区域证据的函数及其输出；cat／grouped 的具体构造见[§3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#34-区域证据)，固定控制取零证据 |
 | $D_v^{\mathrm{reg,ind}},D_v^{\mathrm{reg,att}}$ | [§2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-节点评分与节点描述)的四元组与[§3.6.3](../local-semantics/weighted-message/region-allocation-learning-note.md#363-扩展节点描述)的六元组：供指定总量与区域阈值使用的节点描述 |
