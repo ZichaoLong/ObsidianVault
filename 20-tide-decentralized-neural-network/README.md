@@ -69,7 +69,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 
 | 入口 | 用途 |
 |---|---|
-| [教学图集](figures/README.md) | 节点与区域结构、P/S/U/F 流程及可复现绘图源文件 |
+| [教学图集](figures/README.md) | 节点与区域、P/S/U/F、带权消息与局部模块图，以及定义出处与绘图源文件 |
 | [局部架构设计总览](memos/design/weighted-message-design.md) | 理解整体设计空间、信息与梯度依赖、候选取舍及外部证据 |
 | [可选研究问题与对照](memos/training/weighted-message-research-questions.md) | 按需选择目标、比较和观测；优先级由研究者安排 |
 | [局部架构实现核对](reference/weighted-message-implementation-checks.md) | 核对函数值、反向规则、数值边界、组合与切面继续 |
