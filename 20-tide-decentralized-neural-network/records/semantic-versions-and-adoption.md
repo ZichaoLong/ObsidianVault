@@ -103,9 +103,12 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | adopted family | PositiveDelayGraph、TimedDAG 或 SettleGraph，以及附加条件 |
 | local choices | 局部函数、尺寸、初态、输入日程、聚合、发送、状态和读出 |
 | local extensions | 改变公共函数类型或依赖关系的内容 |
+| implementation mapping | 下游维护的定义、配置与代码、测试的双向对应入口；按固定实现版本定位 |
 | validation | 比较对象、投影、数值容差、固定提交和验证结果 |
 
-离线副本保留来源与提交，从上游单向更新。具体实现的最新支持范围和验证结果由下游维护；上游保留一般定义、证明与教学参考程序。
+逐项对应与运行证据按[实现核对 §1.3](../reference/weighted-message-implementation-checks.md#13-从定义到验证证据)记录，采用声明链接其入口。上游采用页保留有日期和来源的声明及下游入口；具体支持范围、代码路径、测试和运行结果由下游维护。
+
+离线副本保留来源与提交，从上游单向更新。上游保留一般定义、证明与教学参考程序；新增核对要求不改变既有函数，也不更新下游已采用或已验证的范围。
 
 ## 来源
 

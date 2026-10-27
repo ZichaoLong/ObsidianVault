@@ -1,7 +1,7 @@
 ---
 type: document-history
 status: reference
-as-of: 2026-10-23
+as-of: 2026-10-27
 tags:
   - tide
   - history
@@ -10,6 +10,10 @@ tags:
 # 文档修订记录
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
+
+## 2026-10-27：实现验收的逐项对应
+
+[实现核对](../../reference/weighted-message-implementation-checks.md#1-采用声明与比较对象)补充固定定义、配置与代码、测试及运行证据的交付要求，明确模型绑定、参数与快照、返回结构、适用条件和核验范围；以 Read⁺ 展示读取快照及状态保留的对应方法。接口索引与采用声明链接同一要求，下游维护具体代码、测试和结果。四份正典、局部教材、数学函数及配置含义保持。
 
 ## 2026-10-23：局部评分的函数依赖与编码器复用
 
