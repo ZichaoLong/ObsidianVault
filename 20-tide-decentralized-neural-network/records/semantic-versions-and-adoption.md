@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-10-22
+as-of: 2026-10-28
 tags:
   - tide
   - semantic-version
@@ -88,7 +88,8 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 
 | 下游 | 采用声明 | 依据与范围 | 符合性证据 |
 |---|---|---|---|
-| [graph-execution-foundation](https://github.com/ZichaoLong/tide/tree/graph-execution-foundation) | tide-core-3；已包含若干局部模块特化，带权 KV 特例尚未实现 | 2026-10-10 维护者说明（当日记录）；本地目录为 ~/llm/graph-execution-foundation | 由下游固定提交、检查及报告给出；本次文档修订未审计其实现 |
+| [graph-execution-foundation，2026-10-28](https://github.com/ZichaoLong/tide/tree/2c46aa7d0b77afe7a7b82ed428466e36f5162de4) | tide-core-5／上游 0770593；一般 SettleGraph、五记忆与十种发送等已实现 | ascend 当前提交 2c46aa7；固定快照、代码和运行记录的定向审视见[审视记录](reviews/2026-10-28-ascend-implementation-review.md) | 19 份上游快照与固定 Git 对象一致；抽查 9 个任务的 19 份留存文件，新增 30 项 CPU 检查通过。CPU／NPU 有分范围证据与保留失败；CUDA 仅构建，尚无任务质量相当时的稀疏收益证据 |
+| graph-execution-foundation，2026-10-10 历史声明 | 当时为 tide-core-3；包含若干局部模块特化，带权 KV 特例尚未实现 | 2026-10-10 维护者说明（当日记录）；该状态已由上行更新 | 保留原日期和来源；当时的文档修订未审计实现 |
 | fractal-latcarf | 具体采用范围由实验记录声明 | SettleGraph 实验平台，维护模块、模型接入和训练设置 | 以该平台的版本对应和实验报告为准 |
 
 ## 下游引用

@@ -9,6 +9,8 @@ tags:
 
 # 带权消息架构的设计空间与取舍
 
+总体目标与共同框架的关系见[设计需求与架构讨论稿](design-requirements-and-architecture.md)；本页展开带权支线内的具体选择。
+
 本文从整体阅读局部架构：哪些信息被保存，哪些量参与评分与发送，哪些计算能省去，以及改变依赖可能得到什么、失去什么。共同定义见[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)，分配见[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md)，记忆分别见 [KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)与 [SSD](../../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)。
 
 数学性质提供设计边界，机制分析提供选择理由，任务表现仍依赖完整模型与训练。一个值得保持的研究判断是：保留任务需要的内容与历史依赖，同时减少一个量兼任多个控制作用的情况。它可以随实验结果逐步加强、减弱或修改。复杂耦合、计算成本和失败配置可能使某些判断长期无法被独立检验；未检验不等于已证伪，也不等于已验证。
@@ -235,7 +237,7 @@ Mem 已有自己的读取过程：KV qry 和循环 state 先由当前内容读�
 
 默认接收驱动写入、全部候选保留更新、Next 不读取 Full、区域历史为单点，已经使若干依赖清楚分开。这些约定保留未来反馈机会；未来是否读取、是否在反向截断内使用，以及上游是否持续提供输入，仍决定实际信用。
 
-固定图上的选择改变当前计算路径，空间边在其他输入和历史中仍可用。全连接层中所有节点继续准备；HB 可因上游不发送而省去整组下游作用。收拢会缩短某些路径的分离时间，可能有利于纠正早期选择，也可能稀释局部差异。
+固定图上的选择改变当前计算路径，空间边在其他输入和历史中仍可用。全连接层中所有节点继续准备；HB 可因上游不发送而省去部分下游节点的整次作用。在[当前 HB 实例的单位入口与非空发送条件下](../../instances/hb-lattice-weighted-message.md#31-每个区域都有正发送)，每个输入位置仍到达全部区域，区域内节点覆盖由实际发送决定。收拢会缩短某些路径的分离时间，可能有利于纠正早期选择，也可能稀释局部差异。
 
 记忆的保存与读取、Full 的内容变换分别承担职责。KV 教材的读取残差尺度为零时，Full 只用当前内容及前馈残差，描述读取仍可使用 KV；删除写入或改变 Attention／FFN 排列则需要完整的新函数绑定。不同区域怎样搭配这些计算，应按任务依赖与总成本选择。外部架构提供可行例证，不能单凭相似排列推出 Tide 广播与选择更优。
 

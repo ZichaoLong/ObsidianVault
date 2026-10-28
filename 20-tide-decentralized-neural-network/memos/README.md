@@ -14,13 +14,14 @@ tags:
 
 | 文档 | 职责 |
 |---|---|
+| [设计需求与架构关系](design/design-requirements-and-architecture.md) | 局部性与稀疏数量目标、边界配置、实验选择，以及上下层设计怎样相互牵引；讨论稿 |
 | [局部架构设计总览](design/weighted-message-design.md) | 设计能力、依赖路径、候选取舍、外部证据与可修正的判断 |
 | [脑科学启发的模型问题](design/neuroscience-inspired-model-questions.md) | 将生物观察转化为数字模型的可检验设计问题 |
 | [路由统计与物理类比](design/routing-statistics-and-physical-analogies.md) | 路径相关、路由熵与宏观描述的候选问题 |
 | [学习风险与诊断](training/sparse-routing-risks-and-diagnostics.md) | 跨架构的路径漂移、信用距离、状态负担、饥饿与干预机制 |
 | [可选研究问题与对照](training/weighted-message-research-questions.md) | 按问题取用的训练目标、对照、观测和结果解释 |
 
-设计总览用于掌握整体；诊断用于解释学习现象；研究问题用于安排具体比较。实施的优先级与结论由研究者和下游记录。[实现核对](../reference/weighted-message-implementation-checks.md)单独检查所实现的函数与数学定义是否一致。
+需求与架构讨论稿梳理总体目标，局部设计总览展开带权支线的选择；诊断用于解释学习现象，研究问题用于安排具体比较。实施的优先级与结论由研究者和下游记录。[实现核对](../reference/weighted-message-implementation-checks.md)单独检查所实现的函数与数学定义是否一致。
 
 ## 数学补充
 
@@ -43,4 +44,5 @@ tags:
 - [版本差异与下游采用](../records/semantic-versions-and-adoption.md)：当前迁移要点、采用声明与引用方式。
 - [文档修订记录](../records/history/document-revisions.md)：带日期的编辑过程与旧章节线索。
 - [内容迁移索引](../records/history/migration-map.md)：旧文件的现行落点。
+- [有界通信来源](../records/history/bounded-communication-origins.md)：直接通信范围、输入扩散与输出收拢的旧文依据及迁移、删除线索。
 - [LH 历史](../records/history/lh-design-origins.md)：早期实现与语义设计来源。
