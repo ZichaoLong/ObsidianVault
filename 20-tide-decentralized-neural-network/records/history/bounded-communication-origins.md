@@ -10,7 +10,7 @@ tags:
 
 # 有界通信、输入扩散与输出收拢的来源
 
-本页核对“不要一个节点与无界数量的节点进行通信”在旧文中的依据及其去向。当前需求解释与拓扑推导见[设计讨论稿 §4.4](../../memos/design/design-requirements-and-architecture.md#44-现有拓扑相对已确认目标的位置)；旧文的命名、模型候选和更强成本目标按各自历史版本理解。
+本页核对“不要一个节点与无界数量的节点进行通信”在旧文中的依据及其去向。当前需求解释见[设计讨论稿 §3](../../memos/design/design-requirements-and-architecture.md#3-需求共同框架与局部选择)，可达范围推导见[附录 A](../../memos/design/design-requirements-and-architecture.md#附录-a固定端口下的可达范围)；旧文的命名、模型候选和更强成本目标按各自历史版本理解。
 
 ## 1. 本轮用户确认的范围
 

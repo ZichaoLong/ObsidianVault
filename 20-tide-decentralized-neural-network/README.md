@@ -69,7 +69,8 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 
 | 入口 | 用途 |
 |---|---|
-| [设计需求与架构关系](memos/design/design-requirements-and-architecture.md) | 从局部性、有界内部通信与稀疏化梳理共同框架、拓扑和局部语义；分开目标、边界配置、实验选择及待验证判断 |
+| [设计需求与架构关系](memos/design/design-requirements-and-architecture.md) | 简短设计说明：目标与边界、两次完整计算、机制取舍及上下层反馈；详细依据链接到专题 |
+| [首次展示讲述脚本](presentations/design-introduction-script.md) | 从顺序计算到 HB 小图的两次输入，再展开共同框架与候选；含逐步显露、讲者核对和数值底稿 |
 | [教学图集](figures/README.md) | 节点与区域、P/S/U/F、带权消息与局部模块图，以及定义出处与绘图源文件 |
 | [局部架构设计总览](memos/design/weighted-message-design.md) | 理解整体设计空间、信息与梯度依赖、候选取舍及外部证据 |
 | [可选研究问题与对照](memos/training/weighted-message-research-questions.md) | 按需选择目标、比较和观测；优先级由研究者安排 |
