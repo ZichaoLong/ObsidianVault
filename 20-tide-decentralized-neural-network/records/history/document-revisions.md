@@ -11,6 +11,12 @@ tags:
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
 
+## 2026-10-28：三张原有 PNG 补充可编辑 SVG
+
+根据用户对 `tide-structure.png`、`PSUF-simple.png` 和 `PSUF-complete.png` 的询问，扩展已恢复的绘图脚本，生成同名 SVG，保留独立文字、形状及编组箭头。[图集](../../figures/README.md#用鼠标修改旧图)补入文件链接、Inkscape 小修改方法，以及手工修改版与生成源码的维护关系。
+
+三份 PNG 重绘后仍与原图逐字节一致；三张 SVG 经 Inkscape 导出并与原图逐图目视核对。内容、布局及数学语义沿用原图，来源与复核范围见[图片复现记录](../../figures/PROVENANCE.md#2026-10-28旧图的可编辑-svg)。
+
 ## 2026-10-28：首次展示材料预览
 
 根据用户“请生成展示材料，我先看看”的要求，将[讲述脚本](../../presentations/design-introduction-script.md)制成[首版展示材料](../../presentations/design-introduction/README.md)：15 组画面、25 个讲者控制的停点，提供单文件离线 HTML、逐停点 PDF、六幅画面预览与讲者备注。沿固定 HB 节点布局走完两次输入，再解释共同框架、Mem、相容选择和上下层反馈；条件、实验边界与出处保留在画面和备注中。

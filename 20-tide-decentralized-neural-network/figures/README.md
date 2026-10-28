@@ -10,9 +10,9 @@
 
 | 图片 | 用途 | 数学定义 |
 |---|---|---|
-| [节点、区域与消息流](tide-structure.png) | DAG 的发散、汇合、跨区连接与节点局部流程 | [TimedDAG §2—6](../timed-dag-region-selector-learning-note.md#2-固定结构时间节点图端口与区域划分) |
-| [P/S/U/F 简图](PSUF-simple.png) | 共同选择、候选状态保留与激活后的发送 | [TimedDAG §5](../timed-dag-region-selector-learning-note.md#5-区域候选集合选择函数选择历史与状态采用) |
-| [P/S/U/F 详图](PSUF-complete.png) | 计算快照、下一状态、控制与完整输出 | [共同接口索引](../reference/semantic-interface-index.md#局部函数) |
+| 节点、区域与消息流：[PNG](tide-structure.png)／[SVG](tide-structure.svg) | DAG 的发散、汇合、跨区连接与节点局部流程 | [TimedDAG §2—6](../timed-dag-region-selector-learning-note.md#2-固定结构时间节点图端口与区域划分) |
+| P/S/U/F 简图：[PNG](PSUF-simple.png)／[SVG](PSUF-simple.svg) | 共同选择、候选状态保留与激活后的发送 | [TimedDAG §5](../timed-dag-region-selector-learning-note.md#5-区域候选集合选择函数选择历史与状态采用) |
+| P/S/U/F 详图：[PNG](PSUF-complete.png)／[SVG](PSUF-complete.svg) | 计算快照、下一状态、控制与完整输出 | [共同接口索引](../reference/semantic-interface-index.md#局部函数) |
 
 图中的节点名称只用于对应示例。结构图与 P/S/U/F 图表达正典的一般语义；某个局部架构的附加约束由相应教材定义。
 
@@ -84,11 +84,18 @@ python3 20-tide-decentralized-neural-network/figures/render.py --group local
 python3 20-tide-decentralized-neural-network/figures/render.py --only kv-memory
 ```
 
-`--output-dir` 可将结果写到其他目录。局部语义图同时导出 2400 × 1350 的 PNG 和可编辑 SVG；SVG 保留文字、形状与定义引用。编辑 SVG 可直接制作演示变体；持续修改宜同步到生成脚本，重新运行会覆盖同名输出。
+`--output-dir` 可将结果写到其他目录。三张旧图和局部语义图均同时导出 PNG 与可编辑 SVG；旧图沿用原始画布，局部语义图为 2400 × 1350。SVG 保留文字和形状，定义出处见本页及各图来源记录。编辑 SVG 可直接制作演示变体；持续修改宜同步到生成脚本，重新运行会覆盖同名输出。
+
+### 用鼠标修改旧图
+
+用 Inkscape 打开上表的 SVG，按 `T` 使用文字工具修改字词，按 `F1` 使用选择工具移动、缩放对象或改变颜色。箭头的线段和箭头头部已经编组，可以整体移动；节点、标签和相邻连线仍是独立对象，移动节点后需自行调整连线端点。需要一起移动时，可多选后按 `Ctrl+G` 编组。
+
+SVG 使用 Noto Sans CJK SC 字体；编辑机器安装该字体可减少排版差异。建议先另存为一个不同文件名再手工修改，保留修改版，避免运行脚本时覆盖。若希望后续重绘继续保留改动，将文字、坐标或颜色同步回对应的 Python 脚本；也可以把修改后的 SVG 交给助手接入展示材料。
 
 | 源码 | 维护内容 |
 |---|---|
-| [src/legacy/](src/legacy/) | 结构图与 P/S/U/F 两图的独立 Pillow 脚本 |
+| [src/legacy/](src/legacy/) | 结构图与 P/S/U/F 两图的绘制内容、坐标和配色 |
+| [svg_export.py](src/legacy/svg_export.py) | 同步保存旧图的 SVG 文字与图元；PNG 继续使用原 Pillow 绘制 |
 | [local_figures.py](src/local_figures.py) | 带权消息流程与两个算例 |
 | [memory_figures.py](src/memory_figures.py) | KV、仿射／Delta、Gated DeltaNet、SSD |
 | [control_time_figures.py](src/control_time_figures.py) | 发送规则、温度和固定时间槽 |

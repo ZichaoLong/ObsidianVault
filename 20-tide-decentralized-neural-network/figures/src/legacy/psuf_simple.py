@@ -1,6 +1,7 @@
 # Restored from the October 2026 drawing calls; see ../../PROVENANCE.md.
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageFont
+from svg_export import VectorDrawing
 import math
 
 import argparse
@@ -17,7 +18,7 @@ BG = '#F8FAFD'
 INK, MUTED = '#20364B', '#60758A'
 BLUE, GREEN, GOLD, EDGE = '#286DA7', '#27816C', '#A67937', '#7B91A5'
 im = Image.new('RGB', (W*SCALE, H*SCALE), BG)
-d = ImageDraw.Draw(im)
+d = VectorDrawing(im, scale=SCALE, background=BG)
 
 def font(n, bold=False):
     return ImageFont.truetype(BOLD if bold else FONT, round(n*SCALE), index=2)
@@ -114,3 +115,4 @@ text(xv, 1272, '直接后继节点', 28, MUTED)
 
 im.resize((W, H), Image.Resampling.LANCZOS).save(OUT)
 print(OUT)
+print(d.save_svg(OUT.with_suffix('.svg'), source=Path(__file__).name))

@@ -1,6 +1,7 @@
 # Restored from the October 2026 drawing calls; see ../../PROVENANCE.md.
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageFont
+from svg_export import VectorDrawing
 import math
 
 import argparse
@@ -26,7 +27,7 @@ COLORS = {
     'R': ('#F6F1FA', '#CBBBDC', '#9073AB'),
 }
 im = Image.new('RGB', (W*SCALE, H*SCALE), BG)
-d = ImageDraw.Draw(im)
+d = VectorDrawing(im, scale=SCALE, background=BG)
 
 def font(n, bold=False):
     return ImageFont.truetype(BOLD if bold else REG, round(n*SCALE), index=2)
@@ -211,3 +212,4 @@ txt(1400,1847,'各出边载荷可相同或不同；⊥ 表示该边本次无消�
 
 im.resize((W,H),Image.Resampling.LANCZOS).save(OUT)
 print(OUT)
+print(d.save_svg(OUT.with_suffix('.svg'), source=Path(__file__).name))
