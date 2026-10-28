@@ -7,6 +7,7 @@ Canonical hashes record the reviewed edition. An intentional canonical edit
 requires a reviewed diff, a revision record, and an explicit hash update.
 """
 
+import argparse
 from collections import defaultdict
 from functools import lru_cache
 import hashlib
@@ -19,6 +20,9 @@ from urllib.parse import unquote
 
 BASE = Path(__file__).resolve().parents[1]
 ROOT = BASE.parent
+sys.path.insert(0, str(ROOT / 'tools'))
+from check_artifacts import ArtifactRegistry
+
 CANONICAL_HASHES = {
     "settlegraph-learning-note.md":
         "631bb877a197c2d5179b0fa17d4a74d2a294ed9e492278f4f040bb0b1925e362",
@@ -89,7 +93,7 @@ def references(text):
             yield number, match[1], False
 
 
-def resolve(source, target, wiki, by_name):
+def resolve(source, target, wiki, by_name, registry):
     if not target:
         return source
     relative = Path(target)
@@ -99,7 +103,7 @@ def resolve(source, target, wiki, by_name):
         if relative.suffix != ".md":
             candidates += [path.with_suffix(".md") for path in candidates]
     for path in candidates:
-        if path.exists():
+        if path.exists() or registry.recognizes(path):
             return path.resolve()
     if wiki and "/" not in target and len(by_name[relative.stem]) == 1:
         return by_name[relative.stem][0]
@@ -129,12 +133,23 @@ def check_formulas(path, errors):
 
 
 def main():
-    errors = []
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--require-built', action='store_true',
+                        help='Also require every registered artifact after a complete build.')
+    args = parser.parse_args()
+    try:
+        registry = ArtifactRegistry(ROOT)
+        errors, pending = registry.audit(args.require_built)
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        print(f'artifact manifest: {exc}', file=sys.stderr)
+        return 1
     # Include new documents before staging, while respecting the repository's ignores.
     names = subprocess.check_output(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", "*.md"],
         cwd=ROOT,
     ).decode().split("\0")
+    # Generated notes are ignored by Git but are still checked when available.
+    names += [name for name in registry.outputs if name.endswith('.md')]
     paths = sorted({(ROOT / name).resolve() for name in names if name
                     and (ROOT / name).is_file()
                     and not any(part in {".playwright-cli", "appendices"}
@@ -169,7 +184,7 @@ def main():
             if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target) or target.startswith("//"):
                 continue
             path, separator, anchor = target.partition("#")
-            destination = resolve(source, path, wiki, by_name)
+            destination = resolve(source, path, wiki, by_name, registry)
             concerns_tide = (inside or BASE.name in path or Path(path).stem in REMOVED_ENTRIES
                              or destination is not None and destination.is_relative_to(BASE))
             if not concerns_tide:
@@ -179,7 +194,8 @@ def main():
             location = f"{source.relative_to(ROOT)}:{number}"
             if destination is None:
                 errors.append(f"{location}: missing target {raw}")
-            elif separator and destination.suffix == ".md" and anchor not in anchors(destination):
+            elif (separator and destination.suffix == ".md" and destination.is_file()
+                  and anchor not in anchors(destination)):
                 errors.append(f"{location}: missing anchor {raw}")
             if source in canonical and destination not in canonical:
                 errors.append(f"{location}: canonical textbook refers to downstream material: {raw}")
@@ -188,7 +204,7 @@ def main():
     for path in local_notes:
         check_formulas(path, errors)
     for path in BASE.rglob("*"):
-        if path.is_dir() and not any(path.iterdir()):
+        if path.is_dir() and not any(path.iterdir()) and not registry.recognizes(path):
             errors.append(f"{path.relative_to(ROOT)}: empty directory")
     if errors:
         print("\n".join(errors), file=sys.stderr)
@@ -198,6 +214,7 @@ def main():
     print(f"PASS: {links} local Markdown/wiki links ({inbound} incoming) across {documents} Tide documents")
     print(f"PASS: numbered equations and TeX grouping in {len(local_notes)} local textbooks; no empty directories")
     print("PASS: no retired sending configuration names in current noncanonical documents")
+    print(f'{"PENDING" if pending else "PASS"}: {len(pending)} registered outputs await local build')
     return 0
 
 

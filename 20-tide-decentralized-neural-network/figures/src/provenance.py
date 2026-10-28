@@ -45,6 +45,7 @@ def write_local_provenance(base, output_dir, registry):
                             for ref in spec['sources']],
             'artifacts': {name+ext: sha256(output_dir/(name+ext)) for ext in ('.svg', '.png')},
         }
-    destination = output_dir/'local-provenance.json'
+    # Keep the reviewed historical snapshot separate from routine render runs.
+    destination = output_dir/'local-render-checks.json'
     destination.write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n')
     return destination

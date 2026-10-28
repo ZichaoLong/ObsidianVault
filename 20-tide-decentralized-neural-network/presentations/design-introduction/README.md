@@ -2,6 +2,8 @@
 
 从去中心化与稀疏化出发，在同一张 HB 小图上走完两次输入，再解释共同框架、Mem、可替换设计和上下层反馈。共 15 组画面、25 个可停顿步骤，最后一组为算例条件附页。
 
+以下成品由本目录源文件生成，默认不随 Git 跟踪。首次克隆请先运行下方构建命令；HTML／备注由 `build.py` 生成，PDF／预览／渲染报告由 `export.py` 生成。维护与留存规则见[仓库约定](../../../ARTIFACTS.md)。
+
 - [离线 HTML 演示](index.html)：下载后用浏览器打开；内容与图形内嵌，无需网络依赖。左右方向键或空格推进，N 打开备注与出处，G 打开目录；也支持按钮与左右滑动。
 - [PDF 浏览版](tide-design-introduction.pdf)：25 页，每页保留一个停点，方便顺序阅读与批注。
 - [六幅画面预览](preview.png)：快速查看节点图、完整输出、参与计数、记忆与实验边界。
@@ -73,6 +75,6 @@ python3 20-tide-decentralized-neural-network/presentations/design-introduction/b
 python3 20-tide-decentralized-neural-network/presentations/design-introduction/export.py
 ```
 
-HTML 构建只依赖 Python 标准库。导出另需 `playwright-cli`、Chrome、Pillow 与 Noto CJK 字体；[export.py](export.py) 临时启动回环地址服务器和独立浏览器会话，逐停点检查布局并导出 PDF、预览及[渲染记录](render-checks.json)。输出采用 1600 × 900 的 16:9 画面。静态导出按全部停点展开，不依赖过渡动画。
+HTML 构建只依赖 Python 标准库。导出另需 `playwright-cli`、Chrome、Pillow 与 Noto CJK 字体；[export.py](export.py) 临时启动回环地址服务器和独立浏览器会话，逐停点检查布局并导出 PDF、预览及[渲染记录](render-checks.json)。这些输出均只在本地保存。输出采用 1600 × 900 的 16:9 画面。静态导出按全部停点展开，不依赖过渡动画。
 
 HTML 的定义链接按仓库相对路径组织；单独下载 HTML 后，仍可阅读所有画面和备注，定义原文需回到仓库查阅。小屏幕可横屏翻看，也可直接阅读 PDF。

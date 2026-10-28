@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the tracked Tide figures without relying on temporary source files."""
+"""Render ignored Tide artifacts from tracked source files."""
 import argparse
 from pathlib import Path
 import subprocess
@@ -14,7 +14,7 @@ def main():
     parser.add_argument('--output-dir', type=Path, default=BASE)
     parser.add_argument('--only', nargs='+', help='Local figure names to render.')
     parser.add_argument('--record-provenance', action='store_true',
-                        help='Record the complete local batch, definitions and rendering environment.')
+                        help='Write local-render-checks.json for the complete local batch.')
     args = parser.parse_args()
     if args.group == 'legacy' and (args.only or args.record_provenance):
         parser.error('--only and --record-provenance require group local or all')

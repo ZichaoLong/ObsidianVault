@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "groups": [
+    {
+      "name": "legacy-figures",
+      "generator": "20-tide-decentralized-neural-network/figures/render.py",
+      "command": [
+        "python3",
+        "20-tide-decentralized-neural-network/figures/render.py",
+        "--group",
+        "legacy"
+      ],
+      "outputs": [
+        "20-tide-decentralized-neural-network/figures/PSUF-complete.png",
+        "20-tide-decentralized-neural-network/figures/PSUF-complete.svg",
+        "20-tide-decentralized-neural-network/figures/PSUF-simple.png",
+        "20-tide-decentralized-neural-network/figures/PSUF-simple.svg",
+        "20-tide-decentralized-neural-network/figures/tide-structure.png",
+        "20-tide-decentralized-neural-network/figures/tide-structure.svg"
+      ]
+    },
+    {
+      "name": "local-figures",
+      "generator": "20-tide-decentralized-neural-network/figures/render.py",
+      "command": [
+        "python3",
+        "20-tide-decentralized-neural-network/figures/render.py",
+        "--group",
+        "local",
+        "--record-provenance"
+      ],
+      "outputs": [
+        "20-tide-decentralized-neural-network/figures/affine-delta-memory.png",
+        "20-tide-decentralized-neural-network/figures/affine-delta-memory.svg",
+        "20-tide-decentralized-neural-network/figures/gated-delta-memory.png",
+        "20-tide-decentralized-neural-network/figures/gated-delta-memory.svg",
+        "20-tide-decentralized-neural-network/figures/kv-memory.png",
+        "20-tide-decentralized-neural-network/figures/kv-memory.svg",
+        "20-tide-decentralized-neural-network/figures/logical-time-slots.png",
+        "20-tide-decentralized-neural-network/figures/logical-time-slots.svg",
+        "20-tide-decentralized-neural-network/figures/region-allocation.png",
+        "20-tide-decentralized-neural-network/figures/region-allocation.svg",
+        "20-tide-decentralized-neural-network/figures/remember-before-send.png",
+        "20-tide-decentralized-neural-network/figures/remember-before-send.svg",
+        "20-tide-decentralized-neural-network/figures/sending-rules.png",
+        "20-tide-decentralized-neural-network/figures/sending-rules.svg",
+        "20-tide-decentralized-neural-network/figures/ssd-memory.png",
+        "20-tide-decentralized-neural-network/figures/ssd-memory.svg",
+        "20-tide-decentralized-neural-network/figures/temperature-support.png",
+        "20-tide-decentralized-neural-network/figures/temperature-support.svg",
+        "20-tide-decentralized-neural-network/figures/weighted-message-flow.png",
+        "20-tide-decentralized-neural-network/figures/weighted-message-flow.svg",
+        "20-tide-decentralized-neural-network/figures/local-render-checks.json"
+      ]
+    },
+    {
+      "name": "presentation-build",
+      "generator": "20-tide-decentralized-neural-network/presentations/design-introduction/build.py",
+      "command": [
+        "python3",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/build.py"
+      ],
+      "outputs": [
+        "20-tide-decentralized-neural-network/figures/design-introduction/bounded-propagation.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-exit0.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-input0.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-input1.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-memory0.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-middle0.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-middle1.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-neighbors.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-output0.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-output1.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-regions.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-select0.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/hb-select1.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/sequential.svg",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/index.html",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/speaker-notes.md"
+      ],
+      "directories": [
+        "20-tide-decentralized-neural-network/figures/design-introduction"
+      ]
+    },
+    {
+      "name": "presentation-export",
+      "generator": "20-tide-decentralized-neural-network/presentations/design-introduction/export.py",
+      "command": [
+        "python3",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/export.py"
+      ],
+      "outputs": [
+        "20-tide-decentralized-neural-network/presentations/design-introduction/preview.png",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/render-checks.json",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/tide-design-introduction.pdf"
+      ]
+    }
+  ],
+  "retained": [
+    {
+      "path": "20-tide-decentralized-neural-network/figures/legacy-provenance.json",
+      "reason": "恢复原图时的源码、字体及 PNG 校验记录，作为历史来源证据保留。"
+    },
+    {
+      "path": "20-tide-decentralized-neural-network/figures/local-provenance.json",
+      "reason": "2026-10-27 局部图的已审阅定义与渲染快照；日常报告另写 local-render-checks.json。"
+    },
+    {
+      "path": "20-tide-decentralized-neural-network/records/reviews/2026-10-28-ascend-implementation-checks.json",
+      "reason": "固定实现版本和环境的历史核验结果，属于设计审视的证据。"
+    },
+    {
+      "path": "20-tide-decentralized-neural-network/records/history/artifact-rewrite-map.json",
+      "reason": "用户同意历史清理后保留的提交编号与移除路径映射，用于核对旧引用。"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # Tide 教学图集
 
+本页 PNG、SVG 按下方“生成与修改”命令在本地重建，默认不随 Git 保存；首次克隆需先生成，再打开图片链接。维护源与历史来源快照继续跟踪，规则见[仓库生成物约定](../../ARTIFACTS.md)。
+
 先用结构图认识节点、区域与消息流，再用 P/S/U/F 简图解释一次区域作用。接着用带权消息图和两个算例讲清局部计算，按需要展开具体记忆与发送规则。
 
 [首次展示脚本](../presentations/design-introduction-script.md)以 HB 三层图的两次输入贯穿主线，并说明这些素材的接入位置。该脚本统一使用 HB 实例的参数；本图集中区域分配和两次接收图各有自己的数值条件。
@@ -90,7 +92,7 @@ python3 20-tide-decentralized-neural-network/figures/render.py --only kv-memory
 
 用 Inkscape 打开上表的 SVG，按 `T` 使用文字工具修改字词，按 `F1` 使用选择工具移动、缩放对象或改变颜色。箭头的线段和箭头头部已经编组，可以整体移动；节点、标签和相邻连线仍是独立对象，移动节点后需自行调整连线端点。需要一起移动时，可多选后按 `Ctrl+G` 编组。
 
-SVG 使用 Noto Sans CJK SC 字体；编辑机器安装该字体可减少排版差异。建议先另存为一个不同文件名再手工修改，保留修改版，避免运行脚本时覆盖。若希望后续重绘继续保留改动，将文字、坐标或颜色同步回对应的 Python 脚本；也可以把修改后的 SVG 交给助手接入展示材料。
+SVG 使用 Noto Sans CJK SC 字体；编辑机器安装该字体可减少排版差异。手工维护时可另存到 `figures/manual/` 并作为源文件跟踪，避免运行脚本时覆盖。若希望继续由脚本重绘，将文字、坐标或颜色同步回对应的 Python 脚本；采用手工图源时，让展示构建读取该文件。
 
 | 源码 | 维护内容 |
 |---|---|
@@ -102,4 +104,4 @@ SVG 使用 Noto Sans CJK SC 字体；编辑机器安装该字体可减少排版�
 | [drawing.py](src/drawing.py) | 配色、字体、SVG 文字、形状与 PNG 导出 |
 | [catalog.py](src/catalog.py) | 图名注册与定义路径；具体出处及条件与各绘图函数相邻保存 |
 
-完整重绘后，可加 `--record-provenance` 更新[局部图校验记录](local-provenance.json)，包含每张图的定义章节、条件、教材与源码哈希、字体、渲染版本及输出哈希。来源和复现核验记录见 [PROVENANCE.md](PROVENANCE.md)。
+完整重绘后，可加 `--record-provenance` 生成本地的[局部图渲染报告](local-render-checks.json)，包含每张图的定义章节、条件、教材与源码哈希、字体、渲染版本及输出哈希。该报告默认忽略；已有[历史核验快照](local-provenance.json)继续留存，正常构建不覆盖。来源和复现核验记录见 [PROVENANCE.md](PROVENANCE.md)。
