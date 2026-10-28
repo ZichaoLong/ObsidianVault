@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="642" height="279" viewBox="0 0 642 279" role="img" aria-labelledby="title description">
+  <title id="title">Multiple tapes and a single-tape encoding</title>
+  <desc id="description">按同名历史 PNG 重画。M 的三条纸带分别为 01010、aaa、ba，读写头分别指向第二、第三、第一格。S 的纸带用 # 分隔，点标记保留三条纸带的读写头位置。空白符为 ⊔。来源见 assets/PROVENANCE.md。</desc>
+  <defs><marker id="arrow" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#333"/></marker></defs>
+  <rect width="642" height="279" fill="white"/>
+  <g id="machine-boxes" fill="white" stroke="#444" stroke-width="0.8"><rect x="26" y="47" width="51" height="59"/><rect x="26" y="197" width="51" height="59"/></g>
+  <g id="machines" font-family="DejaVu Serif, serif" font-style="italic" font-size="28" text-anchor="middle"><text x="51.5" y="87">M</text><text x="51.5" y="237">S</text></g>
+  <g id="heads" fill="none" stroke="#444" stroke-width="0.8" marker-end="url(#arrow)">
+    <path d="M77 60 H101 V19 H180 V33"/><path d="M77 75 H208 V91"/><path d="M77 91 H101 V136 H152 V152"/><path d="M77 216 H152 V232"/>
+  </g>
+  <g id="tape-cells" fill="none" stroke="#555" stroke-width="0.9">
+    <path d="M138 33 H316 M138 60 H316 M138 33 V60 M166 33 V60 M194 33 V60 M222 33 V60 M250 33 V60 M278 33 V60 M306 33 V60"/>
+    <path d="M138 91 H260 M138 118 H260 M138 91 V118 M166 91 V118 M194 91 V118 M222 91 V118 M250 91 V118"/>
+    <path d="M138 152 H232 M138 179 H232 M138 152 V179 M166 152 V179 M194 152 V179 M222 152 V179"/>
+    <path d="M138 232 H568 M138 259 H568 M138 232 V259 M166 232 V259 M194 232 V259 M222 232 V259 M250 232 V259 M278 232 V259 M306 232 V259 M334 232 V259 M362 232 V259 M390 232 V259 M418 232 V259 M446 232 V259 M474 232 V259 M502 232 V259 M530 232 V259 M558 232 V259"/>
+  </g>
+  <g id="symbols" font-family="DejaVu Serif, serif" font-size="18" text-anchor="middle" fill="#111">
+    <g id="tape-1"><text x="152" y="54">0</text><text x="180" y="54">1</text><text x="208" y="54">0</text><text x="236" y="54">1</text><text x="264" y="54">0</text><text x="292" y="54">⊔</text><text x="332" y="54">…</text></g>
+    <g id="tape-2"><text x="152" y="112">a</text><text x="180" y="112">a</text><text x="208" y="112">a</text><text x="236" y="112">⊔</text><text x="276" y="112">…</text></g>
+    <g id="tape-3"><text x="152" y="173">b</text><text x="180" y="173">a</text><text x="208" y="173">⊔</text><text x="248" y="173">…</text></g>
+    <g id="single-tape"><text x="152" y="253">#</text><text x="180" y="253">0</text><text x="208" y="253">1</text><text x="236" y="253">0</text><text x="264" y="253">1</text><text x="292" y="253">0</text><text x="320" y="253">#</text><text x="348" y="253">a</text><text x="376" y="253">a</text><text x="404" y="253">a</text><text x="432" y="253">#</text><text x="460" y="253">b</text><text x="488" y="253">a</text><text x="516" y="253">#</text><text x="544" y="253">⊔</text><text x="588" y="253">…</text></g>
+  </g>
+  <g id="head-position-marks" fill="#111"><circle cx="208" cy="237.5" r="2.7"/><circle cx="404" cy="237.5" r="2.7"/><circle cx="460" cy="237.5" r="2.7"/></g>
+</svg>

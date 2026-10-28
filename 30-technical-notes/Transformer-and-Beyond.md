@@ -10,6 +10,8 @@ cssclasses:
 
 # Transformer and Beyond
 
+本文的 GPT／RNN 配图由 PPTX 源文件生成；首次克隆后运行 `python3 tools/build.py`，编辑入口见[插图说明](../assets/README.md#架构图继续编辑-pptx)。
+
 为了让文章各部分的表述更准确，下面将使用数学符号、公式来表达各个网络架构的计算方式，由于内容中涉及的符号、上下标较多，为了方便理解及避免混淆，这里事先进行统一说明：
 
 1. 用大写粗体字母表示**矩阵**，例如$\pmb{A},\pmb{B}$。
@@ -282,7 +284,7 @@ Decoder-Only架构舍弃了Encoder，仅包含Decoder，其典型代表是GPT系
 
 GPT在广义上也可理解为具有[输入-状态-输出概念的RNN](https://arxiv.org/abs/2407.04620v1)，用$\pmb{\mathcal{S}}^{[t]}$表示其总体隐藏状态，则GPT的执行过程可用下面的流程图及公式表示
 
-![[assets/fig/gpt-diagram.png]]
+![[assets/fig/gpt-diagram.svg]]
 
 $$
 \begin{split}
@@ -318,7 +320,7 @@ $$
 
 早期的[RNN技术](https://en.wikipedia.org/wiki/Recurrent_neural_network)，一般的说，对于一个输入序列信号$\{\pmb{u}^{[t]}\}_{1\leq t\leq T}$，RNN在每个时刻的处理流程可表达为**更新隐藏状态+输出信号**两个步骤
 
-![[assets/fig/rnn-diagram.png]]
+![[assets/fig/rnn-diagram.svg]]
 $$
 \begin{split}
 \text{RNN Update: } & {\color{blue}\pmb{\mathcal{S}}^{[T]}}=\text{Update}^{[\text{RNN}]}({\color{blue}\pmb{\mathcal{S}}^{[T-1]}},\pmb{u}^{[T]}) \\
@@ -344,7 +346,7 @@ $$
 $$
 类似于通常RNN的依时间顺序计算是采用第一个等式所对应的公式，而为了适配训练任务，希望一次处理长为$T$的序列，只要二元运算$\circ$满足结合律，即可基于第二个等式对应的公式，并行的计算${\color{blue}\pmb{\mathcal{S}}^{[1,T]}}$,再计算${\color{blue}\pmb{\mathcal{S}}^{[2,T]}},\cdots,{\color{blue}\pmb{\mathcal{S}}^{[N,T]}}$等等，而当前主流的方案如Mamba、RWKV、Kimi Linear等都符合这条约束。
 
-![[assets/fig/sequence-parallel-rnn-diagram.png]]
+![[assets/fig/sequence-parallel-rnn-diagram.svg]]
 
 ### Linear Attention
 

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="275" viewBox="-5 -5 260 275" role="img" aria-labelledby="title description">
+  <title id="title">Constant-depth circuit with polynomial fan-in</title>
+  <desc id="description">按同名历史 PNG 重画。顶层 AND 接 OR 层，局部展开两个 AND 与输入；橙色弧线标注 polynomial fan-in 和 constant depth。省略号保留未展开部分。来源见 assets/PROVENANCE.md。</desc>
+  <rect x="-5" y="-5" width="260" height="275" fill="white"/>
+  <g id="wires" fill="none" stroke="#777" stroke-width="0.6">
+    <path d="M 140,21 L 54,87 M 140,21 L 103,87 M 140,21 L 178,87 M 140,21 L 228,87"/>
+    <path d="M 54,87 L 21,166 M 54,87 L 99,166 M 21,166 L 29,207 M 99,166 L 66,207"/>
+  </g>
+  <g id="gates" font-family="DejaVu Sans, sans-serif" font-size="13" text-anchor="middle" fill="#111">
+    <g id="root-and"><circle cx="140" cy="21" r="21" fill="white" stroke="#222"/><text x="140" y="26">AND</text></g>
+    <g id="or-1"><circle cx="54" cy="87" r="21" fill="white" stroke="#222"/><text x="54" y="92">OR</text></g>
+    <g id="or-2"><circle cx="103" cy="87" r="21" fill="white" stroke="#222"/><text x="103" y="92">OR</text></g>
+    <g id="or-3"><circle cx="178" cy="87" r="21" fill="white" stroke="#222"/><text x="178" y="92">OR</text></g>
+    <g id="or-4"><circle cx="228" cy="87" r="21" fill="white" stroke="#222"/><text x="228" y="92">OR</text></g>
+    <g id="lower-and-1"><circle cx="21" cy="166" r="21" fill="white" stroke="#222"/><text x="21" y="171">AND</text></g>
+    <g id="lower-and-2"><circle cx="99" cy="166" r="21" fill="white" stroke="#222"/><text x="99" y="171">AND</text></g>
+    <text x="141" y="92">...</text><text x="60" y="171">...</text>
+  </g>
+  <g id="inputs" font-family="DejaVu Sans, sans-serif" font-size="14" fill="#111" text-anchor="middle">
+    <text x="35" y="220">x<tspan baseline-shift="sub" font-size="10">1</tspan></text>
+    <text x="65" y="220">x<tspan baseline-shift="sub" font-size="10">2</tspan></text>
+    <text x="130" y="220">...</text>
+    <text x="222" y="220">x<tspan baseline-shift="sub" font-size="10">n</tspan></text>
+  </g>
+  <g id="fan-in-annotation">
+    <path d="M 85,35 C 103,71 181,58 232,40" fill="none" stroke="#b34b00" stroke-width="1.8"/>
+    <text x="249" y="19" text-anchor="end" font-family="DejaVu Sans, sans-serif" font-size="12">polynomial</text>
+    <text x="249" y="34" text-anchor="end" font-family="DejaVu Sans, sans-serif" font-size="12">fan-in</text>
+  </g>
+  <g id="depth-annotation">
+    <path d="M 148,27 C 148,65 204,74 190,133 C 187,174 178,203 160,237" fill="none" stroke="#b34b00" stroke-width="1.8"/>
+    <text x="159" y="250" font-family="DejaVu Sans, sans-serif" font-size="12">constant</text>
+    <text x="159" y="264" font-family="DejaVu Sans, sans-serif" font-size="12">depth</text>
+  </g>
+</svg>

@@ -26,6 +26,7 @@ def check_dependencies(full=False):
         '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
         '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+        '/usr/share/fonts/truetype/dejavu/DejaVuMathTeXGyre.ttf',
     ]
     if full:
         fonts.append('/usr/share/fonts/opentype/noto/NotoSansCJK-Medium.ttc')
@@ -41,7 +42,7 @@ def check_dependencies(full=False):
             'Install Python dependencies in your active Python environment:',
             '  python3 -m pip install -r 20-tide-decentralized-neural-network/figures/requirements.txt',
             'On Debian/Ubuntu install Cairo and fonts:',
-            '  sudo apt-get install libcairo2 fonts-noto-cjk fonts-dejavu-core',
+            '  sudo apt-get install libcairo2 fonts-noto-cjk fonts-dejavu-core fonts-dejavu-extra',
         ]
         if full:
             instructions += [

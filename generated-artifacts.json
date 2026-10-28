@@ -2,6 +2,31 @@
   "schema_version": 1,
   "groups": [
     {
+      "name": "editable-assets",
+      "generator": "assets/render.py",
+      "command": [
+        "python3",
+        "assets/render.py"
+      ],
+      "outputs": [
+        "assets/images/load-store-progression-01.png",
+        "assets/images/ai-time-scaling-law-theoretical-evidence-01.png",
+        "assets/images/ai-time-scaling-law-theoretical-evidence-02.png",
+        "assets/images/control-feedback-token-instruction-opcode-operands-01.png",
+        "assets/images/control-feedback-token-instruction-opcode-operands-02.png",
+        "assets/fig/gpt-diagram.svg",
+        "assets/fig/gpt-diagram.png",
+        "assets/fig/gpt-diagram.pdf",
+        "assets/fig/rnn-diagram.svg",
+        "assets/fig/rnn-diagram.png",
+        "assets/fig/rnn-diagram.pdf",
+        "assets/fig/sequence-parallel-rnn-diagram.svg",
+        "assets/fig/sequence-parallel-rnn-diagram.png",
+        "assets/fig/sequence-parallel-rnn-diagram.pdf",
+        "assets/render-checks.json"
+      ]
+    },
+    {
       "name": "legacy-figures",
       "generator": "20-tide-decentralized-neural-network/figures/render.py",
       "command": [

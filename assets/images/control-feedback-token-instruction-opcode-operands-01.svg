@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="595" height="446" viewBox="0 0 595 446" role="img" aria-labelledby="title description">
+  <title id="title">A Turing Machine for aba*</title>
+  <desc id="description">按同名历史 PNG 重画。状态顺序 START 1、3、4、HALT 2；转移分别为 (a,a,R)、(b,b,R)、(Δ,Δ,R)，状态 4 有 (a,a,R) 自环。纸带以 a b a a 开头，其后九个 Δ、四个点。来源见 assets/PROVENANCE.md。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L5 2.5 L0 5 Z" fill="#111"/></marker>
+  </defs>
+  <rect width="595" height="446" fill="white"/>
+  <g id="tape" stroke="#111" stroke-width="1.8" fill="none">
+    <rect x="24" y="69" width="442" height="25"/>
+    <path d="M50 69 V94 M76 69 V94 M102 69 V94 M128 69 V94 M154 69 V94 M180 69 V94 M206 69 V94 M232 69 V94 M258 69 V94 M284 69 V94 M310 69 V94 M336 69 V94 M362 69 V94 M388 69 V94 M414 69 V94 M440 69 V94"/>
+  </g>
+  <g id="tape-symbols" font-family="DejaVu Sans, sans-serif" font-size="14" text-anchor="middle" fill="#111">
+    <text x="37" y="87">a</text><text x="63" y="87">b</text><text x="89" y="87">a</text><text x="115" y="87">a</text>
+    <text x="141" y="87">Δ</text><text x="167" y="87">Δ</text><text x="193" y="87">Δ</text><text x="219" y="87">Δ</text><text x="245" y="87">Δ</text><text x="271" y="87">Δ</text><text x="297" y="87">Δ</text><text x="323" y="87">Δ</text><text x="349" y="87">Δ</text>
+    <text x="375" y="87">.</text><text x="401" y="87">.</text><text x="427" y="87">.</text><text x="453" y="87">.</text>
+  </g>
+  <g id="tape-head">
+    <path d="M 330,155 C 248,155 170,148 170,134 C 170,120 111,113 40,113 V 100" fill="none" stroke="#444" stroke-width="1.2"/>
+    <path d="M 35,100 L 40,95 L 45,100 H 42 V 113 H 38 V 100 Z" fill="white" stroke="#777" stroke-width="1"/>
+  </g>
+  <g id="labels" font-family="DejaVu Sans, sans-serif" font-style="italic" font-weight="bold" font-size="12" fill="#111">
+    <text x="76" y="57">READ/WRITE TAPE</text><text x="36" y="133">TAPE HEAD</text>
+  </g>
+  <rect id="machine" x="10" y="155" width="550" height="198" fill="none" stroke="#111" stroke-width="1.8"/>
+  <g id="transitions" fill="none" stroke="#111" stroke-width="2" marker-end="url(#arrow)">
+    <path d="M 90,268 H 176"/><path d="M 234,268 H 312"/><path d="M 370,268 H 451"/>
+    <path d="M 335,239 C 316,238 329,178 341,178 C 353,178 357,226 345,238" stroke-width="1.2"/>
+  </g>
+  <g id="states" font-family="DejaVu Sans, sans-serif" font-size="14" text-anchor="middle" fill="#111">
+    <g id="start"><rect x="20" y="228" width="70" height="74" rx="11" fill="white" stroke="#111" stroke-width="1.8"/><text x="55" y="254">START</text><text x="55" y="279">1</text></g>
+    <g id="state-3"><ellipse cx="205" cy="268" rx="29" ry="32" fill="white" stroke="#111" stroke-width="1.8"/><text x="205" y="273">3</text></g>
+    <g id="state-4"><ellipse cx="341" cy="270" rx="29" ry="32" fill="white" stroke="#111" stroke-width="1.8"/><text x="341" y="275">4</text></g>
+    <g id="halt"><rect x="451" y="223" width="72" height="75" rx="11" fill="white" stroke="#111" stroke-width="1.8"/><text x="487" y="249">HALT</text><text x="487" y="274">2</text></g>
+  </g>
+  <g id="transition-labels" font-family="DejaVu Sans, sans-serif" font-size="12" text-anchor="middle" fill="#111">
+    <text x="132" y="251">(a, a, R)</text><text x="272" y="251">(b, b, R)</text><text x="407" y="255">(Δ, Δ, R)</text><text x="341" y="172">(a, a, R)</text>
+  </g>
+  <text id="caption" x="297.5" y="402" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="23">A Turing Machine for aba*</text>
+</svg>

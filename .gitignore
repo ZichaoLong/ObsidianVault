@@ -62,3 +62,20 @@ __pycache__/
 /20-tide-decentralized-neural-network/presentations/design-introduction/render-checks.json
 /20-tide-decentralized-neural-network/presentations/design-introduction/speaker-notes.md
 /20-tide-decentralized-neural-network/presentations/design-introduction/tide-design-introduction.pdf
+
+# Exports from hand-maintained SVG and PPTX sources.
+/assets/images/load-store-progression-01.png
+/assets/images/ai-time-scaling-law-theoretical-evidence-01.png
+/assets/images/ai-time-scaling-law-theoretical-evidence-02.png
+/assets/images/control-feedback-token-instruction-opcode-operands-01.png
+/assets/images/control-feedback-token-instruction-opcode-operands-02.png
+/assets/fig/gpt-diagram.svg
+/assets/fig/gpt-diagram.png
+/assets/fig/gpt-diagram.pdf
+/assets/fig/rnn-diagram.svg
+/assets/fig/rnn-diagram.png
+/assets/fig/rnn-diagram.pdf
+/assets/fig/sequence-parallel-rnn-diagram.svg
+/assets/fig/sequence-parallel-rnn-diagram.png
+/assets/fig/sequence-parallel-rnn-diagram.pdf
+/assets/render-checks.json

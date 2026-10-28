@@ -27,7 +27,7 @@ jobs:
         run: python3 tools/check_artifacts.py
       - name: Check Tide documents
         run: python3 20-tide-decentralized-neural-network/tools/check_documents.py
-      - name: Test build ordering and failure handling
+      - name: Test builds and native diagram export
         run: python3 -m unittest discover -s tools -p 'test_*.py'
 
   full-build:
@@ -48,7 +48,7 @@ jobs:
       - name: Install rendering dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libcairo2 fonts-noto-cjk fonts-noto-cjk-extra fonts-dejavu-core
+          sudo apt-get install -y libcairo2 fonts-noto-cjk fonts-noto-cjk-extra fonts-dejavu-core fonts-dejavu-extra
           python3 -m pip install -r 20-tide-decentralized-neural-network/figures/requirements.txt
           npm install --global @playwright/cli@0.1.12
           google-chrome --version

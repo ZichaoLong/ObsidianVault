@@ -10,15 +10,15 @@ Git 保存持续维护的源文件。能由这些源文件重建的产物默认�
 | 手工 SVG、PPTX、原始图片及外部资料 | 作为源文件跟踪，避免被生成器覆盖 |
 | 已留存的历史核验与来源快照 | 跟踪，清单的 `retained` 记录理由 |
 
-`assets/` 中的既有插图和 PPTX 继续作为资料保存；两张 Load/Store 原始图的来源与重复别名清理见[素材说明](assets/README.md)。当前已确认可重建的范围为 Tide 图集和展示材料；其他附件需先核对来源与导出关系再归类。
+当前可重建的范围包括 Tide 图集、展示材料和 `assets/` 中八张插图的导出物。五张手工 SVG 与三份 PPTX 是持续维护的图源，编辑方法与来源见[素材说明](assets/README.md)。复杂拓扑 PNG 继续作为原始素材保存。
 
 ## 本地生成
 
 使用 Python 3.10+，从仓库根目录运行统一入口：
 
 ```bash
-python3 tools/build.py          # 图集、展示 HTML 和讲者备注：43 个文件
-python3 tools/build.py --full   # 另导出 PDF、预览和浏览器检查报告：共 46 个文件
+python3 tools/build.py          # 图集、素材导出、展示 HTML 和讲者备注
+python3 tools/build.py --full   # 另导出 Tide 展示 PDF、预览和浏览器检查报告
 ```
 
 [构建入口](tools/build.py)读取产物清单的 `command`、`build_mode` 和 `depends_on`，按依赖顺序调用现有生成器，使用当前 Python 环境。它在开始前检查依赖，任一步失败即停止，生成后核对本次所需产物和 Tide 文档。普通构建不需要浏览器；尚未生成的完整导出文件可以缺省。
@@ -27,7 +27,7 @@ python3 tools/build.py --full   # 另导出 PDF、预览和浏览器检查报告
 
 ```bash
 python3 -m pip install -r 20-tide-decentralized-neural-network/figures/requirements.txt
-sudo apt-get install libcairo2 fonts-noto-cjk fonts-dejavu-core
+sudo apt-get install libcairo2 fonts-noto-cjk fonts-dejavu-core fonts-dejavu-extra
 ```
 
 完整导出另需 Google Chrome、Node.js 18+、Playwright CLI 和预览标题字体：
@@ -42,6 +42,7 @@ npm install --global @playwright/cli@0.1.12
 各生成器仍可单独运行：
 
 ```bash
+python3 assets/render.py
 python3 20-tide-decentralized-neural-network/figures/render.py --group legacy
 python3 20-tide-decentralized-neural-network/figures/render.py --group local --record-provenance
 python3 20-tide-decentralized-neural-network/presentations/design-introduction/build.py
@@ -49,6 +50,8 @@ python3 20-tide-decentralized-neural-network/presentations/design-introduction/e
 ```
 
 图集文件仍生成到 `figures/`，展示文件仍生成到 `presentations/design-introduction/`，原有本地链接保持。只修改展示时通常运行 `build.py` 即可；PDF 与预览按需导出。首次克隆尚未生成的图片和成品链接，要在对应构建后才能打开。
+
+`assets/render.py` 为五份手工 SVG 生成 PNG，并从三份 PPTX 生成 SVG、PNG 和单页 PDF。它直接读取 PPTX 中的原生公式、坐标与连线；数学字体来自 `fonts-dejavu-extra`，无需 Office 或 LibreOffice。素材图的 PDF 使用 Cairo 生成，包含在普通构建中；Tide 展示的 PDF 需要浏览器，使用 `--full`。
 
 `--record-provenance` 现在写入忽略的 `figures/local-render-checks.json`。既有 `legacy-provenance.json`、`local-provenance.json` 和实现核验 JSON 作为历史证据保留，正常构建不覆盖它们。
 
@@ -75,7 +78,7 @@ python3 20-tide-decentralized-neural-network/tools/check_documents.py --require-
 
 ## GitHub Actions
 
-[Repository checks](.github/workflows/repository.yml)在每次 push 和 pull request 时检查产物跟踪、Tide 文档、构建顺序与失败处理。轻量检查只依赖 Python 标准库和 Git。
+[Repository checks](.github/workflows/repository.yml)在每次 push 和 pull request 时检查产物跟踪、Tide 文档、构建顺序、失败处理及 PPTX 导出行为。轻量检查只依赖 Python 标准库和 Git；公式内容、曲线几何、分组缩放和多行公式都有检查，实际字体渲染由完整构建验证。
 
 需要验证完整生成时，在 GitHub 的 **Actions → Repository checks → Run workflow** 选择分支运行。该流程先执行轻量检查，再安装渲染依赖并运行 `python3 tools/build.py --full`，检查浏览器交互、25 个停点的布局、全部登记产物及工作区是否干净。结果在 Actions 日志中查看；生成物随运行环境清理，不回写仓库。
 

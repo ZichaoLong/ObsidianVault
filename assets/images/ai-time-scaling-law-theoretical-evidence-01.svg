@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="430" viewBox="-8 -8 360 430"
+     role="img" aria-labelledby="title description">
+  <title id="title">Boolean circuit</title>
+  <desc id="description">依据 ai-time-scaling-law-theoretical-evidence-01.png 手工重画。
+    保留六个逻辑门及连接；输入 (x1,x2,x3)=(0,1,0)，输出为 1。
+    所示计算为 NOT(x1 AND x2) AND ((x2 AND x3) OR NOT(x3))。
+    字体、线宽和坐标近似原图，供核对及编辑。</desc>
+  <metadata>Source: assets/images/ai-time-scaling-law-theoretical-evidence-01.png;
+    SHA256: 4eb01472390505ca8678795824a280457f08f77122dae3ede4de0d8f00572b53;
+    repository: ZichaoLong/ObsidianVault; revision: 99d69c5;
+    redraw date: 2026-10-28. No embedded raster images.</metadata>
+  <rect x="-8" y="-8" width="360" height="430" fill="white"/>
+  <g id="wires" fill="none" stroke="#222" stroke-width="1.8">
+    <path d="M 171,66 V 106 L 92,173 L 29,274 V 335"/>
+    <path d="M 171,106 L 250,173 L 171,274 V 335"/>
+    <path d="M 250,173 L 314,274 V 335"/>
+    <path d="M 29,300 L 171,335 M 171,300 L 314,335"/>
+  </g>
+  <g id="gates" font-family="DejaVu Sans, sans-serif" font-size="28" text-anchor="middle">
+    <g id="output-and"><circle cx="171" cy="106" r="28" fill="white" stroke="#222" stroke-width="1.8"/><text x="171" y="115">∧</text></g>
+    <g id="left-not"><circle cx="92" cy="173" r="28" fill="white" stroke="#222" stroke-width="1.8"/><text x="92" y="182">¬</text></g>
+    <g id="right-or"><circle cx="250" cy="173" r="28" fill="white" stroke="#222" stroke-width="1.8"/><text x="250" y="182">∨</text></g>
+    <g id="x1-x2-and"><circle cx="29" cy="274" r="28" fill="white" stroke="#222" stroke-width="1.8"/><text x="29" y="283">∧</text></g>
+    <g id="x2-x3-and"><circle cx="171" cy="274" r="28" fill="white" stroke="#222" stroke-width="1.8"/><text x="171" y="283">∧</text></g>
+    <g id="x3-not"><circle cx="314" cy="274" r="28" fill="white" stroke="#222" stroke-width="1.8"/><text x="314" y="283">¬</text></g>
+  </g>
+  <g id="values-and-labels" font-family="DejaVu Sans, sans-serif" font-size="17" text-anchor="middle" fill="#222">
+    <text x="171" y="27">output</text><text x="171" y="60">1</text>
+    <text x="92" y="136">1</text><text x="250" y="136">1</text>
+    <text x="29" y="237">0</text><text x="171" y="237">0</text><text x="314" y="237">1</text>
+    <text x="29" y="354">x1</text><text x="171" y="354">x2</text><text x="314" y="354">x3</text>
+    <text x="29" y="376">0</text><text x="171" y="376">1</text><text x="314" y="376">0</text>
+    <text x="171" y="404">inputs</text>
+  </g>
+</svg>

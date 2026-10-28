@@ -1,0 +1,12 @@
+{
+  "sources": [
+    "images/load-store-progression-01.svg",
+    "images/ai-time-scaling-law-theoretical-evidence-01.svg",
+    "images/ai-time-scaling-law-theoretical-evidence-02.svg",
+    "images/control-feedback-token-instruction-opcode-operands-01.svg",
+    "images/control-feedback-token-instruction-opcode-operands-02.svg",
+    "fig/gpt-diagram.pptx",
+    "fig/rnn-diagram.pptx",
+    "fig/sequence-parallel-rnn-diagram.pptx"
+  ]
+}

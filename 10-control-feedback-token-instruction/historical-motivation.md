@@ -125,7 +125,7 @@ tags:
 
 $\lor: or，\land: and, \lnot: not$
 
-![[assets/images/ai-time-scaling-law-theoretical-evidence-01.png|42%]] ![[assets/images/ai-time-scaling-law-theoretical-evidence-02.png|32%]]
+![[assets/images/ai-time-scaling-law-theoretical-evidence-01.svg|42%]] ![[assets/images/ai-time-scaling-law-theoretical-evidence-02.svg|32%]]
 
 
 
@@ -556,7 +556,7 @@ Token[Instruction]=Opcode+Operands
 
 其中，**原始的图灵机**[6-abefg]主要用于纯理论研究，但在其中也包含了几个对后续实际计算机工程有启发的概念，**状态转移函数** & **一个无限长读写带**：图灵机的工作过程就是，读写头根据自己的状态以及读到的读写带上的字符，由状态转移函数决定如何修改当前字符以及决定读写头在读写带上向左或向右移动。相关的变种，还有多带图灵机，也就是具有$k>1$个读写带及读写头数量的图灵机，称为$k$**- 带图灵机**。
 
-![[assets/images/control-feedback-token-instruction-opcode-operands-01.png|48%]] ![[assets/images/control-feedback-token-instruction-opcode-operands-02.png|48%]]
+![[assets/images/control-feedback-token-instruction-opcode-operands-01.svg|48%]] ![[assets/images/control-feedback-token-instruction-opcode-operands-02.svg|48%]]
 
 
 
@@ -773,7 +773,7 @@ Token[Instruction]=Opcode+Operands
 
 ### 线性上下文中的局部读取
 
-![[assets/images/load-store-progression-01.png]]
+![[assets/images/load-store-progression-01.svg]]
 
 这张图对应一个早期直觉：如果上下文仍主要是线性 token 序列，那么 `Load` 的核心问题就是在长序列中定位一个局部片段，并把它作为后续控制步骤的反馈信号。
 

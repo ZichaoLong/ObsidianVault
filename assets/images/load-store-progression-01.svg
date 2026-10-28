@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+     width="1270" height="436" viewBox="-8 -8 1270 436"
+     role="img" aria-labelledby="title description">
+  <title id="title">Load/Store window</title>
+  <desc id="description">依据 assets/images/load-store-progression-01.png 手工重画。
+    保留有状态神经网络、Embedding、thinking 回路及 Load/Store 窗口的文字和连接方向。
+    字体、线宽和坐标近似原图；这是历史图示的矢量重画，不代表当前 Tide 定义。</desc>
+  <metadata>Source: assets/images/load-store-progression-01.png;
+    SHA256: a6789290d5cbe035a3ef8edcbe6e77d00cc7994e4c2e9d170ce2f2e12c32f1b0;
+    repository: ZichaoLong/ObsidianVault; revision: 99d69c5;
+    redraw date: 2026-10-28. No embedded raster images.</metadata>
+  <rect id="background" x="-8" y="-8" width="1270" height="436" fill="white"/>
+
+  <g id="thinking-loop" inkscape:label="thinking 回路">
+    <path d="M 190,114 V 0 H 13 V 375 H 279" fill="none" stroke="black" stroke-width="1"/>
+    <path d="M 7,363 L 13,375 L 19,363 Z" fill="black"/>
+    <text x="54" y="54" font-family="Noto Sans CJK SC, sans-serif" font-size="34">thinking</text>
+  </g>
+
+  <g id="window-connections" inkscape:label="窗口输出与反馈">
+    <path d="M 623,114 V 0 H 1031 V 133" fill="none" stroke="black" stroke-width="1"/>
+    <path d="M 1025,121 L 1031,133 L 1037,121 Z" fill="black"/>
+    <path d="M 1031,222 V 375 H 527" fill="none" stroke="black" stroke-width="1"/>
+    <path d="M 539,369 L 527,375 L 539,381 Z" fill="black"/>
+  </g>
+
+  <g id="stateful-network" inkscape:label="有状态神经网络">
+    <rect x="107" y="114" width="592" height="128" rx="22" fill="white" stroke="black" stroke-width="2"/>
+    <text x="403" y="168" text-anchor="middle" font-family="Noto Sans CJK SC, sans-serif" font-size="33">Neural Network with State</text>
+    <text x="403" y="213" text-anchor="middle" font-family="Noto Sans CJK SC, sans-serif" font-size="33">e.g. GPT[KV Cache]/Mamba[state]</text>
+  </g>
+
+  <g id="embedding" inkscape:label="Embedding 与网络输入">
+    <path d="M 403,334 V 242" fill="none" stroke="black" stroke-width="1"/>
+    <path d="M 397,254 L 403,242 L 409,254 Z" fill="black"/>
+    <rect x="279" y="334" width="248" height="80" rx="14" fill="white" stroke="black" stroke-width="2"/>
+    <text x="403" y="388" text-anchor="middle" font-family="Noto Sans CJK SC, sans-serif" font-size="34">Embedding</text>
+  </g>
+
+  <g id="linear-context" inkscape:label="线性上下文：16 个格子" fill="white" stroke="black" stroke-width="2">
+    <rect x="780" y="162" width="473" height="30"/>
+    <path d="M 809.5625,162 V 192 M 839.125,162 V 192 M 868.6875,162 V 192
+      M 898.25,162 V 192 M 927.8125,162 V 192 M 957.375,162 V 192
+      M 986.9375,162 V 192 M 1016.5,162 V 192 M 1046.0625,162 V 192
+      M 1075.625,162 V 192 M 1105.1875,162 V 192 M 1134.75,162 V 192
+      M 1164.3125,162 V 192 M 1193.875,162 V 192 M 1223.4375,162 V 192"/>
+  </g>
+
+  <g id="load-store-window" inkscape:label="Load/Store 窗口">
+    <rect x="927.8125" y="133" width="206.9375" height="89" fill="none" stroke="#888" stroke-width="3" stroke-dasharray="12 8 3 8"/>
+    <text x="857" y="101" font-family="Noto Sans CJK SC, sans-serif" font-size="33">Load/Store window</text>
+  </g>
+</svg>
