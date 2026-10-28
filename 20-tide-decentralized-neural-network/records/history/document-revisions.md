@@ -11,6 +11,14 @@ tags:
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
 
+## 2026-10-28：首次展示材料预览
+
+根据用户“请生成展示材料，我先看看”的要求，将[讲述脚本](../../presentations/design-introduction-script.md)制成[首版展示材料](../../presentations/design-introduction/README.md)：15 组画面、25 个讲者控制的停点，提供单文件离线 HTML、逐停点 PDF、六幅画面预览与讲者备注。沿固定 HB 节点布局走完两次输入，再解释共同框架、Mem、相容选择和上下层反馈；条件、实验边界与出处保留在画面和备注中。
+
+屏幕文字、备注和引用共用内容源；新增 SVG 图形由 figures/src/design_introduction.py 生成，构建与导出脚本随材料保存。以 Chrome 在 1600 × 900 画面上逐停点导出，25 页布局检查通过；另核对翻页、目录、备注、重看本页、小屏宽度和两轮的候选／Full／消息计数。抽样目视检查图形、状态采用、反馈页及实际 PDF 的第二次输出。仓库文档检查通过，本次没有新增训练或性能结果。
+
+用户认可 HTML 的形式与表达力，并要求先提交推送、说明后续小修改的方式。材料说明中补入[小修改指南](../../presentations/design-introduction/README.md#小修改)：按停点定位，分别修改文字、符号、图形与样式，声明局部和共用改动的范围，再构建预览。当前页面仍为播放界面；手工 SVG 接入及拖拽保存尚未实现。
+
 ## 2026-10-28：压缩设计说明并形成展示脚本
 
 按用户同意的整理方向，将[设计讨论稿](../../memos/design/design-requirements-and-architecture.md)压缩为目标与边界、两次完整计算、需求与机制关系、上下层反馈四段主线，保留短的可达范围附录。详细局部候选、实现证据、历史来源与实验问题链接到各自专题，完整旧稿保存在 [d15bafe](https://github.com/ZichaoLong/ObsidianVault/blob/d15bafe9df9daad0f77b5eb319651e2d15f5e2ae/20-tide-decentralized-neural-network/memos/design/design-requirements-and-architecture.md)。

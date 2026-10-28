@@ -4,6 +4,8 @@
 
 [首次展示脚本](../presentations/design-introduction-script.md)以 HB 三层图的两次输入贯穿主线，并说明这些素材的接入位置。该脚本统一使用 HB 实例的参数；本图集中区域分配和两次接收图各有自己的数值条件。
 
+[首版展示材料](../presentations/design-introduction/README.md)已将这条主线制成可逐步推进的画面。新的 [HB 分步 SVG](design-introduction/)使用固定节点布局，图形源为 [design_introduction.py](src/design_introduction.py)；数值与路径仍按 HB 实例 §2。
+
 ## 整体结构与一次区域作用
 
 | 图片 | 用途 | 数学定义 |
