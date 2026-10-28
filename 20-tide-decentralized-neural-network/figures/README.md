@@ -71,6 +71,8 @@ Attention 的最终控制按各自公式形成：直接 Attention 满足 $c_v\le
 
 ## 生成与修改
 
+首次克隆可在仓库根目录运行 `python3 tools/build.py`，一并生成图集、展示 HTML 和备注；`--full` 另导出 PDF 与预览。安装方法及 CI 入口见[统一构建说明](../../ARTIFACTS.md#本地生成)。只修改图集时，也可用下面的单独命令。
+
 使用 Python 3.10 或更高版本，安装 [Python 依赖](requirements.txt)、Cairo、Noto Sans CJK 和 DejaVu Sans 字体。默认字体路径记录在 [drawing.py](src/drawing.py) 中。在仓库根目录运行：
 
 ```bash

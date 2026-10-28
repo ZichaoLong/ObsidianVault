@@ -17,16 +17,28 @@ class ArtifactRegistry:
         if data.get('schema_version') != 1:
             raise ValueError('unsupported artifact manifest schema')
         self.outputs = {}
+        self.groups = {}
         self.directories = set()
         self.generators = set()
         self.retained = {}
         for group in data['groups']:
+            name = group['name']
+            if not isinstance(name, str) or not name or name in self.groups:
+                raise ValueError(f'invalid or duplicate build group: {name}')
+            if group.get('build_mode', 'standard') not in ('standard', 'full'):
+                raise ValueError(f'invalid build mode: {name}')
+            dependencies = group.get('depends_on', [])
+            if (not isinstance(dependencies, list)
+                    or any(not isinstance(item, str) for item in dependencies)):
+                raise ValueError(f'invalid build dependencies: {name}')
             generator = self.path(group['generator'])
             command = group['command']
             if (not isinstance(command, list) or len(command) < 2
                     or any(not isinstance(arg, str) or not arg for arg in command)
+                    or command[0] not in ('python', 'python3')
                     or command[1] != generator):
                 raise ValueError(f'invalid command for {group["name"]}')
+            self.groups[name] = group
             self.generators.add(generator)
             for item in group['outputs']:
                 path = self.path(item)
@@ -34,6 +46,14 @@ class ArtifactRegistry:
                     raise ValueError(f'duplicate generated path: {path}')
                 self.outputs[path] = group['name']
             self.directories.update(self.path(path) for path in group.get('directories', []))
+        for name, group in self.groups.items():
+            for dependency in group.get('depends_on', []):
+                if dependency not in self.groups:
+                    raise ValueError(f'unknown build dependency: {name} -> {dependency}')
+                if (group.get('build_mode', 'standard') == 'standard'
+                        and self.groups[dependency].get('build_mode', 'standard') == 'full'):
+                    raise ValueError(f'standard group depends on full-only group: {name}')
+        self.build_plan(full=True)  # Reject cycles even during source-only CI checks.
         for item in data['retained']:
             path = self.path(item['path'])
             if path in self.retained or not item.get('reason', '').strip():
@@ -60,8 +80,32 @@ class ArtifactRegistry:
             return False
         return name in self.outputs or name in self.directories
 
-    def audit(self, require_built=False):
+    def build_plan(self, full=False):
+        ordered, visited, visiting = [], set(), set()
+
+        def visit(name):
+            if name in visiting:
+                raise ValueError(f'cyclic build dependency at {name}')
+            if name in visited:
+                return
+            visiting.add(name)
+            group = self.groups[name]
+            for dependency in group.get('depends_on', []):
+                visit(dependency)
+            visiting.remove(name)
+            visited.add(name)
+            ordered.append(group)
+
+        for name, group in self.groups.items():
+            if full or group.get('build_mode', 'standard') == 'standard':
+                visit(name)
+        return ordered
+
+    def audit(self, require_built=False, *, groups=None):
         errors = []
+        required_groups = set(self.groups) if groups is None else set(groups)
+        if required_groups - self.groups.keys():
+            raise ValueError('unknown groups in artifact audit')
         tracked = set(subprocess.check_output(
             ['git', 'ls-files', '-z'], cwd=self.root).decode().rstrip('\0').split('\0'))
         names = set(self.outputs) | set(self.retained)
@@ -81,7 +125,8 @@ class ArtifactRegistry:
             target = self.root / path
             if not target.is_file():
                 missing.append(path)
-                if require_built or path in self.retained or target.exists():
+                if ((require_built and self.outputs[path] in required_groups)
+                        or path in self.retained or target.exists()):
                     errors.append(f'generated output is missing or not a file: {path}')
         for path in sorted(self.generators):
             if path not in tracked or not (self.root / path).is_file():

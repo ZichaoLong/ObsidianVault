@@ -11,6 +11,12 @@ tags:
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
 
+## 2026-10-28：统一构建、CI 与重复素材清理
+
+新增[统一构建入口](../../../tools/build.py)，从产物清单依次生成图集、HTML 和备注；`--full` 增加 PDF、预览与浏览器报告。GitHub Actions 在 push／PR 时检查跟踪规则、文档与构建行为，手动运行时验证完整导出及干净检出。使用方法见[生成物约定](../../../ARTIFACTS.md)。
+
+核对两组原始 PNG 后，保留当前正文引用的 `load-store-progression-*`，删除逐字节相同的 `linked-list-transformer-star-moe-decentralized-graph-nn-*` 别名；[素材说明](../../../assets/README.md)保留来源。重复文件共用 Git blob，本次减少检出副本；提交历史保持，数学与设计内容未改动。
+
 ## 2026-10-28：生成物治理与最近历史清理
 
 按用户同意的[治理方案](2026-10-28-artifact-governance.md)，从 `0770593` 后的七次提交移除 45 个可重建产物，保留其他内容并映射提交引用。当前仓库新增维护约定、产物清单和检查；日常输出默认忽略，源文件与历史证据继续跟踪。数学教材、拓扑、实例和下游采用边界保持。

@@ -1,0 +1,61 @@
+name: Repository checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check artifact tracking
+        run: python3 tools/check_artifacts.py
+      - name: Check Tide documents
+        run: python3 20-tide-decentralized-neural-network/tools/check_documents.py
+      - name: Test build ordering and failure handling
+        run: python3 -m unittest discover -s tools -p 'test_*.py'
+
+  full-build:
+    if: github.event_name == 'workflow_dispatch'
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2 fonts-noto-cjk fonts-noto-cjk-extra fonts-dejavu-core
+          python3 -m pip install -r 20-tide-decentralized-neural-network/figures/requirements.txt
+          npm install --global @playwright/cli@0.1.12
+          google-chrome --version
+      - name: Build figures, HTML and PDF
+        run: python3 tools/build.py --full
+      - name: Require all outputs and a clean checkout
+        run: |
+          python3 tools/check_artifacts.py --require-built
+          git diff --exit-code
+          python3 -c "import subprocess; assert not subprocess.check_output(['git', 'status', '--porcelain']), 'Build left untracked files'"

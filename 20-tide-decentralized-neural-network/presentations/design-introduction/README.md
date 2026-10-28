@@ -68,7 +68,9 @@ SVG 是矢量图，可以用 Inkscape 等工具拖动元素。但当前构建流
 
 [content.py](content.py) 保存屏幕文字、逐步画面、讲者备注与引用。[build.py](build.py) 将其与样式、交互及 SVG 图形合成单文件 HTML，并生成备注。节点布局与图形源在 [design_introduction.py](../../figures/src/design_introduction.py)，可编辑 SVG 位于 [figures/design-introduction/](../../figures/design-introduction/)。修改内容源后重新生成，避免直接编辑生成文件。
 
-从仓库根目录运行：
+首次克隆可从仓库根目录运行 `python3 tools/build.py`，生成图集、展示 HTML 和备注；`python3 tools/build.py --full` 另生成 PDF 与预览。依赖安装及 GitHub Actions 的手动完整构建见[统一构建说明](../../../ARTIFACTS.md#本地生成)。
+
+只修改本展示时，可继续单独运行：
 
 ```bash
 python3 20-tide-decentralized-neural-network/presentations/design-introduction/build.py

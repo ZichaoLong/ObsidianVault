@@ -84,6 +84,10 @@
     },
     {
       "name": "presentation-export",
+      "build_mode": "full",
+      "depends_on": [
+        "presentation-build"
+      ],
       "generator": "20-tide-decentralized-neural-network/presentations/design-introduction/export.py",
       "command": [
         "python3",
