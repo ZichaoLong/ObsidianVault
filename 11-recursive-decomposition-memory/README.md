@@ -81,3 +81,7 @@ Memory 暂时作为第二层机制：
 如果不用 Lean，候选方向应优先选择程序验证、SMT / rewrite rule memory、算法合成等仍有局部验证对象的任务；普通代码修复更适合作为工程 sanity check。
 
 GPU / NPU kernel 优化是一个更工程化的非 Lean 分支：正确性和性能都可验证，但必须对标 autotune、compiler search、Agent+Skills 和 evolutionary coding agents。详见 [[future-kernel-landscape|Kernel 性能优化工作谱系]]。
+
+## 维护与生成
+
+本线当前主要维护 Markdown，暂无登记的机械生成物。修改时同步当前状态、证据与入口引用；以后新增图表或报告按[全仓维护地图与生成物约定](../ARTIFACTS.md#各条工作线的维护地图)登记。

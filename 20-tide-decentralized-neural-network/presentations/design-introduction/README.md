@@ -58,7 +58,7 @@ rg -n --glob '*.py' '要找的原句' \
 
 ### 修改后预览
 
-只看 HTML 时，保存源文件后运行下方的 `build.py` 命令，再刷新浏览器即可；正在看的 `#8.2` 等地址可继续定位同一停点。需要同步 PDF 和预览图时，再运行 `export.py`。常规小改无需每次导出全部 PDF。
+只看 HTML 时，保存源文件后运行下方的 `--group presentation-build` 命令，再刷新浏览器即可；正在看的 `#8.2` 等地址可继续定位同一停点。需要同步 PDF 和预览图时，再运行 `--group presentation-export` 命令。常规小改无需每次导出全部 PDF。
 
 `index.html`、`speaker-notes.md` 和 `figures/design-introduction/` 中的 SVG 都是生成文件，直接改它们会在下次构建时被覆盖。浏览器开发者工具可用于临时试字号或位置，确定后将改动写回源文件。
 
@@ -70,13 +70,15 @@ SVG 是矢量图，可以用 Inkscape 等工具拖动元素。但当前构建流
 
 首次克隆可从仓库根目录运行 `python3 tools/build.py`，生成图集、展示 HTML 和备注；`python3 tools/build.py --full` 另生成 PDF 与预览。依赖安装及 GitHub Actions 的手动完整构建见[统一构建说明](../../../ARTIFACTS.md#本地生成)。
 
-只修改本展示时，可继续单独运行：
+只修改本展示时，使用统一入口按组构建并更新指纹；导出组会先重建 HTML 依赖：
 
 ```bash
-python3 20-tide-decentralized-neural-network/presentations/design-introduction/build.py
-python3 20-tide-decentralized-neural-network/presentations/design-introduction/export.py
+python3 tools/build.py --group presentation-build
+python3 tools/build.py --group presentation-export
 ```
 
 HTML 构建只依赖 Python 标准库。导出另需 `playwright-cli`、Chrome、Pillow 与 Noto CJK 字体；[export.py](export.py) 临时启动回环地址服务器和独立浏览器会话，逐停点检查布局并导出 PDF、预览及[渲染记录](render-checks.json)。这些输出均只在本地保存。输出采用 1600 × 900 的 16:9 画面。静态导出按全部停点展开，不依赖过渡动画。
 
 HTML 的定义链接按仓库相对路径组织；单独下载 HTML 后，仍可阅读所有画面和备注，定义原文需回到仓库查阅。小屏幕可横屏翻看，也可直接阅读 PDF。
+
+构建与 Git 同步后的状态处理见[全仓维护约定](../../../ARTIFACTS.md#状态与核验)。直接运行底层 `build.py`／`export.py` 不更新统一构建记录；HTML 变化后，已有 PDF 可能过期，交付静态版前重新构建导出组。

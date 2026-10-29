@@ -25,6 +25,8 @@ jobs:
           python-version: '3.12'
       - name: Check artifact tracking
         run: python3 tools/check_artifacts.py
+      - name: Check repository-wide local links
+        run: python3 tools/check_links.py
       - name: Check Tide documents
         run: python3 20-tide-decentralized-neural-network/tools/check_documents.py
       - name: Test builds and native diagram export
@@ -57,5 +59,6 @@ jobs:
       - name: Require all outputs and a clean checkout
         run: |
           python3 tools/check_artifacts.py --require-built
+          python3 tools/check_links.py --require-built
           git diff --exit-code
           python3 -c "import subprocess; assert not subprocess.check_output(['git', 'status', '--porcelain']), 'Build left untracked files'"

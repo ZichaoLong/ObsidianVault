@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "groups": [
     {
       "name": "editable-assets",
@@ -24,7 +24,31 @@
         "assets/fig/sequence-parallel-rnn-diagram.png",
         "assets/fig/sequence-parallel-rnn-diagram.pdf",
         "assets/render-checks.json"
-      ]
+      ],
+      "inputs": [
+        "assets/catalog.json",
+        "tools/pptx_svg.py",
+        "20-tide-decentralized-neural-network/figures/requirements.txt",
+        "assets/images/load-store-progression-01.svg",
+        "assets/images/ai-time-scaling-law-theoretical-evidence-01.svg",
+        "assets/images/ai-time-scaling-law-theoretical-evidence-02.svg",
+        "assets/images/control-feedback-token-instruction-opcode-operands-01.svg",
+        "assets/images/control-feedback-token-instruction-opcode-operands-02.svg",
+        "assets/fig/gpt-diagram.pptx",
+        "assets/fig/rnn-diagram.pptx",
+        "assets/fig/sequence-parallel-rnn-diagram.pptx"
+      ],
+      "review_sources": [
+        "10-control-feedback-token-instruction/historical-motivation.md",
+        "30-technical-notes/Transformer-and-Beyond.md"
+      ],
+      "catalog": {
+        "kind": "svg-pptx",
+        "path": "assets/catalog.json",
+        "extra_outputs": [
+          "assets/render-checks.json"
+        ]
+      }
     },
     {
       "name": "legacy-figures",
@@ -42,6 +66,20 @@
         "20-tide-decentralized-neural-network/figures/PSUF-simple.svg",
         "20-tide-decentralized-neural-network/figures/tide-structure.png",
         "20-tide-decentralized-neural-network/figures/tide-structure.svg"
+      ],
+      "inputs": [
+        "20-tide-decentralized-neural-network/figures/requirements.txt",
+        "20-tide-decentralized-neural-network/figures/src/legacy/psuf_complete.py",
+        "20-tide-decentralized-neural-network/figures/src/legacy/psuf_simple.py",
+        "20-tide-decentralized-neural-network/figures/src/legacy/svg_export.py",
+        "20-tide-decentralized-neural-network/figures/src/legacy/tide_structure.py"
+      ],
+      "review_sources": [
+        "20-tide-decentralized-neural-network/settlegraph-learning-note.md",
+        "20-tide-decentralized-neural-network/timed-dag-region-selector-learning-note.md",
+        "20-tide-decentralized-neural-network/positive-delay-graph-finite-cut-learning-note.md",
+        "20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note.md",
+        "20-tide-decentralized-neural-network/reference/semantic-interface-index.md"
       ]
     },
     {
@@ -76,7 +114,49 @@
         "20-tide-decentralized-neural-network/figures/weighted-message-flow.png",
         "20-tide-decentralized-neural-network/figures/weighted-message-flow.svg",
         "20-tide-decentralized-neural-network/figures/local-render-checks.json"
-      ]
+      ],
+      "inputs": [
+        "20-tide-decentralized-neural-network/figures/requirements.txt",
+        "20-tide-decentralized-neural-network/figures/src/catalog.py",
+        "20-tide-decentralized-neural-network/figures/src/drawing.py",
+        "20-tide-decentralized-neural-network/figures/src/provenance.py",
+        "20-tide-decentralized-neural-network/figures/src/local_figures.py",
+        "20-tide-decentralized-neural-network/figures/src/memory_figures.py",
+        "20-tide-decentralized-neural-network/figures/src/control_time_figures.py",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/architecture-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/kv-memory-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/region-allocation-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md",
+        "20-tide-decentralized-neural-network/figures/src/design_introduction.py"
+      ],
+      "review_sources": [
+        "20-tide-decentralized-neural-network/settlegraph-learning-note.md",
+        "20-tide-decentralized-neural-network/timed-dag-region-selector-learning-note.md",
+        "20-tide-decentralized-neural-network/positive-delay-graph-finite-cut-learning-note.md",
+        "20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/architecture-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/kv-memory-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/region-allocation-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md"
+      ],
+      "catalog": {
+        "kind": "tide-decorators",
+        "paths": [
+          "20-tide-decentralized-neural-network/figures/src/local_figures.py",
+          "20-tide-decentralized-neural-network/figures/src/memory_figures.py",
+          "20-tide-decentralized-neural-network/figures/src/control_time_figures.py"
+        ],
+        "directory": "20-tide-decentralized-neural-network/figures",
+        "extra_outputs": [
+          "20-tide-decentralized-neural-network/figures/local-render-checks.json"
+        ]
+      }
     },
     {
       "name": "presentation-build",
@@ -105,6 +185,27 @@
       ],
       "directories": [
         "20-tide-decentralized-neural-network/figures/design-introduction"
+      ],
+      "inputs": [
+        "20-tide-decentralized-neural-network/presentations/design-introduction/content.py",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/deck.css",
+        "20-tide-decentralized-neural-network/presentations/design-introduction/deck.js",
+        "20-tide-decentralized-neural-network/figures/src/design_introduction.py"
+      ],
+      "review_sources": [
+        "20-tide-decentralized-neural-network/instances/hb-lattice-weighted-message.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/architecture-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/kv-memory-learning-note.md",
+        "20-tide-decentralized-neural-network/memos/design/design-requirements-and-architecture.md",
+        "20-tide-decentralized-neural-network/memos/design/weighted-message-design.md",
+        "20-tide-decentralized-neural-network/memos/training/weighted-message-research-questions.md",
+        "20-tide-decentralized-neural-network/positive-delay-graph-finite-cut-learning-note.md",
+        "20-tide-decentralized-neural-network/presentations/design-introduction-script.md",
+        "20-tide-decentralized-neural-network/records/reviews/2026-10-28-ascend-implementation-review.md",
+        "20-tide-decentralized-neural-network/settlegraph-learning-note.md",
+        "20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note.md",
+        "20-tide-decentralized-neural-network/timed-dag-region-selector-learning-note.md",
+        "20-tide-decentralized-neural-network/topologies/hb-lattice.md"
       ]
     },
     {
@@ -122,7 +223,11 @@
         "20-tide-decentralized-neural-network/presentations/design-introduction/preview.png",
         "20-tide-decentralized-neural-network/presentations/design-introduction/render-checks.json",
         "20-tide-decentralized-neural-network/presentations/design-introduction/tide-design-introduction.pdf"
-      ]
+      ],
+      "inputs": [
+        "20-tide-decentralized-neural-network/figures/requirements.txt"
+      ],
+      "review_sources": []
     }
   ],
   "retained": [
@@ -142,5 +247,27 @@
       "path": "20-tide-decentralized-neural-network/records/history/artifact-rewrite-map.json",
       "reason": "用户同意历史清理后保留的提交编号与移除路径映射，用于核对旧引用。"
     }
+  ],
+  "state_file": ".artifact-state.json",
+  "build_inputs": [
+    "tools/build.py",
+    "tools/check_artifacts.py"
+  ],
+  "asset_sources": [
+    "assets/images/load-store-progression-01.svg",
+    "assets/images/ai-time-scaling-law-theoretical-evidence-01.svg",
+    "assets/images/ai-time-scaling-law-theoretical-evidence-02.svg",
+    "assets/images/control-feedback-token-instruction-opcode-operands-01.svg",
+    "assets/images/control-feedback-token-instruction-opcode-operands-02.svg",
+    "assets/fig/gpt-diagram.pptx",
+    "assets/fig/rnn-diagram.pptx",
+    "assets/fig/sequence-parallel-rnn-diagram.pptx",
+    "assets/images/load-store-progression-02.png",
+    "assets/catalog.json"
+  ],
+  "asset_directories": [
+    "assets",
+    "20-tide-decentralized-neural-network/figures",
+    "20-tide-decentralized-neural-network/presentations/design-introduction"
   ]
 }

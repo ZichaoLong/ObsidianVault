@@ -42,3 +42,7 @@ tags:
 
 - [[30-technical-notes/README|技术笔记]]
 - [[90-archive/README|Archive]]
+
+## 维护
+
+本页为手工索引，正文移动或改名时同步引用。各研究线的源文件、生成命令与同步流程见[全仓维护地图](../ARTIFACTS.md#各条工作线的维护地图)。

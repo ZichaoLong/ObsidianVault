@@ -14,8 +14,10 @@ class BuildError(RuntimeError):
     pass
 
 
-def check_dependencies(full=False):
+def check_dependencies(full=False, groups=None):
     """Check the current Tide renderers before starting any output writes."""
+    if groups is not None and set(groups) <= {'presentation-build'}:
+        return  # This generator uses only the Python standard library.
     missing = []
     for module, package in [('PIL', 'Pillow'), ('cairosvg', 'CairoSVG / Cairo')]:
         try:
@@ -53,19 +55,22 @@ def check_dependencies(full=False):
         raise BuildError('\n'.join(instructions))
 
 
-def run_build(registry, *, full=False):
-    plan = registry.build_plan(full)
+def run_build(registry, *, full=False, groups=None):
+    plan = registry.build_plan(full, groups)
     for index, group in enumerate(plan, 1):
         print(f'[{index}/{len(plan)}] {group["name"]}', flush=True)
         # Use the caller's Python/virtual environment, with repository-relative
         # commands executed from the repository root even when invoked elsewhere.
         command = [sys.executable, *group['command'][1:]]
+        before = registry.fingerprint(group['name'])
+        registry.invalidate(group['name'])
         result = subprocess.run(command, cwd=registry.root)
         if result.returncode:
             raise BuildError(f'{group["name"]} failed (exit {result.returncode}); build stopped')
         missing = [path for path in group['outputs'] if not (registry.root / path).is_file()]
         if missing:
             raise BuildError(f'{group["name"]} did not produce: '+', '.join(missing))
+        registry.record_build(group['name'], before)
     errors, _ = registry.audit(require_built=True, groups=[group['name'] for group in plan])
     if errors:
         raise BuildError('\n'.join(errors))
@@ -75,14 +80,20 @@ def run_build(registry, *, full=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--full', action='store_true', help='Also export PDF, preview and browser report.')
+    parser.add_argument('--group', action='append', help='Build only this group and its dependencies (repeatable).')
     args = parser.parse_args()
     try:
         registry = ArtifactRegistry()
         errors, _ = registry.audit()
         if errors:
             raise BuildError('\n'.join(errors))
-        check_dependencies(args.full)
-        plan = run_build(registry, full=args.full)
+        if args.full and args.group:
+            raise BuildError('choose --full or --group, not both')
+        selected = registry.build_plan(args.full, args.group)
+        check_dependencies(any(g.get('build_mode') == 'full' for g in selected),
+                           groups=[g['name'] for g in selected])
+        plan = run_build(registry, full=args.full, groups=args.group)
+        subprocess.run([sys.executable, str(ROOT / 'tools/check_links.py')], cwd=ROOT, check=True)
         checker = ROOT / '20-tide-decentralized-neural-network/tools/check_documents.py'
         command = [sys.executable, str(checker)]
         if args.full:
@@ -92,6 +103,9 @@ def main():
         print(f'BUILD FAILED: {exc}', file=sys.stderr)
         return 1
     print(f'Built and checked {len(plan)} groups / {sum(len(g["outputs"]) for g in plan)} outputs')
+    for name, (status, reason) in registry.states().items():
+        if name not in {g['name'] for g in plan} and status != 'CURRENT':
+            print(f'{status}: {name}: {reason}; build with --group {name} when needed')
     return 0
 
 

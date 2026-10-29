@@ -36,13 +36,13 @@
 
 ```bash
 # 从仓库根目录运行，生成这八张图的 14 个导出文件及检查报告。
-python3 assets/render.py
+python3 tools/build.py --group editable-assets
 
 # 一并构建全部图集、素材和展示 HTML；--full 另导出 Tide 展示 PDF。
 python3 tools/build.py
 ```
 
-需要另存预览时使用 `python3 assets/render.py --output-dir /tmp/assets-preview`，结果按 `images/`、`fig/` 子目录输出。来源目录中的 SVG 与 PPTX 保持原样。日常的 [render-checks.json](render-checks.json)记录源文件、字体和输出哈希，并核对 Office Math 对象与文字没有遗漏或重复。
+统一入口记录源与输出指纹；直接运行 `assets/render.py` 不更新该记录。需要另存预览时使用 `python3 assets/render.py --output-dir /tmp/assets-preview`，结果按 `images/`、`fig/` 子目录输出。来源目录中的 SVG 与 PPTX 保持原样。日常的 [render-checks.json](render-checks.json)记录源文件、字体和输出哈希，并核对 Office Math 对象与文字没有遗漏或重复。
 
 图源列表由 [catalog.json](catalog.json)声明，准确输出路径登记在仓库的[产物清单](../generated-artifacts.json)。新增图源时同步更新两处以及精确忽略规则。
 

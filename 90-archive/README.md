@@ -15,3 +15,7 @@ tags:
 
 - [[90-archive/attention-position-memory/attention-position-memory-2026-09-29|2026-09-29 完整原稿]]：从原对话的文件创建及修改记录恢复，包含当时的公式、实验和模型表。
 - [[90-archive/attention-position-memory/global-local-rope-nope-dialogue|全局／局部与 RoPE／NoPE 原始问答]]：较早的二维讨论存留稿。
+
+## 维护
+
+归档保留历史含义，活跃版本另行维护；本目录暂无机械生成物。历史证据、生成成品的留存与同步按[全仓维护约定](../ARTIFACTS.md)处理。

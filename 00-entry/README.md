@@ -32,3 +32,7 @@ tags:
 
 - [[30-technical-notes/README|技术笔记]]
 - [[40-index/README|索引]]
+
+## 仓库维护
+
+生成物归类、各研究线维护源、构建命令与修改／Git 同步流程见[全仓维护地图](../ARTIFACTS.md#各条工作线的维护地图)。AI 工作约定见[AGENTS.md](../AGENTS.md)。

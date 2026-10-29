@@ -79,3 +79,6 @@ __pycache__/
 /assets/fig/sequence-parallel-rnn-diagram.png
 /assets/fig/sequence-parallel-rnn-diagram.pdf
 /assets/render-checks.json
+
+# Local successful-build fingerprints; rebuilt after clone.
+/.artifact-state.json

@@ -83,3 +83,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [循环记忆公式核对](examples/recurrent_memory_checks.py) | 短卷积、Delta／SSD 恒等式、弱事件和分段继续的有限数值检查 |
 
 reference/ 提供名称检索与实现核对；memos/ 提供研究参考；examples/ 保存教学程序，resources/ 汇集学习材料。版本、下游采用和修订历史集中在 records/，入口为[版本与采用记录](records/semantic-versions-and-adoption.md)。
+
+## 维护与生成
+
+本线的教材、图集、实例和展示之间的同步职责见[全仓维护地图](../ARTIFACTS.md#各条工作线的维护地图)。定义变化后先核对受影响的图形与展示维护源，再按组构建；构建成功不能替代语义核对。图集与展示的具体编辑方式见各自 README。

@@ -9,7 +9,6 @@ requires a reviewed diff, a revision record, and an explicit hash update.
 
 import argparse
 from collections import defaultdict
-from functools import lru_cache
 import hashlib
 from pathlib import Path
 import re
@@ -22,6 +21,7 @@ BASE = Path(__file__).resolve().parents[1]
 ROOT = BASE.parent
 sys.path.insert(0, str(ROOT / 'tools'))
 from check_artifacts import ArtifactRegistry
+from document_links import anchors, prose_lines, references, resolve
 
 CANONICAL_HASHES = {
     "settlegraph-learning-note.md":
@@ -43,71 +43,6 @@ RETIRED_CONFIG_NAMES = re.compile(
     r"\b(?:budget_family|tau_soft)\b"
     r"|\bselection_mode\s*=\s*(?:soft|direct|attention|pooled|dense|hard)\b"
 )
-
-
-def prose_lines(text):
-    """Keep original line numbers while excluding fenced examples."""
-    fence = None
-    for number, line in enumerate(text.splitlines(), 1):
-        match = re.match(r"^\s*(?:>\s*)?(`{3,}|~{3,})", line)
-        if match:
-            marker = match[1]
-            if fence is None:
-                fence = marker
-            elif marker[0] == fence[0] and len(marker) >= len(fence):
-                fence = None
-            yield number, ""
-        else:
-            yield number, line if fence is None else ""
-
-
-def slug(heading):
-    heading = re.sub(r"<[^>]+>", "", heading).strip().lower()
-    heading = re.sub(r"[^\w\s-]", "", heading)
-    return re.sub(r"\s", "-", heading)
-
-
-@lru_cache(maxsize=None)
-def anchors(path):
-    text = path.read_text()
-    result = set()
-    seen = defaultdict(int)
-    for _, line in prose_lines(text):
-        result.update(re.findall(r'<a\s+id=["\']([^"\']+)["\']', line))
-        result.update("^" + value for value in re.findall(r"\^([\w-]+)\s*$", line))
-        match = re.match(r"^(?:>\s*)?#{1,6}\s+(.+?)\s*#*$", line)
-        if match:
-            heading = match[1]
-            result.add(heading)  # Obsidian heading links
-            key = slug(heading)
-            result.add(key + (f"-{seen[key]}" if seen[key] else ""))
-            seen[key] += 1
-    return result
-
-
-def references(text):
-    for number, line in prose_lines(text):
-        for match in re.finditer(r"\[\[([^\]\n]+)\]\]", line):
-            yield number, match[1].split("|", 1)[0], True
-        for match in re.finditer(r"!?\[[^\]\n]+\]\(([^)\n]+)\)", line):
-            yield number, match[1], False
-
-
-def resolve(source, target, wiki, by_name, registry):
-    if not target:
-        return source
-    relative = Path(target)
-    candidates = [source.parent / relative]
-    if wiki:
-        candidates.append(ROOT / relative)
-        if relative.suffix != ".md":
-            candidates += [path.with_suffix(".md") for path in candidates]
-    for path in candidates:
-        if path.exists() or registry.recognizes(path):
-            return path.resolve()
-    if wiki and "/" not in target and len(by_name[relative.stem]) == 1:
-        return by_name[relative.stem][0]
-    return None
 
 
 def check_formulas(path, errors):

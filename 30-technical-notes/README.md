@@ -33,3 +33,7 @@ tags:
 - 扩散模型
 - Attention 与距离 / MDS 草稿
 - 图结构、检索、聚类与索引相关笔记
+
+## 维护与生成
+
+正文为手工 Markdown；GPT／RNN 三张图继续编辑[原 PPTX](../assets/README.md#架构图继续编辑-pptx)，修改后运行 `python3 tools/build.py --group editable-assets`。图文与其他研究线的同步职责见[全仓维护地图](../ARTIFACTS.md#各条工作线的维护地图)。

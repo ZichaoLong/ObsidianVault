@@ -31,9 +31,9 @@ class BuildTests(unittest.TestCase):
         ]
         if changes:
             changes(groups)
-        data = {'schema_version': 1, 'groups': groups, 'retained': []}
+        data = {'schema_version': 2, 'state_file': '.artifact-state.json', 'groups': groups, 'retained': []}
         (self.root / 'generated-artifacts.json').write_text(json.dumps(data))
-        (self.root / '.gitignore').write_text('/out/html.txt\n/out/export.txt\n')
+        (self.root / '.gitignore').write_text('/out/html.txt\n/out/export.txt\n/.artifact-state.json\n')
         sources = {
             'html.py': (
                 'from pathlib import Path\nimport sys\n'
@@ -113,6 +113,93 @@ class BuildTests(unittest.TestCase):
         subprocess.run(['git', 'add', '-f', 'out/export.txt'], cwd=self.root, check=True)
         self.assertIn('generated output is tracked: out/export.txt',
                       registry.audit(True, groups=['html'])[0])
+
+    def test_source_change_marks_dependents_stale_without_touching_outputs(self):
+        registry = self.registry()
+        self.build(registry, full=True)
+        source = self.root / 'html.py'
+        source.write_text(source.read_text() + '\n# new content source\n')
+        self.assertEqual(registry.states()['html'][0], 'STALE')
+        self.assertEqual(registry.states()['export'][0], 'STALE')
+        self.assertTrue(any('STALE' in error for error in registry.audit(True)[0]))
+
+    def test_standard_rebuild_keeps_old_export_explicitly_stale(self):
+        registry = self.registry()
+        self.build(registry, full=True)
+        source = self.root / 'html.py'
+        source.write_text(source.read_text() + '\n# updated layout\n')
+        self.build(registry)
+        self.assertEqual(registry.states()['html'][0], 'CURRENT')
+        self.assertEqual(registry.states()['export'][0], 'STALE')
+        self.assertEqual(registry.audit(True, groups=['html'])[0], [])
+
+    def test_modified_output_and_missing_snapshot_are_not_current(self):
+        registry = self.registry()
+        self.build(registry, full=True)
+        (self.root / 'out/html.txt').write_text('edited generated content')
+        self.assertEqual(registry.states()['html'][0], 'STALE')
+        (self.root / registry.state_file).unlink()
+        self.assertEqual(registry.states()['html'][0], 'UNVERIFIED')
+
+    def test_failed_rebuild_invalidates_previous_success(self):
+        registry = self.registry()
+        self.build(registry, full=True)
+        (self.root / 'html.py').write_text('raise SystemExit(7)\n')
+        with self.assertRaises(BuildError):
+            self.build(registry)
+        self.assertEqual(registry.states()['html'][0], 'UNVERIFIED')
+
+    def test_source_modified_during_build_cannot_be_certified(self):
+        registry = self.registry(scripts={'html.py':
+            'from pathlib import Path\n'
+            'Path("out").mkdir(exist_ok=True)\n'
+            'Path("out/html.txt").write_text("done")\n'
+            'Path("html.py").write_text("pass")\n'})
+        with self.assertRaisesRegex(ValueError, 'inputs changed during build'):
+            self.build(registry)
+        self.assertEqual(registry.states()['html'][0], 'UNVERIFIED')
+
+    def test_group_build_includes_dependency_but_not_unrelated_groups(self):
+        registry = self.registry()
+        with contextlib.redirect_stdout(io.StringIO()):
+            plan = run_build(registry, groups=['export'])
+        self.assertEqual([g['name'] for g in plan], ['html', 'export'])
+        self.assertEqual(registry.audit(True), ([], []))
+        with self.assertRaisesRegex(ValueError, 'unknown build group'):
+            registry.build_plan(groups=['typo'])
+
+    def test_affected_separates_review_from_mechanical_rebuild(self):
+        registry = self.registry(changes=lambda g: g[1].update(review_sources=['definition.md']),
+                                 scripts={'definition.md': 'Reviewed definition'})
+        affected = registry.affected(['definition.md'])
+        self.assertTrue(affected['html'][0].startswith('REVIEW'))
+        self.assertTrue(affected['export'][0].startswith('DOWNSTREAM'))
+        self.build(registry, full=True)
+        (self.root / 'definition.md').write_text('Changed meaning')
+        # CURRENT certifies mechanical sources only; rebuilding cannot certify semantics.
+        self.assertEqual(registry.states()['html'][0], 'CURRENT')
+
+    def test_unclassified_asset_and_catalog_drift_fail_audit(self):
+        registry = self.registry()
+        (self.root / 'surprise.png').write_bytes(b'not a registered source')
+        subprocess.run(['git', 'add', 'surprise.png'], cwd=self.root, check=True)
+        self.assertTrue(any('unclassified asset' in error for error in registry.audit()[0]))
+        (self.root / 'assets').mkdir()
+        (self.root / 'assets/source.svg').write_text('<svg/>')
+        (self.root / 'assets/catalog.json').write_text('{"sources": ["source.svg"]}')
+        registry.asset_sources.update({'assets/source.svg', 'assets/catalog.json'})
+        registry.groups['html']['inputs'] = ['assets/source.svg', 'assets/catalog.json']
+        registry.groups['html']['catalog'] = {'kind': 'svg-pptx', 'path': 'assets/catalog.json'}
+        self.assertTrue(any('catalog/output mismatch' in error for error in registry.catalog_errors()))
+
+    def test_removed_output_is_reported_without_deleting_it(self):
+        registry = self.registry()
+        registry.asset_directories = ['out']
+        (self.root / 'out').mkdir()
+        path = self.root / 'out/retired.png'
+        path.write_bytes(b'old output')
+        self.assertTrue(any('out/retired.png' in error for error in registry.audit()[0]))
+        self.assertEqual(path.read_bytes(), b'old output')
 
 
 class DependencyTests(unittest.TestCase):

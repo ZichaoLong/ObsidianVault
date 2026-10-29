@@ -20,3 +20,7 @@ tags:
 - 反馈信源怎么自主选择：[[10-control-feedback-token-instruction/experiment-protocol#B 分支：局部状态访问|B：局部状态访问]]
 - 如何把外部信息、反馈和自书写 memory 类比变成 A/B 可检验对象：[[10-control-feedback-token-instruction/information-acquisition-and-stigmergic-state|主动信息获取与自书写状态]]
 - 会不会被 Agent+Tools / retrieval / scaffold 吸收：[[10-control-feedback-token-instruction/theory-and-challenges#主要攻击面|主要攻击面]]，证据表见 [[10-control-feedback-token-instruction/reference-agent-tools-absorption|Agent 工程对 A/B 弱版本的吸收]]
+
+## 维护与生成
+
+本线正文为手工 Markdown；历史动机的五张简单图维护于[共享 SVG 源](../assets/README.md)，修改后运行 `python3 tools/build.py --group editable-assets`。图文同步范围见[全仓维护地图](../ARTIFACTS.md#各条工作线的维护地图)。
