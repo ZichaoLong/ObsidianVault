@@ -82,3 +82,14 @@ __pycache__/
 
 # Local successful-build fingerprints; rebuilt after clone.
 /.artifact-state.json
+
+# Transformer and explicit-residual MoE presentation diagrams.
+/20-tide-decentralized-neural-network/figures/design-introduction/transformer.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-roles.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-mapping.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-select.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-contributions.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-result.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-history1.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-history2.svg
+/20-tide-decentralized-neural-network/figures/design-introduction/moe-phases.svg

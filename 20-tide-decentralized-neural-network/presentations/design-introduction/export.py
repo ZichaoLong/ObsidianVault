@@ -39,6 +39,8 @@ def main():
             cli('open',f'http://127.0.0.1:{server.server_port}/presentations/design-introduction/index.html','--browser=chrome',f'--profile={work / "browser-profile"}')
             script='''async page => {
               const errors=[];
+              const frames=await page.evaluate(()=>window.tideDeck.data);
+              const targetChapter=frames.find(d=>d.id==='history-first').slide;
               page.on('pageerror',err=>errors.push(err.message));
               await page.keyboard.press('Home');
               await page.keyboard.press('ArrowRight');
@@ -49,7 +51,7 @@ def main():
               const notes=await page.locator('#notes-dialog').evaluate(el=>el.open);
               await page.keyboard.press('Escape');
               await page.keyboard.press('g');
-              await page.locator('#toc-list button').nth(7).click();
+              await page.locator('#toc-list button[data-stop-id="history-first"]').click();
               const chapter=await page.evaluate(()=>window.tideDeck.data[window.tideDeck.index].slide);
               await page.keyboard.press('ArrowRight');
               await page.locator('#replay').click();
@@ -59,11 +61,10 @@ def main():
               await page.setViewportSize({width:390,height:844});
               const mobileFits=await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth);
               const interactions={forward,backward,notes,chapter,replay,last,mobileFits};
-              if(forward!==1||backward!==0||!notes||chapter!==7||replay!==0||!last||!mobileFits)throw new Error(JSON.stringify(interactions));
+              if(forward!==1||backward!==0||!notes||chapter!==targetChapter||replay!==0||!last||!mobileFits)throw new Error(JSON.stringify(interactions));
               await page.setViewportSize({width:1600,height:900});
               await page.addStyleTag({content:'#viewport{height:900px!important}#stage{transform:none!important}.controls{display:none!important}'});
               await page.evaluate(()=>document.fonts.ready);
-              const frames=await page.evaluate(()=>window.tideDeck.data);
               const layout=[];
               for(let i=0;i<frames.length;i++){
                 await page.evaluate(n=>window.tideDeck.show(n),i);
@@ -78,10 +79,15 @@ def main():
                     if(rect.width===0||rect.height===0)continue;
                     if(rect.left<root.left-1||rect.right>root.right+1||rect.bottom>footer.top-8)issues.push({tag:el.tagName,text:el.textContent.slice(0,60),bottom:rect.bottom,footer:footer.top,right:rect.right});
                   }
+                  for(const el of f.querySelectorAll('svg text')){
+                    const r=el.getBoundingClientRect(), bounds=el.closest('svg').getBoundingClientRect();
+                    if(r.left<bounds.left-1||r.right>bounds.right+1||r.top<bounds.top-1||r.bottom>bounds.bottom+1)issues.push({tag:'svg-text',text:el.textContent});
+                  }
+                  const example=f.querySelector('g[data-example]');
                   const graph=f.querySelector('g[data-candidates]');
-                  return {issues,graph:graph?{candidates:Number(graph.dataset.candidates),full:Number(graph.dataset.full),messages:Number(graph.dataset.messages)}:null};
+                  return {issues,example:example?{binding:example.dataset.example,expertFull:Number(example.dataset.expertFull),output:example.dataset.output}:null,graph:graph?{candidates:Number(graph.dataset.candidates),full:Number(graph.dataset.full),messages:Number(graph.dataset.messages)}:null};
                 });
-                layout.push({stop:`${frames[i].slide+1}.${frames[i].step+1}`,title:frames[i].title,...result});
+                layout.push({id:frames[i].id,preview:frames[i].preview,stop:`${frames[i].slide+1}.${frames[i].step+1}`,title:frames[i].title,...result});
                 await page.screenshot({path:SCREEN_DIR+'/frame-'+String(i).padStart(2,'0')+'.png',animations:'disabled'});
               }
               await page.pdf({path:PDF_PATH,width:'1600px',height:'900px',preferCSSPageSize:true,printBackground:true,displayHeaderFooter:false});
@@ -99,11 +105,12 @@ def main():
             report['viewport']=[1600,900]
             report['browser']='Chrome via playwright-cli'
             (HERE/'render-checks.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
-            selected=[4,9,10,12,18,23]
+            selected=[i for i,entry in enumerate(report['layout']) if entry['preview']]
+            if len(selected)!=6:raise ValueError('Select exactly six preview stops in content.py')
             canvas=Image.new('RGB',(1648,1508),'#e3e7e2')
             draw=ImageDraw.Draw(canvas)
             font=ImageFont.truetype('/usr/share/fonts/opentype/noto/NotoSansCJK-Medium.ttc',28,index=2)
-            draw.text((24,20),'Tide · 首版展示预览',font=font,fill='#193d46')
+            draw.text((24,20),'Tide · Transformer、MoE 与局部网络',font=font,fill='#193d46')
             for k,n in enumerate(selected):
                 frame=Image.open(work/f'frame-{n:02d}.png').convert('RGB').resize((792,446),Image.Resampling.LANCZOS)
                 x=24+(k%2)*808;y=80+(k//2)*470

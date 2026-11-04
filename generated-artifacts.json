@@ -179,7 +179,16 @@
         "20-tide-decentralized-neural-network/figures/design-introduction/hb-regions.svg",
         "20-tide-decentralized-neural-network/figures/design-introduction/hb-select0.svg",
         "20-tide-decentralized-neural-network/figures/design-introduction/hb-select1.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-contributions.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-history1.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-history2.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-mapping.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-phases.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-result.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-roles.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/moe-select.svg",
         "20-tide-decentralized-neural-network/figures/design-introduction/sequential.svg",
+        "20-tide-decentralized-neural-network/figures/design-introduction/transformer.svg",
         "20-tide-decentralized-neural-network/presentations/design-introduction/index.html",
         "20-tide-decentralized-neural-network/presentations/design-introduction/speaker-notes.md"
       ],
@@ -187,12 +196,15 @@
         "20-tide-decentralized-neural-network/figures/design-introduction"
       ],
       "inputs": [
+        "20-tide-decentralized-neural-network/examples/explicit_residual_moe_checks.py",
+        "20-tide-decentralized-neural-network/figures/src/design_introduction.py",
         "20-tide-decentralized-neural-network/presentations/design-introduction/content.py",
         "20-tide-decentralized-neural-network/presentations/design-introduction/deck.css",
-        "20-tide-decentralized-neural-network/presentations/design-introduction/deck.js",
-        "20-tide-decentralized-neural-network/figures/src/design_introduction.py"
+        "20-tide-decentralized-neural-network/presentations/design-introduction/deck.js"
       ],
       "review_sources": [
+        "20-tide-decentralized-neural-network/instances/explicit-residual-moe.md",
+        "20-tide-decentralized-neural-network/instances/fully-connected-layered-weighted-message.md",
         "20-tide-decentralized-neural-network/instances/hb-lattice-weighted-message.md",
         "20-tide-decentralized-neural-network/local-semantics/weighted-message/architecture-learning-note.md",
         "20-tide-decentralized-neural-network/local-semantics/weighted-message/kv-memory-learning-note.md",

@@ -1,7 +1,8 @@
-"""Native SVG figures for the design introduction; HB instance §2 is the source.
+"""Native SVG figures for the design introduction.
 
-All graph states use b=2, h=1, n=3, offsets={0,1}. This module is imported
-by presentations/design-introduction/build.py; no third-party dependency.
+HB states use instance §2: b=2, h=1, n=3, offsets={0,1}. The explicit
+residual diagram uses instances/explicit-residual-moe.md and checked traces
+supplied by build.py. Transformer is a pre-norm structural illustration.
 """
 from html import escape
 
@@ -116,6 +117,97 @@ def expansion():
             p.append(f'<circle cx="{80+l*210}" cy="{y}" r="18" fill="{INK if l in (0,4) else "#f7f8f3"}" stroke="{INK}" stroke-width="2"/>')
     p += [text(80,378,'固定入口',21),text(920,378,'固定出口',21),text(500,378,'多跳传播 · 示意图',21,MUTED)]
     return ''.join(p)+'</svg>'
+
+
+def box(x, y, w, h, title, detail='', color=INK, fill=BOX):
+    p = [f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="12" fill="{fill}" stroke="{color}" stroke-width="1.7"/>']
+    p.append(text(x+w/2, y+(h/2+8 if not detail else h/2-3), title, 23, color, weight=650))
+    if detail:
+        p.append(text(x+w/2, y+h/2+24, detail, 18, MUTED))
+    return ''.join(p)
+
+
+def wire(path, color=BLUE, dashed=False):
+    dash = 'stroke-dasharray="6 5"' if dashed else ''
+    marker = 'arrow-ink' if color == INK else 'arrow-blue'
+    return f'<path d="{path}" fill="none" stroke="{color}" stroke-width="2.5" {dash} marker-end="url(#{marker})"/>'
+
+
+def transformer():
+    p = [start('Pre-norm Transformer block：Norm、Attention、Add、Norm、FFN、Add；两条显式残差旁路', 1320, 420)]
+    p.append('<rect x="105" y="40" width="1040" height="300" rx="20" fill="none" stroke="#9bb2ac" stroke-dasharray="8 6"/>')
+    p.append(text(625, 73, '一个完整 Transformer block（pre-norm 示意）', 23, MUTED))
+    for a,b in [(60,130),(260,310),(490,536),(584,650),(780,830),(1010,1056),(1104,1260)]:
+        p.append(wire(f'M{a} 240H{b}'))
+    p += [box(130,200,130,80,'Norm'),box(310,200,180,80,'Attention'),
+          box(650,200,130,80,'Norm'),box(830,200,180,80,'FFN / MoE')]
+    for x in (560,1080):
+        p.append(f'<circle cx="{x}" cy="240" r="24" fill="#f7f6f0" stroke="{INK}" stroke-width="2"/>')
+        p.append(text(x,248,'+',30))
+        p.append(text(x,307,'Add',21,MUTED))
+    p.append(wire('M90 240V110H560V214',INK))
+    p.append(wire('M615 240V145H1080V214',INK))
+    p += [text(40,247,'h',27,BLUE),text(1230,218,'输出',22,BLUE),
+          text(615,277,'x',24,BLUE),text(330,132,'保留 h',20,INK),text(910,128,'保留 x',20,INK),
+          text(625,395,'节点边界可以覆盖整个 block，也可以继续拆开内部计算。',26,INK)]
+    return ''.join(p)+'</svg>'
+
+
+def number(value):
+    return str(value).replace('-', '−')
+
+
+def moe(stage='roles', trace=None):
+    """One stable geometry; route/values are rendered from the checked model."""
+    numeric = trace is not None
+    mapped = stage != 'roles'
+    complete = stage in ('result','history1','history2','phases')
+    computed = stage in ('contributions','result','history1','history2','phases')
+    selected = set(trace['active']) if numeric else set()
+    p = [start('显式 residual MoE：分发、区域选择、专家贡献、加权和、残差相加',900,560)]
+    if numeric:
+        p.append(f'<g data-example="explicit-residual" data-expert-full="{len(selected) if computed else 0}" data-output="{number(trace["output"]) if complete else "pending"}">')
+    else:
+        p.append('<g>')
+    p.append('<rect x="286" y="50" width="295" height="424" rx="18" fill="#eef2ef" stroke="#b6c8c1"/>')
+    p.append(text(434,78,'专家区域 · 最多激活 2 个' if mapped else '三个候选专家',20,INK,weight=650))
+    p.append(box(326,96,214,58,'区域选择' if mapped else '选择专家',
+                 'SelStep → A、aᵢ' if mapped else '集合 A · 权重 aᵢ',GOLD,'#f4ead8'))
+    # Gold dashed control path, separate from blue payload paths.
+    p.append(f'<path d="M326 125H303V409" fill="none" stroke="{GOLD}" stroke-width="2" stroke-dasharray="5 5"/>')
+    for y in (217,307,397):
+        p.append(f'<path d="M303 {y}H326" stroke="{GOLD}" stroke-width="2" stroke-dasharray="5 5"/>')
+    p.append(box(40,240,154,92,'分发 S' if mapped else '分发输入','x = '+number(trace['input']) if numeric else '当前表示 x'))
+    for i,y in enumerate((192,282,372),1):
+        node=f'E{i}'
+        active = not numeric or node in selected
+        color = GOLD if numeric and active else INK if not numeric else MUTED
+        detail = f'E{str(i).translate(str.maketrans("123","₁₂₃"))}(x) · 返回贡献'
+        if numeric:
+            detail = ('贡献 '+number(trace['values'][node])) if computed and active else ('已选 · a = '+number(trace['weights'][node])) if active else '未选 · 不计算'
+        p.append(box(326,y,214,68,f'专家 E{str(i).translate(str.maketrans("123","₁₂₃"))}',detail,color,'#f4ead8' if numeric and active else '#fafbf8'))
+        p.append(wire(f'M194 286C250 286 255 {y+50} 324 {y+50}'))
+        shade = BLUE if active and (computed or not numeric) else '#bcc9c6'
+        dash = 'stroke-dasharray="5 5"' if not active else ''
+        p.append(f'<path d="M540 {y+36}H622C647 {y+36} 647 {218+i*15} 659 {218+i*15}" fill="none" stroke="{shade}" stroke-width="2.5" {dash}/>')
+        if computed and active:
+            p.append(text(610,y+22,number(trace['weighted'][node]),21,BLUE,weight=650))
+    p.append('<rect x="648" y="170" width="220" height="296" rx="18" fill="none" stroke="#b6c8c1"/>')
+    p.append(text(758,197,'合并节点 M' if mapped else '合并贡献与基线',21,INK,weight=650))
+    p.append(box(661,220,194,77,'贡献求和 Σ', 'r = '+number(trace['contribution']) if complete else 'r = Σ aᵢ Eᵢ(x)'))
+    p.append(wire('M758 298V368'))
+    p.append(f'<circle cx="758" cy="395" r="26" fill="#f7f6f0" stroke="{INK}" stroke-width="2"/>')
+    p += [text(758,404,'+',32),text(812,377,'Add',20,MUTED)]
+    p.append(wire('M116 333V500H758V423',INK))
+    p.append(text(400,525,'残差旁路：x'+(' = '+number(trace['input']) if numeric else '')+(' · 时延 2' if mapped else ''),22,INK))
+    p.append(wire('M784 395H898'))
+    p.append(text(809,447,'y = '+number(trace['output']) if complete else 'y = x + r',24,BLUE,weight=650))
+    if mapped:
+        p.append(text(124,214,'θ = 1 + 3t',19,MUTED))
+        p.append(text(434,465,'θ = 2 + 3t',19,MUTED))
+        p.append(text(758,153,'θ = 3 + 3t',19,MUTED))
+    p.append('</g></svg>')
+    return ''.join(p)
 
 
 if __name__=='__main__':

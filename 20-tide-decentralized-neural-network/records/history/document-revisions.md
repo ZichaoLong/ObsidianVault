@@ -1,7 +1,7 @@
 ---
 type: document-history
 status: reference
-as-of: 2026-10-28
+as-of: 2026-11-04
 tags:
   - tide
   - history
@@ -10,6 +10,16 @@ tags:
 # 文档修订记录
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
+
+## 2026-11-04：展示改从 Transformer 残差与显式 MoE 展开
+
+按用户授权重排[展示材料](../../presentations/design-introduction/README.md)：14 组画面、19 个停点。首屏直接显示 Transformer 的 Norm、Attention、前馈与两次 residual add；删去独立铺陈目标的旧第二屏，将去中心化、稀疏化要求放在局部组与网络扩展的取舍旁。每个专家仍独占节点，基线旁路、选择控制、专家贡献、求和与 Add 分别表达。HB 作为后续拓扑示意及独立附例保留。
+
+新增[显式残差 MoE 教学绑定](../../instances/explicit-residual-moe.md)与[数值核对](../../examples/explicit_residual_moe_checks.py)：五节点、三个区域、来源分组求和、Top-2、所选权重归一化与对齐旁路，先完成无状态计算 $y=4$；再显式增加节点本地激活计数，重复同一输入得到 $y=8$，重置计数对照恢复为 $4$。它是通用 TimedDAG 的独立教学绑定，未改既有带权均值、KV 或 HB 的函数。激活计数只为说明历史怎样影响选择，未作为已验证的任务优化方案。
+
+后续页同步区分功能角色与 P/S/U/F 阶段、当前表示与持久状态、一般 Read 与带权 Mem/Describe。计数按准备、区域选择、专家 Full、分发与 Add 的 Full、旁路及贡献消息拆开，不混用旧 HB 的 $10/4/8$。数值程序检查两轮历史、重置、平分与候选子集，以及 21 组按边求值／直接公式比较；导出按全部停点检查交互、页面与 SVG 文字边界，另作 PDF 目视核对。四份正典与已有实例保持，本次没有新增训练或性能结果。
+
+脚本、内容、图源、备注、HTML/PDF 及预览同步；新图与新依赖登记到产物清单，导出预览改用稳定停点 ID 对应的内容标记。Git 按仓库约定保存维护源，可重建成品留在本地。
 
 ## 2026-10-28：统一构建、CI 与重复素材清理
 

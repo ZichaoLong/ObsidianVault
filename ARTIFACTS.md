@@ -11,7 +11,7 @@ Git 保存正文、维护源、原始素材和明确留存的证据。能由源�
 | [Tide 正典、局部语义、拓扑与实例](20-tide-decentralized-neural-network/README.md) | 教材和实例是人工维护的语义来源；图和展示不会自动从教材解析定义 | 核对共同名称、定义、证明、实例、图形源和展示内容；查清影响后分别改源。正典修订继续遵守 Tide 的版本核验约定 |
 | [Tide 原有三图](20-tide-decentralized-neural-network/figures/README.md#整体结构与一次区域作用) | [src/legacy/](20-tide-decentralized-neural-network/figures/src/legacy/) → PNG／SVG，`legacy-figures` | 改绘图源后重建；正典或接口变化时人工核对图示。来源快照不随日常构建改写 |
 | [Tide 局部图集](20-tide-decentralized-neural-network/figures/README.md#带权消息与两个算例) | [figures/src/](20-tide-decentralized-neural-network/figures/src/) 中局部、记忆、控制与时间绘图源 → PNG／SVG／报告，`local-figures` | 教材或算例变化时核对图中参数、条件和公式，再生成。报告记录教材哈希，不代表已完成语义审阅 |
-| [Tide 展示](20-tide-decentralized-neural-network/presentations/design-introduction/README.md) | `content.py`、`build.py`、CSS／JS 和 HB 图源 → HTML／备注／分步 SVG，`presentation-build`；其后 `presentation-export` → PDF／预览／报告 | 讲述脚本、HB 实例、定义或设计说明变化时，核对屏幕内容、图形源和备注；需要交付静态版时再导出 |
+| [Tide 展示](20-tide-decentralized-neural-network/presentations/design-introduction/README.md) | `content.py`、`build.py`、CSS／JS、数值核对程序和 Transformer／MoE／HB 图源 → HTML／备注／分步 SVG，`presentation-build`；其后 `presentation-export` → PDF／预览／报告 | 讲述脚本、MoE／HB 实例、定义或设计说明变化时，核对屏幕内容、图形源和备注；需要交付静态版时再导出 |
 | [技术笔记](30-technical-notes/README.md)与[共享素材](assets/README.md) | Markdown 为正文；三份 PPTX → SVG／PNG／PDF，属于 `editable-assets` | PowerPoint 修改 PPTX 后重建；改变数学符号或连线含义时核对正文。所有八张可编辑图的对应关系见素材说明 |
 | [总入口](00-entry/README.md)、[索引](40-index/README.md)、[归档](90-archive/README.md) | 人工维护的 Markdown，暂无机械生成物 | 移动／改名正文时同步入口和引用；归档保留历史含义，活跃版本另行维护 |
 
@@ -59,8 +59,8 @@ Git `pull`、切换分支、合并以及新建 worktree 后，先读目标版本
 Python 3.10+，从仓库根目录运行：
 
 ```bash
-python3 tools/build.py                       # 全部普通组：58 个输出
-python3 tools/build.py --full                # 含静态展示：共 61 个输出
+python3 tools/build.py                       # 全部普通组：67 个输出
+python3 tools/build.py --full                # 含静态展示：共 70 个输出
 python3 tools/build.py --group editable-assets
 python3 tools/build.py --group legacy-figures
 python3 tools/build.py --group local-figures

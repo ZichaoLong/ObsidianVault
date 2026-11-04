@@ -45,6 +45,7 @@
   data.forEach((d, n) => {
     if (seen.has(d.slide)) return; seen.add(d.slide);
     const b = document.createElement('button');
+    b.dataset.stopId = d.id;
     b.textContent = `${String(d.slide+1).padStart(2,'0')}  ${d.title}`;
     b.addEventListener('click', () => { show(n); tocDialog.close(); });
     document.getElementById('toc-list').append(b);

@@ -1,84 +1,54 @@
-# Tide 首版展示材料
+# Tide 展示材料
 
-从去中心化与稀疏化出发，在同一张 HB 小图上走完两次输入，再解释共同框架、Mem、可替换设计和上下层反馈。共 15 组画面、25 个可停顿步骤，最后一组为算例条件附页。
+从 Transformer 的 residual add 出发，展开一个显式 MoE，走完数值计算，再讨论局部网络、历史、接口与成本。共 **14 组画面、19 个停点**；最后两组是 residual 与 HB 附页。主讲到第 12 组结束。
 
-以下成品由本目录源文件生成，默认不随 Git 跟踪。首次克隆请先运行下方构建命令；HTML／备注由 `build.py` 生成，PDF／预览／渲染报告由 `export.py` 生成。维护与留存规则见[仓库约定](../../../ARTIFACTS.md)。
+- [离线 HTML](index.html)：方向键／空格推进，N 打开备注与出处，G 打开目录，也支持按钮和滑动。
+- [PDF 浏览版](tide-design-introduction.pdf)：19 页，每页对应一个停点。
+- [六幅画面预览](preview.png)：Transformer、MoE 映射、完整结果、局部网络、历史和设计反馈。
+- [讲者备注](speaker-notes.md)：每个停点的条件、解释与定义链接。
 
-- [离线 HTML 演示](index.html)：下载后用浏览器打开；内容与图形内嵌，无需网络依赖。左右方向键或空格推进，N 打开备注与出处，G 打开目录；也支持按钮与左右滑动。
-- [PDF 浏览版](tide-design-introduction.pdf)：25 页，每页保留一个停点，方便顺序阅读与批注。
-- [六幅画面预览](preview.png)：快速查看节点图、完整输出、参与计数、记忆与实验边界。
-- [讲者备注](speaker-notes.md)：各停点的数值条件、语义边界和定义链接。
+以上文件由维护源生成，默认不随 Git 跟踪；首次克隆按下方命令构建。HTML 内嵌文字、图形和交互，无网络依赖。定义链接指向仓库相对位置，单独打开 HTML 仍能看画面与备注，原文需回到仓库查阅。
 
-设计主张见[短稿](../../memos/design/design-requirements-and-architecture.md)，讲述顺序依据[展示脚本](../design-introduction-script.md)。本场使用 [HB 三层实例](../../instances/hb-lattice-weighted-message.md#2-三层图上的分叉汇合与记忆)的同一组参数；标量输出用于核对机制，任务收益留待实验比较。
+## 讲述与数值来源
+
+[设计短稿](../../memos/design/design-requirements-and-architecture.md)保存已确认需求，[讲述脚本](../design-introduction-script.md)保存叙述安排。[显式残差 MoE](../../instances/explicit-residual-moe.md)给出新增教学绑定：每个专家一个节点，选择、贡献合并和残差旁路分别表达。首轮 $y=4$；增加本地激活计数后重复同一输入，第二轮 $y=8$。这是机制核对，不是训练或性能结果。
+
+HB 在第 4 组用于拓扑示意，第 14 组提供独立的[既有数值例子](../../instances/hb-lattice-weighted-message.md#2-三层图上的分叉汇合与记忆)。新例子不沿用 HB 的 $G=u$、KV 写入或 $10/4/8$ 计数。
 
 ## 小修改
 
-当前 HTML 提供播放、目录和备注；尚未实现直接改字、拖拽图形并保存的编辑界面。小修改通过编辑源文件、重新生成完成。也可以直接按停点说明希望怎样修改，由助手更新源文件和展示产物。
+地址末尾的 `#3.3` 表示第 3 组第 3 个停点，对应本版 PDF 第 6 页。提修改时可使用停点编号或标题，并说明作用范围，例如“3.3，把结果公式放大”或“所有 MoE 图，把残差旁路下移”。内部还为每个停点保存稳定 ID，重排后导出预览不依赖固定页码。
 
-### 先定位画面和改动范围
+| 想修改什么 | 维护入口 |
+|---|---|
+| 标题、屏幕说明、备注、引用和顺序 | [content.py](content.py)；查找原句或 `step` 的 ID |
+| Transformer、MoE、HB 的文字和图形位置 | [图形源](../../figures/src/design_introduction.py)；分别修改 `transformer`、`moe`、`graph` |
+| 页面拼装与示例轨迹接入 | [build.py](build.py) |
+| 字体、间距、颜色和布局 | [deck.css](deck.css) |
+| 导航、目录、快捷键 | [deck.js](deck.js) |
+| 数值函数、时间与检查 | [算例程序](../../examples/explicit_residual_moe_checks.py)，同步修改实例正文 |
+| PDF、预览与浏览器检查 | [export.py](export.py) |
 
-地址末尾的 `#8.2` 表示第 8 组画面的第 2 个停点，也可在控制栏看到这个编号；它对应当前 PDF 的第 13 页。提修改时优先用停点编号或标题，说明只改当前画面，还是同步修改所有相关画面。例如：
-
-- “8.2，把副标题里的‘长期摘要’改成‘长期记忆摘要’，其他内容保持。”
-- “所有 HB 图，把左区 L 整体下移一点，连线跟着移动。”
-- “只改 11.2，让当前接收的箭头更靠近 Describe。”
-
-### 自己修改源文件
-
-| 想修改什么 | 当前编辑入口 | 作用范围 |
-|---|---|---|
-| 标题、副标题、图右侧说明、备注、部分数学符号 | [content.py](content.py)，搜索屏幕上的原句 | 对应的 `step(...)`；有些词也会出现在备注或其他停点 |
-| P/S/U/F、Mem、反馈图等固定版式里的文字或框图 | [build.py](build.py) 中的 `phases()`、`memory()`、`feedback()` 和 `body()` | 相应版式及其 `mode` 分支 |
-| HB 节点图、图内标签、节点位置、连线、颜色 | [图形源](../../figures/src/design_introduction.py) | `REGIONS` 和配色是共用配置；`graph(stage)` 控制各阶段的显示 |
-| 字号、间距、线条样式、页面布局 | [deck.css](deck.css)，查找对应选择器，例如 `.side`、`.key`、`.flow-box` | 共用样式会影响使用它的所有画面；仅改单个停点需增加局部样式 |
-
-**改一个字。** 在 `content.py` 搜索“四个区域，十二个节点”，修改引号内的标题并保存。保留字符串外的引号、逗号和括号；文字里已有的 `<br>` 表示换行。若搜不到正文，继续查 `build.py` 和图形源。也可在仓库根目录搜索：
-
-```bash
-rg -n --glob '*.py' '要找的原句' \
-  20-tide-decentralized-neural-network/presentations/design-introduction \
-  20-tide-decentralized-neural-network/figures/src/design_introduction.py
-```
-
-**改一个符号。** 普通标签可以直接替换源文件中的 `θ`、`τ`、`→`、`I₁` 等字符；HTML 文字也使用 `<sub>...</sub>`、`<sup>...</sup>` 表示上下标。若改的是数学对象的名称或含义，检查同一对象的其他画面、备注与算例说明。
-
-**移动一组节点。** 图形源的 `REGIONS` 每项依次为“框的 x、y、宽、高、标题、三个节点的 y 坐标”；节点的 x 坐标由框中心计算。例如把左区 L 整体下移 12 个图形坐标单位，将
-
-```python
-'L': (354, 36, 164, 208, '左区 L', [104, 164, 224]),
-```
-
-改为
-
-```python
-'L': (354, 48, 164, 208, '左区 L', [116, 176, 236]),
-```
-
-框和节点一起移动，连线端点按节点位置重新计算。该配置由所有 HB 停点共用；若只改一幅图，需要按 `stage` 单独处理。图形坐标会随画面缩放，并不总等于屏幕像素。改变连线关系或激活路径还会改变算例含义，须同时核对评分、输出和计数。
-
-### 修改后预览
-
-只看 HTML 时，保存源文件后运行下方的 `--group presentation-build` 命令，再刷新浏览器即可；正在看的 `#8.2` 等地址可继续定位同一停点。需要同步 PDF 和预览图时，再运行 `--group presentation-export` 命令。常规小改无需每次导出全部 PDF。
-
-`index.html`、`speaker-notes.md` 和 `figures/design-introduction/` 中的 SVG 都是生成文件，直接改它们会在下次构建时被覆盖。浏览器开发者工具可用于临时试字号或位置，确定后将改动写回源文件。
-
-SVG 是矢量图，可以用 Inkscape 等工具拖动元素。但当前构建流程从 Python 生成并内嵌 SVG，尚不会读取手工修改的 SVG。若采用鼠标编辑某幅图的方式，需要先把它接为独立图源，再让构建脚本读取它；这样后续手改才会持续保留。整套 HTML 的拖拽编辑与保存则需要另做编辑功能。
+持续修改应落在维护源；重新构建会覆盖 HTML、备注、PDF 与生成的 SVG。当前页面是播放器，尚未提供直接改字或拖动并保存的编辑界面。若改用手工 SVG，应另存为源文件、让生成器读取，并按[仓库约定](../../../ARTIFACTS.md)登记。
 
 ## 内容与复现
 
-[content.py](content.py) 保存屏幕文字、逐步画面、讲者备注与引用。[build.py](build.py) 将其与样式、交互及 SVG 图形合成单文件 HTML，并生成备注。节点布局与图形源在 [design_introduction.py](../../figures/src/design_introduction.py)，可编辑 SVG 位于 [figures/design-introduction/](../../figures/design-introduction/)。修改内容源后重新生成，避免直接编辑生成文件。
-
-首次克隆可从仓库根目录运行 `python3 tools/build.py`，生成图集、展示 HTML 和备注；`python3 tools/build.py --full` 另生成 PDF 与预览。依赖安装及 GitHub Actions 的手动完整构建见[统一构建说明](../../../ARTIFACTS.md#本地生成)。
-
-只修改本展示时，使用统一入口按组构建并更新指纹；导出组会先重建 HTML 依赖：
+在仓库根目录执行：
 
 ```bash
 python3 tools/build.py --group presentation-build
 python3 tools/build.py --group presentation-export
 ```
 
-HTML 构建只依赖 Python 标准库。导出另需 `playwright-cli`、Chrome、Pillow 与 Noto CJK 字体；[export.py](export.py) 临时启动回环地址服务器和独立浏览器会话，逐停点检查布局并导出 PDF、预览及[渲染记录](render-checks.json)。这些输出均只在本地保存。输出采用 1600 × 900 的 16:9 画面。静态导出按全部停点展开，不依赖过渡动画。
+前者生成 HTML、备注和[分步 SVG](../../figures/design-introduction/)，构建时运行数值检查；后者先重建依赖，再导出 PDF、预览和[渲染报告](render-checks.json)。两者记录统一构建指纹。只改文字并预览 HTML 时先运行前者；交付静态版前运行后者。
 
-HTML 的定义链接按仓库相对路径组织；单独下载 HTML 后，仍可阅读所有画面和备注，定义原文需回到仓库查阅。小屏幕可横屏翻看，也可直接阅读 PDF。
+HTML 构建只需 Python 标准库。导出需要 `playwright-cli`、Chrome、Pillow 与 Noto CJK 字体，临时使用回环地址服务器及独立浏览器配置。画面为 1600 × 900；所有停点分别导出，检查翻页、备注、目录、重看、小屏适配、页面和 SVG 文字边界。版式检查之外还要目视核对箭头、公式与图形层次。
 
-构建与 Git 同步后的状态处理见[全仓维护约定](../../../ARTIFACTS.md#状态与核验)。直接运行底层 `build.py`／`export.py` 不更新统一构建记录；HTML 变化后，已有 PDF 可能过期，交付静态版前重新构建导出组。
+```bash
+python3 20-tide-decentralized-neural-network/examples/explicit_residual_moe_checks.py
+python3 tools/check_artifacts.py --require-built --group presentation-export
+python3 tools/check_links.py
+python3 20-tide-decentralized-neural-network/tools/check_documents.py
+```
+
+完整依赖与同步流程见[全仓维护约定](../../../ARTIFACTS.md)。底层生成器的单独运行不更新统一指纹；拉取或切换版本后按清单检查本地产物是否过期。

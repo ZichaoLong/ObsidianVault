@@ -65,13 +65,15 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 
 两份实例先给出完整的 KV 基础绑定，再从小图上的两个连续输入位置展开计算：[全连接例子](instances/fully-connected-layered-weighted-message.md#2-两层图上的两次输入)展示接收、状态、选择及下一层聚合；[HB 例子](instances/hb-lattice-weighted-message.md#2-三层图上的分叉汇合与记忆)展示多区域分叉、稀疏邻域与汇合。随后分别讨论传播性质、可替换的局部绑定和计算量。
 
+[显式残差 MoE 教学绑定](instances/explicit-residual-moe.md)另从通用 TimedDAG 直接构造：每个专家单独占节点，基线旁路与专家贡献在合并节点汇合；先无状态，再加入本地激活计数。它与上述带权 KV 实例独立，供 Transformer 到 Tide 的教学过渡使用。
+
 ## 研究与实现
 
 | 入口 | 用途 |
 |---|---|
 | [设计需求与架构关系](memos/design/design-requirements-and-architecture.md) | 简短设计说明：目标与边界、两次完整计算、机制取舍及上下层反馈；详细依据链接到专题 |
-| [首次展示讲述脚本](presentations/design-introduction-script.md) | 从顺序计算到 HB 小图的两次输入，再展开共同框架与候选；含逐步显露、讲者核对和数值底稿 |
-| [首版展示材料](presentations/design-introduction/README.md) | 可逐步推进的离线 HTML、PDF、画面预览与讲者备注 |
+| [首次展示讲述脚本](presentations/design-introduction-script.md) | 从 Transformer 残差到显式 MoE，再展开局部网络、历史与接口；数值源和附页各有明确归属 |
+| [展示材料](presentations/design-introduction/README.md) | 可逐步推进的离线 HTML、PDF、画面预览与讲者备注 |
 | [教学图集](figures/README.md) | 节点与区域、P/S/U/F、带权消息与局部模块图，以及定义出处与绘图源文件 |
 | [局部架构设计总览](memos/design/weighted-message-design.md) | 理解整体设计空间、信息与梯度依赖、候选取舍及外部证据 |
 | [可选研究问题与对照](memos/training/weighted-message-research-questions.md) | 按需选择目标、比较和观测；优先级由研究者安排 |
@@ -79,6 +81,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [研究备忘](memos/README.md) | 设计分析、学习问题、数学补充与外部背景 |
 | [学习资源](resources/learning-resources.md) | 按问题选读的书目和练习 |
 | [教学参考程序](examples/positive_delay_graph_reference.py) | 正时延图有限切面、分段继续与规范记录的可执行例子 |
+| [显式残差 MoE 核对](examples/explicit_residual_moe_checks.py) | 专家、旁路和合并的时间求值；两轮状态、直接公式与工作量核对 |
 | [区域分配公式核对](examples/region_allocation_checks.py) | 二次分配的独立求解比较、正文算例、光滑分支导数与零温反例 |
 | [循环记忆公式核对](examples/recurrent_memory_checks.py) | 短卷积、Delta／SSD 恒等式、弱事件和分段继续的有限数值检查 |
 
