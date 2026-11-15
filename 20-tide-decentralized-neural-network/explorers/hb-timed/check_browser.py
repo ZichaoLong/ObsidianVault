@@ -160,6 +160,84 @@ try:
       window.atlasDebug.mountCase('9');return contents;
     """)
     assert '输入 0，路径时延 6' in mixing_check and '输入 1，路径时延 2' in mixing_check, mixing_check
+    # Actual Settle spatial candidates, including the g=1 boundary and no-hub UI.
+    settle_checks=script("""
+      const results=[],failures=[];
+      const choose=(s,v)=>{const el=document.querySelector(s);el.value=v;el.dispatchEvent(new Event('change',{bubbles:true}));};
+      for(const key of ['lattice-5','lattice-7','lattice-9','exchange-7','exchange-7-h','exchange-10','exchange-10-h','exchange-13','exchange-13-h']){
+        window.atlasDebug.mountCase(key);const c=window.atlasDebug.case;
+        const size=c.ordinary+c.hubs;
+        const cells=document.querySelectorAll('#matrix-canvas .matrix-hit').length;
+        const circles=document.querySelectorAll('#matrix-canvas g circle').length;
+        const pair=window.atlasDebug.state.source+'>'+window.atlasDebug.state.target;
+        const expected=c.edges.filter(([u,v])=>c.nodes[u].slice(0,2).join(',')+'>'+c.nodes[v].slice(0,2).join(',')===pair).length;
+        if(cells!==size*size||circles!==expected)failures.push(['matrix',key,cells,circles,expected]);
+        if(document.querySelector('#node-role').options.length!==(c.hubs?2:1))failures.push(['roles',key]);
+        if(document.querySelector('#timing-mode').value!=='settle'||!document.querySelector('#timing-mode').disabled)failures.push(['timing',key]);
+        let checked=0;
+        for(const b of c.bundles){
+          const [l,p,r,m,q,t,k,count]=b;
+          const exchange=c.family==='exchange'&&k!=='HD1';
+          if(!Array.from(window.atlasFormulaDebug.settleTargets(l,p,exchange)).includes(q))failures.push(['region',key,Array.from(b)]);
+          checked++;
+        }
+        if(c.family==='exchange')for(const [u,v,k] of c.edges){
+          const a=c.nodes[u],b=c.nodes[v];
+          if(a[2]==='d'&&b[2]==='d'&&b[3]!==a[3]&&b[3]!==(a[3]^(1<<(a[0]%4))))failures.push(['node-bit',key,u,v]);
+        }
+        choose('#node-layer','0');choose('#node-position','0');
+        const atBoundary=document.querySelector('#region-formulas').textContent;
+        if(/NaN|Infinity|undefined/.test(atBoundary))failures.push(['boundary',key]);
+        const edge=document.querySelector('#region-canvas .bundle');
+        edge.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        const matrixSummary=document.querySelector('#matrix-summary').textContent;
+        document.querySelector('#preset-detail').click();
+        if(window.atlasDebug.case.nodes.length!==c.nodes.length)failures.push(['filter-mutated-graph',key]);
+        results.push({key,cells,circles,checked,period:c.settle_period,nodes:c.nodes.length,matrixSummary});
+      }
+      // Family select changes the actual model, not only the displayed edge families.
+      choose('#family-select','lattice');const latticeKey=window.atlasDebug.case.key;
+      choose('#family-select','exchange');const exchangeKey=window.atlasDebug.case.key;
+      choose('#family-select','multiscale');const multiscaleKey=window.atlasDebug.case.key;
+      return {results,failures,latticeKey,exchangeKey,multiscaleKey,errors:window.atlasErrors.slice()};
+    """)
+    assert not settle_checks['failures'] and not settle_checks['errors'],settle_checks
+    assert (settle_checks['latticeKey'],settle_checks['exchangeKey'],settle_checks['multiscaleKey']) == ('lattice-7','exchange-10','9'),settle_checks
+    timing_sync=script("""
+      window.atlasDebug.mountCase('9');
+      const select=document.querySelector('#pair-source');select.value='4,3';select.dispatchEvent(new Event('change'));
+      const target=document.querySelector('#pair-target');target.value='8,0';target.dispatchEvent(new Event('change'));
+      const rows=[];
+      for(const mode of ['timed','aligned','timed-common','settle']){
+        window.atlasDebug.setTiming(mode);
+        const edge=[...document.querySelectorAll('#region-canvas .bundle')].find(e=>e.dataset.src==='4,3'&&e.dataset.dst==='8,0');
+        rows.push({mode,title:edge.querySelector('title').textContent,
+          matrix:document.querySelector('#matrix-summary').textContent,
+          formula:document.querySelector('#pair-formulas math').textContent,
+          timing:document.querySelector('#timing-summary').textContent});
+      }
+      return rows;
+    """)
+    for item in timing_sync:
+        delta=1 if item['mode'] in ('timed','timed-common') else 4
+        assert f'δ={delta}' in item['title'] and f'时延均为 {delta}' in item['matrix'],item
+        assert f'δ={delta}' in item['formula'],item
+    assert '输入间隔 10' in timing_sync[2]['timing'] and '输入间隔 10' in timing_sync[3]['timing'],timing_sync
+    preserved_timing=script("""
+      const el=document.querySelector('#case-select');el.value='17';el.dispatchEvent(new Event('change'));
+      return {key:window.atlasDebug.case.key,mode:window.atlasDebug.state.timing,summary:document.querySelector('#timing-summary').textContent};
+    """)
+    assert preserved_timing['key']=='17' and preserved_timing['mode']=='settle' and 'D=18>M=17' in preserved_timing['summary'],preserved_timing
+    # Inspect each new family visually; external temporary evidence, not tracked outputs.
+    for key in ('lattice-7','exchange-10','exchange-10-h'):
+        script("window.atlasDebug.mountCase(%s);document.querySelector('#regions').scrollIntoView({behavior:'instant'});return true;" % json.dumps(key))
+        shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
+        (OUT/(key+'-preview.png')).write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
+    command('WebDriver:SetWindowRect',{'width':850,'height':1100})
+    small_layout=script("window.atlasDebug.mountCase('exchange-10');return {overflow:document.documentElement.scrollWidth>window.innerWidth,math:document.querySelector('#region-formulas math').getBoundingClientRect().width,errors:window.atlasErrors.slice()};")
+    assert not small_layout['overflow'] and small_layout['math']>0 and not small_layout['errors'],small_layout
+    command('WebDriver:SetWindowRect',{'width':1510,'height':1150})
+    script("window.atlasDebug.mountCase('9');window.scrollTo({top:0,behavior:'instant'});return true;")
     # Check all local document/download targets after formula rendering.
     from urllib.parse import urlparse, unquote
     hrefs=script('return [...document.querySelectorAll("a[href]")].map(a=>a.href);')
@@ -175,7 +253,7 @@ try:
     script('document.querySelector("#regions").scrollIntoView({behavior:"instant"});return true;')
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'formula-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
-    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'embedded_image':image_status}
+    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'embedded_image':image_status}
     (OUT/'browser-checks.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(result,ensure_ascii=False,indent=2))
     command('Marionette:Quit',{'flags':['eForceQuit']})

@@ -271,7 +271,8 @@
         "20-tide-decentralized-neural-network/explorers/hb-timed/page.html",
         "20-tide-decentralized-neural-network/explorers/hb-timed/style.css",
         "20-tide-decentralized-neural-network/explorers/hb-timed/explore.js",
-        "20-tide-decentralized-neural-network/explorers/hb-timed/formulas.js"
+        "20-tide-decentralized-neural-network/explorers/hb-timed/formulas.js",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/settle_topology.py"
       ],
       "review_sources": [
         "20-tide-decentralized-neural-network/topologies/hb-multiscale.md",
@@ -279,7 +280,11 @@
         "20-tide-decentralized-neural-network/local-semantics/weighted-message/role-bounded-allocation.md",
         "20-tide-decentralized-neural-network/memos/design/hb-timed-and-lh.md",
         "20-tide-decentralized-neural-network/settlegraph-learning-note.md",
-        "20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note.md"
+        "20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note.md",
+        "20-tide-decentralized-neural-network/topologies/hb-lattice.md",
+        "20-tide-decentralized-neural-network/topologies/hb-settle-exchange.md",
+        "20-tide-decentralized-neural-network/instances/hb-settle-weighted-message.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/parameter-profiles.md"
       ]
     }
   ],

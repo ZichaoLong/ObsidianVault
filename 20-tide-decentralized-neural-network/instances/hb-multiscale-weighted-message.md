@@ -25,7 +25,7 @@ tags: [tide, hb, weighted-message]
 | 输入 | 每个首层现存节点的入口注入 $(1,E_{\mathrm{role}(v)}x_t)$，两个 $E\in\mathbb R^{d\times d_{\mathrm{in}}}$ 为共享有限矩阵 |
 | 输出 | 末层所有 D 端口的原始记录 $Z$；需要单个槽时可用共同 ReadOut，对全部缺席返回零 |
 
-来源类为 ext，以及各入边的 DD1、DD2、DD4、DH1、HH1/2/4、HD1/2/4；不存在的类无需计算。与旧 HB 的“每个父节点一个类别”相比，本实例按边族保留区别，避免参数随每条边增加。各接收区域使用共享 $A_j,B_j$ 和类别嵌入 $e_{j,a}$；原子仍逐条参与，不合并边身份。这种聚合在固定宽度内容中压缩信息，不保证无损保留全部来源。
+来源类为 ext，以及各入边的 DD1、DD2、DD4、DH1、HH1/2/4、HD1/2/4；不存在的类无需计算。与旧 HB 的“每个父节点一个类别”相比，本实例按边族保留区别，避免参数随每条边增加。Agg 的 $A_v,B_v,e_{v,a}$ 按 §4 的整体参数配置绑定；原子仍逐条参与，不合并边身份。这种聚合在固定宽度内容中压缩信息，不保证无损保留全部来源。
 
 主配置的 hub 没有专门的新汇总算子：它使用同一 Agg 接口，区别在来源、参数、SSD 状态和分配边界。后续若另引入分来源槽、逐边载荷或回取机制，需要另定义，不能由 hub 名称推断。
 
@@ -33,7 +33,7 @@ tags: [tide, hb, weighted-message]
 
 以 $P$ 表示当前输入周期：Timed／对齐流水取 $P=T$，严格 Settle 取 $P=D=M+1$。以下时钟规定在一次运行及所有 chunk 中保持。
 
-**KV。** 采用 [KV 教材](../local-semantics/weighted-message/kv-memory-learning-note.md)的空缓存初态、Upd、sum 描述和完整 Attention／前馈内容函数。$H_{\mathrm{att}}=4,d_h=32,r_a=8$；窗口为 $T_v=128P$ 个逻辑时间，短期率 $\beta_{\mathrm{short}}=\log2/(8P)$、长期率零。Full 每头旋转全部 32 维，频率 $10^{-4\cdot2(a-1)/32}$；距离偏置取零，$\alpha_{\mathrm{att}}=\alpha_{\mathrm{ff}}=1$。sum 描述不额外使用查询旋转。其余投影、摘要与前馈矩阵按教材给定形状，是有限可训练参数。
+**KV。** 采用 [KV 教材](../local-semantics/weighted-message/kv-memory-learning-note.md)的空缓存初态、Upd、sum 描述和完整 Attention／前馈内容函数。$H_{\mathrm{att}}=4,d_h=32$；共享配置 $r_a=8$，独立配置按 §4 取 $r_a=d$ 的完整投影表示；窗口为 $T_v=128P$ 个逻辑时间，短期率 $\beta_{\mathrm{short}}=\log2/(8P)$、长期率零。Full 每头旋转全部 32 维，频率 $10^{-4\cdot2(a-1)/32}$；距离偏置取零，$\alpha_{\mathrm{att}}=\alpha_{\mathrm{ff}}=1$。sum 描述不额外使用查询旋转。其余投影、摘要与前馈矩阵按教材给定形状，是有限可训练参数。
 
 **SSD。** 采用 [SSD 教材](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)的零矩阵、零摘要与空缓存初态，全部 Upd、state 描述及内容公式。4 头、1 组、$d_m=32,d_k=32$，短卷积 conv_size=4；矩阵被动衰减零，摘要短期率 $\log2/(8P)$、长期率零，output_norm_eps=$10^{-5}$，$\alpha_{\mathrm{mem}}=\alpha_{\mathrm{ff}}=1$。有限的投影、卷积系数、$A^{\log},b^\Delta,D_h$、归一化尺度、读取与前馈矩阵均按教材形状给定。
 
@@ -65,22 +65,11 @@ tags: [tide, hb, weighted-message]
 
 ## 4. 参数共享与独立状态
 
-主绑定采用**同层同角色共享大矩阵、节点保留小适配器**。把每个同形节点矩阵 $W_v\in\mathbb R^{a\times b}$ 绑定为
+主绑定采用[两种整体参数配置](../local-semantics/weighted-message/parameter-profiles.md)中的 `shared`：同层同角色节点矩阵基座加私有 rank-8 适配器，区域头按同层区类型共享。`independent` 则使全部节点参数独立、全部区域参数独立。聚合也纳入这两种配置，均通过节点参数接口给定；KV 写入的区域基座例外、独立完整投影表示及 mixed 区的绑定见该页。
 
-$$W_v=W^0_{\ell,\mathrm{role},W}+L_v^WR_v^W,
-\quad L_v^W\in\mathbb R^{a\times r_W},\quad
-R_v^W\in\mathbb R^{r_W\times b},\quad r_W=\min(8,a,b).$$
+这两个整组选择覆盖 Agg、来源嵌入、记忆、门／卷积／归一化、描述／评分和 Full，不再逐模块展开共享候选。所有状态始终私有；同层权重共享可能增加训练期跨设备梯度归约，独立参数仍需处理消息反传和数据并行通信。参数量、状态量和通信量分别记录，不能只按节点数宣称容量。
 
-该规则覆盖记忆的输入／输出投影、评分／描述投影及 Full 的 gate/up/down 矩阵。KV 写入沿用自身已有的基座加适配器，不重复再加一层；同层同角色区域的 KV 基座相等。区域 Agg 矩阵、类别嵌入、query 参数和其余向量按同层同区类型共享；SSD 的门标量、卷积系数和归一化尺度按同层同角色共享，局部评分最后的标量偏置允许每节点独立。混合区按自身区类型共享 query；节点记忆仍按角色选择。
-
-这样扩宽增加私有适配器和状态，不为每个节点重复一套完整大 FFN。若每节点每类矩阵的尺寸为 $(a_W,b_W)$，大致参数数目为
-
-$$\sum_g P_g^{\mathrm{base}}+
-\sum_v\sum_W r_W(a_W+b_W)+\sum_vP_v^{\mathrm{small}}.$$
-
-所有参数在一次运行中固定；共享参数不共享状态，也不使节点读到相同消息。三种可比较的共享强度是：全部独立（容量大、参数和访存大）；本节分层共享加适配（推荐折中）；连跨层基座也按角色共享（参数最省，但不同深度的加工差异更受约束）。完整独立可直接给各 $W_v$；纯共享可将适配器置零。指定这些变化时记录实际参数和状态量，不只按节点数宣称容量。
-
-旧 HB 已有 KV 基座共享，但每节点 Full 等仍可独立，不能用“已有共享”推断它已解决全部参数膨胀。本节明确将 Full 纳入共享。是否需要 hub 更宽状态或专门汇总，留给后续有依据的单项对照。
+旧 HB 教学实例继续保留自身参数定义。新 [HB-Settle 三图实例](hb-settle-weighted-message.md)与 LH 复用本页的 K／S／X 和上述两个参数配置；不要求实现所有轴的笛卡尔积。
 
 ## 5. 精确求值与输出依赖
 

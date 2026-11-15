@@ -26,6 +26,7 @@ tags:
 | [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
 | [全连接实例](../instances/fully-connected-layered-weighted-message.md)、[HB-Lattice 实例](../instances/hb-lattice-weighted-message.md) | 所选拓扑、局部函数、参数、初态与输入读出 | 完整模型绑定、条件性的传播保障、联合求值与实际工作量 |
+| [HB-Settle 位交换](../topologies/hb-settle-exchange.md)及[三图共同绑定](../instances/hb-settle-weighted-message.md) | 对齐计算的分阶段交换；原图、多跨度对齐、位交换三个空间候选 | 保持当前周期约束，复用主局部函数与[两种参数配置](../local-semantics/weighted-message/parameter-profiles.md) |
 | [HB 多跨度拓扑](../topologies/hb-multiscale.md)及[三组主绑定](../instances/hb-multiscale-weighted-message.md) | 普通子图、可选 hub、严格区域分层；时间另行绑定 | 同图 Timed／对齐／严格 Settle、KV／SSD／混合记忆、参数共享及精确块求值条件 |
 | [LH 探索拓扑](../topologies/lh-exploration.md)及[绑定](../instances/lh-exploration-weighted-message.md) | 双侧层次、区内消息、可选正时延反馈 | 一般 TimedDAG／PDG 的具体候选及有限继续 |
 

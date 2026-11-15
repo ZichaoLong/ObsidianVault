@@ -11,12 +11,13 @@ import html
 import json
 import math
 import topology as g
+import settle_topology as sg
 
 ROOT = Path(__file__).resolve().parent
 N, H, T = 16, 4, 4
 PROFILES = g.PROFILES
-KINDS = ['DD1','DD2','DD4','DH1','HH1','HH2','HH4','HD1','HD2','HD4']
-COLORS = {'DD1':'#2563eb','DD2':'#7353bf','DD4':'#a21caf',
+KINDS = ['DDL','DDX','DD1','DD2','DD4','DH1','HH1','HH2','HH4','HD1','HD2','HD4']
+COLORS = {'DDL':'#2563eb','DDX':'#168476','DD1':'#2563eb','DD2':'#7353bf','DD4':'#a21caf',
           'DH1':'#0f8b82','HH1':'#b57a13','HH2':'#b57a13','HH4':'#b57a13',
           'HD1':'#d65c36','HD2':'#d65c36','HD4':'#d65c36'}
 PHASE_COLORS = ['#2374ab','#b45516','#7651b9','#168476']
@@ -24,20 +25,23 @@ INK, MUTED = '#23344b', '#5c6d81'
 OUT = ROOT / 'generated'
 
 
-def phase_counts(delay, origins, source_width):
+def phase_counts(delay, origins, source_width, period=T):
     answer = []
-    for phase in range(T):
+    for phase in range(period):
         mask = 0
         for d in g.support(delay):
-            if d % T == phase:
+            if d % period == phase:
                 mask |= (origins >> (d * source_width)) & ((1 << source_width) - 1)
         answer.append(bin(mask).count('1'))
     return answer
 
 
-def make_case(key, widths, add_dd4):
-    nodes, ids, outs, ins, kinds, regional = g.construct(
-        widths, n=N, h=H, add_dd4=add_dd4)
+def make_case(key, widths, add_dd4=False, family='multiscale', hubs=H):
+    if family == 'multiscale':
+        graph = g.construct(widths, n=N, h=hubs, add_dd4=add_dd4)
+    else:
+        graph = sg.construct(widths, n=N, h=hubs, exchange=family == 'exchange')
+    nodes, ids, outs, ins, kinds, regional = graph
     assert all(len(es) == len({v for v,k in es}) for es in outs)
     assert all(nodes[u][0] < nodes[v][0] for u,es in enumerate(outs) for v,k in es)
     potential, origins = g.reachability(nodes, outs, widths)
@@ -45,13 +49,14 @@ def make_case(key, widths, add_dd4):
     mid = len(widths) // 2
     middle, morigins = g.reachability(nodes, outs, widths, only_detail=True, origin_layer=mid)
     terminal = [u for u,x in enumerate(nodes) if x[0] == len(widths)-1 and x[2] == 'd']
-    spans = [1,2,4] if add_dd4 else [1,2]
+    spans = ([1,2,4] if add_dd4 else [1,2]) if family == 'multiscale' else [1]
     expected = [set() for _ in widths]; expected[0] = {0}
     for l in range(1, len(widths)):
         expected[l] = {d+1 for s in spans if l>=s for d in expected[l-s]}
     assert all(g.support(detail[u]) == sorted(expected[-1]) for u in terminal)
-    phase_d = [phase_counts(detail[u], dorigins[u], widths[0]) for u in terminal]
-    phase_all = [phase_counts(potential[u], origins[u], widths[0]) for u in terminal]
+    cycle = T if family == 'multiscale' else len(widths)+(2 if family == 'lattice' else 1)
+    phase_d = [phase_counts(detail[u], dorigins[u], widths[0], cycle) for u in terminal]
+    phase_all = [phase_counts(potential[u], origins[u], widths[0], cycle) for u in terminal]
     mid_counts = []
     for u in terminal:
         mask = 0
@@ -67,26 +72,30 @@ def make_case(key, widths, add_dd4):
             bundles[a[0],a[1],a[2],b[0],b[1],b[2],kind] += 1
     node_delays = [g.support(d) for d in potential]
     node_ddelays = [g.support(d) for d in detail]
-    middle_workers = [u for u,x in enumerate(nodes) if x[0]==mid and x[1]==3 and x[2]=='d']
+    middle_workers = [u for u,x in enumerate(nodes) if x[0]==mid and x[1]==min(3, widths[mid]-1) and x[2]=='d']
     selected_d = max(middle_workers, key=lambda u:(
         len({k for v,k in ins[u]}), sum(k.startswith('HD') for v,k in ins[u]), len(ins[u])))
     stats = {
-        'positions': sum(widths), 'regions': 2*sum(widths), 'nodes':len(nodes),
-        'ordinary_nodes':N*sum(widths),'hubs':H*sum(widths), 'edges':len(edges),
+        'path_timing':'unit', 'phase_period':cycle,
+        'positions': sum(widths), 'regions': (1+bool(hubs))*sum(widths), 'nodes':len(nodes),
+        'ordinary_nodes':N*sum(widths),'hubs':hubs*sum(widths), 'edges':len(edges),
         'degrees':{r:[max(len(ins[u]) for u,x in enumerate(nodes) if x[2]==r),
-                      max(len(outs[u]) for u,x in enumerate(nodes) if x[2]==r)] for r in ('d','h')},
+                      max(len(outs[u]) for u,x in enumerate(nodes) if x[2]==r)] for r in (('d','h') if hubs else ('d',))},
         'ordinary_delays':sorted(expected[-1]),
-        'ordinary_phase_sources':[[min(x[p] for x in phase_d), max(x[p] for x in phase_d)] for p in range(T)],
-        'all_phase_sources':[[min(x[p] for x in phase_all), max(x[p] for x in phase_all)] for p in range(T)],
+        'ordinary_phase_sources':[[min(x[p] for x in phase_d), max(x[p] for x in phase_d)] for p in range(cycle)],
+        'all_phase_sources':[[min(x[p] for x in phase_all), max(x[p] for x in phase_all)] for p in range(cycle)],
         'middle_sources':[min(mid_counts),max(mid_counts),widths[mid]],
         'earliest':dict(sorted(Counter(node_delays[u][0] for u in terminal).items())),
         'edges_by_kind':dict(sorted(kinds.items())),
     }
-    return {'key':key,'depth':len(widths),'widths':widths,'ordinary':N,'hubs':H,
+    return {'key':key,'depth':len(widths),'widths':widths,'ordinary':N,'hubs':hubs,'family':family,
+            'label': key + ' · ' + ('多跨度' if family=='multiscale' else '原 HB' if family=='lattice' else '位交换'),
+            'default_timing':'timed' if family=='multiscale' else 'settle',
+            'settle_period':len(widths)+(2 if family=='lattice' else 1),
             'period':T,'probes':{1:1,2:1,4:1},'add_dd4':add_dd4,'nodes':nodes,'edges':edges,
             'bundles':[list(k)+[v] for k,v in sorted(bundles.items())],
             'delays':node_delays,'ordinary_delays':node_ddelays,
-            'selected_d':selected_d,'selected_h':ids[mid,3,'h',1], 'stats':stats}
+            'selected_d':selected_d,'selected_h':ids.get((mid,min(3,widths[mid]-1),'h',1)), 'stats':stats}
 
 
 def esc(s): return html.escape(str(s))
@@ -110,10 +119,10 @@ def region_svg(case, static=False):
     depth,widths = case['depth'],case['widths']
     dx,dy = 164,70
     width,height = 170+(depth-1)*dx,max(widths)*dy+260
-    out = start(width,height,'HB-Timed 区域连接')
+    out = start(width,height,'HB 区域连接')
     out += [text(24,35,'{} 层候选 · 区域连接{}'.format(depth,'（普通网络）' if static else ''),25,weight=700),
-            text(24,66,'每个位置分成 D 普通区与 H hub 区；D 含 16 个节点，H 含 4 个节点。同层无消息边。',16),
-            text(24,92,'一条线汇总一个边族在两区间的实际连线；所有消息边 δ=1。线的交叉不是连接点。',15,MUTED)]
+            text(24,66, '每位置 D 普通区含 16 节点；'+('另有 4 节点 H 区。' if case['hubs'] else '无 hub。')+'同层无消息边。',16),
+            text(24,92,'一条线汇总一个边族的实际连线；δ=1。线的交叉不是连接点。',15,MUTED, extra='id="region-timing-label"')]
     def xy(l,p,role=None):
         y=180+(max(widths)-widths[l])*dy/2+p*dy
         return 85+l*dx,y+(16 if role=='h' else -5 if role=='d' else 0)
@@ -121,14 +130,14 @@ def region_svg(case, static=False):
         x,_=xy(l,0)
         out.append(text(x,119,'ℓ={} · {}位置'.format(l,w),13,MUTED,anchor='middle'))
     for l,p,r,m,q,t,kind,count in case['bundles']:
-        if static and kind not in ('DD1','DD2','DD4'):continue
+        if static and not kind.startswith('DD'):continue
         x,y=xy(l,p,r); xx,yy=xy(m,q,t)
         sx,tx=x+35,xx-35
         bend=min(62,(tx-sx)/2)
         # Curves joining longer spans use a small off-center route; no new vertices.
         lift = -20*(m-l-1) if m-l>1 else 0
         path='M {} {} C {} {} {} {} {} {}'.format(sx,y,sx+bend,y+lift,tx-bend,yy+lift,tx,yy)
-        attrs='data-src="{},{}" data-dst="{},{}" data-kind="{}" data-count="{}"'.format(l,p,m,q,kind,count)
+        attrs='data-src="{},{}" data-dst="{},{}" data-kind="{}" data-count="{}" data-span="{}"'.format(l,p,m,q,kind,count,m-l)
         opacity='.52' if static else '.32'
         out.append('<path class="bundle" {} d="{}" stroke="{}" stroke-width="1.5" opacity="{}" marker-end="url(#arr{})"><title>{}({},{}) → {}({},{}) · {} · {} 条消息边 · δ=1</title></path>'.format(attrs,path,COLORS[kind],opacity,kind,r.upper(),l,p,t.upper(),m,q,kind,count))
     for l,w in enumerate(widths):
@@ -137,14 +146,14 @@ def region_svg(case, static=False):
             out.append('<g class="position" data-pos="{},{}" tabindex="0" role="button" aria-label="选择位置 {},{}">'.format(l,p,l,p))
             out.append('<rect class="position-outline" x="{}" y="{}" width="82" height="61" rx="10" fill="#f7f9fc" fill-opacity=".95" stroke="#dce4ed" stroke-dasharray="3 3"/>'.format(x-41,y-29))
             out.append(text(x,y-16,'{},{}'.format(l,p),10,MUTED,anchor='middle'))
-            for role,fill,stroke,label in [('d','#e8f0ff','#7599d2','D16'),('h','#fff1d8','#c5a05c','H4')]:
+            for role,fill,stroke,label in [('d','#e8f0ff','#7599d2','D16')]+([('h','#fff1d8','#c5a05c','H4')] if case['hubs'] else []):
                 _,yy=xy(l,p,role)
                 out.append('<rect x="{}" y="{}" width="68" height="18" rx="5" fill="{}" stroke="{}"/>'.format(x-34,yy-9,fill,stroke))
                 out.append(text(x,yy+4,label,11,anchor='middle'))
             out.append('</g>')
     footer=height-45
     out.append(text(24,footer,'{} 个位置 / {} 个区域 / {} 个节点；横向为层号，纵向为位置编号。'.format(case['stats']['positions'],case['stats']['regions'],case['stats']['nodes']),16))
-    out.append(text(24,footer+26,'蓝色 DD1：普通相邻层；紫色 DD2：普通跳两层。'+('此静态图省略 hub 边；交互页可逐族查看全部边。' if static else '点击位置看邻接；点击连线看该区域对的完整节点矩阵。'),14,MUTED))
+    out.append(text(24,footer+26,('DD：普通节点传播；DH／HH／HD：可选摘要通路。')+('此静态图省略 hub 边；交互页可逐族查看全部边。' if static else '点击位置看邻接；点击连线看该区域对的完整节点矩阵。'),14,MUTED))
     out.append('</svg>')
     return ''.join(out)
 
@@ -274,18 +283,26 @@ def render_png(source,target):
 def main():
     OUT.mkdir(exist_ok=True)
     cases=[make_case(*p) for p in PROFILES]
+    for depth in (5,7,9):
+        widths, _ = sg.lattice(depth)
+        cases.append(make_case('lattice-'+str(depth), widths, family='lattice', hubs=0))
+    for m in (2,3,4):
+        widths = sg.exchange_widths(m)
+        for hubs in (0,4):
+            key = 'exchange-'+str(len(widths))+('-h' if hubs else '')
+            cases.append(make_case(key, widths, family='exchange', hubs=hubs))
     default=next(c for c in cases if c['key']=='9')
     figures={
         'regions-9':region_svg(default,static=True),
         'ordinary-neighborhood':ego_svg(default,default['selected_d']),
         'hub-neighborhood':ego_svg(default,default['selected_h']),
         'node-pair-matrix':matrix_svg(default),
-        'depth-ladder':ladder_svg(cases),
+        'depth-ladder':ladder_svg([c for c in cases if c['family']=='multiscale']),
     }
     for name,svg in figures.items():
         (OUT/(name+'.svg')).write_text(svg)
         render_png(OUT/(name+'.svg'),OUT/(name+'.png'))
-    report={c['key']:{'depth':c['depth'],'widths':c['widths'],'ordinary':N,'hubs':H,'add_dd4':c['add_dd4'],**c['stats']} for c in cases}
+    report={c['key']:{'depth':c['depth'],'widths':c['widths'],'family':c['family'],'ordinary_per_position':N,'hubs_per_position':c['hubs'],'settle_period':c['settle_period'],'add_dd4':c['add_dd4'],**c['stats']} for c in cases}
     (OUT/'checks.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     for c in cases:c['svg']=region_svg(c)
     data={'kinds':KINDS,'colors':COLORS,'cases':{c['key']:c for c in cases}}
@@ -295,7 +312,7 @@ def main():
     page=page.replace('src="depth-ladder.svg"','src="data:image/svg+xml;base64,'+base64.b64encode(figures['depth-ladder'].encode()).decode()+'"')
     page=page.replace('__FORMULAS__',(ROOT/'formulas.js').read_text())
     (OUT/'index.html').write_text(page)
-    print('Built HB atlas: 7 cases, 13 registered outputs; potential paths only.')
+    print('Built HB atlas: 16 spatial cases, 13 registered outputs; potential paths only.')
 
 
 if __name__=='__main__':main()

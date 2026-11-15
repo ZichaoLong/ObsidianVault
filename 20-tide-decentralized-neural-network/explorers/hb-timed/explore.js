@@ -4,7 +4,7 @@ const E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','
 const kinds=ATLAS.kinds, colors=ATLAS.colors;
 const order=['5','5-dd4','7','9','13','15','17'];
 let current, outs, ins, ids;
-const state={key:'9',focus:[4,3],role:'d',index:0,scope:'near',source:'3,2',target:'4,2'};
+const state={timing:'timed',key:'9',focus:[4,3],role:'d',index:0,scope:'near',source:'3,2',target:'4,2'};
 const pos=n=>`${n[0]},${n[1]}`;
 const nodeName=n=>`${n[2].toUpperCase()}(${n[0]},${n[1]}; ${n[3]})`;
 const option=(v,label)=>`<option value="${E(v)}">${E(label===undefined?v:label)}</option>`;
@@ -13,31 +13,50 @@ function svgText(x,y,t,size=16,color='#23344b',weight=400,anchor='start',attrs='
  return `<text x="${x}" y="${y}" font-family="Noto Sans CJK SC,Droid Sans,Microsoft YaHei,sans-serif" font-size="${size}" fill="${color}" font-weight="${weight}" text-anchor="${anchor}" ${attrs}>${E(t)}</text>`;
 }
 function svgStart(w,h,label){return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${E(label)}"><rect width="100%" height="100%" fill="white"/>`;}
+const isUnit=()=>state.timing==='timed'||state.timing==='timed-common';
+const period=()=>['settle','timed-common'].includes(state.timing)?current.settle_period:current.period;
+const edgeDelay=(l,m)=>isUnit()?1:m-l;
+const displayDelays=(u,detail=false)=>isUnit()?(detail?current.ordinary_delays[u]:current.delays[u]):
+ ((detail?current.ordinary_delays[u]:current.delays[u]).length?[current.nodes[u][0]]:[]);
+function profileLabel(c){return `${c.depth} 层${c.add_dd4?' + DD4':''} · ${c.hubs?'16+4 / 独立 H 区':'16 / 无 hub'}`;}
 function mountCase(key){
- state.key=key;current=ATLAS.cases[key];
+ state.key=key;current=ATLAS.cases[key];state.timing=current.default_timing;
+ $('#family-select').value=current.family;
+ $('#case-select').innerHTML=Object.values(ATLAS.cases).filter(c=>c.family===current.family).map(c=>option(c.key,profileLabel(c))).join('');
+ $('#case-select').value=key;
+ $('#timing-mode').value=state.timing;$('#timing-mode').disabled=current.family!=='multiscale';
  outs=current.nodes.map(()=>[]);ins=current.nodes.map(()=>[]);ids=new Map();
  current.nodes.forEach((n,u)=>ids.set(n.join(','),u));
  current.edges.forEach(([u,v,k])=>{outs[u].push([v,k]);ins[v].push([u,k]);});
  const n=current.nodes[current.selected_d];state.focus=n.slice(0,2);state.role=n[2];state.index=n[3];
- $('#case-select').value=key;
  $('#metrics').innerHTML=`<span><b>${current.depth}</b>层</span><span><b>${current.stats.positions}</b>位置</span><span><b>${current.stats.regions}</b>区域</span><span><b>${current.stats.nodes.toLocaleString()}</b>节点</span><span><b>${current.stats.edges.toLocaleString()}</b>消息边</span>`;
- const ds=current.stats.ordinary_delays;
- $('#case-note').textContent=`普通路径总时延 ${ds.join('、')}；输入周期 T=4。`+(current.add_dd4?'此候选新增普通节点跨度 4 的固定置换边。':current.depth===5?'原连接的 5 层版本缺少普通路径相位 1，保留作浅层对照。':'全部末端普通节点均覆盖四个相位；来源混合程度见下表。');
- $('#dd4-label').hidden=!current.add_dd4;
+ $$('[data-family]').forEach(el=>{el.checked=true;el.closest('label').hidden=!Object.keys(current.stats.edges_by_kind).some(k=>family(k)===el.dataset.family);});
+ $('#example-h').disabled=!current.hubs;$('#preset-hub').disabled=!current.hubs;
  $('#region-canvas').innerHTML=current.svg;
  const positions=[];current.widths.forEach((w,l)=>{if(l<current.depth-1)for(let p=0;p<w;p++)positions.push(`${l},${p}`);});
  $('#pair-source').innerHTML=positions.map(p=>option(p,`(${p})`)).join('');
- const sl=Math.max(0,Math.floor(current.depth/2)-1),tl=Math.floor(current.depth/2);
- state.source=`${sl},2`;
- $('#pair-source').value=state.source;
- const sw=current.widths[sl],tw=current.widths[tl],base=tw>=sw?2*(tw/sw):Math.floor(2/(sw/tw));
+ const sl=Math.max(0,Math.floor(current.depth/2)-1),tl=sl+1,sp=Math.min(2,current.widths[sl]-1);
+ state.source=`${sl},${sp}`;$('#pair-source').value=state.source;
+ const sw=current.widths[sl],tw=current.widths[tl],base=tw>=sw?sp*(tw/sw):Math.floor(sp/(sw/tw));
  updateTargets(`${tl},${base}`);
- syncNodeControls();renderNode();paintRegion();renderDepthTable();
+ syncNodeControls();updateTimeLabels();renderNode();paintRegion();renderDepthTable();renderSettleTable();
+}
+function updateTimeLabels(){
+ const delta=isUnit()?'δ=1':'δ=目标层−源层';
+ $('#case-note').textContent=`${{multiscale:'多跨度图',lattice:'原 HB-Lattice',exchange:'Settle 位交换图'}[current.family]} · 宽度 ${current.widths.join('→')}。${delta}，输入间隔 ${period()}。`+
+  (state.timing==='settle'?`D=${period()}>M=${current.depth}；同源路径对齐。`:state.timing==='aligned'?'对齐 TimedDAG；当前周期不满足 Settle 编码。':'长短路径可在不同时间到达。')+
+  ` D 最大入/出度 ${current.stats.degrees.d.join('/')}。`+(current.hubs?` H：${current.stats.degrees.h.join('/')}。`:'');
+ $('#region-timing-label').textContent=`一条线汇总一个边族的真实连线；${delta}。线的交叉不是连接点。`;
+ $$('#region-canvas .bundle').forEach(el=>{el.querySelector('title').textContent=el.querySelector('title').textContent.replace(/δ=\d+/,`δ=${isUnit()?1:el.dataset.span}`);});
+}
+function setTiming(mode){
+ state.timing=mode;$('#timing-mode').value=mode;updateTimeLabels();renderNode();renderMatrix();paintRegion();
 }
 function syncNodeControls(){
  $('#node-layer').innerHTML=current.widths.map((_,l)=>option(l)).join('');$('#node-layer').value=state.focus[0];
  $('#node-position').innerHTML=Array.from({length:current.widths[state.focus[0]]},(_,p)=>option(p)).join('');$('#node-position').value=state.focus[1];
- $('#node-role').value=state.role;
+ if(!current.hubs)state.role='d';
+ $('#node-role').innerHTML=option('d','普通 D')+(current.hubs?option('h','Hub H'):'');$('#node-role').value=state.role;
  const size=state.role==='d'?current.ordinary:current.hubs;state.index=Math.min(state.index,size-1);
  $('#node-index').innerHTML=Array.from({length:size},(_,i)=>option(i)).join('');$('#node-index').value=state.index;
 }
@@ -80,10 +99,10 @@ function renderNode(){
   });
  }
  const color=n[2]==='d'?'#2563eb':'#b57a13';s+=`<rect x="615" y="${cy-95}" width="280" height="190" rx="16" fill="#f5f8fd" stroke="${color}" stroke-width="2"/>`;
- s+=svgText(755,cy-48,nodeName(n),24,color,700,'middle')+svgText(755,cy-12,'每条消息边 δ=1',16,'#23344b',400,'middle')+svgText(755,cy+20,'首层输入的潜在总时延',14,'#5c6d81',400,'middle')+svgText(755,cy+48,current.delays[u].join(', '),18,'#23344b',600,'middle')+svgText(755,cy+77,'Full 沿固定出边广播',14,'#5c6d81',400,'middle');
+ s+=svgText(755,cy-48,nodeName(n),24,color,700,'middle')+svgText(755,cy-12,isUnit()?'每条消息边 δ=1':'边时延 δ=目标层−源层',16,'#23344b',400,'middle')+svgText(755,cy+20,'首层输入的潜在总时延',14,'#5c6d81',400,'middle')+svgText(755,cy+48,displayDelays(u).join(', '),18,'#23344b',600,'middle')+svgText(755,cy+77,'Full 沿固定出边广播',14,'#5c6d81',400,'middle');
  s+=svgText(24,h-22,'这里只画该节点的一跳上下游；邻居之间及邻居通往其他节点的边不在此图中。',15,'#5c6d81')+'</svg>';
  $('#node-canvas').innerHTML=s;
- $('#node-summary').textContent=`${nodeName(n)} · 入度 ${ins[u].length}，出度 ${outs[u].length}。`+(n[2]==='d'?`仅经普通路径可达的时延：${current.ordinary_delays[u].join('、')}。`:'Hub 仍依赖自身输入与历史；独立分区不会消除这些依赖。');
+ $('#node-summary').textContent=`${nodeName(n)} · 入度 ${ins[u].length}，出度 ${outs[u].length}。`+(n[2]==='d'?`仅经普通路径可达的时延：${displayDelays(u,true).join('、')}。`:'Hub 仍依赖自身输入与历史；独立分区不会消除这些依赖。');
  const svg=$('#node-canvas svg');svg.setAttribute('width',w*.88);svg.setAttribute('height',h*.88);
  if(window.refreshFormulas)window.refreshFormulas();
 }
@@ -98,8 +117,8 @@ function renderMatrix(){
  const sources=[],targets=[];for(const r of ['d','h'])for(let i=0;i<(r==='d'?current.ordinary:current.hubs);i++){sources.push(ids.get([...src,r,i].join(',')));targets.push(ids.get([...dst,r,i].join(',')));}
  const ti=new Map(targets.map((u,i)=>[u,i])),matrix=new Map(),counts={};sources.forEach((u,i)=>{for(const [v,k]of outs[u])if(ti.has(v)){matrix.set(`${i},${ti.get(v)}`,[u,v,k]);counts[k]=(counts[k]||0)+1;}});
  const cell=29,x0=145,y0=145,w=1220,h=800;
- let s=svgStart(w,h,'完整端点连接矩阵')+svgText(25,36,`位置 (${state.source}) → (${state.target}) · 全部端点`,24,'#23344b',700)+svgText(25,67,'行：源节点。列：目标节点。彩点：消息边。四个块分别为 D→D、D→H、H→D、H→H。',16,'#5c6d81');
- s+=svgText(x0+current.ordinary*cell/2,y0-48,'下游普通区 D',17,'#2563eb',600,'middle')+svgText(x0+(current.ordinary+current.hubs/2)*cell,y0-48,'下游 hub 区 H',16,'#b57a13',600,'middle');
+ let s=svgStart(w,h,'完整端点连接矩阵')+svgText(25,36,`位置 (${state.source}) → (${state.target}) · 全部端点`,24,'#23344b',700)+svgText(25,67,'行：源节点。列：目标节点。彩点：消息边。角色块按当前图显示；无 hub 时只有 D→D。',16,'#5c6d81');
+ s+=svgText(x0+current.ordinary*cell/2,y0-48,'下游普通区 D',17,'#2563eb',600,'middle')+(current.hubs?svgText(x0+(current.ordinary+current.hubs/2)*cell,y0-48,'下游 hub 区 H',16,'#b57a13',600,'middle'):'');
  for(let i=0;i<size;i++){
   const label=i<current.ordinary?'D'+i:'H'+(i-current.ordinary);
   s+=svgText(x0-17,y0+i*cell+20,label,13,'#23344b',400,'end',`class="node-link" data-jump="${sources[i]}"`)+svgText(x0+i*cell+cell/2,y0-14,label,12,'#23344b',400,'middle',`class="node-link" data-jump="${targets[i]}"`);
@@ -107,20 +126,31 @@ function renderMatrix(){
    const hit=matrix.get(`${i},${j}`),x=x0+j*cell,y=y0+i*cell,fill=i<current.ordinary&&j<current.ordinary?'#f3f7fe':i>=current.ordinary&&j>=current.ordinary?'#fdf6e9':'#fafbfd';
    s+=`<g ${hit?`data-jump="${hit[1]}" style="cursor:pointer"`:''}><rect class="matrix-hit" x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${fill}" stroke="#dce4ed" stroke-width=".7"/>`;
    if(hit)s+=`<circle cx="${x+cell/2}" cy="${y+cell/2}" r="5.8" fill="${colors[kinds[hit[2]]]}"/>`;
-   s+=`<title>${E(nodeName(current.nodes[sources[i]]))} → ${E(nodeName(current.nodes[targets[j]]))}${hit?' · '+kinds[hit[2]]+' · δ=1':' · 无边'}</title></g>`;
+   s+=`<title>${E(nodeName(current.nodes[sources[i]]))} → ${E(nodeName(current.nodes[targets[j]]))}${hit?' · '+kinds[hit[2]]+' · δ='+edgeDelay(src[0],dst[0]):' · 无边'}</title></g>`;
   }
  }
  let y=185;Object.entries(counts).sort((a,b)=>+a[0]-b[0]).forEach(([k,n])=>{s+=`<circle cx="825" cy="${y-5}" r="7" fill="${colors[kinds[k]]}"/>`+svgText(845,y,`${kinds[k]}：${n} 条`,19,colors[kinds[k]],600);y+=38;});
  ['DD：普通细节传播','DH：普通结果进入 hub','HH：hub 交换背景','HD：hub 向普通节点投递钩子','','这里只显示这一对位置。','点击编号 / 彩点进入节点图。'].forEach((t,i)=>s+=svgText(815,y+32+i*31,t,16,'#5c6d81'));
- s+=svgText(25,h-20,'每个位置包含两个独立区域；矩阵的行列相邻不表示节点间另有连接。',15,'#5c6d81')+'</svg>';
- $('#matrix-canvas').innerHTML=s;$('#matrix-summary').textContent=`${matrix.size} 条消息边 · 跨 ${dst[0]-src[0]} 层 · 时延均为 1`;
+ s+=svgText(25,h-20,'每位置一个 D 区，启用 hub 时另有 H 区；行列相邻不表示节点间另有连接。',15,'#5c6d81')+'</svg>';
+ $('#matrix-canvas').innerHTML=s;$('#matrix-summary').textContent=`${matrix.size} 条消息边 · 跨 ${dst[0]-src[0]} 层 · 时延均为 ${edgeDelay(src[0],dst[0])}`;
  if(window.refreshFormulas)window.refreshFormulas();
 }
 function renderDepthTable(){
  let s='<thead><tr><th>候选（点击切换）</th><th>位置 / 节点</th><th>普通路径时延</th><th>普通路径每相位入口数</th><th>全图每相位入口数</th></tr></thead><tbody>';
  order.forEach(key=>{const c=ATLAS.cases[key],st=c.stats;s+=`<tr data-case="${key}" class="${key===state.key?'current':''}"><td>${c.depth} 层${c.add_dd4?' + DD4':''}</td><td>${st.positions} / ${st.nodes.toLocaleString()}</td><td>${st.ordinary_delays.join(', ')}</td><td>${st.ordinary_phase_sources.map(p=>p[0]).join(' / ')}</td><td>${st.all_phase_sources.map(p=>p[0]).join(' / ')}</td></tr>`;});$('#depth-table').innerHTML=s+'</tbody>';
 }
-$('#case-select').addEventListener('change',e=>mountCase(e.target.value));
+function renderSettleTable(){
+ let s='<thead><tr><th>Settle 空间图（点击切换）</th><th>层 / 位置 / 节点</th><th>边数</th><th>D / 对齐路径时延</th><th>宽段轮数 / 覆盖源区域与节点</th></tr></thead><tbody>';
+ for(const c of Object.values(ATLAS.cases).filter(c=>c.family!=='multiscale'||c.key==='9')){
+  const m=(c.depth-1)/3,cover=c.family==='exchange'?`${m} 轮 / ${2**m} 区、${2**(m+Math.min(m,4))} 节点`:'—';
+  s+=`<tr data-case="${c.key}" class="${c.key===state.key?'current':''}"><td>${{multiscale:'多跨度对齐',lattice:'原 HB',exchange:'位交换'}[c.family]} · ${c.hubs?'4 hub':'无 hub'}</td><td>${c.depth} / ${c.stats.positions} / ${c.stats.nodes}</td><td>${c.stats.edges}</td><td>${c.settle_period} / ${c.depth-1}</td><td>${cover}</td></tr>`;
+ }
+ $('#settle-table').innerHTML=s+'</tbody>';
+}
+$('#family-select').addEventListener('change',e=>mountCase({multiscale:'9',lattice:'lattice-7',exchange:'exchange-10'}[e.target.value]));
+$('#timing-mode').addEventListener('change',e=>setTiming(e.target.value));
+$('#settle-table').addEventListener('click',e=>{const row=e.target.closest('[data-case]');if(row){mountCase(row.dataset.case);setTiming('settle');$('#regions').scrollIntoView({behavior:'smooth'});}});
+$('#case-select').addEventListener('change',e=>{const mode=state.timing;mountCase(e.target.value);setTiming(mode);});
 $('#scope').addEventListener('change',paintRegion);$('#zoom').addEventListener('change',paintRegion);
 $$('[data-family]').forEach(c=>c.addEventListener('change',paintRegion));
 for(const [id,predicate]of [['preset-detail',x=>x.startsWith('DD')],['preset-hub',x=>!x.startsWith('DD')],['preset-all',x=>true]])$('#'+id).addEventListener('click',()=>{$$('[data-family]').forEach(c=>c.checked=predicate(c.dataset.family));paintRegion();});
@@ -140,6 +170,6 @@ for(const host of ['node-canvas','matrix-canvas']){
 }
 $('#pair-source').addEventListener('change',()=>updateTargets());$('#pair-target').addEventListener('change',renderMatrix);
 $('#depth-table').addEventListener('click',e=>{const row=e.target.closest('[data-case]');if(row){mountCase(row.dataset.case);$('#regions').scrollIntoView({behavior:'smooth'});}});
-$$('[data-export]').forEach(b=>b.addEventListener('click',()=>{const svg=$('#'+b.dataset.export+' svg'),blob=new Blob([new XMLSerializer().serializeToString(svg)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`hb-timed-${state.key}-${b.dataset.export}.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}));
+$$('[data-export]').forEach(b=>b.addEventListener('click',()=>{const svg=$('#'+b.dataset.export+' svg'),blob=new Blob([new XMLSerializer().serializeToString(svg)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`hb-${state.key}-${state.timing}-${b.dataset.export}.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}));
 mountCase('9');
-window.atlasDebug={get case(){return current;},get state(){return state;},mountCase,chooseNode};
+window.atlasDebug={get case(){return current;},get state(){return state;},mountCase,chooseNode,setTiming,displayDelays};

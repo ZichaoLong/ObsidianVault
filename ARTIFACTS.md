@@ -12,7 +12,7 @@ Git 保存正文、维护源、原始素材和明确留存的证据。能由源�
 | [Tide 原有三图](20-tide-decentralized-neural-network/figures/README.md#整体结构与一次区域作用) | [src/legacy/](20-tide-decentralized-neural-network/figures/src/legacy/) → PNG／SVG，`legacy-figures` | 改绘图源后重建；正典或接口变化时人工核对图示。来源快照不随日常构建改写 |
 | [Tide 局部图集](20-tide-decentralized-neural-network/figures/README.md#带权消息与两个算例) | [figures/src/](20-tide-decentralized-neural-network/figures/src/) 中局部、记忆、控制与时间绘图源 → PNG／SVG／报告，`local-figures` | 教材或算例变化时核对图中参数、条件和公式，再生成。报告记录教材哈希，不代表已完成语义审阅 |
 | [Tide 展示](20-tide-decentralized-neural-network/presentations/design-introduction/README.md) | `content.py`、`build.py`、CSS／JS、数值核对程序和 Transformer／MoE／HB 图源 → HTML／备注／分步 SVG，`presentation-build`；其后 `presentation-export` → PDF／预览／报告 | 讲述脚本、MoE／HB 实例、定义或设计说明变化时，核对屏幕内容、图形源和备注；需要交付静态版时再导出 |
-| [HB 交互公式面板](20-tide-decentralized-neural-network/explorers/hb-timed/README.md) | `topology.py`、绘图脚本与 HTML/CSS/JS 维护源 → `generated/` 图、页面与核对数据，`hb-topology-atlas` | 先核对逐边定义、分区、时间绑定、局部边界与界面公式，再构建；浏览器核对证据写仓库外临时目录 |
+| [HB 交互公式面板](20-tide-decentralized-neural-network/explorers/hb-timed/README.md) | `topology.py`、`settle_topology.py`、绘图脚本与 HTML/CSS/JS 维护源 → `generated/` 图、页面与核对数据，`hb-topology-atlas` | 先核对原 HB、多跨度与位交换三图的逐边定义、分区、时间绑定、局部边界与界面公式，再构建；浏览器核对证据写仓库外临时目录 |
 | [技术笔记](30-technical-notes/README.md)与[共享素材](assets/README.md) | Markdown 为正文；三份 PPTX → SVG／PNG／PDF，属于 `editable-assets` | PowerPoint 修改 PPTX 后重建；改变数学符号或连线含义时核对正文。所有八张可编辑图的对应关系见素材说明 |
 | [总入口](00-entry/README.md)、[索引](40-index/README.md)、[归档](90-archive/README.md) | 人工维护的 Markdown，暂无机械生成物 | 移动／改名正文时同步入口和引用；归档保留历史含义，活跃版本另行维护 |
 

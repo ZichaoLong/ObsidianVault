@@ -6,7 +6,7 @@ tags: [tide, hb, timed-dag, settlegraph]
 
 # HB 多跨度连接：Timed 与 Settle 的共同空间图
 
-本图在展开、加工、收拢中反复交换局部细节和跨组背景。普通节点有独立的输入到输出子图；hub 是可选的附加通路。旧 [HB-Lattice](hb-lattice.md) 的定义与实例保留，称为原 HB 对齐基线。本文的新连接图分别绑定 HB-Timed 和 HB-Multiscale-Settle，便于保持端点不变比较时间；HB-Settle 单独使用时须说明指哪张图。
+本图在展开、加工、收拢中反复交换局部细节和跨组背景。普通节点有独立的输入到输出子图；hub 是可选的附加通路。旧 [HB-Lattice](hb-lattice.md) 的定义与实例保留，称为原 HB 对齐基线。本文的新连接图分别绑定 HB-Timed 和 HB-Multiscale-Settle，便于保持端点不变比较时间；HB-Settle 单独使用时须说明指哪张图；另有为对齐计算设计的[分阶段位交换图](hb-settle-exchange.md)。三个空间候选的[共同主绑定](../instances/hb-settle-weighted-message.md)可用于比较。
 
 ## 1. 节点、位置与区域
 

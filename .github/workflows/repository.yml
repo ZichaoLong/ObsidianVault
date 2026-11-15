@@ -32,6 +32,7 @@ jobs:
       - name: Check HB, LH and role allocation mathematics
         run: |
           python3 20-tide-decentralized-neural-network/examples/hb_lh_checks.py
+          python3 20-tide-decentralized-neural-network/examples/hb_settle_checks.py
           python3 20-tide-decentralized-neural-network/examples/role_bounded_allocation_checks.py
       - name: Test builds and native diagram export
         run: python3 -m unittest discover -s tools -p 'test_*.py'

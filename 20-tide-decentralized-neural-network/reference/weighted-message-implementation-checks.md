@@ -275,3 +275,7 @@ python -B 20-tide-decentralized-neural-network/examples/recurrent_memory_checks.
 采用 [HB 三组绑定](../instances/hb-multiscale-weighted-message.md)时，同时记录空间端点、hub 掩码、分区、时间绑定、局部时钟和参数共享。图内显示筛选不是模型删边。对齐 T=4 的深层流水图不能按当前 D>max r 的时间编码声明为 SettleGraph；改变边时延会改变聚合、写入与选择。比较“只改时延”必须固定其余时钟参数。
 
 [LH 绑定](../instances/lh-exploration-weighted-message.md)允许区内消息；PDG 另有反馈。检查图分类、有限切面在途消息与状态继续，不要求无限运行静止。[构图／继续程序](../examples/hb_lh_checks.py)的标量见证不是 KV／SSD 的整网数值符合性证据。
+
+HB-Settle 的[三图主绑定](../instances/hb-settle-weighted-message.md)另核对原图周期 $L+2$、新图周期 $M+1$，以及位交换的粗组边界 $g=1$、笛卡尔积端点、最宽段各轮覆盖、hub 删除后的普通子图。运行 [Settle 核对](../examples/hb_settle_checks.py)。这些数字只证明潜在连线与时间，不能替代局部执行检查。
+
+采用[两种参数配置](../local-semantics/weighted-message/parameter-profiles.md)时，核对 Agg、来源嵌入、KV/SSD、门／卷积／归一化、描述与评分、区域头和 Full 的全部归属。shared 中矩阵适配器只加一次，mixed 区 KV 基座只有一个值；independent 中 KV 取完整投影表示，不能仍受 rank-8 约束。状态不因共享权重而别名。分布式训练核对共享参数梯度归约，比较时同时记录参数量和实际工作量。

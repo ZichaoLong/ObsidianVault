@@ -40,6 +40,7 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 |---|---|
 | [共同局部架构](local-semantics/weighted-message/architecture-learning-note.md) | 完整计算过程、模块接口与组合，局部条件如何支持整网性质，精确继续与联合求值 |
 | [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 描述与评分、指定总量、区域阈值和节点增益；发送候选、求解与导数，以及各候选的温度极限 |
+| [两种整体参数配置](local-semantics/weighted-message/parameter-profiles.md) | 全部节点／区域参数的独立与分层共享、KV 基座例外及训练通信 |
 | [角色上下界与 hub 保障](local-semantics/weighted-message/role-bounded-allocation.md) | 可行的节点保底与封顶、二次分配、完整返回及光滑分支导数；旧分配保持 |
 | [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
 | [基础循环记忆](local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) | affine／delta 的完整局部定义，循环候选共用的仿射复合 |
@@ -62,6 +63,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | 全连接分层 | [每层一个区域、相邻层全连接](topologies/fully-connected-layered.md) | [KV、稠密 Attention 与混合记忆实例](instances/fully-connected-layered-weighted-message.md) |
 | 原 HB-Lattice | [多区域展开收拢与稀疏邻域](topologies/hb-lattice.md) | [KV、发送规则比较与混合记忆实例](instances/hb-lattice-weighted-message.md) |
 | HB 多跨度图 | [普通通路、可选 hub、三种分区与时间绑定](topologies/hb-multiscale.md) | [K／S／X 三组主绑定、共享与继续](instances/hb-multiscale-weighted-message.md) |
+| HB-Settle 位交换 | [展开、分阶段交换与收拢](topologies/hb-settle-exchange.md) | [Settle 三种空间图的共同主绑定](instances/hb-settle-weighted-message.md) |
 | LH-DAG／LH-PDG | [双侧层次、局部网格与可选反馈](topologies/lh-exploration.md) | [复用主局部候选的探索绑定](instances/lh-exploration-weighted-message.md) |
 
 选择一种拓扑和相容的局部函数即可形成新的绑定。单位强度传播、输入连续性、软硬极限与联合求值分别使用各自的前提。
@@ -79,7 +81,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [展示材料](presentations/design-introduction/README.md) | 可逐步推进的离线 HTML、PDF、画面预览与讲者备注 |
 | [教学图集](figures/README.md) | 节点与区域、P/S/U/F、带权消息与局部模块图，以及定义出处与绘图源文件 |
 | [HB／LH 设计收拢](memos/design/hb-timed-and-lh.md) | 异时输出的原始需求、分工与合作、hub 组织、时间对照和后续实验问题 |
-| [HB 交互公式面板](explorers/hb-timed/README.md) | 区域图、完整上下游、端点矩阵、深度阶梯与同图时间对照 |
+| [HB 交互公式面板](explorers/hb-timed/README.md) | 三种 HB 空间图、完整邻接、端点矩阵、公式与同步时间绑定 |
 | [局部架构设计总览](memos/design/weighted-message-design.md) | 理解整体设计空间、信息与梯度依赖、候选取舍及外部证据 |
 | [可选研究问题与对照](memos/training/weighted-message-research-questions.md) | 按需选择目标、比较和观测；优先级由研究者安排 |
 | [局部架构实现核对](reference/weighted-message-implementation-checks.md) | 核对函数值、反向规则、数值边界、组合与切面继续 |
@@ -89,6 +91,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [显式残差 MoE 核对](examples/explicit_residual_moe_checks.py) | 专家、旁路和合并的时间求值；两轮状态、直接公式与工作量核对 |
 | [区域分配公式核对](examples/region_allocation_checks.py) | 二次分配的独立求解比较、正文算例、光滑分支导数与零温反例 |
 | [角色分配核对](examples/role_bounded_allocation_checks.py) | 独立活动集、全输入可行性、零／缺席与光滑分支导数 |
+| [HB-Settle 构图与交换核对](examples/hb_settle_checks.py) | 原图字地址一致性、18 组交换配置、每轮位覆盖、度数与原周期条件 |
 | [HB／LH 构图与时间核对](examples/hb_lh_checks.py) | 深度与尺寸、分区前提、hub 删除、对齐时间、反馈有限继续 |
 | [循环记忆公式核对](examples/recurrent_memory_checks.py) | 短卷积、Delta／SSD 恒等式、弱事件和分段继续的有限数值检查 |
 
