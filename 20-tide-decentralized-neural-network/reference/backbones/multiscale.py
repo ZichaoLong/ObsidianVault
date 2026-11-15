@@ -138,7 +138,7 @@ def support(bits):
 
 
 def reachability(nodes, outgoing, widths, only_detail=False, origin_layer=0, timing='timed'):
-    if timing not in ('timed', 'aligned'):
+    if timing not in ('timed', 'settle'):
         raise ValueError(timing)
     source_width = widths[origin_layer]
     delay, origins = [0] * len(nodes), [0] * len(nodes)

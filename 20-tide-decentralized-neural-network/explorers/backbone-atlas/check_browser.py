@@ -143,14 +143,22 @@ try:
     timing_checks=script("""
       window.atlasDebug.mountCase('9');
       const el=document.querySelector('#timing-mode'),result=[];
-      for(const mode of ['timed','aligned','settle']){
+      const options=[...el.options].map(o=>o.value);
+      for(const mode of options){
         el.value=mode;el.dispatchEvent(new Event('change',{bubbles:true}));
         result.push({mode,rows:document.querySelectorAll('#timing-table tbody tr').length,
           summary:document.querySelector('#timing-summary').textContent});
       }
-      el.value='timed';el.dispatchEvent(new Event('change',{bubbles:true}));return result;
+      el.value='timed';el.dispatchEvent(new Event('change',{bubbles:true}));
+      let rejected=false;
+      try{window.atlasDebug.setTiming('unsupported');}catch(e){rejected=e.name==='RangeError';}
+      return {options,cases:result,rejected,mode:window.atlasDebug.state.timing};
     """)
-    assert timing_checks[0]['rows'] > 3 and timing_checks[1]['rows'] == timing_checks[2]['rows'] == 3, timing_checks
+    assert timing_checks['options']==['timed','timed-common','settle'],timing_checks
+    timing_cases={item['mode']:item for item in timing_checks['cases']}
+    assert timing_cases['timed']['rows']>3 and timing_cases['timed-common']['rows']>3,timing_checks
+    assert timing_cases['settle']['rows']==3,timing_checks
+    assert timing_checks['rejected'] and timing_checks['mode']=='timed',timing_checks
     mixing_check=script("""
       const c=window.atlasDebug.case;
       const u=c.nodes.findIndex((n,i)=>n[0]===8&&n[2]==='d'&&c.delays[i].includes(2)&&c.delays[i].includes(6));
@@ -299,7 +307,7 @@ try:
       const select=document.querySelector('#pair-source');select.value='4,3';select.dispatchEvent(new Event('change'));
       const target=document.querySelector('#pair-target');target.value='8,0';target.dispatchEvent(new Event('change'));
       const rows=[];
-      for(const mode of ['timed','aligned','timed-common','settle']){
+      for(const mode of ['timed','timed-common','settle']){
         window.atlasDebug.setTiming(mode);
         const edge=[...document.querySelectorAll('#region-canvas .bundle')].find(e=>e.dataset.src==='4,3'&&e.dataset.dst==='8,0');
         rows.push({mode,title:edge.querySelector('title').textContent,
@@ -313,7 +321,8 @@ try:
         delta=1 if item['mode'] in ('timed','timed-common') else 4
         assert f'δ={delta}' in item['title'] and f'时延均为 {delta}' in item['matrix'],item
         assert f'δ={delta}' in item['formula'],item
-    assert '输入间隔 10' in timing_sync[2]['timing'] and '输入间隔 10' in timing_sync[3]['timing'],timing_sync
+    assert '输入间隔 4' in timing_sync[0]['timing'],timing_sync
+    assert '输入间隔 10' in timing_sync[1]['timing'] and '输入间隔 10' in timing_sync[2]['timing'],timing_sync
     preserved_timing=script("""
       const el=document.querySelector('#case-select');el.value='17';el.dispatchEvent(new Event('change'));
       return {key:window.atlasDebug.case.key,mode:window.atlasDebug.state.timing,summary:document.querySelector('#timing-summary').textContent};

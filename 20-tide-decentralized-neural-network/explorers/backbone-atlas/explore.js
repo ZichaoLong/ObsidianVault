@@ -46,12 +46,13 @@ function mountCase(key){
 function updateTimeLabels(){
  const delta=isUnit()?'δ=1':'δ=目标层−源层';
  $('#case-note').textContent=`${{multiscale:'多跨度图',lattice:'原 HB-Lattice',exchange:'Settle 位交换图'}[current.family]} · 宽度 ${current.widths.join('→')}。${delta}，输入间隔 ${period()}。`+
-  (state.timing==='settle'?`D=${period()}>M=${current.depth}；同源路径对齐。`:state.timing==='aligned'?'对齐 TimedDAG；当前周期不满足 Settle 编码。':'长短路径可在不同时间到达。')+
+  (state.timing==='settle'?`D=${period()}>M=${current.depth}；同源路径对齐。`:'长短路径可在不同时间到达。')+
   ` D 最大入/出度 ${current.stats.degrees.d.join('/')}。`+(current.hubs?` H：${current.stats.degrees.h.join('/')}。`:'');
  $('#region-timing-label').textContent=`一条线汇总一个边族的真实连线；${delta}。线的交叉不是连接点。`;
  $$('#region-canvas .bundle').forEach(el=>{el.querySelector('title').textContent=el.querySelector('title').textContent.replace(/δ=\d+/,`δ=${isUnit()?1:el.dataset.span}`);});
 }
 function setTiming(mode){
+ if(!['timed','timed-common','settle'].includes(mode))throw new RangeError('Unknown timing mode: '+mode);
  state.timing=mode;$('#timing-mode').value=mode;updateTimeLabels();renderNode();renderMatrix();paintRegion();
 }
 function syncNodeControls(){
@@ -151,7 +152,7 @@ function renderSettleTable(){
  let s='<thead><tr><th>Settle 空间图（点击切换）</th><th>层 / 位置 / 节点</th><th>边数</th><th>D / 对齐路径时延</th><th>宽段轮数 / 覆盖源区域与节点</th></tr></thead><tbody>';
  for(const c of Object.values(ATLAS.cases).filter(c=>c.family!=='multiscale'||c.key==='9')){
   const m=c.expansion,R=c.rounds,cover=c.family==='exchange'?`${R} 轮 / ${2**Math.min(R,m)} 区、${2**(Math.min(R,m)+Math.min(R,Math.log2(c.ordinary)))} 节点`:'—';
-  s+=`<tr data-case="${c.key}" class="${c.key===state.key?'current':''}"><td>${{multiscale:'多跨度对齐',lattice:'原 HB',exchange:'位交换'}[c.family]} · ${profileLabel(c)}</td><td>${c.depth} / ${c.stats.positions} / ${c.stats.nodes}</td><td>${c.stats.edges}</td><td>${c.settle_period} / ${c.depth-1}</td><td>${cover}</td></tr>`;
+  s+=`<tr data-case="${c.key}" class="${c.key===state.key?'current':''}"><td>${{multiscale:'多跨度 Settle',lattice:'原 HB',exchange:'位交换'}[c.family]} · ${profileLabel(c)}</td><td>${c.depth} / ${c.stats.positions} / ${c.stats.nodes}</td><td>${c.stats.edges}</td><td>${c.settle_period} / ${c.depth-1}</td><td>${cover}</td></tr>`;
  }
  $('#settle-table').innerHTML=s+'</tbody>';
 }

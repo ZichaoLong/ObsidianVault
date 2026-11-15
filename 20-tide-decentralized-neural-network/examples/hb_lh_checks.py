@@ -111,10 +111,10 @@ def main():
         assert all(len(es) == len({v for v, _ in es}) for es in outs)
         assert sum(map(len, outs)) == sum(kinds.values()) == sum(map(len, ins))
         delays, _ = hb.reachability(nodes, outs, widths, only_detail=True)
-        aligned, _ = hb.reachability(nodes, outs, widths, timing='aligned')
+        settle_delays, _ = hb.reachability(nodes, outs, widths, timing='settle')
         expected = list(range((len(widths) // 2), len(widths))) if not extra else [1, 2, 3, 4]
         for u, node in enumerate(nodes):
-            assert hb.support(aligned[u]) == [node[0]]
+            assert hb.support(settle_delays[u]) == [node[0]]
             if node[0] == len(widths) - 1 and node[2] == 'd':
                 assert hb.support(delays[u]) == expected
         summaries.append((key, len(nodes), sum(kinds.values())))

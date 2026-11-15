@@ -272,7 +272,7 @@ python -B 20-tide-decentralized-neural-network/examples/recurrent_memory_checks.
 
 采用 [role_bounded_quad](../local-semantics/weighted-message/role-bounded-allocation.md) 时，记录每节点角色、全输入可行条件、L/U、总量模式、评分快照和边界反向；不把普通 quad 的硬化结论自动用于小数保底。描述须属于对应 $D_v$，上下界须等于所选角色函数在本次 $\mu_v$ 的值，不能只检查 $0\le\ell_v\le u_v\le\mu_v$。核对乘积定义域内各候选子集的可行性、零接收、缺席 hub、固定通过、预算冲突、未选中写入以及可微分支的上下界／温度／总量导数。[独立数值程序](../examples/role_bounded_allocation_checks.py)仅验证这里声明的有限算例。
 
-采用 [HB 三组绑定](../instances/hb-multiscale-weighted-message.md)时，同时记录空间端点、hub 掩码、分区、时间绑定、局部时钟和参数共享。主图末层只有 D，核对每个保留节点到输出端口的潜在可达性；复现旧图时显式取 `terminal_hubs=True`。group／singleton 中删除末层 H 保持保留节点与端口输出，mixed 不一般满足此结论。图内显示筛选不是模型删边。多相位覆盖公式仅适用于单位边时延；跨度时延使末层路径时延统一为 $M-1$。对齐 T=4 的深层流水图不能按当前 D>max r 的时间编码声明为 SettleGraph；改变边时延会改变聚合、写入与选择。比较“只改时延”必须固定其余时钟参数。
+采用 [HB 三组绑定](../instances/hb-multiscale-weighted-message.md)时，同时记录空间端点、hub 掩码、分区、时间绑定、局部时钟和参数共享。主图末层只有 D，核对每个保留节点到输出端口的潜在可达性；复现旧图时显式取 `terminal_hubs=True`。group／singleton 中删除末层 H 保持保留节点与端口输出，mixed 不一般满足此结论。图内显示筛选不是模型删边。多相位覆盖公式仅适用于单位边时延；Settle 取跨度时延，使末层路径时延统一为 $M-1$，并保持 $D>M=\max r_v$ 的输入周期条件。改变边时延会改变聚合、写入与选择；比较“只改时延”必须固定相同输入日程和其余时钟参数。
 
 [LH 绑定](../instances/lh-exploration-weighted-message.md)允许区内消息；PDG 另有反馈。区分层次深度 $d_{\mathrm{tree}}$ 与载荷宽度 $d_{\mathrm{model}}$，检查图分类、有限切面在途消息与状态继续，不要求无限运行静止。[构图／继续程序](../examples/hb_lh_checks.py)的标量见证不是 KV／SSD 的整网数值符合性证据。
 

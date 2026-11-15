@@ -15,7 +15,7 @@ tags: [tide, backbone, capacity, parameter-sharing]
 | FC | [全连接分层](../topologies/fully-connected-layered.md)，每层一区 | Settle，原周期 $D=M+2$ |
 | HB-Lattice | [二叉展开收拢](../topologies/hb-lattice.md)，基础区域关系、偏移 $\{0,1\}$ | Settle，原周期 $D=M+2$ |
 | HB-Exchange | [位交换图](../topologies/hb-exchange.md)，展开深度与交换轮数可分开 | Settle，$D=M+1$ |
-| HB-Multiscale | [多跨度宽图与窄图](../topologies/hb-multiscale.md) | 单位边时延的 HB-Timed、跨度时延的对齐 TimedDAG／Settle |
+| HB-Multiscale | [多跨度宽图与窄图](../topologies/hb-multiscale.md) | 单位边时延的 HB-Timed、跨度时延的 HB-Multiscale-Settle |
 
 $M$ 为包含首尾的层数。Settle 保持当前正典的 $D>M$；Timed 主周期 $T=4$。同一空间图改变时延不改变参数数目，但改变聚合、状态写入和分配。LH-DAG／PDG 保留为一般语义探索，不进入本页规模表。
 

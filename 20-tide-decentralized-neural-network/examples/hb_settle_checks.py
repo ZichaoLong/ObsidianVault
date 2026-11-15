@@ -14,7 +14,7 @@ from hb_lh_checks import check_output_paths
 def check_alignment(widths, graph, period):
     nodes, _, outs, ins, _, _ = graph
     assert period > len(widths)
-    delays, _ = multiscale.reachability(nodes, outs, widths, timing='aligned')
+    delays, _ = multiscale.reachability(nodes, outs, widths, timing='settle')
     for u, (l, p, role, i) in enumerate(nodes):
         assert multiscale.support(delays[u]) == [l]
         assert l == 0 or ins[u]
