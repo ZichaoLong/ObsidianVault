@@ -6,7 +6,7 @@
 |---|---|
 | [multiscale.py](multiscale.py) | [HB-Multiscale](../../topologies/hb-multiscale.md)：宽／窄轮廓、可选 hub、端点构造、时延支持与潜在来源覆盖 |
 | [settle_graphs.py](settle_graphs.py) | [HB-Lattice](../../topologies/hb-lattice.md) 与 [HB-Exchange](../../topologies/hb-exchange.md)：展开、交换与收拢的端点构造 |
-| [capacity.py](capacity.py) | FC 与三类 HB 的尺寸登记、节点／来源类统计、独立／共享参数计数及预算活跃代理 |
+| [capacity.py](capacity.py) | FC 与三类 HB 的尺寸登记、节点／来源类统计、独立／区域共享／层级共享参数计数及预算活跃代理 |
 
 入口程序将 `reference/` 加入 Python 模块搜索路径，按 `from backbones import multiscale, settle_graphs, capacity` 导入。包内使用相对导入；公共代码不依赖面板目录、HTML 或图形库，也不写生成物。`settle_graphs.py` 与多跨度图共用固定置换规则，种子 `hb-timed-discussion-20261114-v1` 保留其定义身份。
 

@@ -11,7 +11,9 @@ from . import settle_graphs as st
 NODE_SIZES = (8, 16, 32, 64, 128)
 DIMENSIONS = (64, 128, 192, 256, 384, 512, 768)
 BUDGETS = (1, 2, 4, 8, 16, 32, 64)
-SHARING = (('independent', 0), ('shared', 8), ('shared', 4), ('shared', 16))
+SHARING = (('independent', 0),
+           ('region_shared', 8), ('region_shared', 4), ('region_shared', 16),
+           ('layer_shared', 8), ('layer_shared', 4), ('layer_shared', 16))
 
 
 def budgets(n):
@@ -91,34 +93,49 @@ def graph_inventory(profile, n, hubs):
         nodes,_,_,ins,_,_ = graph
         classes = [{k for _,k in parents} | ({'ext'} if nodes[u][0]==0 else set())
                    for u,parents in enumerate(ins)]
-    groups = Counter((x[0],x[2]) for x in nodes)
+    # The registered comparisons use group partition: each (layer, position,
+    # role) is an actual region. Mixed/singleton bindings are not counted here.
+    groups = Counter(tuple(x[:3]) for x in nodes)
     class_counts, class_groups = Counter(), defaultdict(set)
     for node, cs in zip(nodes, classes):
         class_counts[node[2]] += len(cs)
-        class_groups[node[0],node[2]].update(cs)
+        class_groups[tuple(node[:3])].update(cs)
     # Cache only counts, not graphs, for the larger n=128 / deep profiles.
     return groups, class_counts, class_groups
 
 
+@lru_cache(None)
+def sharing_inventory(profile, n, hubs, sharing):
+    regions, class_counts, region_classes = graph_inventory(profile, n, hubs)
+    if sharing != 'layer_shared':
+        return regions, class_counts, region_classes
+    groups, class_groups = Counter(), defaultdict(set)
+    for (layer, position, role), number in regions.items():
+        groups[layer, role] += number
+        class_groups[layer, role].update(region_classes[layer, position, role])
+    return groups, class_counts, class_groups
+
+
 def count(profile, n, hubs, d, memory='K', sharing='independent', rank=8):
-    if memory not in ('K','S','X') or sharing not in ('independent','shared'):
+    if memory not in ('K','S','X') or sharing not in ('independent','region_shared','layer_shared'):
         raise ValueError('unknown memory or parameter binding')
-    if sharing == 'shared' and rank not in (4,8,16):
+    if sharing != 'independent' and rank not in (4,8,16):
         raise ValueError('adapter rank must be 4, 8 or 16')
-    groups, class_counts, class_groups = graph_inventory(profile,n,hubs)
+    groups, class_counts, class_groups = sharing_inventory(profile,n,hubs,sharing)
     base, private = 0, Counter()
     nodes = Counter()
-    for (layer,role),number in groups.items():
+    for group,number in groups.items():
+        role = group[-1]
         kind = 'S' if memory=='S' or (memory=='X' and role=='h') else 'K'
         matrices, vectors = inventory(d,kind)
         nodes[role] += number
         reg = 2*(d//4)**2+2*(d//4)
-        if sharing == 'shared':
+        if sharing != 'independent':
             base += sum(a*b for _,a,b in matrices)+sum(x for _,x in vectors)
-            base += len(class_groups[layer,role])*(d//8)+reg
+            base += len(class_groups[group])*(d//8)+reg
             private[role] += number*(sum(min(rank,a,b)*(a+b) for _,a,b in matrices)+1)
         else:
-            base += (number//(n if role=='d' else hubs))*reg
+            base += reg
             private[role] += number*(sum(a*b for _,a,b in matrices)+sum(x for _,x in vectors)+1)
     if sharing == 'independent':
         for role,number in class_counts.items():

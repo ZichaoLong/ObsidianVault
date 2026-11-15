@@ -19,7 +19,7 @@ tags: [tide, lh, weighted-message]
 | 上层 hub | $k=K=1$，固定通过 $c_h=\mu_h$ |
 | 底层混合区 | $k=k_D+1$，$k_D=\max(1,\lceil n/32\rceil)$，$K=n+1$；hub 为 $\beta=1/4,\alpha=1/k$，卫星为普通边界 |
 | 拆区对照 | 每组卫星一区，$k_D,K=n$；底层 hub 单一区，$k=K=1$、固定通过；网格区内消息保留 |
-| 参数 | 采用[整体参数配置](../local-semantics/weighted-message/parameter-profiles.md)的 shared 或 independent；默认 shared，以侧 I/O、层次、角色分组，卫星属于层次 $d_{\mathrm{tree}}$；全部状态私有 |
+| 参数 | 采用[三档整体参数绑定](parameter-profiles.md)；默认 layer_shared，层级组以侧 I/O、层次、角色等区分，卫星属于层次 $d_{\mathrm{tree}}$；region_shared 再按实际区域拆组，independent 逐节点／区域独立；全部状态私有 |
 | 输入 | 根入口 $(1,Ex_t)$，$E$ 为有限 $d_{\mathrm{model}}\times d_{\mathrm{in}}$ 矩阵，载荷属于 $\mathbb R^{1+d_{\mathrm{model}}}$；日程 $4t+1$ |
 | 输出 | O 侧根的逐逻辑时间端口记录，无额外核心读出状态 |
 

@@ -1,7 +1,7 @@
 ---
 type: document-history
 status: reference
-as-of: 2026-11-04
+as-of: 2026-11-15
 tags:
   - tide
   - history
@@ -10,6 +10,10 @@ tags:
 # 文档修订记录
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
+
+## 2026-11-15：角色分配教材整合与区域共享
+
+将角色上下界分配整合入[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)，保留描述定义域、全输入可行性、零接收与连续性、求解及边界导数；既有公式编号和候选保持。[参数绑定](../../instances/parameter-profiles.md)归入实例目录，采用 independent、region_shared、layer_shared 三档，补全全部部件的归属与运行含义。HB 优先区域共享；FC 的两个共享档注明等价。计数按实际区域及来源类汇总，参数表、面板、引用和核对同步。四份正典、旧教学实例与 MoE 展示保持。
 
 ## 2026-11-04：展示改从 Transformer 残差与显式 MoE 展开
 

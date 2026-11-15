@@ -21,7 +21,7 @@ $M$ 为包含首尾的层数。Settle 保持当前正典的 $D>M$；Timed 主周
 
 HB 继承[多跨度主绑定](hb-multiscale-weighted-message.md)与 [Settle 共同绑定](hb-settle-weighted-message.md)的全部函数和初态，再按本页替换尺寸、预算和参数归属。主表使用 group 分区；可选 hub 为非末层每位置 4 个、独立 H 区，末层只有 D。无 hub 时保留全部普通边。
 
-**FC 的统一绑定。** 复用上述主绑定的载荷、KV／SSD 状态与零初态、Agg、Read$^+$、cat／att/content_stats 评分、received query、Next 和 Full；全图只有 D 角色，来源类为 ext、DD。每个首层节点有入口 $(1,E_Dx_t)$，末层全部节点有输出端口。时间、Pos、窗口、衰减与卷积步长按 Settle 规则，$P=D=M+2$。参数按[两种整体配置](../local-semantics/weighted-message/parameter-profiles.md)的层／角色分组，区域为 D 类型。这是一份新的完整比较绑定；[旧 FC 教学实例](fully-connected-layered-weighted-message.md)的混合参数归属保留，不套用本页计数。
+**FC 的统一绑定。** 复用上述主绑定的载荷、KV／SSD 状态与零初态、Agg、Read$^+$、cat／att/content_stats 评分、received query、Next 和 Full；全图只有 D 角色，来源类为 ext、DD。每个首层节点有入口 $(1,E_Dx_t)$，末层全部节点有输出端口。时间、Pos、窗口、衰减与卷积步长按 Settle 规则，$P=D=M+2$。参数按[三档整体绑定](parameter-profiles.md)的节点／区域／层级归属，区域为 D 类型。这是一份新的完整比较绑定；[旧 FC 教学实例](fully-connected-layered-weighted-message.md)的混合参数归属保留，不套用本页计数。
 
 三组记忆仍为 K（全部 KV/sum）、S（全部 SSD/state）、X（D 用 KV，H 用 SSD）；无 hub 时 X 与 K 重合，表中去重。没有增加第四组局部函数。
 
@@ -36,7 +36,7 @@ $$
 
 KV 每头宽度 32，头数 $d/32$，旋转频率及零距离偏置沿用主绑定。SSD 内部宽度 $d$，$d/32$ 个头，每头内容与状态宽度均 32，1 组，conv_size=4。其余固定增益、温度、窗口、时钟换算、残差尺度与归一化 epsilon 沿用主绑定；SSD 的可训练 norm 尺度仍计参数。
 
-参数只有 independent 与 shared 两种整组归属。shared 默认适配秩 $r_{\mathrm{ad}}=8$，同族可选 4、16；矩阵实际秩取 $\min(r_{\mathrm{ad}},a,b)$。它限制节点私有修正，不限制完整矩阵的秩或消息宽度；状态始终私有。共享说明、KV 基座例外及训练梯度归约均以参数配置页为准。
+参数采用 independent、region_shared、layer_shared 三档整组归属，HB 优先区域共享。两个共享档默认适配秩 $r_{\mathrm{ad}}=8$，同族可选 4、16；矩阵实际秩取 $\min(r_{\mathrm{ad}},a,b)$。它限制节点私有修正，不限制完整矩阵的秩或消息宽度；状态始终私有。共享说明、KV 基座例外及训练梯度归约均以参数绑定页为准。FC 每层一区，相同适配秩下两个共享档等价，实验无需重复；单节点组仍保留基座加适配器，三档参数量不保证严格有序。
 
 ## 3. 二次幂预算与稠密对照
 
@@ -101,9 +101,9 @@ $S=\sum_\ell W_\ell$，普通节点数 $N_D=nS$；全位置可选 4 hub 时，$N
 
 $$P_K(d)=17.375d^2+2.25d+1.$$
 
-shared 按唯一基座及节点私有适配器计数，不把重复使用的权重多计。KV 查询的 $W^Q_{v,h}$ 逐数学头分别适配；把多个头打包后改用一份低秩适配器会改变绑定，不是实现上的无差别优化。KV 独立配置的零基座和单位因子固定，不增加冗余可训练参数。
+两个共享档分别按实际区域／层级中的唯一基座及节点私有适配器计数，不把重复使用的权重多计。KV 查询的 $W^Q_{v,h}$ 逐数学头分别适配；把多个头打包后改用一份低秩适配器会改变绑定，不是实现上的无差别优化。KV 独立配置的零基座和单位因子固定，不增加冗余可训练参数。
 
-令 $B$ 为共享基座、共享向量与区域头，$P_D,P_H$ 为 D/H 私有参数总数，则
+令 $B$ 为按所选区域／层级范围去重的共享基座、共享向量与区域头，$P_D,P_H$ 为 D/H 私有参数总数，则
 
 $$
 P_{\mathrm{total}}=B+P_D+P_H,\qquad

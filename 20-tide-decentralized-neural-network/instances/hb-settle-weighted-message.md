@@ -22,7 +22,7 @@ Exchange 可在非末层每位置启用 4 个 hub，分为 D 区与 H 区，成�
 
 ## 2. 完整的局部绑定
 
-继承[HB 主实例](hb-multiscale-weighted-message.md)的载荷、尺寸、初态、Agg 函数形式、Upd、Mem、$p_v,G_v$、Read$^+$、cat／att 评分、received query、role_bounded_quad、Next 和广播。记忆主候选仍至多三个：K 全 KV、S 全 SSD、X 普通 KV／hub SSD；无 hub 时 X 与 K 相同。Exchange 无 hub 默认 K，含 hub 默认 X。参数默认采用[分层共享配置](../local-semantics/weighted-message/parameter-profiles.md)，另保留整组独立配置；Agg 也按这份配置绑定。
+继承[HB 主实例](hb-multiscale-weighted-message.md)的载荷、尺寸、初态、Agg 函数形式、Upd、Mem、$p_v,G_v$、Read$^+$、cat／att 评分、received query、role_bounded_quad、Next 和广播。记忆主候选仍至多三个：K 全 KV、S 全 SSD、X 普通 KV／hub SSD；无 hub 时 X 与 K 相同。Exchange 无 hub 默认 K，含 hub 默认 X。参数优先采用[区域共享配置](parameter-profiles.md) region_shared，另保留 independent 与 layer_shared 两档对照；Agg 及其他部件均按同一整体配置绑定。
 
 具体继承及替换如下，未列出的有限矩阵形状、固定尺度和温度等逐项沿用 HB 主实例 §1—3。
 

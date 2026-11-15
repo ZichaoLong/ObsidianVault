@@ -43,7 +43,7 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-22 分组证据，基线 [3bdee09](https://github.com/ZichaoLong/ObsidianVault/commit/3bdee09) | 新增 region_evidence=grouped；默认 cat 保留原函数，描述类型保持 | 证据与评分分别绑定；原 match 编码参数的名称对应见下段；定义见[§3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#34-区域证据) |
 | 2026-10-22 内容 key，基线 [fefbf7b](https://github.com/ZichaoLong/ObsidianVault/commit/fefbf7b) | 新增 region_key=content；默认 content_stats 保留原 key，描述类型保持 | content 另给独立编码参数；定义见[§3.6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#362-记忆-key)，统计通路与反向见[实现核对 §3.6](../reference/weighted-message-implementation-checks.md#36-区域-attention-的记忆-key) |
 
-2026-11-15 的基线 [1f1c542](https://github.com/ZichaoLong/ObsidianVault/commit/1f1c542) 新增 [HB 多跨度拓扑](../topologies/hb-multiscale.md)、[LH-DAG／PDG](../topologies/lh-exploration.md)及 [role_bounded_quad](../local-semantics/weighted-message/role-bounded-allocation.md)；[5da2bb4](https://github.com/ZichaoLong/ObsidianVault/commit/5da2bb4) 增加 [Settle 位交换图](../topologies/hb-exchange.md)、三图共同绑定及两种完整参数配置。原 HB、旧发送函数与默认值保持，核心版本仍为 tide-core-5。新主实例收敛为 KV／SSD／混合三组，新增角色边界、参数共享和时间绑定须显式采用。当前多跨度图的时间候选收敛为 Timed 与 Settle，Settle 保持 $D>M$ 条件。这些提交不声明下游已经实现或采用。
+2026-11-15 的基线 [1f1c542](https://github.com/ZichaoLong/ObsidianVault/commit/1f1c542) 新增 [HB 多跨度拓扑](../topologies/hb-multiscale.md)、[LH-DAG／PDG](../topologies/lh-exploration.md)及 [role_bounded_quad](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)；[5da2bb4](https://github.com/ZichaoLong/ObsidianVault/commit/5da2bb4) 增加 [Settle 位交换图](../topologies/hb-exchange.md)、三图共同绑定及两种完整参数配置。原 HB、旧发送函数与默认值保持，核心版本仍为 tide-core-5。新主实例收敛为 KV／SSD／混合三组，新增角色边界、参数共享和时间绑定须显式采用。当前多跨度图的时间候选收敛为 Timed 与 Settle，Settle 保持 $D>M$ 条件。这些提交不声明下游已经实现或采用。
 
 本轮复核收紧 role_bounded_quad 的描述空间：上下界必须由固定角色函数生成，保证 SelStep 在整个声明定义域上可行；原合法描述的数值函数保持。多跨度相位定理显式限定单位边时延，LH 层次深度改记 $d_{\mathrm{tree}}$，与载荷宽度 $d_{\mathrm{model}}$ 分开。HB 多跨度与位交换的带 hub 主图默认省去末层 H，`terminal_hubs=True` 可恢复上述基线的图；group／singleton 中保留节点与端口输出保持，mixed 中可能改变共同分配，采用时须记录此开关。四份正典和 Settle 的 $D>M$ 条件保持。
 
@@ -85,6 +85,10 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | $D^{\mathrm{ind}}=(\mu,s)$、$D^{\mathrm{att}}=(\mu,x,K,s)$ | 分别在首位加入 $w$ | 支持 query 与份额读取接收量。只采用 mu 分支的旧表示可保留；适配时 $w$ 从本次聚合取得，不能一般由 $\mu$ 反推 |
 
 共同载荷与六个正典签名保持，局部描述空间的具体绑定扩充。下游兼容解析若同时收到新旧键，须检查对应一致或拒绝冲突；不可把旧 reception 解释成 received。正温度连续性新增覆盖 pooled、dense 及 received 分支，硬化定理仍仅比较约束分配与原硬函数。循环模块采用自己的状态投影与时间规则。
+
+## 2026-11-15：角色分配归入教材与三档参数绑定
+
+角色二次分配的定义、可行性、导数及配置已整合到[区域教材](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)，候选函数保持。实例共用的[参数绑定](../instances/parameter-profiles.md)迁到 instances/：旧 shared 改名 layer_shared，新增 region_shared，independent 保持。两个共享档的模块范围、适配规则及私有状态相同，区域档把共享组按实际区域拆分；HB 优先区域档，LH 默认沿用层级档。FC 两个共享档等价。计数、CSV、面板和检查同步；四份正典、旧教学绑定及 MoE 展示保持。本次不声明下游已实现或取得实验效果。
 
 ## 下游采用记录
 

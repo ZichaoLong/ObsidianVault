@@ -39,9 +39,7 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 | 文档 | 定义与证明的分工 |
 |---|---|
 | [共同局部架构](local-semantics/weighted-message/architecture-learning-note.md) | 完整计算过程、模块接口与组合，局部条件如何支持整网性质，精确继续与联合求值 |
-| [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 描述与评分、指定总量、区域阈值和节点增益；发送候选、求解与导数，以及各候选的温度极限 |
-| [两种整体参数配置](local-semantics/weighted-message/parameter-profiles.md) | 全部节点／区域参数的独立与分层共享、KV 基座例外及训练通信 |
-| [角色上下界与 hub 保障](local-semantics/weighted-message/role-bounded-allocation.md) | 可行的节点保底与封顶、二次分配、完整返回及光滑分支导数；旧分配保持 |
+| [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 描述与评分、指定总量、区域阈值、节点增益及角色上下界；可行性、求解、导数和各候选的温度极限 |
 | [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
 | [基础循环记忆](local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) | affine／delta 的完整局部定义，循环候选共用的仿射复合 |
 | [固定逻辑时间短卷积](local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 带权历史槽、当前读取、空档与弱事件；供完整循环候选复用的部件 |
@@ -57,6 +55,8 @@ recurrent-memory/ 汇集三份循环记忆候选教材及共用的短卷积部�
 ## 具体拓扑与完整实例
 
 topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓扑与局部函数，给定初态、参数及输入读出，形成完整模型，并推导传播与计算量。
+
+[三档整体参数绑定](instances/parameter-profiles.md)统一规定新 FC／HB／LH 实例的 independent、region_shared、layer_shared，覆盖 Agg、记忆、评分和 Full，含 KV 基座例外、私有状态及训练通信。它说明如何绑定原教材参数；旧教学实例继续保留自己的归属。
 
 | 图 | 拓扑定义 | 完整绑定 |
 |---|---|---|

@@ -3,6 +3,7 @@
 const cap=ATLAS.capacity;
 const capRows=cap.rows.map(values=>Object.fromEntries(cap.fields.map((key,i)=>[key,values[i]])));
 const capFamilies={fc:'FC',lattice:'HB-Lattice',exchange:'HB-Exchange',multiscale:'HB-Multiscale · Timed / Settle'};
+const capSharing={independent:'独立参数',region_shared:'区域共享',layer_shared:'层级共享'};
 const capNumber=x=>(x/1e6).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:3});
 const capGraph=new Map(Object.values(ATLAS.cases).map(c=>[`${c.profile}/${c.ordinary}/${c.hubs}`,c.key]));
 function capacityProfiles(preferred='all'){
@@ -26,21 +27,23 @@ function capacityBudgets(){
 }
 function renderCapacity(){
  const n=+$('#cap-n').value,h=+$('#cap-h').value,d=$('#cap-d').value;
- const share=$('#cap-sharing').value,rank=share==='shared'?+$('#cap-rank').value:0;
- $('#cap-rank').disabled=share!=='shared';
+ const share=$('#cap-sharing').value,shared=share!=='independent',rank=shared?+$('#cap-rank').value:0;
+ $('#cap-rank').disabled=!shared;
  const k=$('#cap-k').value,ratio=k==='pool'?1:+k/n;
  const family=$('#cap-family').value,profile=$('#cap-profile').value,memory=$('#cap-memory').value;
  const limit=$('#cap-limit').value==='256'?256e6:Infinity;
  const rows=capRows.filter(r=>r.n===n&&r.h===h&&r.memory===memory&&r.sharing===share&&r.rank===rank&&
   (d==='all'||r.d===+d)&&(family==='all'||cap.profiles[r.profile].family===family)&&
   (profile==='all'||r.profile===profile)&&r.total<=limit).sort((a,b)=>a.total-b.total||a.profile.localeCompare(b.profile));
- $('#capacity-summary').textContent=`${rows.length} 个配置 · 每普通区 ${n} 节点 · ${k==='pool'?'pool 稠密对照':`k=${k}，预算比例 ${100*ratio}%`} · ${share}${rank?`，适配秩 ${rank}`:''}。以下单位为百万参数（M）。`;
- $('#capacity-formula').innerHTML=mathBlock(sub(mi('P'),textMath('总'))+mo('=')+mi('B')+mo('+')+sub(mi('P'),mi('D'))+mo('+')+sub(mi('P'),mi('H')))+
+ $('#capacity-summary').textContent=`${rows.length} 个配置 · 每普通区 ${n} 节点 · ${k==='pool'?'pool 稠密对照':`k=${k}，预算比例 ${100*ratio}%`} · ${capSharing[share]}${rank?`，适配秩 ${rank}`:''}。以下单位为百万参数（M）。`;
+ $('#capacity-sharing-summary').textContent={independent:'节点矩阵与区域头分别独立；不受适配秩限制。',region_shared:'g(v) 按实际区域划分相容节点：区内共享基座，节点适配器私有，区域头独立。',layer_shared:'g(v) 按层与角色等划分相容节点：基座跨区域共享，节点适配器私有，区域头按层与区域类型共享。'}[share];
+ const weightFormula=shared?mathBlock(sub(mi('W'),mi('v'))+mo('=')+sub(sup(mi('W'),mn(0)),mi('g(v)'))+mo('+')+sub(mi('L'),mi('v'))+sub(mi('R'),mi('v'))):'';
+ $('#capacity-formula').innerHTML=weightFormula+mathBlock(sub(mi('P'),textMath('总'))+mo('=')+mi('B')+mo('+')+sub(mi('P'),mi('D'))+mo('+')+sub(mi('P'),mi('H')))+
   mathBlock(sub(mi('P'),textMath('活跃代理'))+mo('=')+mi('B')+mo('+')+mn(ratio)+sub(mi('P'),mi('D'))+mo('+')+sub(mi('P'),mi('H')));
  let table='<thead><tr><th>空间图</th><th>层数</th><th>d</th><th>D / H 节点</th><th>总参数 M</th><th>活跃代理 M</th><th>代理 / 总参数</th><th>连接</th></tr></thead><tbody>';
  for(const r of rows){
   const p=cap.profiles[r.profile],a=r.base+ratio*r.D+r.H,graph=capGraph.get(`${r.profile}/${n}/${h}`);
-  table+=`<tr data-profile="${E(r.profile)}" data-d="${r.d}" data-total="${r.total}" data-active="${a}"><td>${E(p.label)}</td><td>${p.depth}</td><td>${r.d}</td><td>${r.nodes_D} / ${r.nodes_H}</td><td>${capNumber(r.total)}</td><td>${capNumber(a)}</td><td>${(100*a/r.total).toFixed(2)}%</td><td>${graph?`<button data-cap-case="${E(graph)}">查看</button>`:'—'}</td></tr>`;
+  table+=`<tr data-profile="${E(r.profile)}" data-d="${r.d}" data-total="${r.total}" data-active="${a}"><td>${E(p.label)}${shared&&p.family==='fc'?' · 两共享档等价':''}</td><td>${p.depth}</td><td>${r.d}</td><td>${r.nodes_D} / ${r.nodes_H}</td><td>${capNumber(r.total)}</td><td>${capNumber(a)}</td><td>${(100*a/r.total).toFixed(2)}%</td><td>${graph?`<button data-cap-case="${E(graph)}">查看</button>`:'—'}</td></tr>`;
  }
  $('#capacity-table').innerHTML=table+'</tbody>';
 }

@@ -630,7 +630,7 @@ $$
 
 #### 4.1.4 发送总量与激活数量
 
-三个正温度候选都在有正接收时产生正总量。指定总量与区域阈值使用 $b^{\mathrm{recv}}$ 为下界，节点增益与固定阈值分配使用 $\min(1,M)$。若 $W^{\mathrm{recv}}\ge1$ 且 $k=1$，两个区域控制候选的总量均固定为 $1$；弱总接收时，$k=1$ 仍可能有 $b^{\mathrm{recv}}<U$。
+§4.1.1—4.1.3 的三个正温度候选都在有正接收时产生正总量。指定总量与区域阈值使用 $b^{\mathrm{recv}}$ 为下界，节点增益与固定阈值分配使用 $\min(1,M)$。若 $W^{\mathrm{recv}}\ge1$ 且 $k=1$，两个区域控制候选的总量均固定为 $1$；弱总接收时，$k=1$ 仍可能有 $b^{\mathrm{recv}}<U$。
 
 对这三个正温度函数，$k$ 约束发送总和。每个 $c_v\le1$ 只给出 $\sum c_v\le|\mathcal A|$，不能由总和上限推出正分量个数的上限。例如 $(0.8,0.6,0.4,0.2)$ 的总和为 $2$，激活四个节点。给定正总量 $S$ 和节点上限 $\mu$，还必有
 
@@ -638,7 +638,101 @@ $$
 |\mathcal A|\ge\left\lceil S/\max_v\mu_v\right\rceil.
 $$
 
-总量下界与较小的节点上限因而可能共同要求很多节点激活。quad 与 ent 的 $\alpha>1$ 可在正温度产生精确零；Shannon 与 bern 在本章三个候选的正接收节点上全正，证明见附录 A.1。
+总量下界与较小的节点上限因而可能共同要求很多节点激活。quad 与 ent 的 $\alpha>1$ 可在正温度产生精确零；Shannon 与 bern 在 §4.1.1—4.1.3 三个候选的正接收节点上全正，证明见附录 A.1。
+
+#### 4.1.5 带角色上下界的二次分配
+
+本候选给部分节点保留有限发送份额，让其余份额按评分竞争。角色是实例指定的固定节点属性；本节定义角色对应的边界函数，不要求所有节点都有 hub 用途。节点只有实际收到输入才进入本次候选集，角色标签不会自行产生输入。既有分配函数和默认值保持。
+
+##### 角色、描述与总量
+
+沿用共同架构的消息、聚合、Mem、当前特征和 Read。固定区域的一次候选集 $C$、正温度 $\tau$、整数 $1\le k\le|\mathcal R_j|$ 与有限 $\gamma_{\max}\ge1$。按 §4.1.3 的固定增益取得
+
+$$
+w_v=\min(1,(r_v^{\mathrm{in}})_+),\qquad
+\mu_v=\min(1,\gamma_v(r_v^{\mathrm{in}})_+),\qquad
+1\le\gamma_v\le\gamma_{\max}.
+$$
+
+先采用 §3.1 的 cat 局部评分与 ind 区域评分。给定角色边界函数，Describe 返回
+
+$$
+d_v=(w_v,\mu_v,s_v^{\mathrm{loc}},\ell_v,u_v),\qquad
+0\le\ell_v\le u_v\le\mu_v\le1.
+$$
+
+本节 $u_v$ 是发送上界，与前文同字母的聚合内容向量区分。评分使用 Read 指定的状态；上下界由固定角色和本次 $\mu_v$ 决定。普通边界取 $(\ell_v,u_v)=(0,\mu_v)$；需要保障的节点 $h$ 可选：
+
+$$
+\begin{array}{ll}
+\text{固定通过：}&\ell_h=u_h=\mu_h,\\
+\text{有限保底：}&\ell_h=\beta_h\mu_h,\quad
+u_h=\min(\mu_h,\alpha_h k),\quad 0<\beta_h\le1,\quad\alpha_h>0.
+\end{array}
+$$
+
+$\alpha_h$ 表示预算份额，$\gamma_h$ 表示接收增益。Hub 可使用这两种待遇，其他角色也可复用。这里“常亮”指正接收时发送强度为正，不是自主心跳。
+
+将所选角色的函数记为 $\ell_v(\mu),u_v(\mu)$。固定满足下文全输入可行条件的角色参数，定义
+
+$$
+\begin{aligned}
+D_v^{\mathrm{role,ind}}=\{(w,\mu,s,\ell,u):{}&
+0\le w\le\mu\le1,\quad\mu\le\gamma_{\max}w,\quad s\in\mathbb R,\\
+&\ell=\ell_v(\mu),\quad u=u_v(\mu)\}.
+\end{aligned}
+$$
+
+Describe 与 SelStep 的每个描述都须属于对应空间；上下界不是可独立任取的字段。这样可行性覆盖整个乘积定义域及每个候选子集，而不只覆盖实际运行产生的描述。
+
+只对实际 $C$ 求和，取 $b=\min(1,\sum_v\mu_v)$，定义
+
+$$
+U=\min(k,\sum_vu_v),\qquad
+L=\max\left(\sum_v\ell_v,\min(b,U)\right).
+$$
+
+下文条件保证 $\sum\ell_v\le U$。给定固定阈值 $\eta\in\mathbb R$，令 $t_v=s_v^{\mathrm{loc}}-\eta$，定义
+
+$$
+c=\arg\max\left\{\sum_vt_vc_v-\frac{\tau}{2}\sum_vc_v^2:
+\ell_v\le c_v\le u_v,\quad L\le\sum_vc_v\le U\right\}.
+$$
+
+这是 role_bounded_quad 的区间模式。返回激活集 $\mathcal A=\{v:c_v>0\}$ 与控制族，区域历史为单点，正典容量取 $K_j=|\mathcal R_j|$。$k$ 约束发送总和，不限制正分量个数；Full 与 Next 沿用共同定义，全部候选保留接收更新。
+
+例如，一个 hub 与两个普通节点的上限为 $(1,1,1)$，$k=2$，hub 取 $\beta=1/4,\alpha=1/2$。于是 $\ell=(1/4,0,0),u=(1,1,1),L=1,U=2$。取 $\tau=1,\eta=0,s=(-2,1,0.8)$，解为 $(0.25,0.975,0.775)$。Hub 本次缺席时，只对两个普通候选求解，得到 $(1,0.8)$；不读取缺席 hub 的旧描述，也不为其占预算。
+
+##### 对所有合法输入保证可行
+
+设区域中的固定通过节点集为 $H_f$、有限保底节点集为 $H_b$。一组便于配置的充分条件是
+
+$$
+|H_f|+\sum_{h\in H_b}\beta_h\le k,\qquad
+\beta_h\le\alpha_h k\quad(h\in H_b).
+$$
+
+因为 $0\le\mu_h\le1$，这些条件保证逐节点 $\ell\le u$，且任意候选子集都有 $\sum\ell\le k$。再由 $\sum\ell\le\sum u$ 得 $\sum\ell\le U$，从而 $L\le U$、可行集非空。更一般的边界函数须另给覆盖所有合法描述的证明。
+
+四 hub 独立成区，取 $k=2,\beta=1/4,\alpha=1/2$ 满足条件。四个固定通过 hub 则要求 $k\ge4$，此时均有 $c_h=\mu_h$，没有分配权衡。单 hub 区取 $k=1$、固定通过，数值上就是 constrained 单候选的 $c_h=\mu_h$。
+
+混合区取 $k=k_D+k_H$ 时，保底仍按该区完整 $k$ 检查。预算留有余量不保证每次普通节点都获份额；若要求普通组最低份额，须另定义组约束。
+
+##### 区域评分与指定总量
+
+采用 att 时，描述空间扩为
+
+$$
+D_v^{\mathrm{role,att}}=
+\{(w,\mu,x,K,s,\ell,u):(w,\mu,s,\ell,u)\in D_v^{\mathrm{role,ind}},
+\ x,K\in\mathbb R^{d_{\mathrm{sel}}}\}.
+$$
+
+按 §3.6 返回对应向量，固定 query_weight=received，用 $w$ 汇集 query，将最终 $s_v$ 代入上述二次目标。普通节点与 hub 的 Mem 可来自不同记忆，只需提供相容描述；完整内容仍通过消息传播。
+
+还可固定 $\rho\in[0,1]$，取 $B=L+\rho(U-L)$，将总量区间替换为 $\sum c_v=B$。若使用上下文头，则向描述空间增加 §3.4 的证据向量 $z_v^{\mathrm{reg}}\in\mathbb R^{d_{\mathrm{reg}}}$，按 §2.2 以 $w$ 汇集、统计项使用 $\sum w,\sum\mu$，令 $\rho=\sigma(H_j(f_j^{\mathrm{reg}}))$。也可明确选择原下界 $b=\min(1,\sum w)$；所选描述、总量头和下界须一同记录。$\min(b,U)$ 避免角色封顶令原下界不可达。
+
+主实例使用区间模式、$b=\min(1,\sum\mu)$ 与固定阈值。全部节点取 $\ell=0,u=\mu$ 时，精确恢复 quad、constrained。角色候选只定义二次正则，其求解、性质及配置分别见 §6.5、§8.3、附录 S.4。
 
 ### 4.2 通过 Attention 份额分配
 
@@ -740,7 +834,7 @@ $$
 
 ### 5.1 从所选函数得到完整返回
 
-指定总量和区域阈值使用 §2.3 的四元组描述；采用区域 Attention 评分时，按 §3.6.3 扩为六元组。其他发送规则使用 §4.1.3 的节点增益描述。局部评分、区域评分、key 与所需证据或增益分别选择，其输出按相应元组组装。
+指定总量和区域阈值使用 §2.3 的四元组描述；采用区域 Attention 评分时，按 §3.6.3 扩为六元组。角色分配使用 §4.1.5 的角色描述，其他发送规则使用 §4.1.3 的节点增益描述。局部评分、区域评分、key 与所需证据或增益分别选择，其输出按相应元组组装。
 
 由此确定 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$：一次求值使用 $(q,\theta,h)$，读取本节点记忆并返回所需描述。架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。SelStep 收齐描述后使用已绑定的评分与发送函数。
 
@@ -753,6 +847,7 @@ $$
 | 区域阈值分配 | $\mu_v^{\max}$ | $[b^{\mathrm{recv}},U]$ | quad／ent 的 $\alpha>1$ 可稀疏；Shannon／bern 全有效 | $\lvert\mathcal R_j\rvert$ |
 | 节点增益与固定阈值，quad／ent，$\alpha>1$ | $\mu_v$ | $[\min(1,M),\min(k,M)]$ | 可以精确稀疏 | $\lvert \mathcal R_j\rvert$ |
 | 节点增益与固定阈值，Shannon／bern | $\mu_v$ | 同上 | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
+| 角色上下界二次分配 | $u_v\le\mu_v$ | $[L,U]$ 或 $B$ | 正接收保底节点全正，其余可稀疏 | $\lvert\mathcal R_j\rvert$ |
 | 直接 Attention，两种基权重 | $\mu_v$ | $(0,\max\mu]$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 固定总强度 Attention | $1$ | $1$ | 全部真实或全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 总量缩放 Attention | $1$ | $\min(1,M)$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
@@ -869,7 +964,7 @@ $$
 
 指定总量候选的响应输入为 $s_v-\lambda$，乘子用于达到指定的 $B$。区域阈值候选的响应输入为 $s_v-\eta_j-\lambda$，其中 $\eta_j$ 是区域头输出，乘子保证总量约束。两个候选均只求一个标量乘子。
 
-本章三个候选的 Shannon 在有效节点上全正；bern 在 $0<S<M$ 时各有效分量都严格处于上下限之间，$S=M$ 时全取上限。quad 与 ent 的 $\alpha>1$ 可在正温度达到零和上限。各端点及证明见附录 A.1。
+§4.1.1—4.1.3 三个候选的 Shannon 在有效节点上全正；bern 在 $0<S<M$ 时各有效分量都严格处于上下限之间，$S=M$ 时全取上限。quad 与 ent 的 $\alpha>1$ 可在正温度达到零和上限。各端点及证明见附录 A.1。
 
 ### 6.2 约束分配的反向
 
@@ -1002,6 +1097,36 @@ $$
 
 所有正温度族都涉及评分相对温度的尺度。低温未饱和区的斜率可含 $1/\tau$，严格饱和区的直接评分导数可以为零。固定温度时，query/key 范数和匹配尺度的变化仍会改变集中程度。这些是导数性质，训练效果的判断见设计备忘。
 
+### 6.5 角色上下界的求解与导数
+
+§4.1.5 的可行集非空、紧且凸，$\tau>0$ 时目标严格凹，故控制唯一。定义
+
+$$
+c_v(\lambda)=\operatorname{clip}((t_v-\lambda)/\tau,\ell_v,u_v),
+\qquad S(\lambda)=\sum_vc_v(\lambda).
+$$
+
+区间模式先算 $S(0)$：在 $[L,U]$ 内取 $\lambda=0$；超过 $U$ 时以 $\lambda\ge0$ 解 $S(\lambda)=U$；低于 $L$ 时以 $\lambda\le0$ 解 $S(\lambda)=L$。指定总量直接解 $S(\lambda)=B$，不限制符号。$S$ 连续单调不增，可按断点 $t_v-\tau u_v,t_v-\tau\ell_v$ 扫描或二分。乘子可不唯一，但控制唯一；总量等于 $\sum\ell$ 或 $\sum u$ 时直接返回对应边界族。
+
+令 $F,A_-,A_+$ 分别为严格内部、严格下界、严格上界坐标，先消去固定坐标 $\ell=u$。在分支不变时，$dc_v=d\ell_v$ 于 $A_-$，$dc_v=du_v$ 于 $A_+$；内部坐标满足
+
+$$
+dc_v=(dt_v-d\lambda-c_vd\tau)/\tau.
+$$
+
+总和约束松弛时 $d\lambda=0$。总和固定在当前 $S_*=L,U$ 或 $B$ 且 $|F|>0$ 时，
+
+$$
+d\lambda=\frac{\sum_F(dt_v-c_vd\tau)
+ +\tau(\sum_{A_-}d\ell_v+\sum_{A_+}du_v-dS_*)}{|F|}.
+$$
+
+固定通过坐标先取 $dc_h=d\mu_h$，其微分加入上式的边界和。再沿角色边界、$L/U$、评分和区域头使用链式法则；$S_*$ 不是无条件常数。上述公式给出光滑分支的方向微分，可转置实现反向。没有内部坐标的开分支，各控制随对应边界变化；等式总量与边界同时自由扰动时须重新判定分支，不能除零。
+
+clip 断点、总量松紧交界、min/max 并列处可能没有经典导数。参考约定为：先消去固定通过坐标；min/max 并列取书写顺序第一分支；$S(0)$ 恰在区间边界先取松弛分支；clip 恰碰端点取边界分支。若等式分支因此没有内部坐标，返回该面上的边界微分，只对保持该面的扰动有效。这是确定的训练约定，不宣称为所有方向的真实导数；任意方向的精确导数须重新求相应活动约束，前向解不受约定影响。
+
+数值核对见[角色分配程序](../../examples/role_bounded_allocation_checks.py)：独立活动集、旧规则退化、零／缺席、全输入可行性和光滑分支有限差分。
+
 ## 7. 温度极限与硬选择
 
 ### 7.1 一次约束分配
@@ -1096,6 +1221,8 @@ $\mu=(1,1),t=(1,1),k=1$ 时，quad 在每个正温度给出 $(1/2,1/2)$。若分
 
 ## 8. 发送规则如何满足架构条件
 
+本章的单位强度硬化结论使用各自前提。角色保底下的零温解通常仍含小数控制，不能直接套用 §7 的配对硬选择结论。
+
 ### 8.1 零接收与正温度连续性
 
 架构的区域条件针对 Read 与 SelStep 的完整复合。先看评分：两种 query 汇集权重均随接收趋零；零接收候选对 query 无贡献，正极限接收处的评分连续。§3.6 的两种 key 均为连续函数；有界记忆描述、当前内容和有限参数给出有界评分与增益，内容 key 还有该节的统一范数界。因此两种 key 均可用于下述组合条件。
@@ -1113,6 +1240,7 @@ $$
 | 指定总量分配 | 满足 | 满足 | §7.2：自身的唯一线性最优分配 |
 | 区域阈值分配 | 满足 | 满足 | §7.4：单位输入的配对硬选择 |
 | 节点增益与固定阈值分配 | 满足 | 满足 | §7.5：单位输入的配对硬选择 |
+| 角色上下界二次分配 | 满足 | §8.3：满足 | 未定义配对硬选择 |
 | 直接 Attention，两种基权重 | 满足 | 满足 | 未纳入 |
 | 固定总强度 Attention，$a=\mu$ | 满足 | 一般不满足 | 未纳入 |
 | 固定总强度 Attention，$a=1$ | 一般不满足 | 一般不满足 | 未纳入 |
@@ -1143,6 +1271,12 @@ $$
 
 两个区域控制候选使用 $\mu_v^{\max}\le\gamma_{\max}w_v$，同样满足上述有限路径界；实际发送是否达到上限由指定总量或区域阈值与评分共同决定。
 
+### 8.3 角色边界的零接收与连续性
+
+空候选返回空族；全零接收强制 $\ell=u=0$，加入零接收候选不改变其余控制。固定有限角色参数和正温度，连续的接收、边界及有效评分给出连续分配。
+
+**证明。** 平移 $x=c-\ell$ 后，可行集为 $0\le x\le u-\ell$，总量上下界减去 $\sum\ell$，目标线性系数变为 $t-\tau\ell$。因此可用附录 A.1 的恢复列证明。弱接收坐标满足 $c\le u\le\mu\le\gamma_{\max}w\to0$，其对 query／证据的贡献也趋零；有界评分下该坐标对其余控制的影响消失。由共同架构的组合条件得到零消息中性与有限时间连续性。$\square$
+
 ## 附录 A：连续性与极限证明
 
 ### A.1 约束解的连续性
@@ -1155,7 +1289,7 @@ $$
 
 同理，固定 $\mu,t$ 时将目标除以趋于无穷的温度，紧性与正则严格凹性给出 §5.6 的高温结论。
 
-**正支持与端点。** 对本章三个候选，有正接收时总量下界为正。若可行集强制总量为 $M$，向量只能为 $\mu$；否则可选一个可行的 $T\in(0,M)$，向量 $\widetilde c=T\mu/M$ 在每个有效坐标都严格处于上下限之间。若最优向量有有效零分量，朝 $\widetilde c$ 作足够小凸组合，Shannon 或 bern 的零端熵增益为正的 $\varepsilon|\log\varepsilon|$ 量级，支配其他有限斜率项。bern 在上限也有同样的向内增益。因此 Shannon 全有效分量为正，bern 在可行集非单点时均严格处于上下限之间。空接收返回零。$\square$
+**正支持与端点。** 对 §4.1.1—4.1.3 的三个候选，有正接收时总量下界为正。若可行集强制总量为 $M$，向量只能为 $\mu$；否则可选一个可行的 $T\in(0,M)$，向量 $\widetilde c=T\mu/M$ 在每个有效坐标都严格处于上下限之间。若最优向量有有效零分量，朝 $\widetilde c$ 作足够小凸组合，Shannon 或 bern 的零端熵增益为正的 $\varepsilon|\log\varepsilon|$ 量级，支配其他有限斜率项。bern 在上限也有同样的向内增益。因此 Shannon 全有效分量为正，bern 在可行集非单点时均严格处于上下限之间。空接收返回零。$\square$
 
 ### A.2 二元上限与有限温度
 
@@ -1212,38 +1346,39 @@ selection_mode 指定完整发送函数及其求值方式。正温度函数与�
 | 区域阈值分配 | regional_threshold | §4.1.2 | $\lvert\mathcal R_j\rvert$ |
 | 区域阈值的配对硬选择 | regional_threshold_hard | §4.4.3，保留区域阈值函数 | $k_j$ |
 | 节点增益与固定阈值分配 | constrained | §4.1.3 | $\lvert\mathcal R_j\rvert$ |
+| 角色上下界二次分配 | role_bounded_quad | §4.1.5；配置边界见 S.4 | $\lvert\mathcal R_j\rvert$ |
 | 节点增益与固定阈值的硬选择 | hard_selection | §4.4.3，保留节点增益与固定阈值 | $k_j$ |
 | 直接 Attention | direct_attention | 式 (11) | $\lvert\mathcal R_j\rvert$ |
 | 固定总强度 Attention | unit_attention | 式 (12) | $\lvert\mathcal R_j\rvert$ |
 | 总量缩放 Attention | pooled_attention | 式 (13) | $\lvert\mathcal R_j\rvert$ |
 | 按比例分配 | proportional | 式 (14) | $\lvert\mathcal R_j\rvert$ |
 
-regional_total 与 regional_total_zero 保留同一 Describe、评分和总量头；regional_threshold 与 regional_threshold_hard 保留同一 Describe、评分和阈值头。两组都使用 §2.3、§3.6.3 的区域控制描述。constrained 与 hard_selection 使用 §4.1.3 的节点增益描述。下表中“指定总量”“区域阈值”的描述与控制参数同时适用于各自的配对函数。
+regional_total 与 regional_total_zero 保留同一 Describe、评分和总量头；regional_threshold 与 regional_threshold_hard 保留同一 Describe、评分和阈值头。两组都使用 §2.3、§3.6.3 的区域控制描述。constrained 与 hard_selection 使用 §4.1.3 的节点增益描述。role_bounded_quad 使用 §4.1.5 的角色描述。下表中“指定总量”“区域阈值”的描述与控制参数同时适用于各自的配对函数；角色候选的固定取值和扩展字段集中于 S.4。
 
 其余配置对应已定义的参数与函数选择：
 
 | 名称 | 取值与含义 |
 |---|---|
 | local_score | cat、match，式 (1)、(3) |
-| region_score | ind、att；指定总量、区域阈值配套使用 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$，其余使用节点增益描述 |
+| region_score | ind、att；指定总量、区域阈值用 $D^{\mathrm{reg,ind}}$／$D^{\mathrm{reg,att}}$；角色分配用 $D^{\mathrm{role,ind}}$／$D^{\mathrm{role,att}}$；其余用节点增益描述 |
 | region_key | att 使用 content_stats／content，分别对应 §3.6.2 的记忆与统计 key、内容 key；默认 content_stats |
-| send_gain | fixed、context，式 (8)、(9)，用于节点增益描述；区域控制描述不使用 |
+| send_gain | fixed、context，式 (8)、(9)，用于节点增益描述；角色候选固定 fixed；区域控制描述不使用 |
 | gamma_max | 有限最大倍率；指定总量与区域阈值直接使用 $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$ |
-| query_weight | 节点增益描述的 att mu／received 分别使用 $\mu_v,w_v$，默认 mu；区域控制 att 固定 received |
+| query_weight | 节点增益描述的 att mu／received 分别使用 $\mu_v,w_v$，默认 mu；区域控制及角色候选的 att 固定 received |
 | allocation_base | direct_attention 使用 mu 或 received，默认 mu；unit_attention 使用 uniform 或 mu，默认 uniform；pooled_attention 固定 mu |
 | regularizer、ent_alpha | regional_total、regional_threshold、constrained 的 quad／bern／ent；ent 另指定固定 $\alpha\in[1,2]$ |
-| allocation_temperature | 上述三个正温度函数及 Attention 份额候选的正温度，与正典描述模式 $\tau_j$ 分别命名 |
-| k | 三个约束候选、regional_total_zero、proportional 的总发送强度上限；regional_threshold_hard、hard_selection 的激活数量上限 |
-| eta | constrained、hard_selection 的固定阈值；区域阈值在 fixed 控制时使用 |
-| region_control_mode | 指定总量、区域阈值的 fixed／context，分别见 §2.2、§4.1.2 |
+| allocation_temperature | 上述三个正温度函数、角色二次分配及 Attention 份额候选的正温度，与正典描述模式 $\tau_j$ 分别命名 |
+| k | 三个约束候选、角色二次分配、regional_total_zero、proportional 的总发送强度上限；regional_threshold_hard、hard_selection 的激活数量上限 |
+| eta | constrained、role_bounded_quad、hard_selection 的固定阈值；区域阈值在 fixed 控制时使用 |
+| region_control_mode | 指定总量、区域阈值的 fixed／context，分别见 §2.2、§4.1.2；角色 fraction 模式见 S.4 |
 | region_evidence | context 控制下的 cat／grouped，§3.4，默认 cat；与 local_score 独立选择 |
-| region_control_width | $d_{\mathrm{reg}}$，指定总量、区域阈值的描述证据宽度 |
-| total_fraction | 指定总量在 fixed 控制时的 $\rho_j\in[0,1]$；context 由区域头给出比例 |
+| region_control_width | $d_{\mathrm{reg}}$，指定总量、区域阈值及角色 fraction/context 的描述证据宽度 |
+| total_fraction | 指定总量及角色 fraction 在 fixed 控制时的比例；context 由区域头给出比例 |
 | alpha_loc、alpha_sel | att 的局部评分与区域匹配尺度；content key 配非零 alpha_loc 时保留已有局部评分通路 |
 
-三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，region_evidence=cat 给定拼接证据投影；grouped 给定式 (2) 中 $h=\mathrm{reg}$、$g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的编码参数及 §3.4 的组合矩阵与偏置，编码使用 $d_r,d_{\mathrm{sel}}$，输出宽度为 $d_{\mathrm{reg}}$。两种构造都另给同型区域头的全部参数。local_score=match 与 region_evidence=grouped 的编码参数默认独立，共享关系须显式绑定。
+§4.1.1—4.1.3 的三个正温度约束候选都允许持续稠密和可精确稀疏的正则。region_control_mode=context 时，region_evidence=cat 给定拼接证据投影；grouped 给定式 (2) 中 $h=\mathrm{reg}$、$g\in\{\mathrm{cur},\mathrm{mem},\mathrm{stat}\}$ 的编码参数及 §3.4 的组合矩阵与偏置，编码使用 $d_r,d_{\mathrm{sel}}$，输出宽度为 $d_{\mathrm{reg}}$。两种构造都另给同型区域头的全部参数。local_score=match 与 region_evidence=grouped 的编码参数默认独立，共享关系须显式绑定。
 
-fixed 返回零证据，只使用指定的 eta 或 total_fraction，region_evidence 不参与求值。指定总量、区域阈值及各自配对函数均不使用 send_gain 或 allocation_base；指定总量不叠加 eta。其他发送函数不使用 region_evidence。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。
+fixed 返回零证据，只使用指定的 eta 或 total_fraction，region_evidence 不参与求值。指定总量、区域阈值及各自配对函数均不使用 send_gain 或 allocation_base；指定总量不叠加 eta。除 S.4 的角色指定总量扩展外，其他发送函数不使用 region_evidence。direct_attention、unit_attention、pooled_attention 均不使用 k、eta 或 regularizer。
 
 region_key 仅用于 att。content_stats 给定 $W_v^{\mathrm{mem}},b_v^{\mathrm{mem}}$；content 给定式 (2) 中 $h=\mathrm{key}$、$g=\mathrm{mem}$ 的两个矩阵与两个偏置，输入宽度为 $2d_s$，中间宽度为 $d_r$，输出宽度为 $d_{\mathrm{sel}}$。两者均使用相同的当前内容投影与区域 query，描述元组形状保持。key 编码与局部评分、区域证据的参数默认独立；同形共享须显式声明。ind 不读取 region_key。
 
@@ -1275,3 +1410,19 @@ regional_total_zero 精确保持 $B$，可有小数发送，激活数一般可�
 指数响应先在对数域与上限比较；达到上限时直接返回原上限。sigmoid 采用稳定形式；ent 在 $\alpha$ 接近 $1$ 时使用 log1p／expm1 形式。数学零、浮点下溢零与人为裁剪零分别记录。
 
 Attention 规则的 $Z>0$ 边界按式 (20) 核对右导数。全零分支一般没有通常 Jacobian；实现可声明返回零反向，须与方向导数分别记录。跳过 Full 与求出内容再乘零的边界反向也需按所选目标比较。具体核对项见[实现对应](../../reference/weighted-message-implementation-checks.md)。
+
+### S.4 角色分配的配置与边界
+
+selection_mode=role_bounded_quad 选择 §4.1.5，allocation_temperature=$\tau>0$，read_mode=+／-／0；local_score 与 region_score 复用 §3。角色是固定节点配置，描述上下界须等于该角色函数在本次 $\mu$ 的值。
+
+| 字段 | 角色候选的绑定 |
+|---|---|
+| bound_role | ordinary／pass／floor_cap，分别为普通边界、固定通过、有限保底 |
+| beta、alpha | 仅 floor_cap 使用；pass 不读取这两个参数；须满足全输入可行条件 |
+| total_mode | 默认 interval；fraction 采用 $B=L+\rho(U-L)$ |
+| lower_base | 默认 mu，即 $b=\min(1,\sum\mu)$；received 取 $b=\min(1,\sum w)$ |
+| send_gain、eta、query_weight | 固定 send_gain=fixed、query_weight=received；eta 为固定实数，默认 $0$ |
+| total_fraction、region_control_mode | fraction 模式取固定比例，或 context 头计算比例；默认 fixed |
+| region_evidence、region_control_width | fraction/context 使用 §3.4 的证据和宽度，向描述加入该证据向量 |
+
+本候选只定义 quad，不使用 ent_alpha，也不由 regularizer 切换到其他正则；没有自动配对的角色硬选择。正典容量始终取全区节点数，$k$ 仍是强度预算。求解及边界反向按 §6.5，单点／空集等情形优先直接返回。既有候选及其默认值保持。

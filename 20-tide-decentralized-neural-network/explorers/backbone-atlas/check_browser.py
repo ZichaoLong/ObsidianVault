@@ -67,8 +67,9 @@ try:
     command('WebDriver:NewSession',{'capabilities':{'alwaysMatch':{'acceptInsecureCerts':True}}})
     command('WebDriver:SetWindowRect',{'width':1510,'height':1150})
     command('WebDriver:Navigate',{'url':(ROOT/'generated'/'index.html').as_uri()})
-    initial=script('return {title:document.title,metrics:document.querySelector("#metrics").textContent,graphs:document.querySelectorAll(".canvas svg").length,debug:typeof window.atlasDebug};')
+    initial=script('return {title:document.title,metrics:document.querySelector("#metrics").textContent,graphs:document.querySelectorAll(".canvas svg").length,debug:typeof window.atlasDebug,sharing:document.querySelector("#cap-sharing").value};')
     assert initial['graphs']==3 and initial['debug']=='object',initial
+    assert initial['sharing']=='region_shared',initial
     script('window.atlasErrors=[];window.addEventListener("error",e=>window.atlasErrors.push(e.message));return true;')
     records=[]
     for key in ['5','5-dd4','7','9','13','15','17']:
@@ -286,11 +287,25 @@ try:
       choose('#cap-limit','all');const large=+document.querySelector('#capacity-table tbody tr').dataset.total;
       choose('#cap-limit','256');const hiddenLarge=document.querySelectorAll('#capacity-table tbody tr').length===0;
       choose('#cap-family','fc');const noHub=document.querySelector('#cap-h').disabled&&document.querySelector('#cap-h').value==='0';
-      choose('#cap-profile','fc-4');choose('#cap-sharing','shared');choose('#cap-rank',4);
+      choose('#cap-profile','fc-4');choose('#cap-sharing','region_shared');choose('#cap-rank',4);
       const p4=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      const sharingOptions=[...document.querySelector('#cap-sharing').options].map(o=>o.value);
+      const fcEquivalence=document.querySelector('#capacity-table').textContent.includes('两共享档等价');
+      choose('#cap-sharing','layer_shared');
+      const layerP4=+document.querySelector('#capacity-table tbody tr').dataset.total;
       choose('#cap-rank',16);const p16=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      choose('#cap-sharing','region_shared');
+      const regionP16=+document.querySelector('#capacity-table tbody tr').dataset.total;
       choose('#cap-sharing','independent');const rankDisabled=document.querySelector('#cap-rank').disabled;
-      return {smallBudgets,largeBudgets,total,dense,pool,unchanged,linked,large,hiddenLarge,noHub,p4,p16,rankDisabled,errors:window.atlasErrors.slice()};
+      choose('#cap-family','multiscale');choose('#cap-profile','multiscale-compact-9');choose('#cap-h',4);choose('#cap-memory','X');choose('#cap-rank',8);choose('#cap-k',1);
+      const hbIndependent=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      choose('#cap-sharing','layer_shared');const hbLayer=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      const layerScope=document.querySelector('#capacity-sharing-summary').textContent;
+      choose('#cap-sharing','region_shared');const hbRegion=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      const regionScope=document.querySelector('#capacity-sharing-summary').textContent;
+      const regionFormula=document.querySelector('#capacity-formula').textContent;
+      const regionRankEnabled=!document.querySelector('#cap-rank').disabled;
+      return {smallBudgets,largeBudgets,total,dense,pool,unchanged,linked,large,hiddenLarge,noHub,p4,p16,layerP4,regionP16,sharingOptions,fcEquivalence,hbIndependent,hbLayer,hbRegion,layerScope,regionScope,regionFormula,regionRankEnabled,rankDisabled,errors:window.atlasErrors.slice()};
     ''')
     assert capacity_checks['smallBudgets']==['1','2','4','8','pool'],capacity_checks
     assert capacity_checks['largeBudgets']==['1','2','4','8','16','32','64','pool'],capacity_checks
@@ -299,6 +314,12 @@ try:
     assert capacity_checks['unchanged'] and capacity_checks['linked']=='compact-9-n8-h0',capacity_checks
     assert capacity_checks['large']>256e6 and capacity_checks['hiddenLarge'] and capacity_checks['noHub'],capacity_checks
     assert capacity_checks['p4']<capacity_checks['p16'] and capacity_checks['rankDisabled'] and not capacity_checks['errors'],capacity_checks
+    assert capacity_checks['sharingOptions']==['independent','region_shared','layer_shared'],capacity_checks
+    assert capacity_checks['p4']==capacity_checks['layerP4'] and capacity_checks['p16']==capacity_checks['regionP16'] and capacity_checks['fcEquivalence'],capacity_checks
+    assert round(capacity_checks['hbIndependent']/1e6,3)==162.936,capacity_checks
+    assert capacity_checks['hbRegion']>capacity_checks['hbLayer'] and capacity_checks['regionRankEnabled'],capacity_checks
+    assert '实际区域' in capacity_checks['regionScope'] and '跨区域共享' in capacity_checks['layerScope'],capacity_checks
+    assert 'g(v)' in capacity_checks['regionFormula'] and not any(x in capacity_checks['regionFormula'] for x in ('NaN','undefined')),capacity_checks
     script("document.querySelector('#matrix').scrollIntoView({behavior:'instant'});return true;")
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'terminal-matrix-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))

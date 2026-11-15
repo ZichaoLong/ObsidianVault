@@ -9,6 +9,17 @@ tags:
 
 # 旧内容重写与追溯索引
 
+## 2026-11-15 局部教材与三档参数绑定
+
+整理前版本为 [636d755](https://github.com/ZichaoLong/ObsidianVault/commit/636d755)。角色分配合入原区域教材，参数归属说明迁到实例层，原局部函数继续按绑定使用。
+
+| 原位置 | 当前维护入口 |
+|---|---|
+| `local-semantics/weighted-message/role-bounded-allocation.md` | [区域教材 §4.1.5](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)，求解与导数在 §6.5，连续性在 §8.3，配置在 S.4 |
+| `local-semantics/weighted-message/parameter-profiles.md` | [instances/parameter-profiles.md](../../instances/parameter-profiles.md)，三档整体参数绑定 |
+
+旧 shared 对应 layer_shared，原计数保持；新增 region_shared 按实际区域拆分共享组。既有 MoE 教学实例与展示维持原位置和内容。
+
 ## 2026-11-15 主干面板与参考计算
 
 整理前版本为 [85dccd9](https://github.com/ZichaoLong/ObsidianVault/commit/85dccd9)。本次调整目录职责和当前引用，四份正典、连接规则、置换种子、配置标识、参数计数与时间绑定保持。

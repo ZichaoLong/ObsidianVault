@@ -14,15 +14,15 @@
 
 多跨度图的时间选择同步更新区域边标注、节点时延、端点矩阵与到达表：Timed 单位时延／T=4、Timed 单位时延／与 Settle 同周期、Settle 跨度时延／D=M+1。前两项是 Timed 的两种输入日程。原 HB 与位交换图固定各自 Settle 绑定。层数相位阶梯单独标明是单位时延／T=4 的固定参考，Settle 表则给出对齐时间与宽段潜在来源覆盖。潜在路径不等于实际选择、无损内容覆盖或物理低时延。
 
-规模筛选覆盖 FC 与三类 HB，支持 n=8／16／32／64／128、d=64 至 768、K／S／X、independent／shared，以及 shared 秩 4／8／16。预算只选合法的 1、2、4、8、16、32、64 或 pool；显示总参、预算比例和活跃参数代理，超过 256M 的行也保留。规模筛选不修改上方连接图；有已绘制连线的行可点击“查看”。
+规模筛选覆盖 FC 与三类 HB，支持 n=8／16／32／64／128、d=64 至 768、K／S／X、independent／region_shared／layer_shared，以及两个共享档的适配秩 4／8／16。预算只选合法的 1、2、4、8、16、32、64 或 pool；显示总参、预算比例和活跃参数代理，超过 256M 的行也保留。规模筛选不修改上方连接图；有已绘制连线的行可点击“查看”。FC 每层一区，面板标注两个共享档等价；CSV 保留各档标识供筛选，实验无需重复。HB 默认筛选区域共享。
 
 正式语义入口：
 
 - [共同拓扑、全部尺寸、分区与 hub 放置](../../topologies/hb-multiscale.md)。其他配置已有构造定义，暂不都提供界面切换。
-- [位交换拓扑与覆盖证明](../../topologies/hb-exchange.md)、[Settle 三图共同绑定](../../instances/hb-settle-weighted-message.md)、[两种整体参数配置](../../local-semantics/weighted-message/parameter-profiles.md)。
+- [位交换拓扑与覆盖证明](../../topologies/hb-exchange.md)、[Settle 三图共同绑定](../../instances/hb-settle-weighted-message.md)、[三档整体参数绑定](../../instances/parameter-profiles.md)。
 - [统一主干比较绑定与计数口径](../../instances/backbone-comparison.md)、[完整 CSV](generated/capacity.csv)、[生成范围表](generated/capacity-summary.md)。
 - [K／S／X 三组主局部绑定](../../instances/hb-multiscale-weighted-message.md)。显示筛选不会隐式切换模型。
-- [角色上下界](../../local-semantics/weighted-message/role-bounded-allocation.md)、[设计问题与取舍](../../memos/design/hb-and-lh.md)。
+- [角色上下界](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)、[设计问题与取舍](../../memos/design/hb-and-lh.md)。
 - [逐候选核对数据](generated/checks.json)、[9 层区域图](generated/regions-9.svg)、[节点矩阵](generated/node-pair-matrix.svg)、[层数阶梯](generated/depth-ladder.svg)。
 
 ## 在另一台机器构建
