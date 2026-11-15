@@ -93,3 +93,18 @@ __pycache__/
 /20-tide-decentralized-neural-network/figures/design-introduction/moe-history1.svg
 /20-tide-decentralized-neural-network/figures/design-introduction/moe-history2.svg
 /20-tide-decentralized-neural-network/figures/design-introduction/moe-phases.svg
+
+# Rebuildable HB topology atlas; source files remain tracked.
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/index.html
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/data.json
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/checks.json
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/regions-9.svg
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/regions-9.png
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/ordinary-neighborhood.svg
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/ordinary-neighborhood.png
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/hub-neighborhood.svg
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/hub-neighborhood.png
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/node-pair-matrix.svg
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/node-pair-matrix.png
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/depth-ladder.svg
+/20-tide-decentralized-neural-network/explorers/hb-timed/generated/depth-ladder.png

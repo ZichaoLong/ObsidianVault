@@ -266,3 +266,12 @@ python -B 20-tide-decentralized-neural-network/examples/recurrent_memory_checks.
 | run_random_ready_schedule | 给定参考事件集合后，在其依赖图上重排求值 |
 
 该程序覆盖延迟自环、两节点环、门控与选后清空，并比较完整记录和继续状态。在线封闭下界推进、局部神经函数和设备求值各需相应实现证据。这里的字段对应不改变教材签名。
+
+
+## 6. HB 多跨度与 LH 探索候选
+
+采用 [role_bounded_quad](../local-semantics/weighted-message/role-bounded-allocation.md) 时，记录每节点角色、全输入可行条件、L/U、总量模式、评分快照和边界反向；不把普通 quad 的硬化结论自动用于小数保底。核对零接收、缺席 hub、固定通过、预算冲突、未选中写入以及可微分支的上下界／温度／总量导数。[独立数值程序](../examples/role_bounded_allocation_checks.py)仅验证这里声明的有限算例。
+
+采用 [HB 三组绑定](../instances/hb-multiscale-weighted-message.md)时，同时记录空间端点、hub 掩码、分区、时间绑定、局部时钟和参数共享。图内显示筛选不是模型删边。对齐 T=4 的深层流水图不能按当前 D>max r 的时间编码声明为 SettleGraph；改变边时延会改变聚合、写入与选择。比较“只改时延”必须固定其余时钟参数。
+
+[LH 绑定](../instances/lh-exploration-weighted-message.md)允许区内消息；PDG 另有反馈。检查图分类、有限切面在途消息与状态继续，不要求无限运行静止。[构图／继续程序](../examples/hb_lh_checks.py)的标量见证不是 KV／SSD 的整网数值符合性证据。

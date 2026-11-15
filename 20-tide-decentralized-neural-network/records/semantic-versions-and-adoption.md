@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-10-28
+as-of: 2026-11-15
 tags:
   - tide
   - semantic-version
@@ -42,6 +42,8 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 | 2026-10-22 配对函数配置，基线 [0ad390e](https://github.com/ZichaoLong/ObsidianVault/commit/0ad390e) | 为已定义函数增加 regional_total_zero、regional_threshold_hard 名称 | 保留各自描述与区域头；容量和不适用参数按[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)核对 |
 | 2026-10-22 分组证据，基线 [3bdee09](https://github.com/ZichaoLong/ObsidianVault/commit/3bdee09) | 新增 region_evidence=grouped；默认 cat 保留原函数，描述类型保持 | 证据与评分分别绑定；原 match 编码参数的名称对应见下段；定义见[§3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#34-区域证据) |
 | 2026-10-22 内容 key，基线 [fefbf7b](https://github.com/ZichaoLong/ObsidianVault/commit/fefbf7b) | 新增 region_key=content；默认 content_stats 保留原 key，描述类型保持 | content 另给独立编码参数；定义见[§3.6.2](../local-semantics/weighted-message/region-allocation-learning-note.md#362-记忆-key)，统计通路与反向见[实现核对 §3.6](../reference/weighted-message-implementation-checks.md#36-区域-attention-的记忆-key) |
+
+2026-11-15 新增 [HB 多跨度拓扑](../topologies/hb-multiscale.md)、[LH-DAG／PDG](../topologies/lh-exploration.md)及 [role_bounded_quad](../local-semantics/weighted-message/role-bounded-allocation.md)。原 HB、旧发送函数与默认值保持，核心版本仍为 tide-core-5。新主实例收敛为 KV／SSD／混合三组，新增角色边界、参数共享和时间绑定须显式采用；T=4 的跨度时延流水图与 D>M 的严格 Settle 编码分别命名。本条不声明下游已经实现或采用，尚无对应不可变提交发布。
 
 分组编码统一名称时，原 match 的 $B^{\mathrm{enc},g},C^{\mathrm{enc},g},b^{\mathrm{enc},g},d^{\mathrm{enc},g}$ 分别对应 $B^{\mathrm{score},g},C^{\mathrm{score},g},b^{\mathrm{score},g},a^{\mathrm{score},g}$；数值保持。区域证据和内容 key 使用各自参数。更换函数会改变后续状态；保留旧缓存继续与新模型从初态运行是两种比较，按[架构附录 S.1](../local-semantics/weighted-message/architecture-learning-note.md#s1-配置对应)声明。
 

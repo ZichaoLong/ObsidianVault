@@ -46,3 +46,5 @@ tags:
 - [内容迁移索引](../records/history/migration-map.md)：旧文件的现行落点。
 - [有界通信来源](../records/history/bounded-communication-origins.md)：直接通信范围、输入扩散与输出收拢的旧文依据及迁移、删除线索。
 - [LH 历史](../records/history/lh-design-origins.md)：早期实现与语义设计来源。
+
+[HB-Timed 与 LH 的设计收拢](design/hb-timed-and-lh.md)保存异时输出、扩大后的分工合作、hub 组织与本轮具体候选的取舍。

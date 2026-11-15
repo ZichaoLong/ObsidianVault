@@ -203,6 +203,20 @@ class BuildTests(unittest.TestCase):
 
 
 class DependencyTests(unittest.TestCase):
+    @patch('build.ctypes.util.find_library', return_value='available.so')
+    @patch('build.Path.is_file', return_value=True)
+    @patch('build.importlib.import_module', side_effect=ImportError('not installed'))
+    def test_atlas_only_uses_native_renderer(self, import_module, is_file, find_library):
+        check_dependencies(groups=['hb-topology-atlas'])
+        import_module.assert_not_called()
+        self.assertEqual(find_library.call_count, 3)
+
+    @patch('build.ctypes.util.find_library', return_value=None)
+    @patch('build.Path.is_file', return_value=True)
+    def test_atlas_missing_native_library_is_reported(self, is_file, find_library):
+        with self.assertRaisesRegex(BuildError, 'librsvg2-2'):
+            check_dependencies(groups=['hb-topology-atlas'])
+
     @patch('build.importlib.import_module')
     @patch('build.Path.is_file', return_value=True)
     @patch('build.shutil.which', return_value=None)

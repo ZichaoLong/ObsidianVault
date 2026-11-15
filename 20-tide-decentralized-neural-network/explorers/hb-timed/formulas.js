@@ -1,0 +1,99 @@
+'use strict';
+// Native MathML keeps the formula panel available offline.
+const mathBlock=x=>`<div class="math-equation"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block">${x}</math></div>`;
+const mi=x=>`<mi>${E(x)}</mi>`,mn=x=>`<mn>${E(x)}</mn>`,mo=x=>`<mo>${E(x)}</mo>`;
+const sub=(x,y)=>`<msub>${x}<mrow>${y}</mrow></msub>`;
+const sup=(x,y)=>`<msup>${x}<mrow>${y}</mrow></msup>`;
+const cal=x=>`<mi mathvariant="script">${E(x)}</mi>`;
+const par=x=>`<mrow>${mo('(')}${x}${mo(')')}</mrow>`;
+const setMath=xs=>mo('{')+xs.map(mn).join(mo(','))+mo('}');
+const textMath=x=>`<mtext>${E(x)}</mtext>`;
+function targetFormula(l,s,p,mode){
+ const w=current.widths[l],v=current.widths[l+s],g=Math.min(w,v),A=w/g,B=v/g;
+ let x=Math.floor(p/A);
+ if(mode==='near')x=(x+1)%g;
+ if(mode==='cross')x^=1<<((l+Math.log2(s))%Math.log2(g));
+ return Array.from({length:B},(_,j)=>B*x+j);
+}
+function regionFormulas(){
+ const [l,p]=state.focus;
+ let s=`<h3>区域与时间</h3><p class="formula-state">当前：${current.depth} 层 · 位置 (${l},${p})</p>`;
+ s+=mathBlock(sub(mi('D'),mi('ℓ')+mo(',')+mi('p'))+mo('=')+mo('{')+sub(mi('d'),mi('ℓ')+mo(',')+mi('p')+mo(',')+mi('i'))+mo(':')+mn(0)+mo('≤')+mi('i')+mo('<')+mi('n')+mo('}'));
+ s+=mathBlock(sub(mi('H'),mi('ℓ')+mo(',')+mi('p'))+mo('=')+mo('{')+sub(mi('h'),mi('ℓ')+mo(',')+mi('p')+mo(',')+mi('a'))+mo(':')+mn(0)+mo('≤')+mi('a')+mo('<')+mi('h')+mo('}'));
+ s+=mathBlock(mi('n')+mo('=')+mn(current.ordinary)+mo(',')+mi('h')+mo('=')+mn(current.hubs)+mo(',')+mi('δ')+par(mi('e'))+mo('=')+mn(1));
+ s+=mathBlock(mi('ι')+par(mi('t'))+mo('=')+mi('T')+mi('t')+mo('+')+mn(1)+mo(',')+mi('T')+mo('=')+mn(current.period));
+ s+='<p>区间内的每条边严格增加层号。同区只有共同分配，没有隐含消息边。</p><h3>不同宽度间的配对</h3>';
+ s+=mathBlock(mi('g')+mo('=')+textMath('min')+par(sub(mi('W'),mi('ℓ'))+mo(',')+sub(mi('W'),mi('ℓ')+mo('+')+mi('s'))));
+ s+=mathBlock(mi('A')+mo('=')+`<mfrac>${sub(mi('W'),mi('ℓ'))}${mi('g')}</mfrac>`+mo(',')+mi('B')+mo('=')+`<mfrac>${sub(mi('W'),mi('ℓ')+mo('+')+mi('s'))}${mi('g')}</mfrac>`);
+ s+=mathBlock(`<msubsup>${cal('B')}<mrow>${mi('ℓ')+mo(',')+mi('s')}</mrow>${mi('σ')}</msubsup>`+par(mi('p'))+mo('=')+mo('{')+mi('B')+mi('σ')+par(mo('⌊')+`<mfrac>${mi('p')}${mi('A')}</mfrac>`+mo('⌋'))+mo('+')+mi('j')+mo(':')+mn(0)+mo('≤')+mi('j')+mo('<')+mi('B')+mo('}'));
+ s+=mathBlock(sub(mi('σ'),mn(0))+par(mi('x'))+mo('=')+mi('x')+mo(',')+sub(mi('σ'),mo('+'))+par(mi('x'))+mo('=')+par(mi('x')+mo('+')+mn(1))+textMath(' mod ')+mi('g'));
+ s+=mathBlock(sub(mi('σ'),mo('×'))+par(mi('x'))+mo('=')+mi('x')+mo('⊕')+sup(mn(2),mi('k')));
+ s+=mathBlock(mi('k')+mo('=')+par(mi('ℓ')+mo('+')+sub(textMath('log'),mn(2))+mi('s'))+textMath(' mod ')+sub(textMath('log'),mn(2))+mi('g'));
+ const rows=[1,2,4].filter(d=>l+d<current.depth).map(d=>`<tr><td>${d}</td><td>${targetFormula(l,d,p,'base').join(',')}</td><td>${targetFormula(l,d,p,'near').join(',')}</td><td>${targetFormula(l,d,p,'cross').join(',')}</td></tr>`).join('');
+ s+=`<p><b>代入当前位置：</b>下面是目标层 ℓ+s 中的位置编号。三个映射的具体用途由边族决定。</p>${rows?`<table class="formula-table"><thead><tr><th>s</th><th>基础 0</th><th>邻组 +</th><th>跨组 ×</th></tr></thead><tbody>${rows}</tbody></table>`:'<p>已到终层，没有后继。</p>'}`;
+ s+='<details><summary>边族使用哪些配对</summary><p>DD1、DH1：基础 ∪ 邻组。DD2、额外 DD4：跨组。HH：基础 ∪ 跨组。HD1：基础；HD2、HD4：跨组。</p><p>本候选的层宽均为不小于 4 的二次幂，因此上述整数配对和 XOR 有定义。</p></details>';
+ $('#region-formulas').innerHTML=s;
+}
+function nodeFormulas(){
+ const u=selectedId(),n=current.nodes[u],ds=current.delays[u],dd=current.ordinary_delays[u],ph=[...new Set(ds.map(x=>x%current.period))].sort();
+ let s=`<h3>所选节点</h3><p class="formula-state">${E(nodeName(n))}</p>`;
+ s+=mathBlock(mi('v')+mo('=')+sub(mi(n[2]),n.slice(0,2).concat(n[3]).map(mn).join(mo(','))));
+ s+=mathBlock(textMath('Pred')+par(mi('v'))+mo('=')+mo('{')+mi('u')+mo(':')+par(mi('u')+mo(',')+mi('v'))+mo('∈')+mi('E')+mo('}'));
+ s+=mathBlock(textMath('Succ')+par(mi('v'))+mo('=')+mo('{')+mi('w')+mo(':')+par(mi('v')+mo(',')+mi('w'))+mo('∈')+mi('E')+mo('}'));
+ s+=mathBlock(mo('|')+textMath('Pred')+par(mi('v'))+mo('|')+mo('=')+mn(ins[u].length)+mo(',')+mo('|')+textMath('Succ')+par(mi('v'))+mo('|')+mo('=')+mn(outs[u].length));
+ s+='<h3>潜在路径的总时延</h3>';
+ s+=mathBlock(cal('D')+par(mi('v'))+mo('=')+`<munder>${mo('⋃')}<mrow>${par(mi('u')+mo(',')+mi('v'))+mo('∈')+mi('E')}</mrow></munder>`+mo('{')+mi('d')+mo('+')+mn(1)+mo(':')+mi('d')+mo('∈')+cal('D')+par(mi('u'))+mo('}'));
+ s+='<p>首层输入节点取 D(v)={0}，随后沿 DAG 递推；这里计算的是消息路径。</p>';
+ s+=mathBlock(cal('D')+par(mi('v'))+mo('=')+setMath(ds));
+ if(n[2]==='d')s+=mathBlock(sub(cal('D'),textMath('普通'))+par(mi('v'))+mo('=')+setMath(dd));
+ s+=mathBlock(mi('Φ')+par(mi('v'))+mo('=')+mo('{')+mi('d')+textMath(' mod ')+mi('T')+mo(':')+mi('d')+mo('∈')+cal('D')+par(mi('v'))+mo('}'));
+ s+=mathBlock(mi('Φ')+par(mi('v'))+mo('=')+setMath(ph));
+ s+='<p>Φ 是相对入口的相位 d mod T；入口为 Tt+1，绝对逻辑时间相位为 (1+d) mod T。</p><h3>与局部作用的对应</h3><p>同刻到达的消息进入同一时间纤维，再由 Agg 聚合；异刻消息分次作用，通过持久状态衔接。</p><p class="formula-boundary">面板只计算拓扑可达。记忆、评分和 SelStep 已在 <a href="../../../instances/hb-multiscale-weighted-message.md">三组主绑定</a>中定义，此处没有模拟 cᵥ 或实际发送。</p>';
+ $('#node-formulas').innerHTML=s;
+}
+function pairFormulas(){
+ if(!state.source||!state.target)return;
+ const [l,p]=state.source.split(',').map(Number),[m,q]=state.target.split(',').map(Number),span=m-l;
+ const present=current.bundles.filter(b=>b[0]===l&&b[1]===p&&b[3]===m&&b[4]===q);
+ let s=`<h3>当前区域对的公式</h3><p class="formula-state">(${l},${p}) → (${m},${q})</p>`;
+ s+=mathBlock(mi('s')+mo('=')+mn(m)+mo('−')+mn(l)+mo('=')+mn(span)+mo(',')+mi('δ')+mo('=')+mn(1));
+ s+=mathBlock(mi('b')+mo('=')+`<mfrac>${mi('n')}${mi('h')}</mfrac>`+mo('=')+mn(current.ordinary/current.hubs));
+ for(const b of present){
+  const k=b[6];s+=`<h4 style="color:${colors[k]}">${k} · ${b[7]} 条</h4>`;
+  if(k==='DD1')s+=mathBlock(mi('i')+mo('↦')+mo('{')+mi('i')+mo(',')+par(mi('i')+mo('+')+mn(1))+textMath(' mod ')+mi('n')+mo('}'));
+  else if(k==='DD2'||k==='DD4')s+=mathBlock(mi('i')+mo('↦')+sub(mi('π'),mi('ℓ')+mo(',')+mi('p')+mo(',')+mi('q'))+par(mi('i')));
+  else if(k==='DH1')s+=mathBlock(mi('i')+mo('↦')+mo('⌊')+`<mfrac><mrow>${sub(mi('ρ'),mi('ℓ')+mo(',')+mi('p')+mo(',')+mi('q'))+par(mi('i'))}</mrow>${mi('b')}</mfrac>`+mo('⌋'));
+  else if(k.startsWith('HH'))s+=mathBlock(mi('a')+mo('↦')+par(mi('a')+mo('+')+mi('ℓ')+mo('+')+mi('p')+mo('+')+mi('q')+mo('+')+sub(textMath('log'),mn(2))+mi('s'))+textMath(' mod ')+mi('h'));
+  else if(k.startsWith('HD')){
+   s+=mathBlock(mi('c')+mo('=')+par(mi('a')+mo('+')+mi('ℓ')+mo('+')+mi('p')+mo('+')+mi('s'))+textMath(' mod ')+mi('h'));
+   s+=mathBlock(mi('η')+mo('=')+par(mn(7)+mi('ℓ')+mo('+')+mn(3)+mi('p')+mo('+')+mi('q')+mo('+')+mn(5)+mi('s'))+textMath(' mod ')+mi('b'));
+   s+=mathBlock(sub(mi('j'),mi('t'))+mo('=')+mi('χ')+par(mi('c')+mi('b')+mo('+')+par(par(mi('η')+mo('+')+`<mfrac><mrow>${mi('t')+mi('b')}</mrow>${sub(mi('r'),mi('s'))}</mfrac>`)+textMath(' mod ')+mi('b'))));
+   s+=mathBlock(mn(0)+mo('≤')+mi('t')+mo('<')+sub(mi('r'),mi('s'))+mo(',')+sub(mi('r'),mi('s'))+mo('=')+mn(current.probes[String(span)]));
+   s+='<p>χ 是目标位置的固定普通节点置换；c 是目标分组编号，不是发送控制 cᵥ。</p>';
+  }
+  const pairs=[];for(const [u,v,ki]of current.edges)if(kinds[ki]===k&&pos(current.nodes[u])===state.source&&pos(current.nodes[v])===state.target)pairs.push([current.nodes[u][3],current.nodes[v][3]]);
+  const first=Math.min(...pairs.map(x=>x[0]));
+  s+=`<p class="formula-example">端点代入：${b[2].toUpperCase()}${first} → ${pairs.filter(x=>x[0]===first).map(x=>b[5].toUpperCase()+x[1]).join('、')}</p>`;
+ }
+ s+='<details><summary>固定置换怎样确定</summary><p>π、ρ、χ 在建图时确定。对标签与索引拼接固定种子后取 SHA-256，按摘要排序得到置换；不是每次输入重新采样。</p><p>π 使用 detail 标签，额外 DD4 使用 detail4；ρ 使用 collect；χ 使用 hook。精确字节规则见 <a href="../topology.py">构图源</a>与 <a href="../../../topologies/hb-multiscale.md">拓扑定义</a>。</p></details>';
+ $('#pair-formulas').innerHTML=s;
+}
+function renderTiming(){
+ const mode=$('#timing-mode').value,u=selectedId(),n=current.nodes[u];
+ const period=mode==='settle'?current.depth+1:current.period;
+ const delays=mode==='timed'?current.delays[u]:[n[0]];
+ const arrivals=new Map();
+ for(let t=0;t<3;t++)for(const d of delays){
+  const theta=1+period*t+d;
+  if(!arrivals.has(theta))arrivals.set(theta,[]);
+  arrivals.get(theta).push(`输入 ${t}，路径时延 ${d}`);
+ }
+ $('#timing-formula').innerHTML=mathBlock(mi('δ')+par(mi('e'))+mo('=')+(mode==='timed'?mn(1):mi('s'))+mo(',')+mi('ι')+par(mi('t'))+mo('=')+mn(period)+mi('t')+mo('+')+mn(1));
+ $('#timing-summary').textContent=`${nodeName(n)} · 潜在路径时延 {${delays.join(', ')}} · 输入间隔 ${period}。`+(mode==='settle'?`D=${period}>M=${current.depth}，符合 Settle 时间编码。`:mode==='aligned'?'同源路径对齐；当前仍以 TimedDAG 编码。':'长短路径在不同逻辑时刻产生机会，也可能让不同输入位置同刻汇合。');
+ $('#timing-table').innerHTML='<thead><tr><th>逻辑时间 θ</th><th>同刻潜在来源</th></tr></thead><tbody>'+[...arrivals].sort((a,b)=>a[0]-b[0]).map(([theta,xs])=>`<tr><td>${theta}</td><td>${xs.map(E).join('；')}</td></tr>`).join('')+'</tbody>';
+}
+window.refreshFormulas=function(){if(!current)return;regionFormulas();nodeFormulas();pairFormulas();renderTiming();};
+$('#timing-mode').addEventListener('change',renderTiming);
+$('#formulas-toggle').addEventListener('change',e=>document.body.classList.toggle('hide-formulas',!e.target.checked));
+window.atlasFormulaDebug={targetFormula};
+window.refreshFormulas();

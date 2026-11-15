@@ -21,10 +21,13 @@ tags:
 | [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
 | [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 完整计算过程、模块组合、局部条件到整网性质的推导、精确继续与联合求值 |
 | [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定评分、节点上限、区域控制与发送函数 | Describe 与 SelStep 的具体定义、求解与导数；指定总量的线性最优极限，区域阈值、节点增益与固定阈值的单位输入硬化 |
+| [角色上下界](../local-semantics/weighted-message/role-bounded-allocation.md) | $\ell_v\le c_v\le u_v$，可行总量 $[L,U]$ 与正温度二次目标 | hub 保底／固定通过、完整描述与选择、求解、连续性及分支导数；旧函数保持 |
 | [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
 | [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
 | [全连接实例](../instances/fully-connected-layered-weighted-message.md)、[HB-Lattice 实例](../instances/hb-lattice-weighted-message.md) | 所选拓扑、局部函数、参数、初态与输入读出 | 完整模型绑定、条件性的传播保障、联合求值与实际工作量 |
+| [HB 多跨度拓扑](../topologies/hb-multiscale.md)及[三组主绑定](../instances/hb-multiscale-weighted-message.md) | 普通子图、可选 hub、严格区域分层；时间另行绑定 | 同图 Timed／对齐／严格 Settle、KV／SSD／混合记忆、参数共享及精确块求值条件 |
+| [LH 探索拓扑](../topologies/lh-exploration.md)及[绑定](../instances/lh-exploration-weighted-message.md) | 双侧层次、区内消息、可选正时延反馈 | 一般 TimedDAG／PDG 的具体候选及有限继续 |
 
 SettleGraph 向 TimedDAG 保留图对象、端口和局部函数，重索引位置坐标并补齐空档状态；TimedDAG 记录逐切面限制后得到 PositiveDelayGraph 的相容记录族。分块求值研究固定语义下的联合函数。
 
@@ -117,6 +120,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | memory_read、记忆尺寸、窗口和位置 | 各记忆教材附录；memory_read 指定该模块的 Mem 读取函数 |
 | local_score、region_score、region_key、region_evidence | [区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)；分别选择局部评分、区域评分、记忆 key 与区域证据 |
 | selection_mode、区域控制、增益、温度与正则 | 同一[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)，同时列出配对函数、描述类型与容量 |
+| role_bounded_quad、bound_role、beta／alpha、total_mode | [角色分配 §5](../local-semantics/weighted-message/role-bounded-allocation.md#5-配置对应)；普通、固定通过与有限保底，区间或指定总量 |
 | conv_stride 及其时间单位 | [短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续) |
 
 SettleGraph 的 $r_v$ 保持节点秩的含义；带权消息的接收强度统一记为 $r_v^{\mathrm{in}}$。边集沿用 $A$，激活集合沿用 $\mathcal A$。

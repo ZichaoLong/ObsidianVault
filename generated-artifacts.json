@@ -240,6 +240,47 @@
         "20-tide-decentralized-neural-network/figures/requirements.txt"
       ],
       "review_sources": []
+    },
+    {
+      "name": "hb-topology-atlas",
+      "generator": "20-tide-decentralized-neural-network/explorers/hb-timed/build_atlas.py",
+      "command": [
+        "python3",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/build_atlas.py"
+      ],
+      "outputs": [
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/index.html",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/data.json",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/checks.json",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/regions-9.svg",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/regions-9.png",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/ordinary-neighborhood.svg",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/ordinary-neighborhood.png",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/hub-neighborhood.svg",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/hub-neighborhood.png",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/node-pair-matrix.svg",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/node-pair-matrix.png",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/depth-ladder.svg",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/depth-ladder.png"
+      ],
+      "directories": [
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated"
+      ],
+      "inputs": [
+        "20-tide-decentralized-neural-network/explorers/hb-timed/topology.py",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/page.html",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/style.css",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/explore.js",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/formulas.js"
+      ],
+      "review_sources": [
+        "20-tide-decentralized-neural-network/topologies/hb-multiscale.md",
+        "20-tide-decentralized-neural-network/instances/hb-multiscale-weighted-message.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/role-bounded-allocation.md",
+        "20-tide-decentralized-neural-network/memos/design/hb-timed-and-lh.md",
+        "20-tide-decentralized-neural-network/settlegraph-learning-note.md",
+        "20-tide-decentralized-neural-network/timed-dag-chunk-prefill-learning-note.md"
+      ]
     }
   ],
   "retained": [
@@ -275,11 +316,13 @@
     "assets/fig/rnn-diagram.pptx",
     "assets/fig/sequence-parallel-rnn-diagram.pptx",
     "assets/images/load-store-progression-02.png",
-    "assets/catalog.json"
+    "assets/catalog.json",
+    "20-tide-decentralized-neural-network/explorers/hb-timed/page.html"
   ],
   "asset_directories": [
     "assets",
     "20-tide-decentralized-neural-network/figures",
-    "20-tide-decentralized-neural-network/presentations/design-introduction"
+    "20-tide-decentralized-neural-network/presentations/design-introduction",
+    "20-tide-decentralized-neural-network/explorers/hb-timed"
   ]
 }

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build registered figures and HTML; add PDF/preview export with --full."""
 import argparse
+import ctypes.util
 import importlib
 from pathlib import Path
 import shutil
@@ -18,6 +19,18 @@ def check_dependencies(full=False, groups=None):
     """Check the current Tide renderers before starting any output writes."""
     if groups is not None and set(groups) <= {'presentation-build'}:
         return  # This generator uses only the Python standard library.
+    if groups is not None and 'hb-topology-atlas' in groups:
+        missing = [lib for lib in ('rsvg-2', 'cairo', 'gobject-2.0')
+                   if not ctypes.util.find_library(lib)]
+        fonts = ('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+                 '/usr/share/fonts/google-droid-fonts/DroidSansFallback.ttf')
+        if not any(Path(font).is_file() for font in fonts):
+            missing.append('Noto Sans CJK or Droid Sans Fallback')
+        if missing:
+            raise BuildError('HB atlas dependencies missing: ' + ', '.join(missing) +
+                             '; install librsvg2-2 libcairo2 fonts-noto-cjk')
+        if set(groups) <= {'presentation-build', 'hb-topology-atlas'}:
+            return  # Native SVG rendering; no Python image packages or browser.
     missing = []
     for module, package in [('PIL', 'Pillow'), ('cairosvg', 'CairoSVG / Cairo')]:
         try:
