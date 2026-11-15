@@ -7,6 +7,8 @@ let current, outs, ins, ids;
 const state={timing:'timed',key:'9',focus:[4,3],role:'d',index:0,scope:'near',source:'3,2',target:'4,2'};
 const pos=n=>`${n[0]},${n[1]}`;
 const nodeName=n=>`${n[2].toUpperCase()}(${n[0]},${n[1]}; ${n[3]})`;
+const hubsAt=l=>current.hub_counts[l];
+const positionNodes=([l,p])=>current.nodes.flatMap((n,u)=>n[0]===l&&n[1]===p?[u]:[]);
 const option=(v,label)=>`<option value="${E(v)}">${E(label===undefined?v:label)}</option>`;
 const family=k=>k.startsWith('HH')?'HH':k.startsWith('HD')?'HD':k;
 function svgText(x,y,t,size=16,color='#23344b',weight=400,anchor='start',attrs=''){
@@ -18,7 +20,7 @@ const period=()=>['settle','timed-common'].includes(state.timing)?current.settle
 const edgeDelay=(l,m)=>isUnit()?1:m-l;
 const displayDelays=(u,detail=false)=>isUnit()?(detail?current.ordinary_delays[u]:current.delays[u]):
  ((detail?current.ordinary_delays[u]:current.delays[u]).length?[current.nodes[u][0]]:[]);
-function profileLabel(c){return `${c.depth} 层${c.add_dd4?' + DD4':''} · ${c.hubs?'16+4 / 独立 H 区':'16 / 无 hub'}`;}
+function profileLabel(c){return `${c.depth} 层${c.add_dd4?' + DD4':''} · ${c.hubs?'16+4，末层 16 / 独立 H 区':'16 / 无 hub'}`;}
 function mountCase(key){
  state.key=key;current=ATLAS.cases[key];state.timing=current.default_timing;
  $('#family-select').value=current.family;
@@ -55,9 +57,10 @@ function setTiming(mode){
 function syncNodeControls(){
  $('#node-layer').innerHTML=current.widths.map((_,l)=>option(l)).join('');$('#node-layer').value=state.focus[0];
  $('#node-position').innerHTML=Array.from({length:current.widths[state.focus[0]]},(_,p)=>option(p)).join('');$('#node-position').value=state.focus[1];
- if(!current.hubs)state.role='d';
- $('#node-role').innerHTML=option('d','普通 D')+(current.hubs?option('h','Hub H'):'');$('#node-role').value=state.role;
- const size=state.role==='d'?current.ordinary:current.hubs;state.index=Math.min(state.index,size-1);
+ const hubCount=hubsAt(state.focus[0]);
+ if(!hubCount)state.role='d';
+ $('#node-role').innerHTML=option('d','普通 D')+(hubCount?option('h','Hub H'):'');$('#node-role').value=state.role;
+ const size=state.role==='d'?current.ordinary:hubCount;state.index=Math.min(state.index,size-1);
  $('#node-index').innerHTML=Array.from({length:size},(_,i)=>option(i)).join('');$('#node-index').value=state.index;
 }
 function selectedId(){return ids.get([...state.focus,state.role,state.index].join(','));}
@@ -113,16 +116,20 @@ function updateTargets(preferred){
  state.target=targets.includes(preferred)?preferred:targets[0];$('#pair-target').value=state.target;renderMatrix();
 }
 function renderMatrix(){
- state.target=$('#pair-target').value;const src=state.source.split(',').map(Number),dst=state.target.split(',').map(Number),size=current.ordinary+current.hubs;
- const sources=[],targets=[];for(const r of ['d','h'])for(let i=0;i<(r==='d'?current.ordinary:current.hubs);i++){sources.push(ids.get([...src,r,i].join(',')));targets.push(ids.get([...dst,r,i].join(',')));}
+ state.target=$('#pair-target').value;const src=state.source.split(',').map(Number),dst=state.target.split(',').map(Number);
+ const sources=positionNodes(src),targets=positionNodes(dst),rows=sources.length,columns=targets.length;
  const ti=new Map(targets.map((u,i)=>[u,i])),matrix=new Map(),counts={};sources.forEach((u,i)=>{for(const [v,k]of outs[u])if(ti.has(v)){matrix.set(`${i},${ti.get(v)}`,[u,v,k]);counts[k]=(counts[k]||0)+1;}});
  const cell=29,x0=145,y0=145,w=1220,h=800;
  let s=svgStart(w,h,'完整端点连接矩阵')+svgText(25,36,`位置 (${state.source}) → (${state.target}) · 全部端点`,24,'#23344b',700)+svgText(25,67,'行：源节点。列：目标节点。彩点：消息边。角色块按当前图显示；无 hub 时只有 D→D。',16,'#5c6d81');
- s+=svgText(x0+current.ordinary*cell/2,y0-48,'下游普通区 D',17,'#2563eb',600,'middle')+(current.hubs?svgText(x0+(current.ordinary+current.hubs/2)*cell,y0-48,'下游 hub 区 H',16,'#b57a13',600,'middle'):'');
- for(let i=0;i<size;i++){
+ s+=svgText(x0+current.ordinary*cell/2,y0-48,'下游普通区 D',17,'#2563eb',600,'middle')+(hubsAt(dst[0])?svgText(x0+(current.ordinary+hubsAt(dst[0])/2)*cell,y0-48,'下游 hub 区 H',16,'#b57a13',600,'middle'):'');
+ for(let j=0;j<columns;j++){
+  const label=j<current.ordinary?'D'+j:'H'+(j-current.ordinary);
+  s+=svgText(x0+j*cell+cell/2,y0-14,label,12,'#23344b',400,'middle',`class="node-link" data-jump="${targets[j]}"`);
+ }
+ for(let i=0;i<rows;i++){
   const label=i<current.ordinary?'D'+i:'H'+(i-current.ordinary);
-  s+=svgText(x0-17,y0+i*cell+20,label,13,'#23344b',400,'end',`class="node-link" data-jump="${sources[i]}"`)+svgText(x0+i*cell+cell/2,y0-14,label,12,'#23344b',400,'middle',`class="node-link" data-jump="${targets[i]}"`);
-  for(let j=0;j<size;j++){
+  s+=svgText(x0-17,y0+i*cell+20,label,13,'#23344b',400,'end',`class="node-link" data-jump="${sources[i]}"`);
+  for(let j=0;j<columns;j++){
    const hit=matrix.get(`${i},${j}`),x=x0+j*cell,y=y0+i*cell,fill=i<current.ordinary&&j<current.ordinary?'#f3f7fe':i>=current.ordinary&&j>=current.ordinary?'#fdf6e9':'#fafbfd';
    s+=`<g ${hit?`data-jump="${hit[1]}" style="cursor:pointer"`:''}><rect class="matrix-hit" x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${fill}" stroke="#dce4ed" stroke-width=".7"/>`;
    if(hit)s+=`<circle cx="${x+cell/2}" cy="${y+cell/2}" r="5.8" fill="${colors[kinds[hit[2]]]}"/>`;
@@ -131,8 +138,8 @@ function renderMatrix(){
  }
  let y=185;Object.entries(counts).sort((a,b)=>+a[0]-b[0]).forEach(([k,n])=>{s+=`<circle cx="825" cy="${y-5}" r="7" fill="${colors[kinds[k]]}"/>`+svgText(845,y,`${kinds[k]}：${n} 条`,19,colors[kinds[k]],600);y+=38;});
  ['DD：普通细节传播','DH：普通结果进入 hub','HH：hub 交换背景','HD：hub 向普通节点投递钩子','','这里只显示这一对位置。','点击编号 / 彩点进入节点图。'].forEach((t,i)=>s+=svgText(815,y+32+i*31,t,16,'#5c6d81'));
- s+=svgText(25,h-20,'每位置一个 D 区，启用 hub 时另有 H 区；行列相邻不表示节点间另有连接。',15,'#5c6d81')+'</svg>';
- $('#matrix-canvas').innerHTML=s;$('#matrix-summary').textContent=`${matrix.size} 条消息边 · 跨 ${dst[0]-src[0]} 层 · 时延均为 ${edgeDelay(src[0],dst[0])}`;
+ s+=svgText(25,h-20,'每位置一个 D 区，非末层可另有 H 区；矩阵按两端实际节点数绘制。',15,'#5c6d81')+'</svg>';
+ $('#matrix-canvas').innerHTML=s;$('#matrix-summary').textContent=`${matrix.size} 条消息边 · 跨 ${dst[0]-src[0]} 层 · 时延均为 ${edgeDelay(src[0],dst[0])} · ${rows}×${columns} 端点`;
  if(window.refreshFormulas)window.refreshFormulas();
 }
 function renderDepthTable(){

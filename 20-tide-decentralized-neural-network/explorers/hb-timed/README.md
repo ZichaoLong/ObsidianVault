@@ -10,7 +10,7 @@
 | 原 HB-Lattice | 5／7／9 层，16，无 hub | 原递归展开收拢，保持 $D=L+2$ |
 | Settle 位交换 | 7／10／13 层，16 或 16+4 | 对齐计算的逐轮合作，可切换真实 hub 增强图 |
 
-共 16 个空间配置。区域图可筛选边族，单节点图完整列出上下游，16×16／20×20 矩阵逐边显示端点；公式侧栏随当前选择代入。空间选择改变模型，显示筛选只隐藏连线。普通区与 H 区独立分配。
+共 16 个空间配置。含 hub 的配置在每个非末层位置设置 D 区与独立 H 区，末层只有 D。区域图可筛选边族，单节点图完整列出上下游，矩阵按两端实际节点数显示：普通位置为 16×16，含 hub 的内部位置为 20×20，进入末层为 20×16；公式侧栏随当前选择代入。空间选择改变模型，显示筛选只隐藏连线。
 
 多跨度图的时间选择同步更新区域边标注、节点时延、端点矩阵与到达表：单位时延／T=4，跨度时延／T=4，单位时延／与 Settle 同周期，跨度时延／D=M+1。原 HB 与位交换图固定各自 Settle 绑定。层数相位阶梯单独标明是单位时延／T=4 的固定参考，Settle 表则给出对齐时间与宽段潜在来源覆盖。潜在路径不等于实际选择、无损内容覆盖或物理低时延。
 
@@ -34,6 +34,8 @@ python3 20-tide-decentralized-neural-network/examples/role_bounded_allocation_ch
 python3 20-tide-decentralized-neural-network/explorers/hb-timed/check_browser.py
 ```
 
-构建使用 Python 标准库及系统 librsvg、Cairo、GObject，字体采用 Noto Sans CJK 或本机已有的 Droid Sans Fallback；不依赖 Python 的 Pillow／CairoSVG。Debian／Ubuntu 可安装 `librsvg2-2 libcairo2 fonts-noto-cjk`，GObject 由依赖带入。浏览器核对另需 Firefox，通过隔离 profile 验证 16 个配置、区域跳转、公式映射、矩阵端点数量、g=1 边界、时间同步及宽窄布局；报告和截图默认写入仓库外临时目录，不进入日常 Git 产物。
+构建使用 Python 标准库及系统 librsvg、Cairo、GObject，字体采用 Noto Sans CJK 或本机已有的 Droid Sans Fallback；不依赖 Python 的 Pillow／CairoSVG。Debian／Ubuntu 可安装 `librsvg2-2 libcairo2 fonts-noto-cjk`，GObject 由依赖带入。浏览器核对另需 Firefox，通过隔离 profile 验证 16 个配置、区域跳转、公式映射、矩阵端点数量、末层角色与矩形矩阵、g=1 边界、时间同步及宽窄布局；报告和截图默认写入仓库外临时目录，不进入日常 Git 产物。仓库 CI 在 push／pull request 时构建本组并执行浏览器核对。
+
+两个带 hub 的构造器默认省去末层 H；`terminal_hubs=True` 可复现此前包含它们的图，面板展示默认图。删除对 group／singleton 保留节点与输出的影响，以及 mixed 的差异，见[共同拓扑 §1](../../topologies/hb-multiscale.md#1-节点位置与区域)。
 
 `topology.py` 维护多跨度端点与潜在传播，`settle_topology.py` 维护原 HB 和位交换图，不保存全局可变尺寸；`build_atlas.py` 绘制图与生成数据；`page.html`、`style.css`、`explore.js`、`formulas.js` 维护展示。先核对定义、数值例子、图示与界面，再生成；详见[维护地图](../../../ARTIFACTS.md)。构建不覆盖本 README。

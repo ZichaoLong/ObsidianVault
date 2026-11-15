@@ -203,10 +203,12 @@ class BuildTests(unittest.TestCase):
 
 
 class DependencyTests(unittest.TestCase):
+    # Apply this broad mock last: Python 3.11+ resolves string patch targets
+    # through importlib.import_module, which must still work during setup.
+    @patch('build.importlib.import_module', side_effect=ImportError('not installed'))
     @patch('build.ctypes.util.find_library', return_value='available.so')
     @patch('build.Path.is_file', return_value=True)
-    @patch('build.importlib.import_module', side_effect=ImportError('not installed'))
-    def test_atlas_only_uses_native_renderer(self, import_module, is_file, find_library):
+    def test_atlas_only_uses_native_renderer(self, is_file, find_library, import_module):
         check_dependencies(groups=['hb-topology-atlas'])
         import_module.assert_not_called()
         self.assertEqual(find_library.call_count, 3)

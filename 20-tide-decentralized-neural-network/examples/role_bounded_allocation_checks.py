@@ -10,6 +10,16 @@ import math
 import random
 
 
+def in_description_space(description, role, k, beta=0, alpha=1, gamma_max=2):
+    """Membership in the fixed role's D_v, before any regional optimization."""
+    w, mu, score, lo, hi = description
+    if not all(math.isfinite(x) for x in description) or not 0 <= w <= mu <= 1 or mu > gamma_max*w:
+        return False
+    expected = {'ordinary': (0, mu), 'pass': (mu, mu),
+                'floor_cap': (beta*mu, min(mu, alpha*k))}[role]
+    return (lo, hi) == expected and 0 <= lo <= hi <= mu
+
+
 def bounds(mu, lower, upper, k, received=None):
     if len(mu) != len(lower) or len(mu) != len(upper):
         raise ValueError('shape mismatch')
@@ -116,6 +126,28 @@ def main():
         lower = [m / 4 for m in mu]
         upper = [min(m, .5 * 2) for m in mu]
         bounds(mu, lower, upper, 2)
+    # The old inequality-only D_v admitted this tuple at every hub, although
+    # four copies have no feasible regional allocation with k=2.
+    invalid = (1, 1, 0, 1, 1)
+    assert not in_description_space(invalid, 'floor_cap', 2, beta=.25, alpha=.5)
+    assert in_description_space((1, 1, 0, .25, 1), 'floor_cap', 2, beta=.25, alpha=.5)
+    # Check a product of the corrected role-specific spaces, including missing
+    # candidates, capped hubs, fixed passing and weak/zero receipt coordinates.
+    role_specs = [('pass', 1, 1), ('floor_cap', .25, .2), ('ordinary', 0, 1)]
+    for mu in product((0, .125, .5, 1), repeat=3):
+        for present in product((False, True), repeat=3):
+            ds = []
+            for m, active, (kind, beta, alpha) in zip(mu, present, role_specs):
+                if not active:
+                    continue
+                lo = m if kind == 'pass' else beta*m
+                hi = min(m, alpha*2) if kind == 'floor_cap' else m
+                d = (m/2, m, -1, lo, hi)
+                assert in_description_space(d, kind, 2, beta=beta, alpha=alpha)
+                ds.append(d)
+            L, U = bounds([d[1] for d in ds], [d[3] for d in ds], [d[4] for d in ds], 2)
+            c = allocate([d[2] for d in ds], [d[3] for d in ds], [d[4] for d in ds], L, U, 1)
+            assert L-1e-10 <= sum(c) <= U+1e-10
     try:
         bounds([1, 1], [1, 1], [1, 1], 1)
     except ValueError:
@@ -143,7 +175,8 @@ def main():
         actual = [(a - b) / (2 * eps) for a, b in zip(plus, minus)]
         close(actual, expected, tol=2e-8)
         errors.append(max(abs(a - b) for a, b in zip(actual, expected)))
-    print(f'PASS: {comparisons} independent face comparisons; zero/absence/pass/feasibility/reduction checks; '
+    print(f'PASS: {comparisons} independent face comparisons; role-domain counterexample and 512 product/subset checks; '
+          'zero/absence/pass/feasibility/reduction checks; '
           f'40 smooth derivative directions, max error {max(errors):.3g}')
 
 

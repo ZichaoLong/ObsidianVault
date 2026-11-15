@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'explorers' / 'hb-timed'))
 import topology as multiscale
 import settle_topology as settle
+from hb_lh_checks import check_output_paths
 
 
 def check_alignment(widths, graph, period):
@@ -63,20 +64,28 @@ def exchange_checks():
             plain = settle.construct(widths, n=n)
             for h in (0, 4):
                 graph = settle.construct(widths, n=n, h=h)
+                check_output_paths(widths, graph)
                 nodes, ids, outs, ins, kinds, _ = graph
+                full = settle.construct(widths, n=n, h=h, terminal_hubs=True)
+                kept = set(nodes)
+                assert {(nodes[u], nodes[v], k) for u, es in enumerate(outs) for v, k in es} == {
+                    (full[0][u], full[0][v], k) for u, es in enumerate(full[2]) for v, k in es
+                    if full[0][u] in kept and full[0][v] in kept}
+                assert len(full[0])-len(nodes) == h*widths[-1]
                 actual_d = {(nodes[u], nodes[v]) for u, es in enumerate(outs)
                             for v, kind in es if kind == 'DDX'}
                 expected_d = {(plain[0][u], plain[0][v]) for u, es in enumerate(plain[2])
                               for v, _ in es}
                 assert actual_d == expected_d  # Hub deletion is exact.
                 counts = {'DDX': 0, 'DH1': 0, 'HH1': 0, 'HD1': 0}
-                for w, v in zip(widths, widths[1:]):
+                for l, (w, v) in enumerate(zip(widths, widths[1:])):
                     # Each coarse group chooses itself and one different bit group.
                     pairs = max(w, v)*(2 if min(w, v) > 1 else 1)
                     counts['DDX'] += 2*n*pairs
                     if h:
-                        counts['DH1'] += n*pairs
-                        counts['HH1'] += h*pairs
+                        if l < len(widths)-2:
+                            counts['DH1'] += n*pairs
+                            counts['HH1'] += h*pairs
                         counts['HD1'] += h*max(w, v)
                 assert dict(kinds) == {k: v for k, v in counts.items() if v}
                 assert max(len(es) for es in plain[2]) == 8
@@ -108,11 +117,11 @@ def exchange_checks():
                         assert bin(mask).count('1') == 2**(r+min(r, q))
                         region_count = sum(bool((mask >> (a*n)) & ((1 << n)-1)) for a in range(2**m))
                         assert region_count == 2**r
-    assert rows == [(7,0,288,1152),(7,4,360,1952),(10,0,736,3200),
-                    (10,4,920,5408),(13,0,1760,7808),(13,4,2200,13184)]
+    assert rows == [(7,0,288,1152),(7,4,356,1912),(10,0,736,3200),
+                    (10,4,916,5368),(13,0,1760,7808),(13,4,2196,13144)]
     # g=1 and the smallest legal node set are well-defined, including deduplication.
     check_alignment(settle.exchange_widths(1), settle.construct(settle.exchange_widths(1), n=2), 5)
-    print('PASS: 18 exchange configurations; exact counts, hub deletion, degrees and every plateau target')
+    print('PASS: 18 exchange configurations; exact counts, hub deletion, output reachability, degrees and every plateau target')
 
 
 def main():

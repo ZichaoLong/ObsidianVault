@@ -203,6 +203,38 @@ try:
     """)
     assert not settle_checks['failures'] and not settle_checks['errors'],settle_checks
     assert (settle_checks['latticeKey'],settle_checks['exchangeKey'],settle_checks['multiscaleKey']) == ('lattice-7','exchange-10','9'),settle_checks
+    terminal_checks=script("""
+      const results=[],failures=[];
+      const choose=(s,v)=>{const el=document.querySelector(s);el.value=v;el.dispatchEvent(new Event('change',{bubbles:true}));};
+      const keys=['5','5-dd4','7','9','13','15','17','lattice-5','lattice-7','lattice-9',
+                  'exchange-7','exchange-7-h','exchange-10','exchange-10-h','exchange-13','exchange-13-h'];
+      for(const key of keys){
+        window.atlasDebug.mountCase(key);const c=window.atlasDebug.case,last=c.depth-1;
+        if(c.hubs)document.querySelector('#example-h').click();
+        choose('#node-layer',String(last));choose('#node-position','0');
+        if(document.querySelector('#node-role').options.length!==1||window.atlasDebug.state.role!=='d')failures.push(['terminal-role',key]);
+        if(c.nodes.some(n=>n[0]===last&&n[2]==='h'))failures.push(['terminal-hub',key]);
+        const box=document.querySelector(`#region-canvas [data-pos="${last},0"]`);
+        if(box.textContent.includes('H4'))failures.push(['drawn-hub',key]);
+        choose('#pair-source',`${last-1},0`);choose('#pair-target',`${last},0`);
+        const cells=document.querySelectorAll('#matrix-canvas .matrix-hit').length;
+        const circles=document.querySelectorAll('#matrix-canvas g circle').length;
+        const rows=c.nodes.filter(n=>n[0]===last-1&&n[1]===0).length;
+        const columns=c.nodes.filter(n=>n[0]===last&&n[1]===0).length;
+        const expected=c.edges.filter(([u,v])=>c.nodes[u][0]===last-1&&c.nodes[u][1]===0&&c.nodes[v][0]===last&&c.nodes[v][1]===0).length;
+        if(cells!==rows*columns||circles!==expected||columns!==16)failures.push(['terminal-matrix',key,cells,rows,columns,circles,expected]);
+        if(/NaN|Infinity|undefined/.test(document.querySelector('#matrix-canvas').textContent+document.querySelector('#region-formulas').textContent))failures.push(['terminal-text',key]);
+        const point=document.querySelector('#matrix-canvas g[data-jump]');
+        point.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+        if(window.atlasDebug.state.focus[0]!==last)failures.push(['terminal-navigation',key]);
+        results.push({key,rows,columns,edges:circles});
+      }
+      return {results,failures,errors:window.atlasErrors.slice()};
+    """)
+    assert not terminal_checks['failures'] and not terminal_checks['errors'],terminal_checks
+    script("document.querySelector('#matrix').scrollIntoView({behavior:'instant'});return true;")
+    shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
+    (OUT/'terminal-matrix-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
     timing_sync=script("""
       window.atlasDebug.mountCase('9');
       const select=document.querySelector('#pair-source');select.value='4,3';select.dispatchEvent(new Event('change'));
@@ -253,7 +285,7 @@ try:
     script('document.querySelector("#regions").scrollIntoView({behavior:"instant"});return true;')
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'formula-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
-    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'embedded_image':image_status}
+    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'terminal':terminal_checks,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'embedded_image':image_status}
     (OUT/'browser-checks.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(result,ensure_ascii=False,indent=2))
     command('Marionette:Quit',{'flags':['eForceQuit']})

@@ -23,7 +23,7 @@ def targets(widths, layer, position, exchange=True):
     return tuple(sorted((v // g) * y + j for y in groups for j in range(v // g)))
 
 
-def construct(widths, n=16, h=0, exchange=True):
+def construct(widths, n=16, h=0, exchange=True, terminal_hubs=False):
     if (len(widths) < 2 or any(w < 1 or w & (w - 1) for w in widths)
             or any(max(a, b) > 2 * min(a, b) for a, b in zip(widths, widths[1:]))):
         raise ValueError('power-of-two widths with adjacent ratio <= 2 required')
@@ -32,12 +32,15 @@ def construct(widths, n=16, h=0, exchange=True):
     if not exchange and h:
         raise ValueError('original lattice has no hub')
     nodes = [(l, p, r, i) for l, w in enumerate(widths) for p in range(w)
-             for r, size in [('d', n), ('h', h)] for i in range(size)]
+             for r, size in [('d', n), ('h', h if terminal_hubs or l < len(widths)-1 else 0)]
+             for i in range(size)]
     ids = {x: u for u, x in enumerate(nodes)}
     outs, ins = [[] for _ in nodes], [[] for _ in nodes]
     kinds, connections = Counter(), defaultdict(set)
 
     def add(src, dst, kind):
+        if src not in ids or dst not in ids:
+            return  # Delete terminal hubs and their incident edges together.
         u, v = ids[src], ids[dst]
         outs[u].append((v, kind)); ins[v].append((u, kind))
         kinds[kind] += 1

@@ -43,7 +43,8 @@ def region_targets(widths, layer, span, position, modes):
                          for q in destinations(widths, layer, span, position, mode)}))
 
 
-def construct(widths, n=16, h=4, probes=(1, 1, 1), placement='all', add_dd4=False):
+def construct(widths, n=16, h=4, probes=(1, 1, 1), placement='all', add_dd4=False,
+              terminal_hubs=False):
     if not widths or any(w < 4 or w & (w - 1) for w in widths):
         raise ValueError('widths must be powers of two >= 4')
     if n < 1 or h < 1 or n % h or len(probes) != 3:
@@ -58,6 +59,7 @@ def construct(widths, n=16, h=4, probes=(1, 1, 1), placement='all', add_dd4=Fals
     for layer, width in enumerate(widths):
         for p in range(width):
             present = placement == 'all' or (placement == 'checkerboard' and (layer + p) % 2 == 0)
+            present = present and (terminal_hubs or layer < len(widths) - 1)
             for role, size in [('d', n), ('h', h if present else 0)]:
                 for i in range(size):
                     ids[layer, p, role, i] = len(nodes)

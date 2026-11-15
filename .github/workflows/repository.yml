@@ -37,9 +37,49 @@ jobs:
       - name: Test builds and native diagram export
         run: python3 -m unittest discover -s tools -p 'test_*.py'
 
+  hb-atlas:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest
+      - name: Install native atlas rendering dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcairo2 librsvg2-2 fonts-noto-cjk
+          firefox --version
+      - name: Build the HB topology atlas
+        run: python3 tools/build.py --group hb-topology-atlas
+      - name: Check all HB atlas configurations in Firefox
+        run: python3 20-tide-decentralized-neural-network/explorers/hb-timed/check_browser.py --output-dir "$RUNNER_TEMP/hb-atlas-browser"
+      - name: Require current atlas outputs and a clean checkout
+        run: |
+          python3 tools/check_artifacts.py --require-built --group hb-topology-atlas
+          python3 tools/check_links.py
+          git diff --exit-code
+          python3 -c "import subprocess; assert not subprocess.check_output(['git', 'status', '--porcelain']), 'Atlas checks left untracked files'"
+      - name: Preserve browser diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hb-atlas-browser-diagnostics
+          path: |
+            ${{ runner.temp }}/hb-atlas-browser/*.log
+            ${{ runner.temp }}/hb-atlas-browser/*.json
+            ${{ runner.temp }}/hb-atlas-browser/*.png
+          if-no-files-found: ignore
+
   full-build:
     if: github.event_name == 'workflow_dispatch'
-    needs: checks
+    needs: [checks, hb-atlas]
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

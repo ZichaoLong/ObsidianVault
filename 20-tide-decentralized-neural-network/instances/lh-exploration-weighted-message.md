@@ -6,7 +6,7 @@ tags: [tide, lh, weighted-message]
 
 # LH 探索图的局部绑定与有限继续
 
-取 [LH-DAG 或 LH-PDG](../topologies/lh-exploration.md)，主尺寸 $d=3,n=32$、$4\times8$ 网格、542 节点。采用 [HB 的三组主绑定](hb-multiscale-weighted-message.md#2-两类记忆与三个主候选) K／S／X；优先 X，即卫星有限窗口 KV、hub 固定状态 SSD。两图使用同一组局部参数，只在 PDG 中启用反馈边。
+取 [LH-DAG 或 LH-PDG](../topologies/lh-exploration.md)，层次深度 $d_{\mathrm{tree}}=3,n=32$、$4\times8$ 网格、542 节点。内容宽度取 $d_{\mathrm{model}}=128$，对应被引用局部教材中的 $d$。采用 [HB 的三组主绑定](hb-multiscale-weighted-message.md#2-两类记忆与三个主候选) K／S／X；优先 X，即卫星有限窗口 KV、hub 固定状态 SSD。两图使用同一组局部参数，只在 PDG 中启用反馈边。
 
 ## 1. 完整替换项
 
@@ -19,8 +19,8 @@ tags: [tide, lh, weighted-message]
 | 上层 hub | $k=K=1$，固定通过 $c_h=\mu_h$ |
 | 底层混合区 | $k=k_D+1$，$k_D=\max(1,\lceil n/32\rceil)$，$K=n+1$；hub 为 $\beta=1/4,\alpha=1/k$，卫星为普通边界 |
 | 拆区对照 | 每组卫星一区，$k_D,K=n$；底层 hub 单一区，$k=K=1$、固定通过；网格区内消息保留 |
-| 参数 | 采用[整体参数配置](../local-semantics/weighted-message/parameter-profiles.md)的 shared 或 independent；默认 shared，以侧 I/O、层次、角色分组，卫星属于层次 $d$；全部状态私有 |
-| 输入 | 根入口 $(1,Ex_t)$，$E$ 为有限 $d\times d_{\mathrm{in}}$ 矩阵；日程 $4t+1$ |
+| 参数 | 采用[整体参数配置](../local-semantics/weighted-message/parameter-profiles.md)的 shared 或 independent；默认 shared，以侧 I/O、层次、角色分组，卫星属于层次 $d_{\mathrm{tree}}$；全部状态私有 |
+| 输入 | 根入口 $(1,Ex_t)$，$E$ 为有限 $d_{\mathrm{model}}\times d_{\mathrm{in}}$ 矩阵，载荷属于 $\mathbb R^{1+d_{\mathrm{model}}}$；日程 $4t+1$ |
 | 输出 | O 侧根的逐逻辑时间端口记录，无额外核心读出状态 |
 
 固定阈值为零、增益为 2、正温度为 1；所有区域历史单点。区域预算和角色界满足全输入可行条件。底层 hub 只有成为正接收候选时有保障；若只有卫星收到消息，该次选择没有 hub 描述，卫星在实际候选中分配。
@@ -29,7 +29,7 @@ tags: [tide, lh, weighted-message]
 
 ## 2. 数学见证与范围
 
-可以从图中抽取根桥、经过一级 hub 的桥、经过底层卫星和网格的一条路径，分别核对时延 $1,3,2d+3,2d+4$。设一次输入在时刻 1，输出根可以在 2 先收到直达，再在 4 收到一级往返贡献。它们是两次接收更新；某个时刻两条贡献重合时，则先聚合再写一次。不会因来自同一输入位置就自动合并所有时刻。
+可以从图中抽取根桥、经过一级 hub 的桥、经过底层卫星和网格的一条路径，分别核对时延 $1,3,2d_{\mathrm{tree}}+3,2d_{\mathrm{tree}}+4$。设一次输入在时刻 1，输出根可以在 2 先收到直达，再在 4 收到一级往返贡献。它们是两次接收更新；某个时刻两条贡献重合时，则先聚合再写一次。不会因来自同一输入位置就自动合并所有时刻。
 
 PDG 的根反馈给出 $H^I_{0,0}(1)\to H^O_{0,0}(2)\to H^I_{0,0}(3)$。在切面 3 处比较时，2 时刻发出的回传仍是待处理消息；继续到 3 才参与聚合。不能只保存节点记忆而删除这条消息。[参考核对](../examples/hb_lh_checks.py)在有限区间使用显式标量接收、状态累加与广播函数验证区间分割；它是继续语义的计算见证，不冒充上述 KV／SSD 整网实现。
 

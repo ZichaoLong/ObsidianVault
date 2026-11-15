@@ -119,7 +119,7 @@ python3 tools/check_links.py --require-built
 
 ## GitHub Actions
 
-[Repository checks](.github/workflows/repository.yml)在 push／pull request 时执行登记与目录交叉核对、全仓链接、Tide 专项和单元测试，轻量检查只需 Python 标准库与 Git。
+[Repository checks](.github/workflows/repository.yml)在 push／pull request 时执行登记与目录交叉核对、全仓链接、Tide 专项和单元测试，轻量检查只需 Python 标准库与 Git。随后独立的 `hb-atlas` 作业安装 librsvg／Cairo／CJK 字体和 Firefox，构建 HB 面板并核对全部 16 个空间配置、公式、时间绑定、末层矩阵和浏览器布局，要求本组产物为 `CURRENT` 且维护源与工作区保持干净。失败时保留仓库外生成的浏览器诊断为 CI 附件。
 
 在 **Actions → Repository checks → Run workflow** 手动触发完整构建，验证全部产物、指纹状态、浏览器交互与布局，以及构建不改动维护源、不留下未跟踪文件。CI 不回写生成物；所有检出都使用完整 Git 历史。
 

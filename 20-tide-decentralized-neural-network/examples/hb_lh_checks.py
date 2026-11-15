@@ -82,10 +82,31 @@ def scalar_interval(state, pending, out, source, sink, start, stop):
     return state, pending, records
 
 
+def check_output_paths(widths, graph):
+    nodes, _, outs, ins, _, _ = graph
+    reachable = {u for u, x in enumerate(nodes) if x[0] == len(widths)-1 and x[2] == 'd'}
+    pending = list(reachable)
+    while pending:
+        for u, _ in ins[pending.pop()]:
+            if u not in reachable:
+                reachable.add(u)
+                pending.append(u)
+    assert len(reachable) == len(nodes), [x for u, x in enumerate(nodes) if u not in reachable]
+    assert all(x[2] == 'd' for x in nodes if x[0] == len(widths)-1)
+
+
 def main():
     summaries = []
     for key, widths, extra in hb.PROFILES:
-        nodes, ids, outs, ins, kinds, _ = hb.construct(widths, add_dd4=extra)
+        graph = hb.construct(widths, add_dd4=extra)
+        check_output_paths(widths, graph)
+        nodes, ids, outs, ins, kinds, _ = graph
+        full = hb.construct(widths, add_dd4=extra, terminal_hubs=True)
+        kept = set(nodes)
+        assert {(nodes[u], nodes[v], k) for u, es in enumerate(outs) for v, k in es} == {
+            (full[0][u], full[0][v], k) for u, es in enumerate(full[2]) for v, k in es
+            if full[0][u] in kept and full[0][v] in kept}
+        assert len(full[0])-len(nodes) == 4*widths[-1]
         assert all(nodes[u][0] < nodes[v][0] for u, es in enumerate(outs) for v, _ in es)
         assert all(len(es) == len({v for v, _ in es}) for es in outs)
         assert sum(map(len, outs)) == sum(kinds.values()) == sum(map(len, ins))
@@ -98,10 +119,10 @@ def main():
                 assert hb.support(delays[u]) == expected
         summaries.append((key, len(nodes), sum(kinds.values())))
     widths = hb.PROFILES[-1][1]
-    expected_sizes = [(16, (1, 1, 1), 3040, 24096, (32, 24)),
-                      (32, (1, 1, 1), 5472, 42144, (48, 24)),
-                      (64, (2, 2, 1), 10336, 79552, (80, 28)),
-                      (128, (4, 4, 2), 20064, 155072, (144, 40))]
+    expected_sizes = [(16, (1, 1, 1), 3024, 23840, (32, 24)),
+                      (32, (1, 1, 1), 5456, 41760, (48, 24)),
+                      (64, (2, 2, 1), 10320, 78912, (80, 28)),
+                      (128, (4, 4, 2), 20048, 153920, (144, 40))]
     for n, probes, count, edges, degrees in expected_sizes:
         nodes, _, outs, ins, kinds, _ = hb.construct(widths, n=n, probes=probes)
         assert (len(nodes), sum(kinds.values())) == (count, edges)
@@ -114,10 +135,12 @@ def main():
     ordinary_edges = {(all_nodes[u], all_nodes[v], k) for u, es in enumerate(all_out)
                       for v, k in es if k.startswith('DD')}
     for placement in ('none', 'checkerboard'):
-        nodes, _, outs, _, _, _ = hb.construct(widths, placement=placement)
+        graph = hb.construct(widths, placement=placement)
+        nodes, _, outs, _, _, _ = graph
         edges = {(nodes[u], nodes[v], k) for u, es in enumerate(outs) for v, k in es}
         assert {e for e in edges if e[2].startswith('DD')} == ordinary_edges
-        assert len(nodes) == sum(widths) * (16 if placement == 'none' else 18)
+        assert len(nodes) == 16*sum(widths)+(2*sum(widths[:-1]) if placement == 'checkerboard' else 0)
+        check_output_paths(widths, graph)
         dd, _ = hb.reachability(nodes, outs, widths, only_detail=True)
         assert all(hb.support(dd[u]) == [4, 5, 6, 7, 8]
                    for u, x in enumerate(nodes) if x[0] == 8 and x[2] == 'd')
@@ -164,7 +187,7 @@ def main():
             lh_summary.append({'n': rows * cols, 'feedback': feedback,
                                'nodes': len(nodes), 'edges': len(edges)})
     print(json.dumps({'HB': summaries, 'LH': lh_summary}, ensure_ascii=False))
-    print('PASS: 7 depth profiles; 4 degree/size cases; hub deletion; aligned ranks; '
+    print('PASS: 7 depth profiles; 4 degree/size cases; terminal/placement deletion and output reachability; aligned ranks; '
           'LH DAG/cycle/phase witnesses; 3 exact scalar cut continuations.')
 
 

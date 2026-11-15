@@ -22,7 +22,7 @@ function settleTargets(l,p,exchange=true){
 }
 function settleRegionFormulas(){
  const [l,p]=state.focus,ex=current.family==='exchange';
- let s=`<h3>${ex?'分阶段位交换':'原 HB 递归邻域'}</h3><p class="formula-state">${current.depth} 层 · 位置 (${l},${p}) · ${current.hubs?'D / H 分区':'只有 D 区'}</p>`;
+ let s=`<h3>${ex?'分阶段位交换':'原 HB 递归邻域'}</h3><p class="formula-state">${current.depth} 层 · 位置 (${l},${p}) · ${hubsAt(l)?'D / H 分区':'只有 D 区'}</p>`;
  s+=mathBlock(sub(mi('r'),mi('v'))+mo('=')+mi('ℓ')+mo('+')+mn(1)+mo(',')+mi('δ')+mo('=')+mn(1));
  s+=mathBlock(mi('ι')+par(mi('t'))+mo('=')+mn(period())+mi('t')+mo('+')+mn(1)+mo(',')+mi('D')+mo('>')+mi('M'));
  if(ex){
@@ -54,7 +54,7 @@ function settleRegionFormulas(){
   s+=mathBlock(cal('Q')+par(mn(p))+mo('=')+setMath(settleTargets(l,p,ex)));
   if(ex)s+=mathBlock(sub(mi('c'),mn(l))+mo('=')+mn(l%Math.log2(current.ordinary)));
  }else s+='<p>末层没有消息出边。</p>';
- if(ex)s+='<p>Hub 增强沿 Q 做 DH 收集与 HH 交换，沿基础配对做每 hub 一个 HD 探针；不新增跳层边。源与目标的完整节点端点见矩阵。</p>';
+ if(ex)s+='<p>Hub 增强在非末层沿 Q 做 DH 收集与 HH 交换，沿基础配对做每 hub 一个 HD 探针；末层只有 D，因此进入末层只保留 DDX 与 HD1。源与目标的完整节点端点见矩阵。</p>';
  s+=`<p><a href="../../../topologies/${ex?'hb-settle-exchange':'hb-lattice'}.md">完整拓扑与证明</a> · <a href="../../../instances/hb-settle-weighted-message.md">共同局部绑定</a></p>`;
  $('#region-formulas').innerHTML=s;
 }
@@ -63,11 +63,11 @@ function regionFormulas(){
  const [l,p]=state.focus;
  let s=`<h3>区域与时间</h3><p class="formula-state">当前：${current.depth} 层 · 位置 (${l},${p})</p>`;
  s+=mathBlock(sub(mi('D'),mi('ℓ')+mo(',')+mi('p'))+mo('=')+mo('{')+sub(mi('d'),mi('ℓ')+mo(',')+mi('p')+mo(',')+mi('i'))+mo(':')+mn(0)+mo('≤')+mi('i')+mo('<')+mi('n')+mo('}'));
- s+=mathBlock(sub(mi('H'),mi('ℓ')+mo(',')+mi('p'))+mo('=')+mo('{')+sub(mi('h'),mi('ℓ')+mo(',')+mi('p')+mo(',')+mi('a'))+mo(':')+mn(0)+mo('≤')+mi('a')+mo('<')+mi('h')+mo('}'));
+ s+=mathBlock(sub(mi('H'),mi('ℓ')+mo(',')+mi('p'))+mo('=')+(hubsAt(l)?mo('{')+sub(mi('h'),mi('ℓ')+mo(',')+mi('p')+mo(',')+mi('a'))+mo(':')+mn(0)+mo('≤')+mi('a')+mo('<')+mi('h')+mo('}'):mo('∅')));
  s+=mathBlock(mi('n')+mo('=')+mn(current.ordinary)+mo(',')+mi('h')+mo('=')+mn(current.hubs)+mo(',')+mi('δ')+par(mi('e'))+mo('=')+(isUnit()?mn(1):mi('s')));
  const clockSymbol=state.timing==='settle'?'D':'T';
  s+=mathBlock(mi('ι')+par(mi('t'))+mo('=')+mi(clockSymbol)+mi('t')+mo('+')+mn(1)+mo(',')+mi(clockSymbol)+mo('=')+mn(period()));
- s+='<p>区间内的每条边严格增加层号。同区只有共同分配，没有隐含消息边。</p><h3>不同宽度间的配对</h3>';
+ s+='<p>每条边严格增加层号。同区只有共同分配，没有隐含消息边。主图末层只有 D；H 集合为空，不设 H 区或其关联边。</p><h3>不同宽度间的配对</h3>';
  s+=mathBlock(mi('g')+mo('=')+textMath('min')+par(sub(mi('W'),mi('ℓ'))+mo(',')+sub(mi('W'),mi('ℓ')+mo('+')+mi('s'))));
  s+=mathBlock(mi('A')+mo('=')+`<mfrac>${sub(mi('W'),mi('ℓ'))}${mi('g')}</mfrac>`+mo(',')+mi('B')+mo('=')+`<mfrac>${sub(mi('W'),mi('ℓ')+mo('+')+mi('s'))}${mi('g')}</mfrac>`);
  s+=mathBlock(`<msubsup>${cal('B')}<mrow>${mi('ℓ')+mo(',')+mi('s')}</mrow>${mi('σ')}</msubsup>`+par(mi('p'))+mo('=')+mo('{')+mi('B')+mi('σ')+par(mo('⌊')+`<mfrac>${mi('p')}${mi('A')}</mfrac>`+mo('⌋'))+mo('+')+mi('j')+mo(':')+mn(0)+mo('≤')+mi('j')+mo('<')+mi('B')+mo('}'));

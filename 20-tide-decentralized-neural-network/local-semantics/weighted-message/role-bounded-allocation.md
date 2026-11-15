@@ -26,7 +26,7 @@ d_v=(w_v,\mu_v,s_v^{\mathrm{loc}},\ell_v,u_v),\qquad
 \tag{1}
 $$
 
-这里 $u_v$ 是**发送上界**；与共同架构中同字母的聚合内容向量区分，后文不在同一公式中混用。描述空间是满足式 (1) 及 $w_v\le\mu_v\le\gamma_{\max}w_v$ 的元组空间。评分使用本次 Read 指定的状态。
+这里 $u_v$ 是**发送上界**；与共同架构中同字母的聚合内容向量区分，后文不在同一公式中混用。评分使用本次 Read 指定的状态。上下界由节点的固定角色和本次 $\mu_v$ 确定。
 
 普通节点取 $(\ell_v,u_v)=(0,\mu_v)$。Hub 有两种明确待遇：
 
@@ -41,6 +41,18 @@ $$
 
 $\alpha_h$ 表示预算份额，$\gamma_h$ 表示接收增益，二者不同。上述上界始终不超过 $\mu_h$。常亮在这里指**正接收时发送强度为正**，不指自主心跳。
 
+将所选角色的两个函数记为 $\ell_v(\mu),u_v(\mu)$。固定满足 §2.1 可行条件的角色参数，描述空间为
+
+$$
+\begin{aligned}
+D_v=\{(w,\mu,s,\ell,u):{}&0\le w\le\mu\le1,\quad
+ \mu\le\gamma_{\max}w,\quad s\in\mathbb R,\\
+ &\ell=\ell_v(\mu),\quad u=u_v(\mu)\}.
+\end{aligned}
+$$
+
+Describe 返回这个空间中的元组。传入 SelStep 的每个描述也须属于对应的 $D_v$；上下界不是可独立任取的字段。这样 §2.1 的证明覆盖整个乘积定义域 $\prod_{v\in C}D_v$，而不只覆盖某次运行实际产生的描述。
+
 只对实际 $C$ 求和。沿用节点增益候选的原总量下界 $b=\min(1,\sum_v\mu_v)$，定义
 
 $$
@@ -49,7 +61,7 @@ L=\max\left(\sum_v\ell_v,\min(b,U)\right).
 \tag{3}
 $$
 
-要求 $\sum_v\ell_v\le U$。给定固定阈值 $\eta\in\mathbb R$，令 $t_v=s_v^{\mathrm{loc}}-\eta$，求
+上述定义域与 §2.1 的参数条件保证 $\sum_v\ell_v\le U$。给定固定阈值 $\eta\in\mathbb R$，令 $t_v=s_v^{\mathrm{loc}}-\eta$，求
 
 $$
 c=\arg\max\left\{\sum_v t_vc_v-\frac\tau2\sum_vc_v^2:
@@ -83,7 +95,7 @@ $$
 
 ### 2.2 共同评分与指定总量
 
-式 (1) 可扩展为 $(w,\mu,x^{\mathrm{sel}},K^{\mathrm{sel}},s^{\mathrm{loc}},\ell,u)$。采用[区域 Attention 评分](region-allocation-learning-note.md#36-区域-attention-评分)，固定 query_weight=received，用 $w$ 汇集 query，并将所得 $s_v$ 代入式 (4)。普通与 hub 的 Mem 只需具有相同描述宽度，可以来自不同记忆。完整内容仍只通过消息传播。
+描述可扩展为 $(w,\mu,x^{\mathrm{sel}},K^{\mathrm{sel}},s^{\mathrm{loc}},\ell,u)$，其中 $(w,\mu,s^{\mathrm{loc}},\ell,u)\in D_v$，新增两个向量属于 $\mathbb R^{d_{\mathrm{sel}}}$。采用[区域 Attention 评分](region-allocation-learning-note.md#36-区域-attention-评分)，固定 query_weight=received，用 $w$ 汇集 query，并将所得 $s_v$ 代入式 (4)。普通与 hub 的 Mem 只需具有相同描述宽度，可以来自不同记忆。完整内容仍只通过消息传播。
 
 还可固定 $\rho\in[0,1]$，取
 

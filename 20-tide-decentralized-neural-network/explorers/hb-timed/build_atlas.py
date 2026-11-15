@@ -72,13 +72,15 @@ def make_case(key, widths, add_dd4=False, family='multiscale', hubs=H):
             bundles[a[0],a[1],a[2],b[0],b[1],b[2],kind] += 1
     node_delays = [g.support(d) for d in potential]
     node_ddelays = [g.support(d) for d in detail]
+    hub_counts = [sum(x[0] == l and x[1] == 0 and x[2] == 'h' for x in nodes)
+                  for l in range(len(widths))]
     middle_workers = [u for u,x in enumerate(nodes) if x[0]==mid and x[1]==min(3, widths[mid]-1) and x[2]=='d']
     selected_d = max(middle_workers, key=lambda u:(
         len({k for v,k in ins[u]}), sum(k.startswith('HD') for v,k in ins[u]), len(ins[u])))
     stats = {
         'path_timing':'unit', 'phase_period':cycle,
-        'positions': sum(widths), 'regions': (1+bool(hubs))*sum(widths), 'nodes':len(nodes),
-        'ordinary_nodes':N*sum(widths),'hubs':hubs*sum(widths), 'edges':len(edges),
+        'positions': sum(widths), 'regions': len({x[:3] for x in nodes}), 'nodes':len(nodes),
+        'ordinary_nodes':N*sum(widths),'hubs':sum(x[2]=='h' for x in nodes), 'edges':len(edges),
         'degrees':{r:[max(len(ins[u]) for u,x in enumerate(nodes) if x[2]==r),
                       max(len(outs[u]) for u,x in enumerate(nodes) if x[2]==r)] for r in (('d','h') if hubs else ('d',))},
         'ordinary_delays':sorted(expected[-1]),
@@ -88,7 +90,8 @@ def make_case(key, widths, add_dd4=False, family='multiscale', hubs=H):
         'earliest':dict(sorted(Counter(node_delays[u][0] for u in terminal).items())),
         'edges_by_kind':dict(sorted(kinds.items())),
     }
-    return {'key':key,'depth':len(widths),'widths':widths,'ordinary':N,'hubs':hubs,'family':family,
+    return {'key':key,'depth':len(widths),'widths':widths,'ordinary':N,'hubs':hubs,
+            'hub_counts':hub_counts,'family':family,
             'label': key + ' · ' + ('多跨度' if family=='multiscale' else '原 HB' if family=='lattice' else '位交换'),
             'default_timing':'timed' if family=='multiscale' else 'settle',
             'settle_period':len(widths)+(2 if family=='lattice' else 1),
@@ -121,7 +124,7 @@ def region_svg(case, static=False):
     width,height = 170+(depth-1)*dx,max(widths)*dy+260
     out = start(width,height,'HB 区域连接')
     out += [text(24,35,'{} 层候选 · 区域连接{}'.format(depth,'（普通网络）' if static else ''),25,weight=700),
-            text(24,66, '每位置 D 普通区含 16 节点；'+('另有 4 节点 H 区。' if case['hubs'] else '无 hub。')+'同层无消息边。',16),
+            text(24,66, '每位置 D 普通区含 16 节点；'+('非末层另有 4 节点 H 区，末层只有 D。' if case['hubs'] else '无 hub。')+'同层无消息边。',16),
             text(24,92,'一条线汇总一个边族的实际连线；δ=1。线的交叉不是连接点。',15,MUTED, extra='id="region-timing-label"')]
     def xy(l,p,role=None):
         y=180+(max(widths)-widths[l])*dy/2+p*dy
@@ -146,7 +149,7 @@ def region_svg(case, static=False):
             out.append('<g class="position" data-pos="{},{}" tabindex="0" role="button" aria-label="选择位置 {},{}">'.format(l,p,l,p))
             out.append('<rect class="position-outline" x="{}" y="{}" width="82" height="61" rx="10" fill="#f7f9fc" fill-opacity=".95" stroke="#dce4ed" stroke-dasharray="3 3"/>'.format(x-41,y-29))
             out.append(text(x,y-16,'{},{}'.format(l,p),10,MUTED,anchor='middle'))
-            for role,fill,stroke,label in [('d','#e8f0ff','#7599d2','D16')]+([('h','#fff1d8','#c5a05c','H4')] if case['hubs'] else []):
+            for role,fill,stroke,label in [('d','#e8f0ff','#7599d2','D16')]+([('h','#fff1d8','#c5a05c','H4')] if case['hub_counts'][l] else []):
                 _,yy=xy(l,p,role)
                 out.append('<rect x="{}" y="{}" width="68" height="18" rx="5" fill="{}" stroke="{}"/>'.format(x-34,yy-9,fill,stroke))
                 out.append(text(x,yy+4,label,11,anchor='middle'))
@@ -201,22 +204,25 @@ def ego_svg(case,u):
 
 
 def matrix_svg(case,src=(3,2),dst=(4,2)):
-    cell=29;x0,y0=180,168;size=N+H
+    cell=29;x0,y0=180,168
+    source=[u for u,x in enumerate(case['nodes']) if tuple(x[:2])==src]
+    target=[u for u,x in enumerate(case['nodes']) if tuple(x[:2])==dst]
+    rows,columns=len(source),len(target)
     out=start(1240,850,'区域对的完整节点连接矩阵')
-    out += [text(25,38,'位置 {} → {}：全部 {}×{} 个端点组合'.format(src,dst,size,size),25,weight=700),
+    out += [text(25,38,'位置 {} → {}：全部 {}×{} 个端点组合'.format(src,dst,rows,columns),25,weight=700),
             text(25,70,'行是上游节点，列是下游节点；一个彩点是一条真实消息边。空格没有边。',17,MUTED)]
-    lookup={tuple(x):u for u,x in enumerate(case['nodes'])}
-    source=[lookup[src+('d',i)] for i in range(N)]+[lookup[src+('h',i)] for i in range(H)]
-    target=[lookup[dst+('d',i)] for i in range(N)]+[lookup[dst+('h',i)] for i in range(H)]
     si={u:i for i,u in enumerate(source)};ti={u:i for i,u in enumerate(target)}
     counts=Counter()
     out.append(text(x0+N*cell/2,y0-49,'下游普通区 D',17,'#2563eb',600,anchor='middle'))
-    out.append(text(x0+(N+H/2)*cell,y0-49,'下游 hub 区 H',16,'#b57a13',600,anchor='middle'))
-    for i in range(size):
+    if columns>N:
+        out.append(text(x0+(N+(columns-N)/2)*cell,y0-49,'下游 hub 区 H',16,'#b57a13',600,anchor='middle'))
+    for j in range(columns):
+        label='D'+str(j) if j<N else 'H'+str(j-N)
+        out.append(text(x0+j*cell+cell/2,y0-14,label,12,anchor='middle'))
+    for i in range(rows):
         label='D'+str(i) if i<N else 'H'+str(i-N)
         out.append(text(x0-18,y0+i*cell+20,label,13,anchor='end'))
-        out.append(text(x0+i*cell+cell/2,y0-14,label,12,anchor='middle'))
-        for j in range(size):
+        for j in range(columns):
             fill='#f3f7fe' if i<N and j<N else '#fdf6e9' if i>=N and j>=N else '#fafbfd'
             out.append('<rect x="{}" y="{}" width="{}" height="{}" fill="{}" stroke="#dce4ed" stroke-width=".7"/>'.format(x0+j*cell,y0+i*cell,cell,cell,fill))
     for a,b,k in case['edges']:
@@ -236,7 +242,7 @@ def matrix_svg(case,src=(3,2),dst=(4,2)):
 def ladder_svg(cases):
     out=start(1640,805,'层数阶梯与相位覆盖')
     out += [text(26,38,'层数阶梯：相位覆盖与来源混合分别看',28,weight=700),
-            text(26,72,'每位置 16 个普通节点 + 4 个 hub；T=4，所有边 δ=1。彩格表示每个末端普通节点都具备的普通路径总时延。',17),
+            text(26,72,'每位置 16 个普通节点，非末层另加 4 个 hub；T=4，所有边 δ=1。彩格为每个末端的普通路径总时延。',17),
             text(26,112,'候选 / 总节点',17,weight=600),text(215,112,'区域宽度轮廓',17,weight=600),
             text(460,112,'普通路径总时延 d',17,weight=600),text(1155,112,'每相位可达入口数的最小值',17,weight=600),
             text(1155,138,'φ=d mod T；入口共 4 组',14,MUTED)]
@@ -302,7 +308,7 @@ def main():
     for name,svg in figures.items():
         (OUT/(name+'.svg')).write_text(svg)
         render_png(OUT/(name+'.svg'),OUT/(name+'.png'))
-    report={c['key']:{'depth':c['depth'],'widths':c['widths'],'family':c['family'],'ordinary_per_position':N,'hubs_per_position':c['hubs'],'settle_period':c['settle_period'],'add_dd4':c['add_dd4'],**c['stats']} for c in cases}
+    report={c['key']:{'depth':c['depth'],'widths':c['widths'],'family':c['family'],'ordinary_per_position':N,'hubs_per_position_by_layer':c['hub_counts'],'settle_period':c['settle_period'],'add_dd4':c['add_dd4'],**c['stats']} for c in cases}
     (OUT/'checks.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     for c in cases:c['svg']=region_svg(c)
     data={'kinds':KINDS,'colors':COLORS,'cases':{c['key']:c for c in cases}}
