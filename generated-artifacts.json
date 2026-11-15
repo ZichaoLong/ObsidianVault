@@ -261,7 +261,9 @@
         "20-tide-decentralized-neural-network/explorers/hb-timed/generated/node-pair-matrix.svg",
         "20-tide-decentralized-neural-network/explorers/hb-timed/generated/node-pair-matrix.png",
         "20-tide-decentralized-neural-network/explorers/hb-timed/generated/depth-ladder.svg",
-        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/depth-ladder.png"
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/depth-ladder.png",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/capacity.csv",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/generated/capacity-summary.md"
       ],
       "directories": [
         "20-tide-decentralized-neural-network/explorers/hb-timed/generated"
@@ -272,7 +274,9 @@
         "20-tide-decentralized-neural-network/explorers/hb-timed/style.css",
         "20-tide-decentralized-neural-network/explorers/hb-timed/explore.js",
         "20-tide-decentralized-neural-network/explorers/hb-timed/formulas.js",
-        "20-tide-decentralized-neural-network/explorers/hb-timed/settle_topology.py"
+        "20-tide-decentralized-neural-network/explorers/hb-timed/settle_topology.py",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/capacity.py",
+        "20-tide-decentralized-neural-network/explorers/hb-timed/capacity.js"
       ],
       "review_sources": [
         "20-tide-decentralized-neural-network/topologies/hb-multiscale.md",
@@ -284,7 +288,11 @@
         "20-tide-decentralized-neural-network/topologies/hb-lattice.md",
         "20-tide-decentralized-neural-network/topologies/hb-settle-exchange.md",
         "20-tide-decentralized-neural-network/instances/hb-settle-weighted-message.md",
-        "20-tide-decentralized-neural-network/local-semantics/weighted-message/parameter-profiles.md"
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/parameter-profiles.md",
+        "20-tide-decentralized-neural-network/instances/backbone-comparison.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/architecture-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/kv-memory-learning-note.md",
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md"
       ]
     }
   ],

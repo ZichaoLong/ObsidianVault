@@ -20,7 +20,7 @@ const period=()=>['settle','timed-common'].includes(state.timing)?current.settle
 const edgeDelay=(l,m)=>isUnit()?1:m-l;
 const displayDelays=(u,detail=false)=>isUnit()?(detail?current.ordinary_delays[u]:current.delays[u]):
  ((detail?current.ordinary_delays[u]:current.delays[u]).length?[current.nodes[u][0]]:[]);
-function profileLabel(c){return `${c.depth} 层${c.add_dd4?' + DD4':''} · ${c.hubs?'16+4，末层 16 / 独立 H 区':'16 / 无 hub'}`;}
+function profileLabel(c){return `${c.profile.includes('compact')?'窄图 · ':''}${c.depth} 层${c.profile.includes('two-inputs')?' · 双入口位置':''}${c.add_dd4?' + DD4':''}${c.family==='exchange'?` · m=${c.expansion}, R=${c.rounds}`:''} · ${c.ordinary}${c.hubs?'+4 / 独立 H 区':' / 无 hub'}`;}
 function mountCase(key){
  state.key=key;current=ATLAS.cases[key];state.timing=current.default_timing;
  $('#family-select').value=current.family;
@@ -119,7 +119,7 @@ function renderMatrix(){
  state.target=$('#pair-target').value;const src=state.source.split(',').map(Number),dst=state.target.split(',').map(Number);
  const sources=positionNodes(src),targets=positionNodes(dst),rows=sources.length,columns=targets.length;
  const ti=new Map(targets.map((u,i)=>[u,i])),matrix=new Map(),counts={};sources.forEach((u,i)=>{for(const [v,k]of outs[u])if(ti.has(v)){matrix.set(`${i},${ti.get(v)}`,[u,v,k]);counts[k]=(counts[k]||0)+1;}});
- const cell=29,x0=145,y0=145,w=1220,h=800;
+ const cell=29,x0=145,y0=145,legendX=Math.max(815,x0+columns*cell+55),w=legendX+405,h=Math.max(800,y0+rows*cell+65);
  let s=svgStart(w,h,'完整端点连接矩阵')+svgText(25,36,`位置 (${state.source}) → (${state.target}) · 全部端点`,24,'#23344b',700)+svgText(25,67,'行：源节点。列：目标节点。彩点：消息边。角色块按当前图显示；无 hub 时只有 D→D。',16,'#5c6d81');
  s+=svgText(x0+current.ordinary*cell/2,y0-48,'下游普通区 D',17,'#2563eb',600,'middle')+(hubsAt(dst[0])?svgText(x0+(current.ordinary+hubsAt(dst[0])/2)*cell,y0-48,'下游 hub 区 H',16,'#b57a13',600,'middle'):'');
  for(let j=0;j<columns;j++){
@@ -136,21 +136,22 @@ function renderMatrix(){
    s+=`<title>${E(nodeName(current.nodes[sources[i]]))} → ${E(nodeName(current.nodes[targets[j]]))}${hit?' · '+kinds[hit[2]]+' · δ='+edgeDelay(src[0],dst[0]):' · 无边'}</title></g>`;
   }
  }
- let y=185;Object.entries(counts).sort((a,b)=>+a[0]-b[0]).forEach(([k,n])=>{s+=`<circle cx="825" cy="${y-5}" r="7" fill="${colors[kinds[k]]}"/>`+svgText(845,y,`${kinds[k]}：${n} 条`,19,colors[kinds[k]],600);y+=38;});
- ['DD：普通细节传播','DH：普通结果进入 hub','HH：hub 交换背景','HD：hub 向普通节点投递钩子','','这里只显示这一对位置。','点击编号 / 彩点进入节点图。'].forEach((t,i)=>s+=svgText(815,y+32+i*31,t,16,'#5c6d81'));
+ let y=185;Object.entries(counts).sort((a,b)=>+a[0]-b[0]).forEach(([k,n])=>{s+=`<circle cx="${legendX+10}" cy="${y-5}" r="7" fill="${colors[kinds[k]]}"/>`+svgText(legendX+30,y,`${kinds[k]}：${n} 条`,19,colors[kinds[k]],600);y+=38;});
+ ['DD：普通细节传播','DH：普通结果进入 hub','HH：hub 交换背景','HD：hub 向普通节点投递钩子','','这里只显示这一对位置。','点击编号 / 彩点进入节点图。'].forEach((t,i)=>s+=svgText(legendX,y+32+i*31,t,16,'#5c6d81'));
  s+=svgText(25,h-20,'每位置一个 D 区，非末层可另有 H 区；矩阵按两端实际节点数绘制。',15,'#5c6d81')+'</svg>';
  $('#matrix-canvas').innerHTML=s;$('#matrix-summary').textContent=`${matrix.size} 条消息边 · 跨 ${dst[0]-src[0]} 层 · 时延均为 ${edgeDelay(src[0],dst[0])} · ${rows}×${columns} 端点`;
  if(window.refreshFormulas)window.refreshFormulas();
 }
 function renderDepthTable(){
- let s='<thead><tr><th>候选（点击切换）</th><th>位置 / 节点</th><th>普通路径时延</th><th>普通路径每相位入口数</th><th>全图每相位入口数</th></tr></thead><tbody>';
- order.forEach(key=>{const c=ATLAS.cases[key],st=c.stats;s+=`<tr data-case="${key}" class="${key===state.key?'current':''}"><td>${c.depth} 层${c.add_dd4?' + DD4':''}</td><td>${st.positions} / ${st.nodes.toLocaleString()}</td><td>${st.ordinary_delays.join(', ')}</td><td>${st.ordinary_phase_sources.map(p=>p[0]).join(' / ')}</td><td>${st.all_phase_sources.map(p=>p[0]).join(' / ')}</td></tr>`;});$('#depth-table').innerHTML=s+'</tbody>';
+ let s='<thead><tr><th>候选（点击切换）</th><th>位置 / 节点</th><th>普通路径时延</th><th>普通路径每相位入口位置数</th><th>全图每相位入口位置数</th><th>普通路径首层 D 来源数</th><th>全图首层 D 来源数</th></tr></thead><tbody>';
+ const keys=order.concat(Object.values(ATLAS.cases).filter(c=>c.profile.includes('compact')&&c.ordinary===current.ordinary&&c.hubs===current.hubs).map(c=>c.key));
+ keys.forEach(key=>{const c=ATLAS.cases[key],st=c.stats;s+=`<tr data-case="${key}" class="${key===state.key?'current':''}"><td>${profileLabel(c)}</td><td>${st.positions} / ${st.nodes.toLocaleString()}</td><td>${st.ordinary_delays.join(', ')}</td><td>${st.ordinary_phase_sources.map(p=>p[0]).join(' / ')}（共 ${c.widths[0]}）</td><td>${st.all_phase_sources.map(p=>p[0]).join(' / ')}</td><td>${st.ordinary_phase_node_sources.map(p=>p[0]).join(' / ')}（共 ${st.source_D_nodes}）</td><td>${st.all_phase_node_sources.map(p=>p[0]).join(' / ')}</td></tr>`;});$('#depth-table').innerHTML=s+'</tbody>';
 }
 function renderSettleTable(){
  let s='<thead><tr><th>Settle 空间图（点击切换）</th><th>层 / 位置 / 节点</th><th>边数</th><th>D / 对齐路径时延</th><th>宽段轮数 / 覆盖源区域与节点</th></tr></thead><tbody>';
  for(const c of Object.values(ATLAS.cases).filter(c=>c.family!=='multiscale'||c.key==='9')){
-  const m=(c.depth-1)/3,cover=c.family==='exchange'?`${m} 轮 / ${2**m} 区、${2**(m+Math.min(m,4))} 节点`:'—';
-  s+=`<tr data-case="${c.key}" class="${c.key===state.key?'current':''}"><td>${{multiscale:'多跨度对齐',lattice:'原 HB',exchange:'位交换'}[c.family]} · ${c.hubs?'4 hub':'无 hub'}</td><td>${c.depth} / ${c.stats.positions} / ${c.stats.nodes}</td><td>${c.stats.edges}</td><td>${c.settle_period} / ${c.depth-1}</td><td>${cover}</td></tr>`;
+  const m=c.expansion,R=c.rounds,cover=c.family==='exchange'?`${R} 轮 / ${2**Math.min(R,m)} 区、${2**(Math.min(R,m)+Math.min(R,Math.log2(c.ordinary)))} 节点`:'—';
+  s+=`<tr data-case="${c.key}" class="${c.key===state.key?'current':''}"><td>${{multiscale:'多跨度对齐',lattice:'原 HB',exchange:'位交换'}[c.family]} · ${profileLabel(c)}</td><td>${c.depth} / ${c.stats.positions} / ${c.stats.nodes}</td><td>${c.stats.edges}</td><td>${c.settle_period} / ${c.depth-1}</td><td>${cover}</td></tr>`;
  }
  $('#settle-table').innerHTML=s+'</tbody>';
 }
@@ -179,4 +180,4 @@ $('#pair-source').addEventListener('change',()=>updateTargets());$('#pair-target
 $('#depth-table').addEventListener('click',e=>{const row=e.target.closest('[data-case]');if(row){mountCase(row.dataset.case);$('#regions').scrollIntoView({behavior:'smooth'});}});
 $$('[data-export]').forEach(b=>b.addEventListener('click',()=>{const svg=$('#'+b.dataset.export+' svg'),blob=new Blob([new XMLSerializer().serializeToString(svg)],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`hb-${state.key}-${state.timing}-${b.dataset.export}.svg`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}));
 mountCase('9');
-window.atlasDebug={get case(){return current;},get state(){return state;},mountCase,chooseNode,setTiming,displayDelays};
+window.atlasDebug={get case(){return current;},get state(){return state;},get keys(){return Object.keys(ATLAS.cases);},mountCase,chooseNode,setTiming,displayDelays};

@@ -7,10 +7,12 @@ from collections import Counter, defaultdict
 from topology import permutation
 
 
-def exchange_widths(m):
-    if m < 1:
-        raise ValueError('positive expansion depth required')
-    return [2 ** min(l, m, 3 * m - l) for l in range(3 * m + 1)]
+def exchange_widths(m, rounds=None):
+    rounds = m if rounds is None else rounds
+    if m < 1 or rounds < 1:
+        raise ValueError('positive expansion depth and exchange rounds required')
+    depth = 2*m + rounds + 1
+    return [2 ** min(l, m, depth-1-l) for l in range(depth)]
 
 
 def targets(widths, layer, position, exchange=True):

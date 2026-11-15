@@ -94,7 +94,7 @@ try:
                 errors:window.atlasErrors.slice()};
         ''' % json.dumps(key)
         result=script(code)
-        assert result['matrices']==400 and result['phaseRows']==7 and not result['errors'],result
+        assert result['matrices']==400 and result['phaseRows']==12 and not result['errors'],result
         assert result['visibleKinds']==(['DD1','DD2','DD4'] if key=='5-dd4' else ['DD1','DD2']),result
         assert result['dd4Visible']==(key=='5-dd4'),result
         assert result['mathCount']>=20 and result['nodeFormula'].startswith('D('),result
@@ -232,6 +232,65 @@ try:
       return {results,failures,errors:window.atlasErrors.slice()};
     """)
     assert not terminal_checks['failures'] and not terminal_checks['errors'],terminal_checks
+    # Exercise every newly registered width / node-count / optional-hub case.
+    compact_checks=[]
+    all_keys=list(json.loads((ROOT/'generated'/'checks.json').read_text()))
+    assert len(all_keys)==58,all_keys
+    for key in [k for k in all_keys if k.startswith('compact-') or k.startswith('exchange-m')]:
+        result=script('''
+          window.atlasDebug.mountCase(%s);const c=window.atlasDebug.case,failures=[];
+          const choose=(s,v)=>{const el=document.querySelector(s);el.value=String(v);el.dispatchEvent(new Event('change',{bubbles:true}));};
+          const pair=window.atlasDebug.state.source+'>'+window.atlasDebug.state.target;
+          const count=c.edges.filter(([u,v])=>c.nodes[u].slice(0,2).join(',')+'>'+c.nodes[v].slice(0,2).join(',')===pair).length;
+          const cells=document.querySelectorAll('#matrix-canvas .matrix-hit').length;
+          if(cells!==(c.ordinary+c.hubs)**2||document.querySelectorAll('#matrix-canvas g circle').length!==count)failures.push('matrix');
+          for(const b of c.bundles){
+            const [l,p,r,m,q,t,k]=b,s=m-l;
+            if(c.family==='multiscale'){
+              const modes=(k==='DD1'||k==='DH1')?['base','near']:k.startsWith('DD')?['cross']:k.startsWith('HH')?['base','cross']:s===1?['base']:['cross'];
+              if(!modes.some(mode=>Array.from(window.atlasFormulaDebug.targetFormula(l,s,p,mode)).includes(q)))failures.push(['mapping',Array.from(b)]);
+            }else if(!Array.from(window.atlasFormulaDebug.settleTargets(l,p,k!=='HD1')).includes(q))failures.push(['mapping',Array.from(b)]);
+          }
+          choose('#node-layer',0);choose('#node-position',0);
+          if(/NaN|Infinity|undefined/.test(document.querySelector('#region-formulas').textContent))failures.push('boundary');
+          if(c.family==='multiscale'&&Array.from(window.atlasFormulaDebug.targetFormula(0,1,0,'cross')).some(p=>p>=c.widths[1]))failures.push('cross-range');
+          const last=c.depth-1;choose('#node-layer',last);choose('#node-position',0);
+          if(document.querySelector('#node-role').options.length!==1)failures.push('terminal-role');
+          choose('#pair-source',`${last-1},0`);choose('#pair-target',`${last},0`);
+          if(document.querySelectorAll('#matrix-canvas .matrix-hit').length!==(c.ordinary+c.hubs)*c.ordinary)failures.push('terminal-matrix');
+          return {key:c.key,n:c.ordinary,h:c.hubs,cells,failures,errors:window.atlasErrors.slice()};
+        ''' % json.dumps(key))
+        assert not result['failures'] and not result['errors'],result
+        compact_checks.append(result)
+    capacity_checks=script('''
+      const choose=(s,v)=>{const el=document.querySelector(s);el.value=String(v);el.dispatchEvent(new Event('change',{bubbles:true}));};
+      const original=window.atlasDebug.case.key;
+      choose('#cap-family','multiscale');choose('#cap-profile','multiscale-compact-9');
+      choose('#cap-n',8);choose('#cap-h',0);choose('#cap-d',64);choose('#cap-memory','K');choose('#cap-sharing','independent');
+      const smallBudgets=[...document.querySelector('#cap-k').options].map(o=>o.value);
+      const row=document.querySelector('#capacity-table tbody tr'),total=+row.dataset.total;
+      choose('#cap-k',8);const dense=+document.querySelector('#capacity-table tbody tr').dataset.active;
+      choose('#cap-k','pool');const pool=+document.querySelector('#capacity-table tbody tr').dataset.active;
+      const unchanged=window.atlasDebug.case.key===original;
+      document.querySelector('#capacity-table [data-cap-case]').click();const linked=window.atlasDebug.case.key;
+      choose('#cap-n',128);const largeBudgets=[...document.querySelector('#cap-k').options].map(o=>o.value);
+      choose('#cap-n',32);choose('#cap-h',4);choose('#cap-memory','X');choose('#cap-profile','multiscale-17');choose('#cap-d',128);
+      choose('#cap-limit','all');const large=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      choose('#cap-limit','256');const hiddenLarge=document.querySelectorAll('#capacity-table tbody tr').length===0;
+      choose('#cap-family','fc');const noHub=document.querySelector('#cap-h').disabled&&document.querySelector('#cap-h').value==='0';
+      choose('#cap-profile','fc-4');choose('#cap-sharing','shared');choose('#cap-rank',4);
+      const p4=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      choose('#cap-rank',16);const p16=+document.querySelector('#capacity-table tbody tr').dataset.total;
+      choose('#cap-sharing','independent');const rankDisabled=document.querySelector('#cap-rank').disabled;
+      return {smallBudgets,largeBudgets,total,dense,pool,unchanged,linked,large,hiddenLarge,noHub,p4,p16,rankDisabled,errors:window.atlasErrors.slice()};
+    ''')
+    assert capacity_checks['smallBudgets']==['1','2','4','8','pool'],capacity_checks
+    assert capacity_checks['largeBudgets']==['1','2','4','8','16','32','64','pool'],capacity_checks
+    assert round(capacity_checks['total']/1e6,3)==9.139,capacity_checks
+    assert capacity_checks['dense']==capacity_checks['pool']==capacity_checks['total'],capacity_checks
+    assert capacity_checks['unchanged'] and capacity_checks['linked']=='compact-9-n8-h0',capacity_checks
+    assert capacity_checks['large']>256e6 and capacity_checks['hiddenLarge'] and capacity_checks['noHub'],capacity_checks
+    assert capacity_checks['p4']<capacity_checks['p16'] and capacity_checks['rankDisabled'] and not capacity_checks['errors'],capacity_checks
     script("document.querySelector('#matrix').scrollIntoView({behavior:'instant'});return true;")
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'terminal-matrix-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
@@ -261,13 +320,17 @@ try:
     """)
     assert preserved_timing['key']=='17' and preserved_timing['mode']=='settle' and 'D=18>M=17' in preserved_timing['summary'],preserved_timing
     # Inspect each new family visually; external temporary evidence, not tracked outputs.
-    for key in ('lattice-7','exchange-10','exchange-10-h'):
+    for key in ('lattice-7','exchange-10','exchange-10-h','compact-9-n8-h0','compact-9-two-inputs-n32-h4'):
         script("window.atlasDebug.mountCase(%s);document.querySelector('#regions').scrollIntoView({behavior:'instant'});return true;" % json.dumps(key))
         shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
         (OUT/(key+'-preview.png')).write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
     command('WebDriver:SetWindowRect',{'width':850,'height':1100})
     small_layout=script("window.atlasDebug.mountCase('exchange-10');return {overflow:document.documentElement.scrollWidth>window.innerWidth,math:document.querySelector('#region-formulas math').getBoundingClientRect().width,errors:window.atlasErrors.slice()};")
     assert not small_layout['overflow'] and small_layout['math']>0 and not small_layout['errors'],small_layout
+    capacity_layout=script("document.querySelector('#capacity').scrollIntoView({behavior:'instant'});return {overflow:document.documentElement.scrollWidth>window.innerWidth};")
+    assert not capacity_layout['overflow'],capacity_layout
+    shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
+    (OUT/'capacity-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
     command('WebDriver:SetWindowRect',{'width':1510,'height':1150})
     script("window.atlasDebug.mountCase('9');window.scrollTo({top:0,behavior:'instant'});return true;")
     # Check all local document/download targets after formula rendering.
@@ -285,7 +348,7 @@ try:
     script('document.querySelector("#regions").scrollIntoView({behavior:"instant"});return true;')
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'formula-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
-    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'terminal':terminal_checks,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'embedded_image':image_status}
+    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'terminal':terminal_checks,'compact':compact_checks,'capacity':capacity_checks,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'capacity_layout':capacity_layout,'embedded_image':image_status}
     (OUT/'browser-checks.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(result,ensure_ascii=False,indent=2))
     command('Marionette:Quit',{'flags':['eForceQuit']})

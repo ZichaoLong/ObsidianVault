@@ -16,7 +16,7 @@ tags: [tide, hb, settlegraph, weighted-message]
 | Multiscale-Settle | [多跨度图](../topologies/hb-multiscale.md)原样复用端点，group 分区 | 9 层，$n=32,h=4$，非末层全位置 hub；92 区，1712 节点 | 跨度时延，$D=M+1=10$ |
 | Exchange-Settle，独立 Settle 设计的优先候选 | [位交换图](../topologies/hb-settle-exchange.md) | $m=3,n=32,h=0$；10 层，46 区，1472 节点 | 相邻层时延 1，$D=M+1=11$ |
 
-Exchange 可在非末层每位置启用 4 个 hub，分为 D 区与 H 区，成为 91 区、1652 节点的增强对照；末层只有 D。7／10／13 层和 $n=16/32/64$ 是明确尺寸阶梯，不增加局部函数种类。多跨度图的其他 hub 掩码与分区继续按其原定义；第一轮无需全部展开。
+Exchange 可在非末层每位置启用 4 个 hub，分为 D 区与 H 区，成为 91 区、1652 节点的增强对照；末层只有 D。原 7／10／13 层阶梯保留，另有独立选择平台轮数的窄图；$n=8/16/32/64/128$、二次幂预算与内容维度由[比较绑定](backbone-comparison.md)统一给出，不增加局部函数种类。多跨度图的其他 hub 掩码与分区继续按其原定义；第一轮无需全部展开。
 
 三个候选均取 $r_v=\ell+1$（此处层号从零起），$\delta(e)=r_{\mathrm{dst}}-r_{\mathrm{src}}$，输入为 $Dt+1$，保留当前 $D>\max r_v$。$M$ 是包含首尾的层数，旧图的 $L=M$；$D$ 是本页输入周期，$T$ 是 Timed 讨论中输入周期的名称。它们不代表三种 Settle 语义。原图一基层号与面板零基层号只差地址记法。
 

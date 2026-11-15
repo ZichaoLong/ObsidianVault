@@ -33,7 +33,7 @@ tags: [tide, hb, weighted-message]
 
 以 $P$ 表示当前输入周期：Timed／对齐流水取 $P=T$，严格 Settle 取 $P=D=M+1$。以下时钟规定在一次运行及所有 chunk 中保持。
 
-**KV。** 采用 [KV 教材](../local-semantics/weighted-message/kv-memory-learning-note.md)的空缓存初态、Upd、sum 描述和完整 Attention／前馈内容函数。$H_{\mathrm{att}}=4,d_h=32$；共享配置 $r_a=8$，独立配置按 §4 取 $r_a=d$ 的完整投影表示；窗口为 $T_v=128P$ 个逻辑时间，短期率 $\beta_{\mathrm{short}}=\log2/(8P)$、长期率零。Full 每头旋转全部 32 维，频率 $10^{-4\cdot2(a-1)/32}$；距离偏置取零，$\alpha_{\mathrm{att}}=\alpha_{\mathrm{ff}}=1$。sum 描述不额外使用查询旋转。其余投影、摘要与前馈矩阵按教材给定形状，是有限可训练参数。
+**KV。** 采用 [KV 教材](../local-semantics/weighted-message/kv-memory-learning-note.md)的空缓存初态、Upd、sum 描述和完整 Attention／前馈内容函数。$H_{\mathrm{att}}=4,d_h=32$；共享配置默认 $r_a=8$（尺寸对照取 $\min(r_{\mathrm{ad}},d)$），独立配置按 §4 取 $r_a=d$ 的完整投影表示；窗口为 $T_v=128P$ 个逻辑时间，短期率 $\beta_{\mathrm{short}}=\log2/(8P)$、长期率零。Full 每头旋转全部 32 维，频率 $10^{-4\cdot2(a-1)/32}$；距离偏置取零，$\alpha_{\mathrm{att}}=\alpha_{\mathrm{ff}}=1$。sum 描述不额外使用查询旋转。其余投影、摘要与前馈矩阵按教材给定形状，是有限可训练参数。
 
 **SSD。** 采用 [SSD 教材](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)的零矩阵、零摘要与空缓存初态，全部 Upd、state 描述及内容公式。4 头、1 组、$d_m=32,d_k=32$，短卷积 conv_size=4；矩阵被动衰减零，摘要短期率 $\log2/(8P)$、长期率零，output_norm_eps=$10^{-5}$，$\alpha_{\mathrm{mem}}=\alpha_{\mathrm{ff}}=1$。有限的投影、卷积系数、$A^{\log},b^\Delta,D_h$、归一化尺度、读取与前馈矩阵均按教材形状给定。
 
@@ -51,7 +51,7 @@ tags: [tide, hb, weighted-message]
 
 ## 3. 三种分区及角色预算
 
-普通区取 $k_D=\max(1,\lceil n/32\rceil)$；它给出主要容量区约 $1/32$ 的设计比例，小区因整数预算而不同，实际活跃按运行统计。Hub 取有限保底 $\beta=1/4$，默认 $k_H=\max(1,h/2)$（本配置 $h=1,2,4$）；若 $h$ 为其他整数可取 $\max(1,\lceil h/2\rceil)$，并重算约束。
+普通区取 $k_D=\max(1,\lceil n/32\rceil)$作为默认档；在已登记尺寸 $n=8,16,32,64,128$ 中，可改选 $\{1,2,4,8,16,32,64\}\cap[1,n]$ 或按[统一比较绑定](backbone-comparison.md)选择 pool。小区不必追求约 3%，实际活跃按运行统计。Hub 取有限保底 $\beta=1/4$，默认 $k_H=\max(1,h/2)$（本配置 $h=1,2,4$）；若 $h$ 为其他整数可取 $\max(1,\lceil h/2\rceil)$，并重算约束。
 
 | 分区 | 预算与边界 |
 |---|---|
@@ -67,7 +67,7 @@ tags: [tide, hb, weighted-message]
 
 ## 4. 参数共享与独立状态
 
-主绑定采用[两种整体参数配置](../local-semantics/weighted-message/parameter-profiles.md)中的 `shared`：同层同角色节点矩阵基座加私有 rank-8 适配器，区域头按同层区类型共享。`independent` 则使全部节点参数独立、全部区域参数独立。聚合也纳入这两种配置，均通过节点参数接口给定；KV 写入的区域基座例外、独立完整投影表示及 mixed 区的绑定见该页。
+主绑定采用[两种整体参数配置](../local-semantics/weighted-message/parameter-profiles.md)中的 `shared`：同层同角色节点矩阵基座加私有适配器（默认秩 8，尺寸对照可取 4／16），区域头按同层区类型共享。`independent` 则使全部节点参数独立、全部区域参数独立。聚合也纳入这两种配置，均通过节点参数接口给定；KV 写入的区域基座例外、独立完整投影表示及 mixed 区的绑定见该页。
 
 这两个整组选择覆盖 Agg、来源嵌入、记忆、门／卷积／归一化、描述／评分和 Full，不再逐模块展开共享候选。所有状态始终私有；同层权重共享可能增加训练期跨设备梯度归约，独立参数仍需处理消息反传和数据并行通信。参数量、状态量和通信量分别记录，不能只按节点数宣称容量。
 
@@ -88,3 +88,5 @@ HB 全部边增加区域秩。给定完整外部输入窗口及左切面，可�
 语言任务外接 Pronounce 可消费这些记录；其窗口、prefill／decode 组织、状态和 next-token 规则属于下游，本仓库不进一步设计该头。
 
 连接和时间核对见[HB／LH 程序](../examples/hb_lh_checks.py)；局部公式沿各记忆教材与角色分配的核对程序验证。这里没有执行整网神经数值实现或训练。
+
+尺寸扩展、FC 统一绑定、二次幂预算及主干参数范围统一见[比较绑定](backbone-comparison.md)；原宽图主配置不被窄图覆盖。

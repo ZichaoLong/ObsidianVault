@@ -81,7 +81,8 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [展示材料](presentations/design-introduction/README.md) | 可逐步推进的离线 HTML、PDF、画面预览与讲者备注 |
 | [教学图集](figures/README.md) | 节点与区域、P/S/U/F、带权消息与局部模块图，以及定义出处与绘图源文件 |
 | [HB／LH 设计收拢](memos/design/hb-timed-and-lh.md) | 异时输出的原始需求、分工与合作、hub 组织、时间对照和后续实验问题 |
-| [HB 交互公式面板](explorers/hb-timed/README.md) | 三种 HB 空间图、完整邻接、端点矩阵、公式与同步时间绑定 |
+| [主干比较绑定与尺寸阶梯](instances/backbone-comparison.md) | FC／HB 的统一局部绑定、独立／共享、二次幂预算、合理维度及可复算规模表 |
+| [HB 交互公式面板](explorers/hb-timed/README.md) | 三种 HB 空间图与窄图、完整邻接、端点矩阵、公式、时间与主干规模筛选 |
 | [局部架构设计总览](memos/design/weighted-message-design.md) | 理解整体设计空间、信息与梯度依赖、候选取舍及外部证据 |
 | [可选研究问题与对照](memos/training/weighted-message-research-questions.md) | 按需选择目标、比较和观测；优先级由研究者安排 |
 | [局部架构实现核对](reference/weighted-message-implementation-checks.md) | 核对函数值、反向规则、数值边界、组合与切面继续 |
@@ -91,6 +92,8 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [显式残差 MoE 核对](examples/explicit_residual_moe_checks.py) | 专家、旁路和合并的时间求值；两轮状态、直接公式与工作量核对 |
 | [区域分配公式核对](examples/region_allocation_checks.py) | 二次分配的独立求解比较、正文算例、光滑分支导数与零温反例 |
 | [角色分配核对](examples/role_bounded_allocation_checks.py) | 独立活动集、全输入可行性、零／缺席与光滑分支导数 |
+| [紧凑图的相位与合作](examples/hb_compact_checks.py) | 窄图、首层节点覆盖、独立交换轮数和更深平台 |
+| [主干参数核对](examples/backbone_capacity_checks.py) | 二次幂预算、逐头适配器、独立参数闭式计数和活跃代理 |
 | [HB-Settle 构图与交换核对](examples/hb_settle_checks.py) | 原图字地址一致性、18 组交换配置、每轮位覆盖、度数与原周期条件 |
 | [HB／LH 构图与时间核对](examples/hb_lh_checks.py) | 深度与尺寸、分区前提、hub 删除、对齐时间、反馈有限继续 |
 | [循环记忆公式核对](examples/recurrent_memory_checks.py) | 短卷积、Delta／SSD 恒等式、弱事件和分段继续的有限数值检查 |

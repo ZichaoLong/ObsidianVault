@@ -12,7 +12,7 @@ function targetFormula(l,s,p,mode){
  const w=current.widths[l],v=current.widths[l+s],g=Math.min(w,v),A=w/g,B=v/g;
  let x=Math.floor(p/A);
  if(mode==='near')x=(x+1)%g;
- if(mode==='cross')x^=1<<((l+Math.log2(s))%Math.log2(g));
+ if(mode==='cross'&&g>1)x^=1<<((l+Math.log2(s))%Math.log2(g));
  return Array.from({length:B},(_,j)=>B*x+j);
 }
 function settleTargets(l,p,exchange=true){
@@ -26,9 +26,10 @@ function settleRegionFormulas(){
  s+=mathBlock(sub(mi('r'),mi('v'))+mo('=')+mi('ℓ')+mo('+')+mn(1)+mo(',')+mi('δ')+mo('=')+mn(1));
  s+=mathBlock(mi('ι')+par(mi('t'))+mo('=')+mn(period())+mi('t')+mo('+')+mn(1)+mo(',')+mi('D')+mo('>')+mi('M'));
  if(ex){
-  const m=(current.depth-1)/3;
-  s+=mathBlock(mi('M')+mo('=')+mn(3)+mi('m')+mo('+')+mn(1)+mo(',')+mi('m')+mo('=')+mn(m));
-  s+=mathBlock(sub(mi('W'),mi('ℓ'))+mo('=')+sup(mn(2),textMath('min(ℓ,m,3m−ℓ)')));
+  const m=current.expansion,R=current.rounds;
+  s+=mathBlock(mi('M')+mo('=')+mn(2)+mi('m')+mo('+')+mi('R')+mo('+')+mn(1));
+  s+=mathBlock(mi('m')+mo('=')+mn(m)+mo(',')+mi('R')+mo('=')+mn(R));
+  s+=mathBlock(sub(mi('W'),mi('ℓ'))+mo('=')+sup(mn(2),textMath('min(ℓ,m,M−1−ℓ)')));
   s+=mathBlock(sub(mi('c'),mi('ℓ'))+mo('=')+mi('ℓ')+textMath(' mod log₂ n'));
   s+=mathBlock(mi('i')+mo('↦')+mo('{')+mi('i')+mo(',')+mi('i')+mo('⊕')+sup(mn(2),sub(mi('c'),mi('ℓ')))+mo('}'));
   s+='<p>区域配对与节点配对取笛卡尔积。等宽处每节点入 / 出度为 4，宽度变化处至多 8。展开、宽段与收拢均使用本规则。</p>';
@@ -74,9 +75,10 @@ function regionFormulas(){
  s+=mathBlock(sub(mi('σ'),mn(0))+par(mi('x'))+mo('=')+mi('x')+mo(',')+sub(mi('σ'),mo('+'))+par(mi('x'))+mo('=')+par(mi('x')+mo('+')+mn(1))+textMath(' mod ')+mi('g'));
  s+=mathBlock(sub(mi('σ'),mo('×'))+par(mi('x'))+mo('=')+mi('x')+mo('⊕')+sup(mn(2),mi('k')));
  s+=mathBlock(mi('k')+mo('=')+par(mi('ℓ')+mo('+')+sub(textMath('log'),mn(2))+mi('s'))+textMath(' mod ')+sub(textMath('log'),mn(2))+mi('g'));
+ s+='<p>上述 XOR 式用于 g&gt;1；g=1 时，跨组映射取 σ×(x)=x，不计算模零。</p>';
  const rows=[1,2,4].filter(d=>l+d<current.depth).map(d=>`<tr><td>${d}</td><td>${targetFormula(l,d,p,'base').join(',')}</td><td>${targetFormula(l,d,p,'near').join(',')}</td><td>${targetFormula(l,d,p,'cross').join(',')}</td></tr>`).join('');
  s+=`<p><b>代入当前位置：</b>下面是目标层 ℓ+s 中的位置编号。三个映射的具体用途由边族决定。</p>${rows?`<table class="formula-table"><thead><tr><th>s</th><th>基础 0</th><th>邻组 +</th><th>跨组 ×</th></tr></thead><tbody>${rows}</tbody></table>`:'<p>已到终层，没有后继。</p>'}`;
- s+='<details><summary>边族使用哪些配对</summary><p>DD1、DH1：基础 ∪ 邻组。DD2、额外 DD4：跨组。HH：基础 ∪ 跨组。HD1：基础；HD2、HD4：跨组。</p><p>本候选的层宽均为不小于 4 的二次幂，因此上述整数配对和 XOR 有定义。</p></details>';
+ s+='<details><summary>边族使用哪些配对</summary><p>DD1、DH1：基础 ∪ 邻组。DD2、额外 DD4：跨组。HH：基础 ∪ 跨组。HD1：基础；HD2、HD4：跨组。</p><p>层宽为正的二次幂，允许 1／2；边界 g=1 使用恒等跨组映射。</p></details>';
  $('#region-formulas').innerHTML=s;
 }
 function nodeFormulas(){

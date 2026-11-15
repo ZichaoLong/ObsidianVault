@@ -17,6 +17,27 @@ PROFILES = [
     ('17', [4, 4, 4, 8, 8, 8, 16, 16, 16, 16, 16, 8, 8, 8, 4, 4, 4], False),
 ]
 
+# Additional width profiles; the original figures and keys remain stable.
+COMPACT_PROFILES = [
+    ('compact-5-dd4', [1, 1, 2, 1, 1], True),
+    ('compact-7', [1, 1, 2, 2, 2, 1, 1], False),
+    ('compact-9', [1, 1, 2, 2, 4, 2, 2, 1, 1], False),
+    ('compact-9-two-inputs', [2, 2, 2, 4, 2, 2, 2, 2, 2], False),
+    ('compact-15', [1]*4 + [2]*7 + [1]*4, False),
+]
+
+
+def extended_widths(depth):
+    """Extend the 17-layer plateau without reducing its content dimensions."""
+    if depth not in (25, 33):
+        raise ValueError('extended depths are 25 and 33')
+    seed = next(w for key, w, _ in PROFILES if key == '17')
+    return seed[:8] + [16]*(depth-17) + seed[8:]
+
+
+def probes_for(n):
+    return max(1, n//32), max(1, n//32), max(1, n//64)
+
 
 def permutation(tag, *indices, size):
     prefix = '|'.join(map(str, (SEED, tag, *indices))) + '|'
@@ -31,8 +52,9 @@ def destinations(widths, layer, span, position, mode):
     if mode == 'near':
         coarse = (coarse + 1) % g
     elif mode == 'cross':
-        bit = (layer + span.bit_length() - 1) % (g.bit_length() - 1)
-        coarse ^= 1 << bit
+        if g > 1:
+            bit = (layer + span.bit_length() - 1) % (g.bit_length() - 1)
+            coarse ^= 1 << bit
     elif mode != 'base':
         raise ValueError(mode)
     return tuple((v // g) * coarse + j for j in range(v // g))
@@ -45,8 +67,8 @@ def region_targets(widths, layer, span, position, modes):
 
 def construct(widths, n=16, h=4, probes=(1, 1, 1), placement='all', add_dd4=False,
               terminal_hubs=False):
-    if not widths or any(w < 4 or w & (w - 1) for w in widths):
-        raise ValueError('widths must be powers of two >= 4')
+    if not widths or any(w < 1 or w & (w - 1) for w in widths):
+        raise ValueError('widths must be powers of two >= 1')
     if n < 1 or h < 1 or n % h or len(probes) != 3:
         raise ValueError('positive h must divide n; give probes for spans 1,2,4')
     b = n // h
@@ -132,3 +154,31 @@ def reachability(nodes, outgoing, widths, only_detail=False, origin_layer=0, tim
             delay[v] |= delay[u] << delta
             origins[v] |= origins[u] << (delta * source_width)
     return delay, origins
+
+
+def source_node_coverage(nodes, outgoing, widths, ordinary_only=False, period=4):
+    """Potential first-layer D identities per output phase, not content flow."""
+    roots = [u for u,x in enumerate(nodes) if x[0] == 0 and x[2] == 'd']
+    paths = [{} for _ in nodes]
+    for i,u in enumerate(roots):
+        paths[u][0] = 1 << i
+    for u in range(len(nodes)):
+        for v,kind in outgoing[u]:
+            if ordinary_only and not kind.startswith('DD'):
+                continue
+            for delay,mask in paths[u].items():
+                paths[v][delay+1] = paths[v].get(delay+1,0) | mask
+    rows = []
+    for u,x in enumerate(nodes):
+        if x[0] != len(widths)-1 or x[2] != 'd':
+            continue
+        counts = []
+        for phase in range(period):
+            mask = 0
+            for delay,sources in paths[u].items():
+                if delay % period == phase:
+                    mask |= sources
+            counts.append(bin(mask).count('1'))
+        rows.append(counts)
+    return len(roots), [[min(r[p] for r in rows),max(r[p] for r in rows)]
+                        for p in range(period)]
