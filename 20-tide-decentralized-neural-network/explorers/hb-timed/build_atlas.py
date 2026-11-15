@@ -4,17 +4,18 @@ Only potential paths are evaluated, not regional selection or neural functions.
 """
 from collections import Counter, defaultdict
 from pathlib import Path
-import ctypes as C
-import ctypes.util
 import base64
 import html
 import json
 import math
+import sys
 import topology as g
 import settle_topology as sg
 import capacity
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parents[2] / 'tools'))
+from native_svg import render_png
 N, H, T = 16, 4, 4
 PROFILES = g.PROFILES
 KINDS = ['DDL','DDX','DD1','DD2','DD4','DH1','HH1','HH2','HH4','HD1','HD2','HD4']
@@ -278,23 +279,6 @@ def ladder_svg(cases):
     out.append('</svg>');return ''.join(out)
 
 
-def render_png(source,target):
-    import re
-    raw=source.read_bytes();s=raw.decode();w,h=map(int,re.search(r'width="(\d+)" height="(\d+)"',s).groups())
-    rsvg=C.CDLL(ctypes.util.find_library('rsvg-2'));cairo=C.CDLL(ctypes.util.find_library('cairo'));go=C.CDLL(ctypes.util.find_library('gobject-2.0'))
-    rsvg.rsvg_handle_new_from_data.argtypes=[C.c_void_p,C.c_size_t,C.c_void_p];rsvg.rsvg_handle_new_from_data.restype=C.c_void_p
-    rsvg.rsvg_handle_render_cairo.argtypes=[C.c_void_p,C.c_void_p];rsvg.rsvg_handle_render_cairo.restype=C.c_int
-    cairo.cairo_image_surface_create.argtypes=[C.c_int,C.c_int,C.c_int];cairo.cairo_image_surface_create.restype=C.c_void_p
-    cairo.cairo_create.argtypes=[C.c_void_p];cairo.cairo_create.restype=C.c_void_p
-    cairo.cairo_surface_write_to_png.argtypes=[C.c_void_p,C.c_char_p];cairo.cairo_surface_write_to_png.restype=C.c_int
-    cairo.cairo_destroy.argtypes=[C.c_void_p];cairo.cairo_surface_destroy.argtypes=[C.c_void_p];go.g_object_unref.argtypes=[C.c_void_p]
-    handle=rsvg.rsvg_handle_new_from_data(raw,len(raw),None);assert handle
-    surface=cairo.cairo_image_surface_create(0,w,h);ctx=cairo.cairo_create(surface)
-    assert rsvg.rsvg_handle_render_cairo(handle,ctx)
-    assert cairo.cairo_surface_write_to_png(surface,str(target).encode())==0
-    cairo.cairo_destroy(ctx);cairo.cairo_surface_destroy(surface);go.g_object_unref(handle)
-
-
 def main():
     OUT.mkdir(exist_ok=True)
     cases=[make_case(*p) for p in PROFILES]
@@ -334,7 +318,7 @@ def main():
     data={'kinds':KINDS,'colors':COLORS,'cases':{c['key']:c for c in cases},'capacity':capacity.build(OUT)}
     (OUT/'data.json').write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
     template=(ROOT/'page.html').read_text()
-    page=template.replace('__STYLE__',(ROOT/'style.css').read_text()).replace('__DATA__',json.dumps(data,ensure_ascii=False,separators=(',',':')).replace('</','<\/')).replace('__SCRIPT__',(ROOT/'explore.js').read_text())
+    page=template.replace('__STYLE__',(ROOT/'style.css').read_text()).replace('__DATA__',json.dumps(data,ensure_ascii=False,separators=(',',':')).replace('</',r'<\/')).replace('__SCRIPT__',(ROOT/'explore.js').read_text())
     page=page.replace('src="depth-ladder.svg"','src="data:image/svg+xml;base64,'+base64.b64encode(figures['depth-ladder'].encode()).decode()+'"')
     page=page.replace('__FORMULAS__',(ROOT/'formulas.js').read_text())
     page=page.replace('__CAPACITY__',(ROOT/'capacity.js').read_text())

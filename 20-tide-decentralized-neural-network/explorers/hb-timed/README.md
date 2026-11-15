@@ -25,7 +25,36 @@
 - [角色上下界](../../local-semantics/weighted-message/role-bounded-allocation.md)、[设计问题与取舍](../../memos/design/hb-timed-and-lh.md)。
 - [逐候选核对数据](generated/checks.json)、[9 层区域图](generated/regions-9.svg)、[节点矩阵](generated/node-pair-matrix.svg)、[层数阶梯](generated/depth-ladder.svg)。
 
-从仓库根目录生成：
+## 在另一台机器构建
+
+当前构建使用 Linux 的系统图形库及字体路径；Debian／Ubuntu 或 WSL Ubuntu 可按以下步骤操作。使用 Python 3.10+，先更新仓库，再在仓库根目录运行。首次安装系统依赖：
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3 librsvg2-2 libcairo2 fonts-noto-cjk
+```
+
+仅构建面板（无需构建其他图集或静态演示 PDF）：
+
+```bash
+python3 tools/build.py --group hb-topology-atlas
+python3 tools/check_artifacts.py --require-built --group hb-topology-atlas
+```
+
+成功后用现代浏览器直接打开 `20-tide-decentralized-neural-network/explorers/hb-timed/generated/index.html`，无需启动 HTTP 服务。页面内嵌交互所需数据；CSV 下载及正文链接需要保留对应目录。产物不随 Git 同步，拉取后按维护地图检查状态并重建本组。
+
+Conda Python 可以调用统一构建器。PNG 渲染由 `tools/native_svg.py` 启动 `/usr/bin/python3 -I -S`（或 `/bin/python3`），只在该子进程中清除 LD_LIBRARY_PATH、LD_PRELOAD、LD_AUDIT、PYTHONHOME、PYTHONPATH，并使用系统 PATH。这样避免系统 Pango／Fontconfig 与 Conda 已加载库混用，调用者环境和其他构建组的 Python 选择不变。依赖预检在相同隔离环境中实际加载图形库，而非只查找库名。
+
+若旧版本出现 `libpangoft2 ... undefined symbol: FcConfigSetDefaultSubstitute`，先更新仓库。临时也可用下面的命令绕过调用者的 Python 和库路径：
+
+```bash
+env -u LD_LIBRARY_PATH -u LD_PRELOAD -u LD_AUDIT -u PYTHONHOME -u PYTHONPATH \
+  /usr/bin/python3 tools/build.py --group hb-topology-atlas
+```
+
+## 维护与核对
+
+从仓库根目录生成并核对：
 
 ```bash
 python3 tools/check_artifacts.py --affected 20-tide-decentralized-neural-network/explorers/hb-timed
@@ -39,7 +68,7 @@ python3 20-tide-decentralized-neural-network/examples/role_bounded_allocation_ch
 python3 20-tide-decentralized-neural-network/explorers/hb-timed/check_browser.py
 ```
 
-构建使用 Python 标准库及系统 librsvg、Cairo、GObject，字体采用 Noto Sans CJK 或本机已有的 Droid Sans Fallback；不依赖 Python 的 Pillow／CairoSVG。Debian／Ubuntu 可安装 `librsvg2-2 libcairo2 fonts-noto-cjk`，GObject 由依赖带入。浏览器核对另需 Firefox，通过隔离 profile 验证 58 个配置及参数预算筛选、区域跳转、公式映射、矩阵端点数量、末层角色与矩形矩阵、g=1 边界、时间同步及宽窄布局；报告和截图默认写入仓库外临时目录，不进入日常 Git 产物。仓库 CI 在 push／pull request 时构建本组并执行浏览器核对。
+构建使用 Python 标准库、系统 Python 及系统 librsvg、Cairo、GObject，字体采用 Noto Sans CJK 或本机已有的 Droid Sans Fallback；不依赖 Python 的 Pillow／CairoSVG。Debian／Ubuntu 可安装 `librsvg2-2 libcairo2 fonts-noto-cjk`，GObject 由依赖带入。浏览器核对另需 Firefox，通过隔离 profile 验证 58 个配置及参数预算筛选、区域跳转、公式映射、矩阵端点数量、末层角色与矩形矩阵、g=1 边界、时间同步及宽窄布局；报告和截图默认写入仓库外临时目录，不进入日常 Git 产物。仓库 CI 在 push／pull request 时构建本组并执行浏览器核对。
 
 两个带 hub 的构造器默认省去末层 H；`terminal_hubs=True` 可复现此前包含它们的图，面板展示默认图。删除对 group／singleton 保留节点与输出的影响，以及 mixed 的差异，见[共同拓扑 §1](../../topologies/hb-multiscale.md#1-节点位置与区域)。
 

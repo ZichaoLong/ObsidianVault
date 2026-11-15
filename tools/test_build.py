@@ -206,17 +206,17 @@ class DependencyTests(unittest.TestCase):
     # Apply this broad mock last: Python 3.11+ resolves string patch targets
     # through importlib.import_module, which must still work during setup.
     @patch('build.importlib.import_module', side_effect=ImportError('not installed'))
-    @patch('build.ctypes.util.find_library', return_value='available.so')
+    @patch('build.check_native_renderer')
     @patch('build.Path.is_file', return_value=True)
-    def test_atlas_only_uses_native_renderer(self, is_file, find_library, import_module):
+    def test_atlas_only_uses_native_renderer(self, is_file, check_native, import_module):
         check_dependencies(groups=['hb-topology-atlas'])
         import_module.assert_not_called()
-        self.assertEqual(find_library.call_count, 3)
+        check_native.assert_called_once_with()
 
-    @patch('build.ctypes.util.find_library', return_value=None)
+    @patch('build.check_native_renderer', side_effect=RuntimeError('undefined symbol: FcConfigSetDefaultSubstitute'))
     @patch('build.Path.is_file', return_value=True)
-    def test_atlas_missing_native_library_is_reported(self, is_file, find_library):
-        with self.assertRaisesRegex(BuildError, 'librsvg2-2'):
+    def test_atlas_native_load_failure_is_reported_before_build(self, is_file, check_native):
+        with self.assertRaisesRegex(BuildError, 'FcConfigSetDefaultSubstitute.*librsvg2-2'):
             check_dependencies(groups=['hb-topology-atlas'])
 
     @patch('build.importlib.import_module')

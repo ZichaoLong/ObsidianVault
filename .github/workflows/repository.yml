@@ -58,6 +58,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libcairo2 librsvg2-2 fonts-noto-cjk
           firefox --version
+      - name: Check isolated renderer against a Fontconfig collision
+        run: python3 -m unittest discover -s tools -p test_native_svg.py -v
       - name: Build the HB topology atlas
         run: python3 tools/build.py --group hb-topology-atlas
       - name: Check all HB atlas configurations in Firefox

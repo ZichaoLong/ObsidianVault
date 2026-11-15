@@ -276,7 +276,8 @@
         "20-tide-decentralized-neural-network/explorers/hb-timed/formulas.js",
         "20-tide-decentralized-neural-network/explorers/hb-timed/settle_topology.py",
         "20-tide-decentralized-neural-network/explorers/hb-timed/capacity.py",
-        "20-tide-decentralized-neural-network/explorers/hb-timed/capacity.js"
+        "20-tide-decentralized-neural-network/explorers/hb-timed/capacity.js",
+        "tools/native_svg.py"
       ],
       "review_sources": [
         "20-tide-decentralized-neural-network/topologies/hb-multiscale.md",

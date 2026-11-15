@@ -70,7 +70,7 @@ python3 tools/build.py --group presentation-export
 python3 tools/build.py --group hb-topology-atlas
 ```
 
-`--group` 可重复使用，自动按依赖顺序构建；不要与 `--full` 同用。展示 HTML 组只需 Python 标准库；HB 图册另需系统 librsvg／Cairo／GObject，见其 README。其余普通组需要 Pillow、CairoSVG、Cairo 和字体；展示导出另需浏览器。当前绘图脚本使用固定字体路径，Debian／Ubuntu 安装方式如下：
+`--group` 可重复使用，自动按依赖顺序构建；不要与 `--full` 同用。展示 HTML 组只需 Python 标准库；HB 图册另需系统 Python 与 librsvg／Cairo／GObject，图形库由隔离子进程加载以避免 Conda 混库，见其 README。其余普通组需要 Pillow、CairoSVG、Cairo 和字体；展示导出另需浏览器。当前绘图脚本使用固定字体路径，Debian／Ubuntu 安装方式如下：
 
 ```bash
 python3 -m pip install -r 20-tide-decentralized-neural-network/figures/requirements.txt
