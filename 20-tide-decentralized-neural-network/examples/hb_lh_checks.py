@@ -9,8 +9,8 @@ from pathlib import Path
 import json
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'explorers/hb-timed'))
-import topology as hb
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'reference'))
+from backbones import multiscale as hb
 
 
 def lh_graph(depth=3, rows=4, columns=8, feedback=False):

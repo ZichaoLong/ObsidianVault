@@ -4,7 +4,7 @@ status: active
 tags: [tide, hb, settlegraph]
 ---
 
-# HB-Settle：分阶段位交换图
+# HB-Exchange：分阶段位交换图
 
 本图为到达对齐的计算安排普通节点之间的多尺度交换。展开增加容量，最宽处连续交换不同地址位，收拢途中继续交换；不要求填满输入间隔内的输出相位。它与[原 HB-Lattice](hb-lattice.md)、[多跨度图的 Settle 绑定](hb-multiscale.md#4-端口与三种时间绑定)组成三个空间候选。三者均沿用当前 SettleGraph 的周期条件。
 
@@ -112,4 +112,4 @@ $$
 
 普通两端点、收集、hub 交换和探针分别贡献各项；最后一步没有收集与 HH 目标。恢复末层 H 时，区域数增加 $W_{M-1}$，式 (5) 去掉 $\mathbf1[\ell<M-2]$。参数 $h=0$ 时不求值 §4 中的 $n/h$。
 
-[共同主绑定](../instances/hb-settle-weighted-message.md)给出状态和完整局部函数，可使用 Settle 的对齐求值，也满足严格区域分层整窗口定理的条件。[交互公式面板](../explorers/hb-timed/README.md)共用区域图、逐节点邻接和端点矩阵，并列三个 Settle 空间候选；[核对程序](../examples/hb_settle_checks.py)独立检查位覆盖、边数与时间绑定。
+[共同主绑定](../instances/hb-settle-weighted-message.md)给出状态和完整局部函数，可使用 Settle 的对齐求值，也满足严格区域分层整窗口定理的条件。[交互公式面板](../explorers/backbone-atlas/README.md)共用区域图、逐节点邻接和端点矩阵，并列三个 Settle 空间候选；[核对程序](../examples/hb_settle_checks.py)独立检查位覆盖、边数与时间绑定。

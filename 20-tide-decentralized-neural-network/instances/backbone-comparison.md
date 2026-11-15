@@ -14,7 +14,7 @@ tags: [tide, backbone, capacity, parameter-sharing]
 |---|---|---|
 | FC | [全连接分层](../topologies/fully-connected-layered.md)，每层一区 | Settle，原周期 $D=M+2$ |
 | HB-Lattice | [二叉展开收拢](../topologies/hb-lattice.md)，基础区域关系、偏移 $\{0,1\}$ | Settle，原周期 $D=M+2$ |
-| HB-Exchange | [位交换图](../topologies/hb-settle-exchange.md)，展开深度与交换轮数可分开 | Settle，$D=M+1$ |
+| HB-Exchange | [位交换图](../topologies/hb-exchange.md)，展开深度与交换轮数可分开 | Settle，$D=M+1$ |
 | HB-Multiscale | [多跨度宽图与窄图](../topologies/hb-multiscale.md) | 单位边时延的 HB-Timed、跨度时延的对齐 TimedDAG／Settle |
 
 $M$ 为包含首尾的层数。Settle 保持当前正典的 $D>M$；Timed 主周期 $T=4$。同一空间图改变时延不改变参数数目，但改变聚合、状态写入和分配。LH-DAG／PDG 保留为一般语义探索，不进入本页规模表。
@@ -91,7 +91,7 @@ $S=\sum_\ell W_\ell$，普通节点数 $N_D=nS$；全位置可选 4 hub 时，$N
 | 原宽九层 | 32,4 | 1712 | 122.50 | 487.67 |
 | 原宽十七层 | 32,4 | 5456 | 390.46 | 1554.13 |
 
-这些不是训练效果排名。窄图减少并行容量与路径冗余；重复合作、摘要钩子是否有用以及扩大后如何分工，继续作为[设计问题](../memos/design/hb-timed-and-lh.md)保留。
+这些不是训练效果排名。窄图减少并行容量与路径冗余；重复合作、摘要钩子是否有用以及扩大后如何分工，继续作为[设计问题](../memos/design/hb-and-lh.md)保留。
 
 ## 5. 主干参数与活跃代理
 
@@ -114,6 +114,6 @@ independent 中 $B$ 只有区域头；pool 用比例 1。估算假定各区均�
 
 ## 6. 交互与复算
 
-[交互面板](../explorers/hb-timed/README.md)提供拓扑、数学公式和规模筛选；[完整参数 CSV](../explorers/hb-timed/generated/capacity.csv)保留全部尺寸、独立／共享、K/S/X 和二次幂预算的估算，[生成范围表](../explorers/hb-timed/generated/capacity-summary.md)便于逐图阅读。CSV 参数单位为标量个数，空预算列表示 k>n；页面以百万参数显示。所有行由[计数源](../explorers/hb-timed/capacity.py)重建。
+[交互面板](../explorers/backbone-atlas/README.md)提供拓扑、数学公式和规模筛选；[完整参数 CSV](../explorers/backbone-atlas/generated/capacity.csv)保留全部尺寸、独立／共享、K/S/X 和二次幂预算的估算，[生成范围表](../explorers/backbone-atlas/generated/capacity-summary.md)便于逐图阅读。CSV 参数单位为标量个数，空预算列表示 k>n；页面以百万参数显示。所有行由[计数源](../reference/backbones/capacity.py)重建。
 
 对应核对为[紧凑图的相位与合作](../examples/hb_compact_checks.py)和[参数形状与预算](../examples/backbone_capacity_checks.py)。这些证据不包含整网训练或吞吐结果。真正实现后还应按唯一 Parameter 对象核对主干总参。

@@ -1,4 +1,4 @@
-"""Build the registered offline HB atlas from the shared spatial definition.
+"""Build the offline backbone atlas from shared reference constructions/counts.
 
 Only potential paths are evaluated, not regional selection or neural functions.
 """
@@ -9,12 +9,13 @@ import html
 import json
 import math
 import sys
-import topology as g
-import settle_topology as sg
-import capacity
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parents[1] / 'reference'))
 sys.path.insert(0, str(ROOT.parents[2] / 'tools'))
+from backbones import multiscale as g
+from backbones import settle_graphs as sg
+import capacity_reports
 from native_svg import render_png
 N, H, T = 16, 4, 4
 PROFILES = g.PROFILES
@@ -315,7 +316,7 @@ def main():
     report={c['key']:{'depth':c['depth'],'widths':c['widths'],'family':c['family'],'ordinary_per_position':c['ordinary'],'hubs_per_position_by_layer':c['hub_counts'],'settle_period':c['settle_period'],'add_dd4':c['add_dd4'],**c['stats']} for c in cases}
     (OUT/'checks.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     for c in cases:c['svg']=region_svg(c)
-    data={'kinds':KINDS,'colors':COLORS,'cases':{c['key']:c for c in cases},'capacity':capacity.build(OUT)}
+    data={'kinds':KINDS,'colors':COLORS,'cases':{c['key']:c for c in cases},'capacity':capacity_reports.build(OUT)}
     (OUT/'data.json').write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
     template=(ROOT/'page.html').read_text()
     page=template.replace('__STYLE__',(ROOT/'style.css').read_text()).replace('__DATA__',json.dumps(data,ensure_ascii=False,separators=(',',':')).replace('</',r'<\/')).replace('__SCRIPT__',(ROOT/'explore.js').read_text())
@@ -323,7 +324,7 @@ def main():
     page=page.replace('__FORMULAS__',(ROOT/'formulas.js').read_text())
     page=page.replace('__CAPACITY__',(ROOT/'capacity.js').read_text())
     (OUT/'index.html').write_text(page)
-    print(f"Built HB atlas: {len(cases)} spatial cases, {len(data['capacity']['rows'])} parameter configurations; potential paths and shape counts only.")
+    print(f"Built backbone atlas: {len(cases)} spatial cases, {len(data['capacity']['rows'])} parameter configurations; potential paths and shape counts only.")
 
 
 if __name__=='__main__':main()

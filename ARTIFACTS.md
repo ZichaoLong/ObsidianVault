@@ -12,7 +12,7 @@ Git 保存正文、维护源、原始素材和明确留存的证据。能由源�
 | [Tide 原有三图](20-tide-decentralized-neural-network/figures/README.md#整体结构与一次区域作用) | [src/legacy/](20-tide-decentralized-neural-network/figures/src/legacy/) → PNG／SVG，`legacy-figures` | 改绘图源后重建；正典或接口变化时人工核对图示。来源快照不随日常构建改写 |
 | [Tide 局部图集](20-tide-decentralized-neural-network/figures/README.md#带权消息与两个算例) | [figures/src/](20-tide-decentralized-neural-network/figures/src/) 中局部、记忆、控制与时间绘图源 → PNG／SVG／报告，`local-figures` | 教材或算例变化时核对图中参数、条件和公式，再生成。报告记录教材哈希，不代表已完成语义审阅 |
 | [Tide 展示](20-tide-decentralized-neural-network/presentations/design-introduction/README.md) | `content.py`、`build.py`、CSS／JS、数值核对程序和 Transformer／MoE／HB 图源 → HTML／备注／分步 SVG，`presentation-build`；其后 `presentation-export` → PDF／预览／报告 | 讲述脚本、MoE／HB 实例、定义或设计说明变化时，核对屏幕内容、图形源和备注；需要交付静态版时再导出 |
-| [HB 交互公式面板](20-tide-decentralized-neural-network/explorers/hb-timed/README.md) | `topology.py`、`settle_topology.py`、`capacity.py`、绘图脚本与 HTML/CSS/JS 维护源 → `generated/` 图、页面、参数表与核对数据，`hb-topology-atlas` | 先核对原 HB、多跨度与位交换三图的逐边定义、分区、时间绑定、局部边界与界面公式，再构建；浏览器核对证据写仓库外临时目录 |
+| [主干拓扑与规模面板](20-tide-decentralized-neural-network/explorers/backbone-atlas/README.md) | [reference/backbones/](20-tide-decentralized-neural-network/reference/backbones/README.md) 的公共构图与计数、面板绘图／报表脚本和 HTML/CSS/JS → `generated/` 图、页面、参数表与核对数据，`backbone-atlas` | 先核对三类 HB 的逐边定义、分区、时间绑定，以及 FC／HB 的局部绑定、参数计数与界面公式，再构建；浏览器核对证据写仓库外临时目录 |
 | [技术笔记](30-technical-notes/README.md)与[共享素材](assets/README.md) | Markdown 为正文；三份 PPTX → SVG／PNG／PDF，属于 `editable-assets` | PowerPoint 修改 PPTX 后重建；改变数学符号或连线含义时核对正文。所有八张可编辑图的对应关系见素材说明 |
 | [总入口](00-entry/README.md)、[索引](40-index/README.md)、[归档](90-archive/README.md) | 人工维护的 Markdown，暂无机械生成物 | 移动／改名正文时同步入口和引用；归档保留历史含义，活跃版本另行维护 |
 
@@ -67,10 +67,10 @@ python3 tools/build.py --group legacy-figures
 python3 tools/build.py --group local-figures
 python3 tools/build.py --group presentation-build
 python3 tools/build.py --group presentation-export
-python3 tools/build.py --group hb-topology-atlas
+python3 tools/build.py --group backbone-atlas
 ```
 
-`--group` 可重复使用，自动按依赖顺序构建；不要与 `--full` 同用。展示 HTML 组只需 Python 标准库；HB 图册另需系统 Python 与 librsvg／Cairo／GObject，图形库由隔离子进程加载以避免 Conda 混库，见其 README。其余普通组需要 Pillow、CairoSVG、Cairo 和字体；展示导出另需浏览器。当前绘图脚本使用固定字体路径，Debian／Ubuntu 安装方式如下：
+`--group` 可重复使用，自动按依赖顺序构建；不要与 `--full` 同用。展示 HTML 组只需 Python 标准库；主干面板另需系统 Python 与 librsvg／Cairo／GObject，图形库由隔离子进程加载以避免 Conda 混库，见其 README。其余普通组需要 Pillow、CairoSVG、Cairo 和字体；展示导出另需浏览器。当前绘图脚本使用固定字体路径，Debian／Ubuntu 安装方式如下：
 
 ```bash
 python3 -m pip install -r 20-tide-decentralized-neural-network/figures/requirements.txt
@@ -119,7 +119,7 @@ python3 tools/check_links.py --require-built
 
 ## GitHub Actions
 
-[Repository checks](.github/workflows/repository.yml)在 push／pull request 时执行登记与目录交叉核对、全仓链接、Tide 专项和单元测试，轻量检查只需 Python 标准库与 Git。随后独立的 `hb-atlas` 作业安装 librsvg／Cairo／CJK 字体和 Firefox，构建 HB 面板并核对全部 58 个空间配置与主干参数筛选、公式、时间绑定、末层矩阵和浏览器布局，要求本组产物为 `CURRENT` 且维护源与工作区保持干净。失败时保留仓库外生成的浏览器诊断为 CI 附件。
+[Repository checks](.github/workflows/repository.yml)在 push／pull request 时执行登记与目录交叉核对、全仓链接、Tide 专项和单元测试，轻量检查只需 Python 标准库与 Git。随后独立的 `backbone-atlas` 作业安装 librsvg／Cairo／CJK 字体和 Firefox，构建主干面板并核对全部 58 个空间配置与 FC／HB 参数筛选、公式、时间绑定、末层矩阵和浏览器布局，要求本组产物为 `CURRENT` 且维护源与工作区保持干净。失败时保留仓库外生成的浏览器诊断为 CI 附件。
 
 在 **Actions → Repository checks → Run workflow** 手动触发完整构建，验证全部产物、指纹状态、浏览器交互与布局，以及构建不改动维护源、不留下未跟踪文件。CI 不回写生成物；所有检出都使用完整 Git 历史。
 

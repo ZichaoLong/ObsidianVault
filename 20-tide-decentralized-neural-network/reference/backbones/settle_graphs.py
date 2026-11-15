@@ -1,10 +1,10 @@
 """Original lattice and staged-exchange Settle graphs; no neural execution.
 
-Definitions: topologies/hb-lattice.md and topologies/hb-settle-exchange.md.
+Definitions: topologies/hb-lattice.md and topologies/hb-exchange.md.
 Node addresses use zero-based layers, with canonical rank = layer + 1.
 """
 from collections import Counter, defaultdict
-from topology import permutation
+from .multiscale import permutation
 
 
 def exchange_widths(m, rounds=None):

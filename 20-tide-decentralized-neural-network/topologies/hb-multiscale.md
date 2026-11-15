@@ -6,7 +6,7 @@ tags: [tide, hb, timed-dag, settlegraph]
 
 # HB 多跨度连接：Timed 与 Settle 的共同空间图
 
-本图在展开、加工、收拢中反复交换局部细节和跨组背景。普通节点有独立的输入到输出子图；hub 是可选的附加通路。旧 [HB-Lattice](hb-lattice.md) 的定义与实例保留，称为原 HB 对齐基线。本文的新连接图分别绑定 HB-Timed 和 HB-Multiscale-Settle，便于保持端点不变比较时间；HB-Settle 单独使用时须说明指哪张图；另有为对齐计算设计的[分阶段位交换图](hb-settle-exchange.md)。三个空间候选的[共同主绑定](../instances/hb-settle-weighted-message.md)可用于比较。
+本图在展开、加工、收拢中反复交换局部细节和跨组背景。普通节点有独立的输入到输出子图；hub 是可选的附加通路。旧 [HB-Lattice](hb-lattice.md) 的定义与实例保留，称为原 HB 对齐基线。本文的新连接图分别绑定 HB-Timed 和 HB-Multiscale-Settle，便于保持端点不变比较时间；HB-Settle 单独使用时须说明指哪张图；另有为对齐计算设计的[分阶段位交换图](hb-exchange.md)。三个空间候选的[共同主绑定](../instances/hb-settle-weighted-message.md)可用于比较。
 
 ## 1. 节点、位置与区域
 
@@ -147,4 +147,4 @@ $$\{\lceil(M-1)/2\rceil,\ldots,M-1\}.\tag{4}$$
 
 全部空间边增加区域秩，故配合精确局部块见证可应用[严格分层整块定理](../timed-dag-chunk-prefill-learning-note.md#6-严格分层区域的整块定理)：已知整个输入窗口时，按区域拓扑序求完整驱动，不必等到达对齐。局部状态递归、设备效率和逐输出的实际就绪仍由完整绑定确定。
 
-定义的可执行构造与[交互公式面板](../explorers/hb-timed/README.md)共用一份维护源；潜在覆盖与局部运行的验证分开记录。
+定义的可执行构造与[交互公式面板](../explorers/backbone-atlas/README.md)共用一份维护源；潜在覆盖与局部运行的验证分开记录。

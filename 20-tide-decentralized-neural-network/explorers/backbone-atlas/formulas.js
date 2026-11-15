@@ -56,7 +56,7 @@ function settleRegionFormulas(){
   if(ex)s+=mathBlock(sub(mi('c'),mn(l))+mo('=')+mn(l%Math.log2(current.ordinary)));
  }else s+='<p>末层没有消息出边。</p>';
  if(ex)s+='<p>Hub 增强在非末层沿 Q 做 DH 收集与 HH 交换，沿基础配对做每 hub 一个 HD 探针；末层只有 D，因此进入末层只保留 DDX 与 HD1。源与目标的完整节点端点见矩阵。</p>';
- s+=`<p><a href="../../../topologies/${ex?'hb-settle-exchange':'hb-lattice'}.md">完整拓扑与证明</a> · <a href="../../../instances/hb-settle-weighted-message.md">共同局部绑定</a></p>`;
+ s+=`<p><a href="../../../topologies/${ex?'hb-exchange':'hb-lattice'}.md">完整拓扑与证明</a> · <a href="../../../instances/hb-settle-weighted-message.md">共同局部绑定</a></p>`;
  $('#region-formulas').innerHTML=s;
 }
 function regionFormulas(){
@@ -123,7 +123,7 @@ function pairFormulas(){
   const first=Math.min(...pairs.map(x=>x[0]));
   s+=`<p class="formula-example">端点代入：${b[2].toUpperCase()}${first} → ${pairs.filter(x=>x[0]===first).map(x=>b[5].toUpperCase()+x[1]).join('、')}</p>`;
  }
- if(current.hubs||current.family==='multiscale')s+='<details><summary>固定置换怎样确定</summary><p>π、ρ、χ 在建图时确定。对标签与索引拼接固定种子后取 SHA-256，按摘要排序得到置换；不是每次输入重新采样。</p><p>π 使用 detail 标签，额外 DD4 使用 detail4；ρ 使用 collect；χ 使用 hook。精确字节规则见 <a href="../topology.py">构图源</a>与 <a href="../../../topologies/hb-multiscale.md">拓扑定义</a>。</p></details>';
+ if(current.hubs||current.family==='multiscale')s+='<details><summary>固定置换怎样确定</summary><p>π、ρ、χ 在建图时确定。对标签与索引拼接固定种子后取 SHA-256，按摘要排序得到置换；不是每次输入重新采样。</p><p>π 使用 detail 标签，额外 DD4 使用 detail4；ρ 使用 collect；χ 使用 hook。精确字节规则见 <a href="../../../reference/backbones/multiscale.py">构图源</a>与 <a href="../../../topologies/hb-multiscale.md">拓扑定义</a>。</p></details>';
  $('#pair-formulas').innerHTML=s;
 }
 function renderTiming(){

@@ -19,7 +19,7 @@ def check_dependencies(full=False, groups=None):
     """Check the current Tide renderers before starting any output writes."""
     if groups is not None and set(groups) <= {'presentation-build'}:
         return  # This generator uses only the Python standard library.
-    if groups is not None and 'hb-topology-atlas' in groups:
+    if groups is not None and 'backbone-atlas' in groups:
         missing = []
         try:
             check_native_renderer()
@@ -30,9 +30,9 @@ def check_dependencies(full=False, groups=None):
         if not any(Path(font).is_file() for font in fonts):
             missing.append('Noto Sans CJK or Droid Sans Fallback')
         if missing:
-            raise BuildError('HB atlas dependencies missing: ' + ', '.join(missing) +
+            raise BuildError('Backbone atlas dependencies missing: ' + ', '.join(missing) +
                              '; install python3 librsvg2-2 libcairo2 fonts-noto-cjk')
-        if set(groups) <= {'presentation-build', 'hb-topology-atlas'}:
+        if set(groups) <= {'presentation-build', 'backbone-atlas'}:
             return  # Native SVG rendering; no Python image packages or browser.
     missing = []
     for module, package in [('PIL', 'Pillow'), ('cairosvg', 'CairoSVG / Cairo')]:

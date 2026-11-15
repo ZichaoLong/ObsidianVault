@@ -2,9 +2,9 @@
 from pathlib import Path
 import sys
 
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'explorers'/'hb-timed'))
-import topology as ms
-import settle_topology as st
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'reference'))
+from backbones import multiscale as ms
+from backbones import settle_graphs as st
 from hb_lh_checks import check_output_paths
 from hb_settle_checks import check_alignment
 

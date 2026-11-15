@@ -39,7 +39,7 @@ tags:
 
 ## 2026-10-28：首次展示材料预览
 
-根据用户“请生成展示材料，我先看看”的要求，将[讲述脚本](../../presentations/design-introduction-script.md)制成[首版展示材料](../../presentations/design-introduction/README.md)：15 组画面、25 个讲者控制的停点，提供单文件离线 HTML、逐停点 PDF、六幅画面预览与讲者备注。沿固定 HB 节点布局走完两次输入，再解释共同框架、Mem、相容选择和上下层反馈；条件、实验边界与出处保留在画面和备注中。
+根据用户“请生成展示材料，我先看看”的要求，将[讲述脚本](../../presentations/design-introduction/script.md)制成[首版展示材料](../../presentations/design-introduction/README.md)：15 组画面、25 个讲者控制的停点，提供单文件离线 HTML、逐停点 PDF、六幅画面预览与讲者备注。沿固定 HB 节点布局走完两次输入，再解释共同框架、Mem、相容选择和上下层反馈；条件、实验边界与出处保留在画面和备注中。
 
 屏幕文字、备注和引用共用内容源；新增 SVG 图形由 figures/src/design_introduction.py 生成，构建与导出脚本随材料保存。以 Chrome 在 1600 × 900 画面上逐停点导出，25 页布局检查通过；另核对翻页、目录、备注、重看本页、小屏宽度和两轮的候选／Full／消息计数。抽样目视检查图形、状态采用、反馈页及实际 PDF 的第二次输出。仓库文档检查通过，本次没有新增训练或性能结果。
 
@@ -49,7 +49,7 @@ tags:
 
 按用户同意的整理方向，将[设计讨论稿](../../memos/design/design-requirements-and-architecture.md)压缩为目标与边界、两次完整计算、需求与机制关系、上下层反馈四段主线，保留短的可达范围附录。详细局部候选、实现证据、历史来源与实验问题链接到各自专题，完整旧稿保存在 [d15bafe](https://github.com/ZichaoLong/ObsidianVault/blob/d15bafe9df9daad0f77b5eb319651e2d15f5e2ae/20-tide-decentralized-neural-network/memos/design/design-requirements-and-architecture.md)。
 
-新增[首次展示讲述脚本](../../presentations/design-introduction-script.md)。从熟悉的顺序计算进入目标，在固定 HB 小图上走完第一次输入，再以第二次输入说明未激活时保留的记忆，随后展开共同框架、相容候选和成本反馈。各段记录前置理解、新增理解、逐步画面、讲述要点、核对事项和出处；保留数值底稿与素材接入说明，尚未制作成品幻灯片。
+新增[首次展示讲述脚本](../../presentations/design-introduction/script.md)。从熟悉的顺序计算进入目标，在固定 HB 小图上走完第一次输入，再以第二次输入说明未激活时保留的记忆，随后展开共同框架、相容候选和成本反馈。各段记录前置理解、新增理解、逐步画面、讲述要点、核对事项和出处；保留数值底稿与素材接入说明，尚未制作成品幻灯片。
 
 短稿和脚本统一使用已有 HB 三层实例的同一组参数、路径与输出。明确应用单输入单输出和三个固定图端口的边界区别；全区域参与可以与节点、连接稀疏并存；给定参数下的正温度二次分配恰好产生一位激活，不把发送总量直接当作激活数量上限。无界端口提示仍仅留作范围外答疑。
 

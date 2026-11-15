@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output-dir', type=Path)
 args = parser.parse_args()
-OUT = args.output_dir or Path(tempfile.mkdtemp(prefix='hb-atlas-browser-'))
+OUT = args.output_dir or Path(tempfile.mkdtemp(prefix='backbone-atlas-browser-'))
 OUT.mkdir(parents=True, exist_ok=True)
 profile = OUT / 'browser-profile'
 profile.mkdir(exist_ok=True)

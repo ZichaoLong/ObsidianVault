@@ -5,9 +5,9 @@ These are spatial/timing witnesses, not KV/SSD network execution or training.
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'explorers' / 'hb-timed'))
-import topology as multiscale
-import settle_topology as settle
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'reference'))
+from backbones import multiscale
+from backbones import settle_graphs as settle
 from hb_lh_checks import check_output_paths
 
 

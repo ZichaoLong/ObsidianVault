@@ -58,7 +58,7 @@ def main():
     print(model.check())
     for name,svg in FIGURES.items():
         (generated/f'{name}.svg').write_text(svg)
-    frames=[];metadata=[];notes=['# Tide 展示讲者备注\n','由 [content.py](content.py) 生成；讲述主线见[脚本](../design-introduction-script.md)。\n']
+    frames=[];metadata=[];notes=['# Tide 展示讲者备注\n','由 [content.py](content.py) 生成；讲述主线见[脚本](script.md)。\n']
     for i,slide in enumerate(content.SLIDES):
         notes.append(f'## {i+1}. {slide["steps"][0]["title"]}\n')
         refs=[dict(label=content.SOURCES[k][0],href=content.SOURCES[k][1]) for k in slide['sources']]

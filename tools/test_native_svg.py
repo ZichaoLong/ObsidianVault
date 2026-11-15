@@ -24,7 +24,7 @@ class NativeSvgTests(unittest.TestCase):
             self.assertEqual(env['PATH'],os.defpath)
 
     def test_atlas_source_compiles_with_escape_warnings_as_errors(self):
-        source=Path(__file__).resolve().parents[1]/'20-tide-decentralized-neural-network/explorers/hb-timed/build_atlas.py'
+        source=Path(__file__).resolve().parents[1]/'20-tide-decentralized-neural-network/explorers/backbone-atlas/build_atlas.py'
         with warnings.catch_warnings():
             warnings.simplefilter('error',SyntaxWarning)
             warnings.simplefilter('error',DeprecationWarning)

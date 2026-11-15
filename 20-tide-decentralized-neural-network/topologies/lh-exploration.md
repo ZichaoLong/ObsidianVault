@@ -6,7 +6,7 @@ tags: [tide, lh, timed-dag, positive-delay-graph]
 
 # LH-DAG 与 LH-PDG：双侧层次图的探索候选
 
-本候选保留参考 LH 的双侧层次 hub、底层卫星、局部连接、逐节点桥接与可选反馈。目的在于展示 Tide 更一般的区域与时间语义；不复刻参考 selector、几何生成器或数值模块。参考来源及已知差异见[设计说明](../memos/design/hb-timed-and-lh.md)。
+本候选保留参考 LH 的双侧层次 hub、底层卫星、局部连接、逐节点桥接与可选反馈。目的在于展示 Tide 更一般的区域与时间语义；不复刻参考 selector、几何生成器或数值模块。参考来源及已知差异见[设计说明](../memos/design/hb-and-lh.md)。
 
 ## 1. 节点与单侧连接
 

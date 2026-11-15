@@ -1,13 +1,31 @@
 ---
 type: migration-index
 status: reference
-as-of: 2026-10-20
+as-of: 2026-11-15
 tags:
   - tide
   - history
 ---
 
 # 旧内容重写与追溯索引
+
+## 2026-11-15 主干面板与参考计算
+
+整理前版本为 [85dccd9](https://github.com/ZichaoLong/ObsidianVault/commit/85dccd9)。本次调整目录职责和当前引用，四份正典、连接规则、置换种子、配置标识、参数计数与时间绑定保持。
+
+| 原位置 | 当前维护入口 |
+|---|---|
+| `explorers/hb-timed/` | [主干拓扑与规模面板](../../explorers/backbone-atlas/README.md)，包含三类 HB 的图与时间、FC／HB 规模筛选 |
+| 旧面板的 `topology.py` | [reference/backbones/multiscale.py](../../reference/backbones/multiscale.py) |
+| 旧面板的 `settle_topology.py` | [reference/backbones/settle_graphs.py](../../reference/backbones/settle_graphs.py) |
+| 旧面板的 `capacity.py` | [公共计数](../../reference/backbones/capacity.py)与[面板报表输出](../../explorers/backbone-atlas/capacity_reports.py)分离 |
+| `memos/design/hb-timed-and-lh.md` | [HB 与 LH 设计收拢](../../memos/design/hb-and-lh.md) |
+| `topologies/hb-settle-exchange.md` | [HB-Exchange 位交换图](../../topologies/hb-exchange.md)，继续采用原 Settle 时间绑定 |
+| `presentations/design-introduction-script.md` | [展示目录内的讲述脚本](../../presentations/design-introduction/script.md) |
+
+构建组由 `hb-topology-atlas` 改为 `backbone-atlas`，CI 名称同步。旧机器的忽略产物不会随 Git 迁移，按[升级说明](../../explorers/backbone-atlas/README.md#从旧目录升级)将旧目录移至仓库外保存，再重建新组；仓库内不保留第二套展示源。历史提交身份与核验快照仍按原版本解释。
+
+## 较早的整理背景
 
 2026-09-14 的整理将 20-tide 定位为数学教材与语义上游；下表记录 2026-09-20 的非正典目录整理及 2026-10-20 的后续归属。内容对应按主题追溯。整理前完整版本可从提交 **133d638** 追溯；更早一次大整合前的材料见 **d27819f**。
 

@@ -209,7 +209,7 @@ class DependencyTests(unittest.TestCase):
     @patch('build.check_native_renderer')
     @patch('build.Path.is_file', return_value=True)
     def test_atlas_only_uses_native_renderer(self, is_file, check_native, import_module):
-        check_dependencies(groups=['hb-topology-atlas'])
+        check_dependencies(groups=['backbone-atlas'])
         import_module.assert_not_called()
         check_native.assert_called_once_with()
 
@@ -217,7 +217,7 @@ class DependencyTests(unittest.TestCase):
     @patch('build.Path.is_file', return_value=True)
     def test_atlas_native_load_failure_is_reported_before_build(self, is_file, check_native):
         with self.assertRaisesRegex(BuildError, 'FcConfigSetDefaultSubstitute.*librsvg2-2'):
-            check_dependencies(groups=['hb-topology-atlas'])
+            check_dependencies(groups=['backbone-atlas'])
 
     @patch('build.importlib.import_module')
     @patch('build.Path.is_file', return_value=True)

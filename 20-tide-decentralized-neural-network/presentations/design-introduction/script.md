@@ -11,7 +11,7 @@ tags:
 
 # Tide：从 Transformer 的残差走向局部网络
 
-面向熟悉 Transformer、首次接触 Tide 的听众。主线是 **Transformer → 展开 MoE → 完成一次计算 → 局部网络 → 引入历史 → 回看接口与代价**。[设计短稿](../memos/design/design-requirements-and-architecture.md)保存需求依据；[展示材料](design-introduction/README.md)提供离线 HTML、PDF 和逐停点备注。屏幕文案和具体讲解维护在 [content.py](design-introduction/content.py)，本页只保存叙述设计，避免重复维护整套备注。
+面向熟悉 Transformer、首次接触 Tide 的听众。主线是 **Transformer → 展开 MoE → 完成一次计算 → 局部网络 → 引入历史 → 回看接口与代价**。[设计短稿](../../memos/design/design-requirements-and-architecture.md)保存需求依据；[展示材料](README.md)提供离线 HTML、PDF 和逐停点备注。屏幕文案和具体讲解维护在 [content.py](content.py)，本页只保存叙述设计，避免重复维护整套备注。
 
 ## 1. 从已有计算看节点边界
 
@@ -33,7 +33,7 @@ $$
 
 ## 2. 尽早走完一次计算
 
-采用新增的[显式残差 MoE 教学绑定](../instances/explicit-residual-moe.md)，不从旧 HB 的 $G=u$ 特例推断专家行为。
+采用新增的[显式残差 MoE 教学绑定](../../instances/explicit-residual-moe.md)，不从旧 HB 的 $G=u$ 特例推断专家行为。
 
 | 停点 | 新增理解 |
 |---|---|
@@ -43,7 +43,7 @@ $$
 
 全场对这张图保持节点位置。蓝色表示载荷，金色虚线表示控制，深色旁路表示基线。未选节点保留轮廓和“不计算”说明；静态连接与实际消息要能区分。开始时全部状态为单点，不提前假定 KV 或其他历史。
 
-完整函数、初态、容量、平分规则、空候选行为、时间与端口见实例 §2—3。[可执行核对](../examples/explicit_residual_moe_checks.py)用按边求值和直接公式作比较。
+完整函数、初态、容量、平分规则、空候选行为、时间与端口见实例 §2—3。[可执行核对](../../examples/explicit_residual_moe_checks.py)用按边求值和直接公式作比较。
 
 ## 3. 一个局部小组还不等于整个去中心化网络
 
@@ -84,4 +84,4 @@ P/S/U/F 是每次区域作用的阶段，专家、router、合并、Add 是功�
 
 附页 B 保留 HB 第一轮、$10/4/8$ 计数及原实例链接。完整第二轮和参数去原文查阅，避免将两套绑定混作一个贯穿算例。
 
-所有页面分别标明结构示意、定义事实、新增教学绑定、已确认目标、条件推论或待验证判断。数学来源首先回到 [TimedDAG §4—5](../timed-dag-region-selector-learning-note.md#4-节点的局部函数)、[分块教材 MoE](../timed-dag-chunk-prefill-learning-note.md#73-moe-区域)、[KV 内容函数](../local-semantics/weighted-message/kv-memory-learning-note.md#42-内容函数)及新实例；数值变化不作为性能结论。制作与静态导出遵守[展示技能](../skills/tide-presentation-writing/SKILL.md)。
+所有页面分别标明结构示意、定义事实、新增教学绑定、已确认目标、条件推论或待验证判断。数学来源首先回到 [TimedDAG §4—5](../../timed-dag-region-selector-learning-note.md#4-节点的局部函数)、[分块教材 MoE](../../timed-dag-chunk-prefill-learning-note.md#73-moe-区域)、[KV 内容函数](../../local-semantics/weighted-message/kv-memory-learning-note.md#42-内容函数)及新实例；数值变化不作为性能结论。制作与静态导出遵守[展示技能](../../skills/tide-presentation-writing/SKILL.md)。

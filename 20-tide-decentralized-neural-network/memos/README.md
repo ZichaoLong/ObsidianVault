@@ -21,7 +21,7 @@ tags:
 | [学习风险与诊断](training/sparse-routing-risks-and-diagnostics.md) | 跨架构的路径漂移、信用距离、状态负担、饥饿与干预机制 |
 | [可选研究问题与对照](training/weighted-message-research-questions.md) | 按问题取用的训练目标、对照、观测和结果解释 |
 
-需求与架构讨论稿梳理总体目标，[展示脚本](../presentations/design-introduction-script.md)安排首次听众的理解顺序，局部设计总览展开带权支线的选择；诊断用于解释学习现象，研究问题用于安排具体比较。实施的优先级与结论由研究者和下游记录。[实现核对](../reference/weighted-message-implementation-checks.md)单独检查所实现的函数与数学定义是否一致。
+需求与架构讨论稿梳理总体目标，[展示脚本](../presentations/design-introduction/script.md)安排首次听众的理解顺序，局部设计总览展开带权支线的选择；诊断用于解释学习现象，研究问题用于安排具体比较。实施的优先级与结论由研究者和下游记录。[实现核对](../reference/weighted-message-implementation-checks.md)单独检查所实现的函数与数学定义是否一致。
 
 ## 数学补充
 
@@ -47,4 +47,4 @@ tags:
 - [有界通信来源](../records/history/bounded-communication-origins.md)：直接通信范围、输入扩散与输出收拢的旧文依据及迁移、删除线索。
 - [LH 历史](../records/history/lh-design-origins.md)：早期实现与语义设计来源。
 
-[HB-Timed 与 LH 的设计收拢](design/hb-timed-and-lh.md)保存异时输出、扩大后的分工合作、hub 组织与本轮具体候选的取舍。
+[HB 与 LH 的设计收拢](design/hb-and-lh.md)保存异时输出、Settle 交换、扩大后的分工合作、hub 组织、参数配置与紧凑尺寸候选的取舍。
