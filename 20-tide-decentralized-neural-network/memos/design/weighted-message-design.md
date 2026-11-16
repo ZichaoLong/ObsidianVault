@@ -11,6 +11,8 @@ tags:
 
 总体目标与共同框架的关系见[设计需求与架构讨论稿](design-requirements-and-architecture.md)；本页展开带权支线内的具体选择。
 
+当前主干实例的实现入口是[三组主绑定](../../instances/hb-multiscale-weighted-message.md#2-两类记忆与三个主候选)：K 全用 KV／sum，S 全用 SSD／state，X 在普通节点用 KV、hub 用 SSD。分配以[角色上下界二次分配](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)为主，参数使用[独立、区域共享、层级共享三档](../../instances/parameter-profiles.md)。下文保留更广的可选设计空间，供具体问题需要时展开；主候选也无需穷举所有组合。
+
 本文从整体阅读局部架构：哪些信息被保存，哪些量参与评分与发送，哪些计算能省去，以及改变依赖可能得到什么、失去什么。共同定义见[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)，分配见[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md)，记忆分别见 [KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)与 [SSD](../../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)。
 
 数学性质提供设计边界，机制分析提供选择理由，任务表现仍依赖完整模型与训练。一个值得保持的研究判断是：保留任务需要的内容与历史依赖，同时减少一个量兼任多个控制作用的情况。它可以随实验结果逐步加强、减弱或修改。复杂耦合、计算成本和失败配置可能使某些判断长期无法被独立检验；未检验不等于已证伪，也不等于已验证。

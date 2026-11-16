@@ -11,6 +11,12 @@ tags:
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
 
+## 2026-11-15：通读后的符号与文档整理
+
+[区域分配教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)将角色发送上下界统一记为 $\underline c_v,\overline c_v$，并同步求解、导数、性质与实例引用；[主干绑定](../../instances/hb-multiscale-weighted-message.md#2-两类记忆与三个主候选)将输入周期记为 $P_{\mathrm{in}}$，与载荷空间 $P$ 区分，面板公式同步。相关长公式按数学结构换行，控制规则、可行条件和四份正典保持。
+
+实现核对中追加的角色、参数和图条目归回对应正文，消除重复节号；两份研究备忘录补入当前 K／S／X 与三档参数绑定的导航；学习资源明确个人书籍副本不随仓库分发。新增[九层 HB 连线算例](../../topologies/hb-multiscale.md#31-从位置对应算到节点端点)，逐步计算 DD1、DD2 与 HD2 端点，并给出面板复查位置，使用既有图和固定置换。
+
 ## 2026-11-15：角色分配教材整合与区域共享
 
 将角色上下界分配整合入[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)，保留描述定义域、全输入可行性、零接收与连续性、求解及边界导数；既有公式编号和候选保持。[参数绑定](../../instances/parameter-profiles.md)归入实例目录，采用 independent、region_shared、layer_shared 三档，补全全部部件的归属与运行含义。HB 优先区域共享；FC 的两个共享档注明等价。计数按实际区域及来源类汇总，参数表、面板、引用和核对同步。四份正典、旧教学实例与 MoE 展示保持。

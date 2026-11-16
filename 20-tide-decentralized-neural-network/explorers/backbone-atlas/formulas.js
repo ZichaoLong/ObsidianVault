@@ -93,9 +93,9 @@ function nodeFormulas(){
  s+='<p>首层输入节点取 D(v)={0}，随后沿 DAG 递推；这里计算的是消息路径。</p>';
  s+=mathBlock(cal('D')+par(mi('v'))+mo('=')+setMath(ds));
  if(n[2]==='d')s+=mathBlock(sub(cal('D'),textMath('普通'))+par(mi('v'))+mo('=')+setMath(dd));
- s+=mathBlock(mi('Φ')+par(mi('v'))+mo('=')+mo('{')+mi('d')+textMath(' mod ')+mi('P')+mo(':')+mi('d')+mo('∈')+cal('D')+par(mi('v'))+mo('}'));
+ s+=mathBlock(mi('Φ')+par(mi('v'))+mo('=')+mo('{')+mi('d')+textMath(' mod ')+sub(mi('P'),textMath('in'))+mo(':')+mi('d')+mo('∈')+cal('D')+par(mi('v'))+mo('}'));
  s+=mathBlock(mi('Φ')+par(mi('v'))+mo('=')+setMath(ph));
- s+='<p>此处 P 是当前输入周期（Timed 记 T，Settle 记 D）。Φ 是相对入口的 d mod P；绝对时间相位为 (1+d) mod P。Settle 图每节点只有一个潜在路径时延。</p><h3>与局部作用的对应</h3><p>同刻到达的消息进入同一时间纤维，再由 Agg 聚合；异刻消息分次作用，通过持久状态衔接。</p><p class="formula-boundary">面板只计算拓扑可达。记忆、评分和 SelStep 已在 <a href="../../../instances/hb-multiscale-weighted-message.md">三组主绑定</a>中定义，此处没有模拟 cᵥ 或实际发送。</p>';
+ s+='<p>此处 P<sub>in</sub> 是当前输入周期（Timed 记 T，Settle 记 D）。Φ 是相对入口的 d mod P<sub>in</sub>；绝对时间相位为 (1+d) mod P<sub>in</sub>。Settle 图每节点只有一个潜在路径时延。</p><h3>与局部作用的对应</h3><p>同刻到达的消息进入同一时间纤维，再由 Agg 聚合；异刻消息分次作用，通过持久状态衔接。</p><p class="formula-boundary">面板只计算拓扑可达。记忆、评分和 SelStep 已在 <a href="../../../instances/hb-multiscale-weighted-message.md">三组主绑定</a>中定义，此处没有模拟 cᵥ 或实际发送。</p>';
  $('#node-formulas').innerHTML=s;
 }
 function pairFormulas(){

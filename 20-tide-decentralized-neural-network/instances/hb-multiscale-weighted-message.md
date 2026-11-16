@@ -31,15 +31,15 @@ tags: [tide, hb, weighted-message]
 
 ## 2. 两类记忆与三个主候选
 
-以 $P$ 表示当前输入周期：Timed 取 $P=T$，Settle 取 $P=D=M+1$。以下时钟规定在一次运行及所有 chunk 中保持。
+以 $P_{\mathrm{in}}$ 表示当前输入周期：Timed 取 $P_{\mathrm{in}}=T$，Settle 取 $P_{\mathrm{in}}=D=M+1$。以下时钟规定在一次运行及所有 chunk 中保持。
 
-**KV。** 采用 [KV 教材](../local-semantics/weighted-message/kv-memory-learning-note.md)的空缓存初态、Upd、sum 描述和完整 Attention／前馈内容函数。$H_{\mathrm{att}}=4,d_h=32$；共享配置默认 $r_a=8$（尺寸对照取 $\min(r_{\mathrm{ad}},d)$），独立配置按 §4 取 $r_a=d$ 的完整投影表示；窗口为 $T_v=128P$ 个逻辑时间，短期率 $\beta_{\mathrm{short}}=\log2/(8P)$、长期率零。Full 每头旋转全部 32 维，频率 $10^{-4\cdot2(a-1)/32}$；距离偏置取零，$\alpha_{\mathrm{att}}=\alpha_{\mathrm{ff}}=1$。sum 描述不额外使用查询旋转。其余投影、摘要与前馈矩阵按教材给定形状，是有限可训练参数。
+**KV。** 采用 [KV 教材](../local-semantics/weighted-message/kv-memory-learning-note.md)的空缓存初态、Upd、sum 描述和完整 Attention／前馈内容函数。$H_{\mathrm{att}}=4,d_h=32$；共享配置默认 $r_a=8$（尺寸对照取 $\min(r_{\mathrm{ad}},d)$），独立配置按 §4 取 $r_a=d$ 的完整投影表示；窗口为 $T_v=128P_{\mathrm{in}}$ 个逻辑时间，短期率 $\beta_{\mathrm{short}}=\log2/(8P_{\mathrm{in}})$、长期率零。Full 每头旋转全部 32 维，频率 $10^{-4\cdot2(a-1)/32}$；距离偏置取零，$\alpha_{\mathrm{att}}=\alpha_{\mathrm{ff}}=1$。sum 描述不额外使用查询旋转。其余投影、摘要与前馈矩阵按教材给定形状，是有限可训练参数。
 
-**SSD。** 采用 [SSD 教材](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)的零矩阵、零摘要与空缓存初态，全部 Upd、state 描述及内容公式。4 头、1 组、$d_m=32,d_k=32$，短卷积 conv_size=4；矩阵被动衰减零，摘要短期率 $\log2/(8P)$、长期率零，output_norm_eps=$10^{-5}$，$\alpha_{\mathrm{mem}}=\alpha_{\mathrm{ff}}=1$。有限的投影、卷积系数、$A^{\log},b^\Delta,D_h$、归一化尺度、读取与前馈矩阵均按教材形状给定。
+**SSD。** 采用 [SSD 教材](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)的零矩阵、零摘要与空缓存初态，全部 Upd、state 描述及内容公式。4 头、1 组、$d_m=32,d_k=32$，短卷积 conv_size=4；矩阵被动衰减零，摘要短期率 $\log2/(8P_{\mathrm{in}})$、长期率零，output_norm_eps=$10^{-5}$，$\alpha_{\mathrm{mem}}=\alpha_{\mathrm{ff}}=1$。有限的投影、卷积系数、$A^{\log},b^\Delta,D_h$、归一化尺度、读取与前馈矩阵均按教材形状给定。
 
-位置和卷积有两种明确的对照口径。主候选采用输入周期换算：Timed 的 $\operatorname{Pos}_v(\theta)=(\theta-1)/P$；Settle 用 $(\theta-r_v)/P$，故对齐作用处为输入位置 $t$。相对旋转中逐节点常数偏移抵消。Timed 的 conv_stride=1，覆盖相邻逻辑槽；Settle 的 conv_stride=$D$，覆盖相邻输入位置。如此比较的是各时间结构下的实用局部配置。若要**只改边时延**，在共同 $D>M$ 下比较 Timed 与 Settle，须给两侧固定相同日程以及相同 Pos、逻辑窗口、衰减、conv_stride。两种口径分别标注，不把多项变化归因于一项。
+位置和卷积有两种明确的对照口径。主候选采用输入周期换算：Timed 的 $\operatorname{Pos}_v(\theta)=(\theta-1)/P_{\mathrm{in}}$；Settle 用 $(\theta-r_v)/P_{\mathrm{in}}$，故对齐作用处为输入位置 $t$。相对旋转中逐节点常数偏移抵消。Timed 的 conv_stride=1，覆盖相邻逻辑槽；Settle 的 conv_stride=$D$，覆盖相邻输入位置。如此比较的是各时间结构下的实用局部配置。若要**只改边时延**，在共同 $D>M$ 下比较 Timed 与 Settle，须给两侧固定相同日程以及相同 Pos、逻辑窗口、衰减、conv_stride。两种口径分别标注，不把多项变化归因于一项。
 
-有限 KV 窗口 $128P$ 表示物理逻辑时间范围，不代表缓存恒为 128 项：Timed 中一个节点可以在每个逻辑时间收到不同作用，最多存 $128P$ 项；Settle 主配置每个输入位置至多写一次，最多 128 项。SSD 状态固定大小，但所有正接收仍执行更新。
+有限 KV 窗口 $128P_{\mathrm{in}}$ 表示逻辑时间窗口，不代表缓存恒为 128 项：Timed 中一个节点可以在每个逻辑时间收到不同作用，最多存 $128P_{\mathrm{in}}$ 项；Settle 主配置每个输入位置至多写一次，最多 128 项。SSD 状态固定大小，但所有正接收仍执行更新。
 
 | 主候选 | 普通节点 | hub | 用途与代价 |
 |---|---|---|---|
@@ -55,7 +55,7 @@ tags: [tide, hb, weighted-message]
 
 | 分区 | 预算与边界 |
 |---|---|
-| group | D 区 $k_D$；H 区 $k_H$，各 hub 的 $\alpha=1/k_H$，故 $u_h=\mu_h,\ell_h=\mu_h/4$ |
+| group | D 区 $k_D$；H 区 $k_H$，各 hub 的 $\alpha=1/k_H$，故 $\overline c_h=\mu_h,\underline c_h=\mu_h/4$ |
 | singleton | D 区 $k_D$；每个 H 区 $k=1$、固定通过 $c_h=\mu_h$ |
 | mixed | 整区 $k=k_D+k_H$，普通边界不变，hub 取 $\beta=1/4,\alpha=1/k$ |
 

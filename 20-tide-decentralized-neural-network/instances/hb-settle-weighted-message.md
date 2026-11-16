@@ -32,7 +32,7 @@ Exchange 可在非末层每位置启用 4 个 hub，分为 D 区与 H 区，成�
 | 普通区 | $k_D=\max(1,\lceil n/32\rceil)$，$K=n$，普通边界 $(0,\mu_v)$ |
 | 增强图 H 区 | $h=4,k_H=2,K=4$，hub 边界 $(\mu_h/4,\mu_h)$；共同角色分配 |
 | 区域历史 | 单点；全部候选保留 Upd；零控制不求 Full |
-| 时间 | $P=D$；$\operatorname{Pos}_v(\theta)=(\theta-r_v)/D$，KV 窗口 $128D$，短期率 $\log2/(8D)$，SSD conv_stride=$D$ |
+| 时间 | $P_{\mathrm{in}}=D$；$\operatorname{Pos}_v(\theta)=(\theta-r_v)/D$，KV 窗口 $128D$，短期率 $\log2/(8D)$，SSD conv_stride=$D$ |
 | 输入 | 首层全部现存节点各有入口，$(1,E_{\mathrm{role}(v)}x_t)$；无 hub 只需 $E_D$ |
 | 输出 | 末层 D 的逐端口原始记录 $Z$；需要单槽时使用共同 ReadOut，全部缺席返回零 |
 

@@ -21,7 +21,7 @@ $M$ 为包含首尾的层数。Settle 保持当前正典的 $D>M$；Timed 主周
 
 HB 继承[多跨度主绑定](hb-multiscale-weighted-message.md)与 [Settle 共同绑定](hb-settle-weighted-message.md)的全部函数和初态，再按本页替换尺寸、预算和参数归属。主表使用 group 分区；可选 hub 为非末层每位置 4 个、独立 H 区，末层只有 D。无 hub 时保留全部普通边。
 
-**FC 的统一绑定。** 复用上述主绑定的载荷、KV／SSD 状态与零初态、Agg、Read$^+$、cat／att/content_stats 评分、received query、Next 和 Full；全图只有 D 角色，来源类为 ext、DD。每个首层节点有入口 $(1,E_Dx_t)$，末层全部节点有输出端口。时间、Pos、窗口、衰减与卷积步长按 Settle 规则，$P=D=M+2$。参数按[三档整体绑定](parameter-profiles.md)的节点／区域／层级归属，区域为 D 类型。这是一份新的完整比较绑定；[旧 FC 教学实例](fully-connected-layered-weighted-message.md)的混合参数归属保留，不套用本页计数。
+**FC 的统一绑定。** 复用上述主绑定的载荷、KV／SSD 状态与零初态、Agg、Read$^+$、cat／att/content_stats 评分、received query、Next 和 Full；全图只有 D 角色，来源类为 ext、DD。每个首层节点有入口 $(1,E_Dx_t)$，末层全部节点有输出端口。时间、Pos、窗口、衰减与卷积步长按 Settle 规则，$P_{\mathrm{in}}=D=M+2$。参数按[三档整体绑定](parameter-profiles.md)的节点／区域／层级归属，区域为 D 类型。这是一份新的完整比较绑定；[旧 FC 教学实例](fully-connected-layered-weighted-message.md)的混合参数归属保留，不套用本页计数。
 
 三组记忆仍为 K（全部 KV/sum）、S（全部 SSD/state）、X（D 用 KV，H 用 SSD）；无 hub 时 X 与 K 重合，表中去重。没有增加第四组局部函数。
 

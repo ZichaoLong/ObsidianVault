@@ -10,7 +10,7 @@ tags: [tide, lh, weighted-message]
 
 ## 1. 完整替换项
 
-继承 HB 实例 §1—2 的载荷宽度、归一化、记忆尺寸、空／零初态、全部 Upd、Mem、$p_v,G_v$、Read$^+$、cat 与 att 评分、received query、角色二次分配、Next 和广播。局部时间取 $P=4$、$\operatorname{Pos}_v(\theta)=(\theta-1)/4$、conv_stride=1，窗口、衰减和全部有限矩阵的范围依 HB 绑定。下表补全 LH 特有部分。
+继承 HB 实例 §1—2 的载荷宽度、归一化、记忆尺寸、空／零初态、全部 Upd、Mem、$p_v,G_v$、Read$^+$、cat 与 att 评分、received query、角色二次分配、Next 和广播。局部时间取 $P_{\mathrm{in}}=4$、$\operatorname{Pos}_v(\theta)=(\theta-1)/4$、conv_stride=1，窗口、衰减和全部有限矩阵的范围依 HB 绑定。下表补全 LH 特有部分。
 
 | 对象 | LH 绑定 |
 |---|---|

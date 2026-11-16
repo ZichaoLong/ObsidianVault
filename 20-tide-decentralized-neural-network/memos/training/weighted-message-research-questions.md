@@ -11,6 +11,8 @@ tags:
 
 本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../design/weighted-message-design.md)；函数以[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)、[区域分配](../../local-semantics/weighted-message/region-allocation-learning-note.md)及共同架构列出的记忆教材为准。实现与定义的对应见[实现核对](../../reference/weighted-message-implementation-checks.md)。
 
+当前主干对照从[K／S／X 三组记忆绑定](../../instances/hb-multiscale-weighted-message.md#2-两类记忆与三个主候选)出发，分别是全 KV／sum、全 SSD／state、普通节点 KV 与 hub SSD；采用[角色上下界二次分配](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)，参数对照收在[independent／region_shared／layer_shared 三档](../../instances/parameter-profiles.md)。尺寸、预算与 pool 对照见[主干比较绑定](../../instances/backbone-comparison.md)。本页的更广目录供研究问题需要时选取。
+
 以下条目没有预设执行顺序，也不要求全部实施。研究者掌握设计空间后，根据当前问题、已有结果和资源选择优先级。一个配置失败、难以训练或过于昂贵，本身可成为缩小探索范围的依据；复杂耦合可能使某些机制判断长期只有间接支持。
 
 ## 1. 问题与可选比较

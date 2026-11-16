@@ -657,29 +657,33 @@ $$
 先采用 §3.1 的 cat 局部评分与 ind 区域评分。给定角色边界函数，Describe 返回
 
 $$
-d_v=(w_v,\mu_v,s_v^{\mathrm{loc}},\ell_v,u_v),\qquad
-0\le\ell_v\le u_v\le\mu_v\le1.
+\begin{aligned}
+d_v&=(w_v,\mu_v,s_v^{\mathrm{loc}},\underline c_v,\overline c_v),\\
+0&\le\underline c_v\le\overline c_v\le\mu_v\le1.
+\end{aligned}
 $$
 
-本节 $u_v$ 是发送上界，与前文同字母的聚合内容向量区分。评分使用 Read 指定的状态；上下界由固定角色和本次 $\mu_v$ 决定。普通边界取 $(\ell_v,u_v)=(0,\mu_v)$；需要保障的节点 $h$ 可选：
-
-$$
-\begin{array}{ll}
-\text{固定通过：}&\ell_h=u_h=\mu_h,\\
-\text{有限保底：}&\ell_h=\beta_h\mu_h,\quad
-u_h=\min(\mu_h,\alpha_h k),\quad 0<\beta_h\le1,\quad\alpha_h>0.
-\end{array}
-$$
-
-$\alpha_h$ 表示预算份额，$\gamma_h$ 表示接收增益。Hub 可使用这两种待遇，其他角色也可复用。这里“常亮”指正接收时发送强度为正，不是自主心跳。
-
-将所选角色的函数记为 $\ell_v(\mu),u_v(\mu)$。固定满足下文全输入可行条件的角色参数，定义
+这里 $\underline c_v,\overline c_v$ 分别是节点 $v$ 的发送下界与上界。评分使用 Read 指定的状态；上下界由固定角色和本次 $\mu_v$ 决定。普通边界取 $(\underline c_v,\overline c_v)=(0,\mu_v)$；需要保障的节点 $h$ 可选：
 
 $$
 \begin{aligned}
-D_v^{\mathrm{role,ind}}=\{(w,\mu,s,\ell,u):{}&
-0\le w\le\mu\le1,\quad\mu\le\gamma_{\max}w,\quad s\in\mathbb R,\\
-&\ell=\ell_v(\mu),\quad u=u_v(\mu)\}.
+\text{固定通过：}\quad&\underline c_h=\overline c_h=\mu_h,\\
+\text{有限保底：}\quad&\underline c_h=\beta_h\mu_h,\quad
+\overline c_h=\min(\mu_h,\alpha_h k).
+\end{aligned}
+$$
+
+有限保底的参数满足 $0<\beta_h\le1,\alpha_h>0$。$\alpha_h$ 表示预算份额，$\gamma_h$ 表示接收增益。Hub 可使用这两种待遇，其他角色也可复用。这里“常亮”指正接收时发送强度为正，不是自主心跳。
+
+将所选角色的函数记为 $\underline c_v(\mu),\overline c_v(\mu)$。固定满足下文全输入可行条件的角色参数，定义
+
+$$
+\begin{aligned}
+D_v^{\mathrm{role,ind}}=\{(w,\mu,s,\underline c,\overline c):{}&
+0\le w\le\mu\le1,\\
+&\mu\le\gamma_{\max}w,\quad s\in\mathbb R,\\
+&\underline c=\underline c_v(\mu),\quad
+\overline c=\overline c_v(\mu)\}.
 \end{aligned}
 $$
 
@@ -688,20 +692,21 @@ Describe 与 SelStep 的每个描述都须属于对应空间；上下界不是�
 只对实际 $C$ 求和，取 $b=\min(1,\sum_v\mu_v)$，定义
 
 $$
-U=\min(k,\sum_vu_v),\qquad
-L=\max\left(\sum_v\ell_v,\min(b,U)\right).
+U=\min(k,\sum_v\overline c_v),\qquad
+L=\max\left(\sum_v\underline c_v,\min(b,U)\right).
 $$
 
-下文条件保证 $\sum\ell_v\le U$。给定固定阈值 $\eta\in\mathbb R$，令 $t_v=s_v^{\mathrm{loc}}-\eta$，定义
+下文条件保证 $\sum\underline c_v\le U$。给定固定阈值 $\eta\in\mathbb R$，令 $t_v=s_v^{\mathrm{loc}}-\eta$，定义
 
 $$
-c=\arg\max\left\{\sum_vt_vc_v-\frac{\tau}{2}\sum_vc_v^2:
-\ell_v\le c_v\le u_v,\quad L\le\sum_vc_v\le U\right\}.
+c=\underset{\substack{\underline c_v\le c_v\le\overline c_v\\
+L\le\sum_vc_v\le U}}{\arg\max}
+\left(\sum_vt_vc_v-\frac{\tau}{2}\sum_vc_v^2\right).
 $$
 
 这是 role_bounded_quad 的区间模式。返回激活集 $\mathcal A=\{v:c_v>0\}$ 与控制族，区域历史为单点，正典容量取 $K_j=|\mathcal R_j|$。$k$ 约束发送总和，不限制正分量个数；Full 与 Next 沿用共同定义，全部候选保留接收更新。
 
-例如，一个 hub 与两个普通节点的上限为 $(1,1,1)$，$k=2$，hub 取 $\beta=1/4,\alpha=1/2$。于是 $\ell=(1/4,0,0),u=(1,1,1),L=1,U=2$。取 $\tau=1,\eta=0,s=(-2,1,0.8)$，解为 $(0.25,0.975,0.775)$。Hub 本次缺席时，只对两个普通候选求解，得到 $(1,0.8)$；不读取缺席 hub 的旧描述，也不为其占预算。
+例如，一个 hub 与两个普通节点的上限为 $(1,1,1)$，$k=2$，hub 取 $\beta=1/4,\alpha=1/2$。于是 $\underline c=(1/4,0,0),\overline c=(1,1,1)$，$L=1,U=2$。取 $\tau=1,\eta=0,s=(-2,1,0.8)$，解为 $(0.25,0.975,0.775)$。Hub 本次缺席时，只对两个普通候选求解，得到 $(1,0.8)$；不读取缺席 hub 的旧描述，也不为其占预算。
 
 ##### 对所有合法输入保证可行
 
@@ -712,7 +717,7 @@ $$
 \beta_h\le\alpha_h k\quad(h\in H_b).
 $$
 
-因为 $0\le\mu_h\le1$，这些条件保证逐节点 $\ell\le u$，且任意候选子集都有 $\sum\ell\le k$。再由 $\sum\ell\le\sum u$ 得 $\sum\ell\le U$，从而 $L\le U$、可行集非空。更一般的边界函数须另给覆盖所有合法描述的证明。
+因为 $0\le\mu_h\le1$，这些条件保证逐节点 $\underline c\le\overline c$，且任意候选子集都有 $\sum\underline c\le k$。再由 $\sum\underline c\le\sum\overline c$ 得 $\sum\underline c\le U$，从而 $L\le U$、可行集非空。更一般的边界函数须另给覆盖所有合法描述的证明。
 
 四 hub 独立成区，取 $k=2,\beta=1/4,\alpha=1/2$ 满足条件。四个固定通过 hub 则要求 $k\ge4$，此时均有 $c_h=\mu_h$，没有分配权衡。单 hub 区取 $k=1$、固定通过，数值上就是 constrained 单候选的 $c_h=\mu_h$。
 
@@ -723,16 +728,18 @@ $$
 采用 att 时，描述空间扩为
 
 $$
-D_v^{\mathrm{role,att}}=
-\{(w,\mu,x,K,s,\ell,u):(w,\mu,s,\ell,u)\in D_v^{\mathrm{role,ind}},
-\ x,K\in\mathbb R^{d_{\mathrm{sel}}}\}.
+\begin{aligned}
+D_v^{\mathrm{role,att}}=\{(w,\mu,x,K,s,\underline c,\overline c):{}&
+(w,\mu,s,\underline c,\overline c)\in D_v^{\mathrm{role,ind}},\\
+&x,K\in\mathbb R^{d_{\mathrm{sel}}}\}.
+\end{aligned}
 $$
 
 按 §3.6 返回对应向量，固定 query_weight=received，用 $w$ 汇集 query，将最终 $s_v$ 代入上述二次目标。普通节点与 hub 的 Mem 可来自不同记忆，只需提供相容描述；完整内容仍通过消息传播。
 
 还可固定 $\rho\in[0,1]$，取 $B=L+\rho(U-L)$，将总量区间替换为 $\sum c_v=B$。若使用上下文头，则向描述空间增加 §3.4 的证据向量 $z_v^{\mathrm{reg}}\in\mathbb R^{d_{\mathrm{reg}}}$，按 §2.2 以 $w$ 汇集、统计项使用 $\sum w,\sum\mu$，令 $\rho=\sigma(H_j(f_j^{\mathrm{reg}}))$。也可明确选择原下界 $b=\min(1,\sum w)$；所选描述、总量头和下界须一同记录。$\min(b,U)$ 避免角色封顶令原下界不可达。
 
-主实例使用区间模式、$b=\min(1,\sum\mu)$ 与固定阈值。全部节点取 $\ell=0,u=\mu$ 时，精确恢复 quad、constrained。角色候选只定义二次正则，其求解、性质及配置分别见 §6.5、§8.3、附录 S.4。
+主实例使用区间模式、$b=\min(1,\sum\mu)$ 与固定阈值。全部节点取 $\underline c=0,\overline c=\mu$ 时，精确恢复 quad、constrained。角色候选只定义二次正则，其求解、性质及配置分别见 §6.5、§8.3、附录 S.4。
 
 ### 4.2 通过 Attention 份额分配
 
@@ -847,7 +854,7 @@ $$
 | 区域阈值分配 | $\mu_v^{\max}$ | $[b^{\mathrm{recv}},U]$ | quad／ent 的 $\alpha>1$ 可稀疏；Shannon／bern 全有效 | $\lvert\mathcal R_j\rvert$ |
 | 节点增益与固定阈值，quad／ent，$\alpha>1$ | $\mu_v$ | $[\min(1,M),\min(k,M)]$ | 可以精确稀疏 | $\lvert \mathcal R_j\rvert$ |
 | 节点增益与固定阈值，Shannon／bern | $\mu_v$ | 同上 | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
-| 角色上下界二次分配 | $u_v\le\mu_v$ | $[L,U]$ 或 $B$ | 正接收保底节点全正，其余可稀疏 | $\lvert\mathcal R_j\rvert$ |
+| 角色上下界二次分配 | $\overline c_v\le\mu_v$ | $[L,U]$ 或 $B$ | 正接收保底节点全正，其余可稀疏 | $\lvert\mathcal R_j\rvert$ |
 | 直接 Attention，两种基权重 | $\mu_v$ | $(0,\max\mu]$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 固定总强度 Attention | $1$ | $1$ | 全部真实或全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 总量缩放 Attention | $1$ | $\min(1,M)$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
@@ -1102,13 +1109,15 @@ $$
 §4.1.5 的可行集非空、紧且凸，$\tau>0$ 时目标严格凹，故控制唯一。定义
 
 $$
-c_v(\lambda)=\operatorname{clip}((t_v-\lambda)/\tau,\ell_v,u_v),
-\qquad S(\lambda)=\sum_vc_v(\lambda).
+\begin{aligned}
+c_v(\lambda)&=\operatorname{clip}((t_v-\lambda)/\tau,\underline c_v,\overline c_v),\\
+S(\lambda)&=\sum_vc_v(\lambda).
+\end{aligned}
 $$
 
-区间模式先算 $S(0)$：在 $[L,U]$ 内取 $\lambda=0$；超过 $U$ 时以 $\lambda\ge0$ 解 $S(\lambda)=U$；低于 $L$ 时以 $\lambda\le0$ 解 $S(\lambda)=L$。指定总量直接解 $S(\lambda)=B$，不限制符号。$S$ 连续单调不增，可按断点 $t_v-\tau u_v,t_v-\tau\ell_v$ 扫描或二分。乘子可不唯一，但控制唯一；总量等于 $\sum\ell$ 或 $\sum u$ 时直接返回对应边界族。
+区间模式先算 $S(0)$：在 $[L,U]$ 内取 $\lambda=0$；超过 $U$ 时以 $\lambda\ge0$ 解 $S(\lambda)=U$；低于 $L$ 时以 $\lambda\le0$ 解 $S(\lambda)=L$。指定总量直接解 $S(\lambda)=B$，不限制符号。$S$ 连续单调不增，可按断点 $t_v-\tau\overline c_v,t_v-\tau\underline c_v$ 扫描或二分。乘子可不唯一，但控制唯一；总量等于 $\sum\underline c$ 或 $\sum\overline c$ 时直接返回对应边界族。
 
-令 $F,A_-,A_+$ 分别为严格内部、严格下界、严格上界坐标，先消去固定坐标 $\ell=u$。在分支不变时，$dc_v=d\ell_v$ 于 $A_-$，$dc_v=du_v$ 于 $A_+$；内部坐标满足
+令 $F,A_-,A_+$ 分别为严格内部、严格下界、严格上界坐标，先消去固定坐标 $\underline c=\overline c$。在分支不变时，$dc_v=d\underline c_v$ 于 $A_-$，$dc_v=d\overline c_v$ 于 $A_+$；内部坐标满足
 
 $$
 dc_v=(dt_v-d\lambda-c_vd\tau)/\tau.
@@ -1117,8 +1126,11 @@ $$
 总和约束松弛时 $d\lambda=0$。总和固定在当前 $S_*=L,U$ 或 $B$ 且 $|F|>0$ 时，
 
 $$
-d\lambda=\frac{\sum_F(dt_v-c_vd\tau)
- +\tau(\sum_{A_-}d\ell_v+\sum_{A_+}du_v-dS_*)}{|F|}.
+\begin{aligned}
+d\lambda&=\frac{\sum_F(dt_v-c_vd\tau)}{|F|}\\
+&\quad+\frac{\tau}{|F|}
+ \left(\sum_{A_-}d\underline c_v+\sum_{A_+}d\overline c_v-dS_*\right).
+\end{aligned}
 $$
 
 固定通过坐标先取 $dc_h=d\mu_h$，其微分加入上式的边界和。再沿角色边界、$L/U$、评分和区域头使用链式法则；$S_*$ 不是无条件常数。上述公式给出光滑分支的方向微分，可转置实现反向。没有内部坐标的开分支，各控制随对应边界变化；等式总量与边界同时自由扰动时须重新判定分支，不能除零。
@@ -1273,9 +1285,9 @@ $$
 
 ### 8.3 角色边界的零接收与连续性
 
-空候选返回空族；全零接收强制 $\ell=u=0$，加入零接收候选不改变其余控制。固定有限角色参数和正温度，连续的接收、边界及有效评分给出连续分配。
+空候选返回空族；全零接收强制 $\underline c=\overline c=0$，加入零接收候选不改变其余控制。固定有限角色参数和正温度，连续的接收、边界及有效评分给出连续分配。
 
-**证明。** 平移 $x=c-\ell$ 后，可行集为 $0\le x\le u-\ell$，总量上下界减去 $\sum\ell$，目标线性系数变为 $t-\tau\ell$。因此可用附录 A.1 的恢复列证明。弱接收坐标满足 $c\le u\le\mu\le\gamma_{\max}w\to0$，其对 query／证据的贡献也趋零；有界评分下该坐标对其余控制的影响消失。由共同架构的组合条件得到零消息中性与有限时间连续性。$\square$
+**证明。** 平移 $x=c-\underline c$ 后，可行集为 $0\le x\le\overline c-\underline c$，总量上下界减去 $\sum\underline c$，目标线性系数变为 $t-\tau\underline c$。因此可用附录 A.1 的恢复列证明。弱接收坐标满足 $c\le\overline c\le\mu\le\gamma_{\max}w\to0$，其对 query／证据的贡献也趋零；有界评分下该坐标对其余控制的影响消失。由共同架构的组合条件得到零消息中性与有限时间连续性。$\square$
 
 ## 附录 A：连续性与极限证明
 
