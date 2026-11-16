@@ -8,6 +8,8 @@ tags: [tide, hb, weighted-message]
 
 本文将[共同连接图](../topologies/hb-multiscale.md)与已有记忆、[角色分配](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)组成可实现的模型族。只保留三组主局部绑定；拓扑尺寸、hub 放置、分区及时间是单独的对照轴。任一行给定所列形状的全部有限参数后，就是完整模型，不再等待选择未定义的函数。
 
+三组记忆、Hub 分区和参数归属的选择理由见[主干候选的形成与取舍](backbone-design.md)；本页负责把这些选择组成可求值的模型。
+
 ## 1. 先组成一个混合记忆模型
 
 主配置取 9 层宽度 $4,4,4,8,8,8,4,4,4$，$n=32,h=4$，三个探针数都为 1，非末层每位置有 hub，末层只有 D，group 分区；共 48 个位置、92 区、1712 节点。首先绑定 HB-Timed，输入间隔 $T=4$、入口 $4t+1$。

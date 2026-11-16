@@ -8,6 +8,8 @@ tags: [tide, hb, settlegraph, weighted-message]
 
 本页将三个 Settle 空间候选接到同一组局部函数，用于后续实现和比较。原有 [HB-Lattice 教学实例](hb-lattice-weighted-message.md)仍按原定义运行；本页是另一份明确采用新主绑定的实例，不覆盖旧例子。
 
+为什么保留三种空间图、同端点时间对照与各自原生图分别比较什么，见[主干记录 §5](backbone-design.md#5-settle-的交换与三档参数绑定)。
+
 ## 1. 空间候选与时间
 
 | 名称 | 全部消息边与分区的来源 | 数值起点 | 时间 |

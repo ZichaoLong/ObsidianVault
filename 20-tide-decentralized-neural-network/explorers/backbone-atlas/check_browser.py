@@ -1,5 +1,8 @@
 """Exercise the generated offline page in an isolated headless Firefox."""
 import base64
+import csv
+from decimal import Decimal
+from itertools import zip_longest
 import json
 import os
 from pathlib import Path
@@ -10,9 +13,63 @@ import tempfile
 import argparse
 
 ROOT = Path(__file__).resolve().parent
+
+
+def check_capacity_export():
+    """Cross-check human units, time bindings and the page's exact counts."""
+    data = json.loads((ROOT/'generated'/'data.json').read_text())['capacity']
+    seen = set()
+    spatial_rows = {}
+    count = 0
+    with (ROOT/'generated'/'capacity.csv').open(encoding='utf-8', newline='') as f:
+        for exported, values in zip_longest(csv.DictReader(f), data['rows']):
+            assert exported is not None and values is not None, 'CSV/page row counts differ'
+            row = dict(zip(data['fields'], values))
+            p = data['profiles'][row['profile']]
+            identity = tuple(row[name] for name in ('profile','n','h','d','memory','sharing','rank'))
+            assert identity not in seen, identity
+            seen.add(identity)
+            assert exported['profile'] == row['profile']
+            assert exported['spatial_profile'] == p['spatial_profile']
+            assert exported['timing'] == p['timing']
+            assert row['profile'] == p['spatial_profile']+'-'+p['timing']
+            widths = list(map(int, exported['widths'].split(';')))
+            assert widths == p['widths'] and len(widths) == int(exported['depth'])
+            assert int(exported['positions']) == sum(widths)
+            assert int(exported['max_width']) == max(widths)
+            expected_period = 4 if p['timing']=='timed' else len(widths)+(2 if p['family'] in ('fc','lattice') else 1)
+            assert int(exported['input_period']) == expected_period
+            assert row['nodes_D'] == row['n']*sum(widths)
+            assert row['nodes_H'] == row['h']*(sum(widths)-widths[-1])
+            for field,column in (('total','total_M'),('base','base_M'),('D','private_D_M'),('H','private_H_M')):
+                assert Decimal(exported[column])*1_000_000 == row[field], (identity,column)
+            assert exported['within_256M'] == str(row['total'] <= 256_000_000)
+            for k in data['budgets']:
+                value = exported[f'active_k{k}_M']
+                if k > row['n']:
+                    assert value == ''
+                else:
+                    expected = row['base']+Decimal(k)*row['D']/row['n']+row['H']
+                    assert Decimal(value)*1_000_000 == expected, (identity,k)
+            assert exported['active_pool_M'] == exported['total_M']
+            spatial_identity = (p['spatial_profile'],)+identity[1:]
+            numeric = tuple(row[name] for name in ('nodes_D','nodes_H','total','base','D','H'))
+            bindings = spatial_rows.setdefault(spatial_identity, {})
+            bindings[p['timing']] = numeric
+            count += 1
+    for identity, bindings in spatial_rows.items():
+        if identity[0].startswith('multiscale-'):
+            assert set(bindings) == {'timed','settle'}
+            assert bindings['timed'] == bindings['settle'], identity
+        else:
+            assert set(bindings) == {'settle'}
+    return dict(rows=count, spatial_configurations=len(spatial_rows), bound_profiles=len(data['profiles']))
+
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output-dir', type=Path)
 args = parser.parse_args()
+export_checks = check_capacity_export()
 OUT = args.output_dir or Path(tempfile.mkdtemp(prefix='backbone-atlas-browser-'))
 OUT.mkdir(parents=True, exist_ok=True)
 profile = OUT / 'browser-profile'
@@ -205,9 +262,9 @@ try:
         results.push({key,cells,circles,checked,period:c.settle_period,nodes:c.nodes.length,matrixSummary});
       }
       // Family select changes the actual model, not only the displayed edge families.
-      choose('#family-select','lattice');const latticeKey=window.atlasDebug.case.key;
-      choose('#family-select','exchange');const exchangeKey=window.atlasDebug.case.key;
-      choose('#family-select','multiscale');const multiscaleKey=window.atlasDebug.case.key;
+      choose('#family-select','lattice-settle');const latticeKey=window.atlasDebug.case.key;
+      choose('#family-select','exchange-settle');const exchangeKey=window.atlasDebug.case.key;
+      choose('#family-select','multiscale-timed');const multiscaleKey=window.atlasDebug.case.key;
       return {results,failures,latticeKey,exchangeKey,multiscaleKey,errors:window.atlasErrors.slice()};
     """)
     assert not settle_checks['failures'] and not settle_checks['errors'],settle_checks
@@ -274,7 +331,7 @@ try:
     capacity_checks=script('''
       const choose=(s,v)=>{const el=document.querySelector(s);el.value=String(v);el.dispatchEvent(new Event('change',{bubbles:true}));};
       const original=window.atlasDebug.case.key;
-      choose('#cap-family','multiscale');choose('#cap-profile','multiscale-compact-9');
+      choose('#cap-family','multiscale-timed');choose('#cap-profile','multiscale-compact-9-timed');
       choose('#cap-n',8);choose('#cap-h',0);choose('#cap-d',64);choose('#cap-memory','K');choose('#cap-sharing','independent');
       const smallBudgets=[...document.querySelector('#cap-k').options].map(o=>o.value);
       const row=document.querySelector('#capacity-table tbody tr'),total=+row.dataset.total;
@@ -283,11 +340,11 @@ try:
       const unchanged=window.atlasDebug.case.key===original;
       document.querySelector('#capacity-table [data-cap-case]').click();const linked=window.atlasDebug.case.key;
       choose('#cap-n',128);const largeBudgets=[...document.querySelector('#cap-k').options].map(o=>o.value);
-      choose('#cap-n',32);choose('#cap-h',4);choose('#cap-memory','X');choose('#cap-profile','multiscale-17');choose('#cap-d',128);
+      choose('#cap-n',32);choose('#cap-h',4);choose('#cap-memory','X');choose('#cap-profile','multiscale-17-timed');choose('#cap-d',128);
       choose('#cap-limit','all');const large=+document.querySelector('#capacity-table tbody tr').dataset.total;
       choose('#cap-limit','256');const hiddenLarge=document.querySelectorAll('#capacity-table tbody tr').length===0;
-      choose('#cap-family','fc');const noHub=document.querySelector('#cap-h').disabled&&document.querySelector('#cap-h').value==='0';
-      choose('#cap-profile','fc-4');choose('#cap-sharing','region_shared');choose('#cap-rank',4);
+      choose('#cap-family','fc-settle');const noHub=document.querySelector('#cap-h').disabled&&document.querySelector('#cap-h').value==='0';
+      choose('#cap-profile','fc-4-settle');choose('#cap-sharing','region_shared');choose('#cap-rank',4);
       const p4=+document.querySelector('#capacity-table tbody tr').dataset.total;
       const sharingOptions=[...document.querySelector('#cap-sharing').options].map(o=>o.value);
       const fcEquivalence=document.querySelector('#capacity-table').textContent.includes('两共享档等价');
@@ -297,7 +354,7 @@ try:
       choose('#cap-sharing','region_shared');
       const regionP16=+document.querySelector('#capacity-table tbody tr').dataset.total;
       choose('#cap-sharing','independent');const rankDisabled=document.querySelector('#cap-rank').disabled;
-      choose('#cap-family','multiscale');choose('#cap-profile','multiscale-compact-9');choose('#cap-h',4);choose('#cap-memory','X');choose('#cap-rank',8);choose('#cap-k',1);
+      choose('#cap-family','multiscale-timed');choose('#cap-profile','multiscale-compact-9-timed');choose('#cap-h',4);choose('#cap-memory','X');choose('#cap-rank',8);choose('#cap-k',1);
       const hbIndependent=+document.querySelector('#capacity-table tbody tr').dataset.total;
       choose('#cap-sharing','layer_shared');const hbLayer=+document.querySelector('#capacity-table tbody tr').dataset.total;
       const layerScope=document.querySelector('#capacity-sharing-summary').textContent;
@@ -320,6 +377,42 @@ try:
     assert capacity_checks['hbRegion']>capacity_checks['hbLayer'] and capacity_checks['regionRankEnabled'],capacity_checks
     assert '实际区域' in capacity_checks['regionScope'] and '跨区域共享' in capacity_checks['layerScope'],capacity_checks
     assert 'g(v)' in capacity_checks['regionFormula'] and not any(x in capacity_checks['regionFormula'] for x in ('NaN','undefined')),capacity_checks
+    capacity_timing=script('''
+      const choose=(s,v)=>{const el=document.querySelector(s);el.value=String(v);el.dispatchEvent(new Event('change',{bubbles:true}));};
+      choose('#cap-family','multiscale-settle');choose('#cap-profile','multiscale-compact-9-settle');
+      choose('#cap-n',8);choose('#cap-h',0);choose('#cap-d',64);choose('#cap-memory','K');choose('#cap-sharing','independent');
+      const settleRow=document.querySelector('#capacity-table tbody tr');
+      const settleTotal=+settleRow.dataset.total,settlePeriod=+settleRow.dataset.period;
+      document.querySelector('#capacity-table [data-cap-case]').click();
+      const settle={key:window.atlasDebug.case.key,mode:window.atlasDebug.state.timing,variant:document.querySelector('#family-select').value};
+      document.querySelector('#cap-use-graph').click();
+      const settleProfile=document.querySelector('#cap-profile').value;
+      choose('#family-select','multiscale-timed');
+      const sameGraph=window.atlasDebug.case.key===settle.key;
+      choose('#timing-mode','timed-common');document.querySelector('#cap-use-graph').click();
+      const common={profile:document.querySelector('#cap-profile').value,schedule:document.querySelector('#cap-schedule').value,
+        period:+document.querySelector('#capacity-table tbody tr').dataset.period};
+      document.querySelector('#capacity-table [data-cap-case]').click();common.mode=window.atlasDebug.state.timing;
+      choose('#case-select','compact-7-n8-h0');document.querySelector('#cap-use-graph').click();
+      const changed={profile:document.querySelector('#cap-profile').value,period:+document.querySelector('#capacity-table tbody tr').dataset.period};
+      choose('#cap-schedule','native');document.querySelector('#capacity-table [data-cap-case]').click();
+      const native={mode:window.atlasDebug.state.timing,period:+document.querySelector('#capacity-table tbody tr').dataset.period};
+      choose('#cap-family','all');choose('#cap-limit','all');
+      const pair=[...document.querySelectorAll('#capacity-table tbody tr')]
+        .filter(r=>r.dataset.profile.startsWith('multiscale-compact-9-')&&!r.dataset.profile.includes('two-inputs'))
+        .map(r=>({profile:r.dataset.profile,total:+r.dataset.total,period:+r.dataset.period}));
+      const variants=[...document.querySelector('#cap-family').options].map(o=>o.value);
+      return {settle,settleProfile,settleTotal,settlePeriod,sameGraph,common,changed,native,pair,variants,errors:window.atlasErrors.slice()};
+    ''')
+    assert capacity_timing['settle']==dict(key='compact-9-n8-h0',mode='settle',variant='multiscale-settle'),capacity_timing
+    assert capacity_timing['settleProfile']=='multiscale-compact-9-settle' and capacity_timing['settlePeriod']==10,capacity_timing
+    assert capacity_timing['sameGraph'] and capacity_timing['common']==dict(profile='multiscale-compact-9-timed',schedule='common',period=10,mode='timed-common'),capacity_timing
+    assert capacity_timing['changed']==dict(profile='multiscale-compact-7-timed',period=8),capacity_timing
+    assert capacity_timing['native']==dict(mode='timed',period=4),capacity_timing
+    assert len(capacity_timing['pair'])==2 and {r['period'] for r in capacity_timing['pair']}=={4,10},capacity_timing
+    assert all(r['total']==capacity_timing['settleTotal'] for r in capacity_timing['pair']),capacity_timing
+    assert capacity_timing['variants']==['all','fc-settle','lattice-settle','exchange-settle','multiscale-timed','multiscale-settle'],capacity_timing
+    assert not capacity_timing['errors'],capacity_timing
     script("document.querySelector('#matrix').scrollIntoView({behavior:'instant'});return true;")
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'terminal-matrix-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
@@ -378,7 +471,7 @@ try:
     script('document.querySelector("#regions").scrollIntoView({behavior:"instant"});return true;')
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'formula-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
-    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'terminal':terminal_checks,'compact':compact_checks,'capacity':capacity_checks,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'capacity_layout':capacity_layout,'embedded_image':image_status}
+    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'terminal':terminal_checks,'compact':compact_checks,'capacity':capacity_checks,'capacity_export':export_checks,'capacity_timing':capacity_timing,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'capacity_layout':capacity_layout,'embedded_image':image_status}
     (OUT/'browser-checks.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(result,ensure_ascii=False,indent=2))
     command('Marionette:Quit',{'flags':['eForceQuit']})

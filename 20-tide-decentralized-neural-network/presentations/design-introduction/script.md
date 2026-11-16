@@ -11,7 +11,7 @@ tags:
 
 # Tide：从 Transformer 的残差走向局部网络
 
-面向熟悉 Transformer、首次接触 Tide 的听众。主线是 **Transformer → 展开 MoE → 完成一次计算 → 局部网络 → 引入历史 → 回看接口与代价**。[设计短稿](../../memos/design/design-requirements-and-architecture.md)保存需求依据；[展示材料](README.md)提供离线 HTML、PDF 和逐停点备注。屏幕文案和具体讲解维护在 [content.py](content.py)，本页只保存叙述设计，避免重复维护整套备注。
+面向熟悉 Transformer、首次接触 Tide 的听众。主线是 **Transformer → 展开 MoE → 完成一次计算 → 局部网络 → 引入历史 → 回看接口与代价**。[研究意图与探索路径](../../memos/design/design-requirements-and-architecture.md)保存研究缘由与机制取舍；[展示材料](README.md)提供离线 HTML、PDF 和逐停点备注。屏幕文案和具体讲解维护在 [content.py](content.py)，本页只保存叙述设计，避免重复维护整套备注。
 
 ## 1. 从已有计算看节点边界
 

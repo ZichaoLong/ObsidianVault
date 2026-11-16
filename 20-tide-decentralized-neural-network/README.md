@@ -13,7 +13,11 @@ TIDE 研究固定消息图上的有状态计算：节点聚合收到的值、形
 
 本目录是数学与语义上游。教材面向第一次接触 TIDE 的数学读者，给出对象、函数、例子与证明；共同名称和返回值族为下游实现提供直接对应。计算表示与系统术语见各篇附录。
 
-## 正典教材
+阅读分为语义与语义应用：语义内部包括上层正典与局部教材，应用则选择拓扑与局部候选，形成完整实例。[研究意图与探索路径](memos/design/design-requirements-and-architecture.md)说明为什么探索这些方向、不同机制如何共同支持意图；[应用目录](instances/README.md)连接具体候选及其形成理由。
+
+## 语义
+
+### 正典教材
 
 图的层级为
 
@@ -32,7 +36,7 @@ $$
 
 SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问题选择有环图或分块求值续篇。[符号与函数索引](reference/semantic-interface-index.md)用于查阅共同名称、类型与定义位置。
 
-## 带权消息的局部架构
+### 带权消息的局部架构
 
 局部函数教材位于 local-semantics/。带权消息支线选定正典允许的一组局部空间与函数；共同架构给出组合条件，模块教材定义状态、读取、评分与发送。
 
@@ -52,9 +56,13 @@ recurrent-memory/ 汇集三份循环记忆候选教材及共用的短卷积部�
 
 学习矩阵记忆可先读基础循环。完整 Gated DeltaNet 与 SSD 使用短卷积部件，再定义自己的更新、描述与内容；它们填入同一套架构函数。
 
-## 具体拓扑与完整实例
+## 语义应用
+
+### 具体拓扑与完整实例
 
 topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓扑与局部函数，给定初态、参数及输入读出，形成完整模型，并推导传播与计算量。
+
+[应用目录](instances/README.md)区分拓扑、局部组合、参数归属与教学用途；[主干候选的形成与取舍](instances/backbone-design.md)保存从参考 LH、异时输出到 HB 各分支的理由、取舍和替代方案。拓扑与局部组合相互约束，具体候选按其意图选择，已有目录不穷尽设计空间。
 
 [三档整体参数绑定](instances/parameter-profiles.md)统一规定新 FC／HB／LH 实例的 independent、region_shared、layer_shared，覆盖 Agg、记忆、评分和 Full，含 KV 基座例外、私有状态及训练通信。它说明如何绑定原教材参数；旧教学实例继续保留自己的归属。
 
@@ -76,11 +84,10 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 
 | 入口 | 用途 |
 |---|---|
-| [设计需求与架构关系](memos/design/design-requirements-and-architecture.md) | 简短设计说明：目标与边界、两次完整计算、机制取舍及上下层反馈；详细依据链接到专题 |
+| [研究意图与探索路径](memos/design/design-requirements-and-architecture.md) | 意图与机制的多对多关系、语义与应用的支撑、启发和后续探索；保留计算例子与有界通信推导 |
 | [首次展示讲述脚本](presentations/design-introduction/script.md) | 从 Transformer 残差到显式 MoE，再展开局部网络、历史与接口；数值源和附页各有明确归属 |
 | [展示材料](presentations/design-introduction/README.md) | 可逐步推进的离线 HTML、PDF、画面预览与讲者备注 |
 | [教学图集](figures/README.md) | 节点与区域、P/S/U/F、带权消息与局部模块图，以及定义出处与绘图源文件 |
-| [HB／LH 设计收拢](memos/design/hb-and-lh.md) | 异时输出的原始需求、分工与合作、hub 组织、时间对照和后续实验问题 |
 | [主干比较绑定与尺寸阶梯](instances/backbone-comparison.md) | FC／HB 的统一局部绑定、独立／共享、二次幂预算、合理维度及可复算规模表 |
 | [主干拓扑与规模面板](explorers/backbone-atlas/README.md) | 三种 HB 空间图与窄图、完整邻接、端点矩阵、公式、时间，以及 FC／HB 主干规模筛选 |
 | [主干参考构造与计数](reference/backbones/README.md) | 面板与数学核对共用的构图、潜在传播和参数形状代码 |

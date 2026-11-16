@@ -9,11 +9,13 @@ tags:
 
 # 带权消息架构的设计空间与取舍
 
-总体目标与共同框架的关系见[设计需求与架构讨论稿](design-requirements-and-architecture.md)；本页展开带权支线内的具体选择。
+希望获得哪些能力、为什么探索这些方向，见[研究意图与探索路径](design-requirements-and-architecture.md)；本页展开带权支线内的机制选择与取舍。局部教材定义函数，本页分析它们能提供什么支持，实际在何处采用则由[拓扑与实例](../../instances/README.md)绑定。
 
 当前主干实例的实现入口是[三组主绑定](../../instances/hb-multiscale-weighted-message.md#2-两类记忆与三个主候选)：K 全用 KV／sum，S 全用 SSD／state，X 在普通节点用 KV、hub 用 SSD。分配以[角色上下界二次分配](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)为主，参数使用[独立、区域共享、层级共享三档](../../instances/parameter-profiles.md)。下文保留更广的可选设计空间，供具体问题需要时展开；主候选也无需穷举所有组合。
 
 本文从整体阅读局部架构：哪些信息被保存，哪些量参与评分与发送，哪些计算能省去，以及改变依赖可能得到什么、失去什么。共同定义见[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)，分配见[区域教材](../../local-semantics/weighted-message/region-allocation-learning-note.md)，记忆分别见 [KV](../../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)与 [SSD](../../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md)。
+
+局部选择与拓扑共同支持研究意图。例如，传播摘要既依赖聚合和记忆，也依赖收集与发送到哪些位置；让 hub 在正接收时持续参与，可以通过单节点区域的既有约束分配，也可以通过共同区域中的角色边界实现。同一意图因此有多种构造，某项局部机制的作用需放回完整绑定判断。HB／LH 的具体安排及替代方案见[主干候选的形成与取舍](../../instances/backbone-design.md)。
 
 数学性质提供设计边界，机制分析提供选择理由，任务表现仍依赖完整模型与训练。一个值得保持的研究判断是：保留任务需要的内容与历史依赖，同时减少一个量兼任多个控制作用的情况。它可以随实验结果逐步加强、减弱或修改。复杂耦合、计算成本和失败配置可能使某些判断长期无法被独立检验；未检验不等于已证伪，也不等于已验证。
 
@@ -27,7 +29,7 @@ tags:
 
 记截断接收量为 $w_v=\min(1,(r_v^{\mathrm{in}})_+)$。指定总量与区域阈值使用固定最大倍率的节点上限 $\mu_v^{\max}=\min(1,\gamma_{\max}w_v)$；区域汇集节点证据后，分别产生实际总量 $B$ 或共同阈值 $\eta_j$。节点增益与固定阈值分配等规则另使用逐节点增益 $\gamma_v$，得到 $\mu_v=\min(1,\gamma_v(r_v^{\mathrm{in}})_+)$，其上限或权重作用由发送函数决定。
 
-围绕“区域决定发送强弱与激活规模、评分决定节点分工”的设计意图，当前采用指定总量、区域阈值、节点增益的阅读顺序：指定总量让总量头直接参与实际发送；区域阈值保留单位强度硬选择的配对目标；节点增益提供逐节点调节发送上限或权重的能力。这是依据依赖和梯度结构作出的设计判断，训练质量与实际成本仍待完整模型验证，取舍见第 3 节。
+围绕“区域决定发送强弱与激活规模、评分决定节点分工”的意图，当前采用指定总量、区域阈值、节点增益的阅读顺序：指定总量让总量头直接参与实际发送；区域阈值保留单位强度硬选择的配对目标；节点增益提供逐节点调节发送上限或权重的能力。这是依据依赖和梯度结构作出的设计判断，训练质量与实际成本仍待完整模型验证，取舍见第 3 节。
 
 下面按计算位置列出选择，各行说明所用输入和产生的输出。Full 使用新状态；评分所读的状态由描述模式确定。
 

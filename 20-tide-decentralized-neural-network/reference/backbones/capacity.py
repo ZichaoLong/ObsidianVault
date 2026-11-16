@@ -49,6 +49,37 @@ def make_profiles():
 
 PROFILES = make_profiles()
 
+VARIANTS = {
+    'fc-settle': dict(family='fc', timing='settle', label='FC · Settle'),
+    'lattice-settle': dict(family='lattice', timing='settle', label='HB-Lattice · Settle'),
+    'exchange-settle': dict(family='exchange', timing='settle', label='HB-Exchange · Settle'),
+    'multiscale-timed': dict(family='multiscale', timing='timed', label='HB-Multiscale · Timed'),
+    'multiscale-settle': dict(family='multiscale', timing='settle', label='HB-Multiscale · Settle'),
+}
+
+
+def make_bound_profiles():
+    """Bind native input schedules without duplicating spatial constructors.
+
+    The same-period Timed comparison remains an optional schedule of Timed;
+    the catalog records its native period 4 and the alternative Settle period.
+    """
+    result = {}
+    for spatial_key, p in PROFILES.items():
+        settle_period = p['depth'] + (2 if p['family'] in ('fc', 'lattice') else 1)
+        for timing in (('timed', 'settle') if p['family'] == 'multiscale' else ('settle',)):
+            key = f'{spatial_key}-{timing}'
+            result[key] = dict(p, key=key, spatial_profile=spatial_key,
+                               variant=f"{p['family']}-{timing}", timing=timing,
+                               label=f"{p['label']} · {timing.title()}",
+                               positions=sum(p['widths']), max_width=max(p['widths']),
+                               input_period=4 if timing == 'timed' else settle_period,
+                               settle_period=settle_period)
+    return result
+
+
+BOUND_PROFILES = make_bound_profiles()
+
 
 @lru_cache(None)
 def inventory(d, memory):

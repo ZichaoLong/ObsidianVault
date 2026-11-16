@@ -8,6 +8,8 @@ tags: [tide, lh, weighted-message]
 
 取 [LH-DAG 或 LH-PDG](../topologies/lh-exploration.md)，层次深度 $d_{\mathrm{tree}}=3,n=32$、$4\times8$ 网格、542 节点。内容宽度取 $d_{\mathrm{model}}=128$，对应被引用局部教材中的 $d$。采用 [HB 的三组主绑定](hb-multiscale-weighted-message.md#2-两类记忆与三个主候选) K／S／X；优先 X，即卫星有限窗口 KV、hub 固定状态 SSD。两图使用同一组局部参数，只在 PDG 中启用反馈边。
 
+本候选保留区内连接与可选反馈，用于探索 HB 严格区域分层之外的语义；参考来源与形成理由见[主干记录](backbone-design.md)。
+
 ## 1. 完整替换项
 
 继承 HB 实例 §1—2 的载荷宽度、归一化、记忆尺寸、空／零初态、全部 Upd、Mem、$p_v,G_v$、Read$^+$、cat 与 att 评分、received query、角色二次分配、Next 和广播。局部时间取 $P_{\mathrm{in}}=4$、$\operatorname{Pos}_v(\theta)=(\theta-1)/4$、conv_stride=1，窗口、衰减和全部有限矩阵的范围依 HB 绑定。下表补全 LH 特有部分。

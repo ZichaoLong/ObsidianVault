@@ -8,6 +8,8 @@ tags: [tide, backbone, capacity, parameter-sharing]
 
 本页将 FC、HB-Lattice、HB-Exchange、HB-Multiscale 接到统一尺寸和参数归属，供下游选择实例。目标是用整套候选覆盖小规模至约 256M 的主干、不同普通区预算及更大的容量；不要求每个小实例都有约 3% 的预算比例，也不为对准参数数目而使用特殊的小维度。这里规定模型与计数，不执行训练。
 
+不同候选覆盖不同需求组合。小总参、大维度、多节点，以及更多交换与更强局部性之间的取舍，连同需求如何推动新拓扑、Hub 和时间设计，保存在[主干候选的形成与取舍](backbone-design.md)。后续可据此新增构造或绑定，已有尺寸并非唯一扩展路线。
+
 ## 1. 空间图、时间与局部函数
 
 | 空间图 | 端点定义 | 时间绑定 |
@@ -91,7 +93,7 @@ $S=\sum_\ell W_\ell$，普通节点数 $N_D=nS$；全位置可选 4 hub 时，$N
 | 原宽九层 | 32,4 | 1712 | 122.50 | 487.67 |
 | 原宽十七层 | 32,4 | 5456 | 390.46 | 1554.13 |
 
-这些不是训练效果排名。窄图减少并行容量与路径冗余；重复合作、摘要钩子是否有用以及扩大后如何分工，继续作为[设计问题](../memos/design/hb-and-lh.md)保留。
+这些不是训练效果排名。窄图减少并行容量与路径冗余；重复合作、摘要钩子是否有用以及扩大后如何分工，继续作为[设计问题](backbone-design.md)保留。
 
 ## 5. 主干参数与活跃代理
 
@@ -114,6 +116,27 @@ independent 中 $B$ 只有区域头；pool 用比例 1。估算假定各区均�
 
 ## 6. 交互与复算
 
-[交互面板](../explorers/backbone-atlas/README.md)提供拓扑、数学公式和规模筛选；[完整参数 CSV](../explorers/backbone-atlas/generated/capacity.csv)保留全部尺寸、独立／共享、K/S/X 和二次幂预算的估算，[生成范围表](../explorers/backbone-atlas/generated/capacity-summary.md)便于逐图阅读。CSV 参数单位为标量个数，空预算列表示 k>n；页面以百万参数显示。所有行由[计数源](../reference/backbones/capacity.py)重建。
+[交互面板](../explorers/backbone-atlas/README.md)提供拓扑、数学公式和规模筛选；[完整参数 CSV](../explorers/backbone-atlas/generated/capacity.csv)保留全部尺寸、独立／共享、K/S/X 和二次幂预算的估算，[生成范围表](../explorers/backbone-atlas/generated/capacity-summary.md)便于逐图阅读。CSV 和页面的参数单位均为百万参数，$1\mathrm{M}=10^6$；内部计数与范围判断保留精确值。所有行由[计数源](../reference/backbones/capacity.py)重建。
+
+profile 绑定空间轮廓与时间，例如 `multiscale-compact-9-timed` 和 `multiscale-compact-9-settle` 分别列行，二者的 `spatial_profile` 均为 `multiscale-compact-9`。它们参数量相同，消息汇合、状态写入和作用次数可以不同。当前 41 个空间轮廓展开为 55 个含时间绑定的轮廓，与合法尺寸、记忆和参数归属组合后共 56,350 行；预算阶梯仍是列。一行尚未选定预算，也不代表已经规定了下游训练与读出。
+
+| CSV 列 | 含义 |
+|---|---|
+| `profile`、`spatial_profile` | 含时间绑定的轮廓标识、共用的空间轮廓标识；完整参数配置还需结合 n/h/d、记忆、共享档及秩 |
+| `family`、`timing` | 空间图族 fc／lattice／exchange／multiscale；时间绑定 timed／settle |
+| `depth`、`widths` | 包含首尾的层数；各层位置数，以分号分隔 |
+| `positions`、`max_width` | 全图位置总数、最宽层的位置数；位置内可有 D 区及 H 区 |
+| `expansion`、`rounds` | Exchange 的展开深度 m、宽段交换轮数 R；其他图留空 |
+| `input_period` | 当前主周期：Timed 为 4；Settle 按图族采用 M+1 或 M+2 |
+| `n`、`h`、`d` | 每个 D 区节点数、每个非末层位置的 H 节点数、全图内容维度；当前表使用 group 分区和全位置／无 hub |
+| `memory`、`sharing`、`rank` | K／S／X、三档参数归属、共享适配秩；independent 的 rank 为 0 |
+| `nodes_D`、`nodes_H` | 全图两类节点总数 |
+| `total_M`、`base_M` | $P_{\mathrm{total}}/10^6$、$B/10^6$；base 的组成依参数归属，见 §5 |
+| `private_D_M`、`private_H_M` | $P_D/10^6$、$P_H/10^6$；两类节点私有参数总量 |
+| `within_256M` | 精确总参数是否不超过 256,000,000 |
+| `active_k1_M` 至 `active_k64_M` | §5 的活跃参数代理，按合法二次幂预算分别列出；k>n 留空 |
+| `active_pool_M` | pool 档的参数代理，等于 total_M |
+
+CSV 使用各候选主周期。面板另保留 Timed 与 Settle 同周期的对照设置，显示对应输入周期并在图与规模表之间双向传递；它属于 Timed 的另一输入日程。修改日程后的完整实验仍须按实例声明位置函数、衰减、窗口和卷积抽头。生成数据中的整数计数供计算使用，CSV 的 _M 列保存纯数字，便于直接筛选和统计。
 
 对应核对为[紧凑图的相位与合作](../examples/hb_compact_checks.py)和[参数形状与预算](../examples/backbone_capacity_checks.py)。这些证据不包含整网训练或吞吐结果。真正实现后还应按唯一 Parameter 对象核对主干总参。

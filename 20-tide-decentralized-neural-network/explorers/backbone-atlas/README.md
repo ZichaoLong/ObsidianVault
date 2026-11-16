@@ -2,7 +2,7 @@
 
 打开[离线面板](generated/index.html)。页面内嵌图数据、交互代码、MathML 与阶梯图；无需网络。源码和定义入库，HTML、SVG、PNG 及数据报告由统一构建生成。
 
-共用一个入口，分别选择空间图、时间绑定和参数配置。连接视图覆盖三类 HB，规模筛选另包含 FC；FC 连接视图与 LH 探索图尚未接入。三类空间图分别选择：
+共用一个入口，按拓扑与时间选择候选，再选择尺寸和参数配置。多跨度 Timed／Settle 在连接视图和规模筛选中分别列项，并可保留同一空间图切换时间。连接视图覆盖三类 HB，规模筛选另包含 FC；FC 连接视图与 LH 探索图尚未接入。三类空间图的范围为：
 
 | 空间图 | 面板尺寸 | 用途 |
 |---|---|---|
@@ -16,7 +16,9 @@
 
 多跨度图的时间选择同步更新区域边标注、节点时延、端点矩阵与到达表：Timed 单位时延／T=4、Timed 单位时延／与 Settle 同周期、Settle 跨度时延／D=M+1。前两项是 Timed 的两种输入日程。原 HB 与位交换图固定各自 Settle 绑定。层数相位阶梯单独标明是单位时延／T=4 的固定参考，Settle 表则给出对齐时间与宽段潜在来源覆盖。潜在路径不等于实际选择、无损内容覆盖或物理低时延。
 
-规模筛选覆盖 FC 与三类 HB，支持 n=8／16／32／64／128、d=64 至 768、K／S／X、independent／region_shared／layer_shared，以及两个共享档的适配秩 4／8／16。预算只选合法的 1、2、4、8、16、32、64 或 pool；显示总参、预算比例和活跃参数代理，超过 256M 的行也保留。规模筛选不修改上方连接图；有已绘制连线的行可点击“查看”。FC 每层一区，面板标注两个共享档等价；CSV 保留各档标识供筛选，实验无需重复。HB 默认筛选区域共享。
+规模筛选分别列出 FC-Settle、HB-Lattice-Settle、HB-Exchange-Settle、HB-Multiscale-Timed 和 HB-Multiscale-Settle，支持 n=8／16／32／64／128、d=64 至 768、K／S／X、independent／region_shared／layer_shared，以及两个共享档的适配秩 4／8／16。预算只选合法的 1、2、4、8、16、32、64 或 pool；显示总参、预算比例和活跃参数代理，超过 256M 的行也保留。规模筛选不修改上方连接图；有已绘制连线的行可点击“查看”。“按上方连接图筛选”和“查看”均传递空间轮廓与时间绑定，Timed 的同周期设置也随之保留。FC 每层一区，面板标注两个共享档等价；CSV 保留各档标识供筛选，实验无需重复。HB 默认筛选区域共享。
+
+完整 CSV 共 56,350 行。profile 带时间后缀，spatial_profile 标识共用的空间轮廓，另列层数、层宽、位置数和主输入周期；参数列以 _M 结尾，单位为百万参数。CSV 保存主周期，面板另可选择 Timed 的同周期对照。内嵌数据与范围判断保留精确计数。字段解释见[比较绑定 §6](../../instances/backbone-comparison.md#6-交互与复算)。候选覆盖不同需求组合；提出新配置或新构造时，可从[主干候选的形成与取舍](../../instances/backbone-design.md)接续。
 
 正式语义入口：
 
@@ -24,7 +26,7 @@
 - [位交换拓扑与覆盖证明](../../topologies/hb-exchange.md)、[Settle 三图共同绑定](../../instances/hb-settle-weighted-message.md)、[三档整体参数绑定](../../instances/parameter-profiles.md)。
 - [统一主干比较绑定与计数口径](../../instances/backbone-comparison.md)、[完整 CSV](generated/capacity.csv)、[生成范围表](generated/capacity-summary.md)。
 - [K／S／X 三组主局部绑定](../../instances/hb-multiscale-weighted-message.md)。显示筛选不会隐式切换模型。
-- [角色上下界](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)、[设计问题与取舍](../../memos/design/hb-and-lh.md)。
+- [角色上下界](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)、[设计问题与取舍](../../instances/backbone-design.md)。
 - [逐候选核对数据](generated/checks.json)、[9 层区域图](generated/regions-9.svg)、[节点矩阵](generated/node-pair-matrix.svg)、[层数阶梯](generated/depth-ladder.svg)。
 
 ## 在另一台机器构建
@@ -85,6 +87,8 @@ python3 20-tide-decentralized-neural-network/explorers/backbone-atlas/check_brow
 ```
 
 构建使用 Python 标准库、系统 Python 及系统 librsvg、Cairo、GObject，字体采用 Noto Sans CJK 或本机已有的 Droid Sans Fallback；不依赖 Python 的 Pillow／CairoSVG。Debian／Ubuntu 可安装 `librsvg2-2 libcairo2 fonts-noto-cjk`，GObject 由依赖带入。浏览器核对另需 Firefox，通过隔离 profile 验证 58 个配置及参数预算筛选、区域跳转、公式映射、矩阵端点数量、末层角色与矩形矩阵、g=1 边界、时间同步及宽窄布局；报告和截图默认写入仓库外临时目录，不进入日常 Git 产物。仓库 CI 在 push／pull request 时构建本组并执行浏览器核对。
+
+核对也逐行比较 CSV 的 M 单位与页面精确计数，检查 Timed／Settle 成对配置、合法预算空值，以及连接图与参数筛选之间的时间绑定和输入日程传递。
 
 两个带 hub 的构造器默认省去末层 H；`terminal_hubs=True` 可复现此前包含它们的图，面板展示默认图。删除对 group／singleton 保留节点与输出的影响，以及 mixed 的差异，见[共同拓扑 §1](../../topologies/hb-multiscale.md#1-节点位置与区域)。
 

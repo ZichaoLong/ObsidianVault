@@ -11,7 +11,7 @@
 
 ## 讲述与数值来源
 
-[设计短稿](../../memos/design/design-requirements-and-architecture.md)保存已确认需求，[讲述脚本](script.md)保存叙述安排。[显式残差 MoE](../../instances/explicit-residual-moe.md)给出新增教学绑定：每个专家一个节点，选择、贡献合并和残差旁路分别表达。首轮 $y=4$；增加本地激活计数后重复同一输入，第二轮 $y=8$。这是机制核对，不是训练或性能结果。
+[研究意图与探索路径](../../memos/design/design-requirements-and-architecture.md)保存研究缘由与机制取舍，[讲述脚本](script.md)保存叙述安排。[显式残差 MoE](../../instances/explicit-residual-moe.md)给出新增教学绑定：每个专家一个节点，选择、贡献合并和残差旁路分别表达。首轮 $y=4$；增加本地激活计数后重复同一输入，第二轮 $y=8$。这是机制核对，不是训练或性能结果。
 
 HB 在第 4 组用于拓扑示意，第 14 组提供独立的[既有数值例子](../../instances/hb-lattice-weighted-message.md#2-三层图上的分叉汇合与记忆)。新例子不沿用 HB 的 $G=u$、KV 写入或 $10/4/8$ 计数。
 

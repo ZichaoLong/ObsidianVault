@@ -8,6 +8,8 @@ tags: [tide, hb, settlegraph]
 
 本图为到达对齐的计算安排普通节点之间的多尺度交换。展开增加容量，最宽处连续交换不同地址位，收拢途中继续交换；不要求填满输入间隔内的输出相位。它与[原 HB-Lattice](hb-lattice.md)、[多跨度图的 Settle 绑定](hb-multiscale.md#4-端口与时间绑定)组成三个空间候选。三者均沿用当前 SettleGraph 的周期条件。
 
+本图与原图、多跨度图各自回应的信息交换问题，见[主干记录 §5](../instances/backbone-design.md#5-settle-的交换与三档参数绑定)。连接、局部组合与规模的阅读路线见[应用目录](../instances/README.md)。
+
 ## 1. 层、节点与分区
 
 取展开深度 $m\ge1$、最宽平台的交换轮数 $R\ge1$，总层数和每层位置数为

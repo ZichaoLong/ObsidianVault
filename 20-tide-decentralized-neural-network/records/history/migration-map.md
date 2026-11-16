@@ -1,13 +1,25 @@
 ---
 type: migration-index
 status: reference
-as-of: 2026-11-15
+as-of: 2026-11-16
 tags:
   - tide
   - history
 ---
 
 # 旧内容重写与追溯索引
+
+## 2026-11-16 研究意图与语义应用
+
+将跨层研究缘由与具体候选记录分开维护，入口按语义与语义应用组织。四份正典和全部局部教材保持；这次整理说明意图、语义支撑、拓扑和局部组合的关系，不新增数学条件。
+
+| 原位置或职责 | 当前维护入口 |
+|---|---|
+| `memos/design/design-requirements-and-architecture.md` 的总体需求说明 | 同路径的[研究意图与探索路径](../../memos/design/design-requirements-and-architecture.md)，保留两次计算与可达范围推导 |
+| `memos/design/hb-and-lh.md` | [instances/backbone-design.md](../../instances/backbone-design.md)，主干候选的形成、取舍与替代选择 |
+| 拓扑、局部组合与参数绑定的分散入口 | [instances/README.md](../../instances/README.md)，语义应用的阅读路线 |
+
+局部机制、脑科学与物理启发继续位于 memos/design/；memos 按研究文档用途组织，其内容可以跨越语义与应用。面板、生成报表和展示同步引用，生成物仍由维护源重建。
 
 ## 2026-11-15 局部教材与三档参数绑定
 
@@ -30,7 +42,7 @@ tags:
 | 旧面板的 `topology.py` | [reference/backbones/multiscale.py](../../reference/backbones/multiscale.py) |
 | 旧面板的 `settle_topology.py` | [reference/backbones/settle_graphs.py](../../reference/backbones/settle_graphs.py) |
 | 旧面板的 `capacity.py` | [公共计数](../../reference/backbones/capacity.py)与[面板报表输出](../../explorers/backbone-atlas/capacity_reports.py)分离 |
-| `memos/design/hb-timed-and-lh.md` | [HB 与 LH 设计收拢](../../memos/design/hb-and-lh.md) |
+| `memos/design/hb-timed-and-lh.md` | [主干候选的形成与取舍](../../instances/backbone-design.md) |
 | `topologies/hb-settle-exchange.md` | [HB-Exchange 位交换图](../../topologies/hb-exchange.md)，继续采用原 Settle 时间绑定 |
 | `presentations/design-introduction-script.md` | [展示目录内的讲述脚本](../../presentations/design-introduction/script.md) |
 

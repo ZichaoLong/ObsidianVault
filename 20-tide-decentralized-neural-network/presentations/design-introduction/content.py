@@ -4,7 +4,7 @@ Narrative: Transformer -> explicit residual MoE -> local network -> history.
 The new numeric binding is independent of the retained HB topology example.
 """
 SOURCES = {
-    'design': ('设计需求与架构关系', '../../memos/design/design-requirements-and-architecture.md'),
+    'design': ('研究意图与探索路径', '../../memos/design/design-requirements-and-architecture.md'),
     'moe': ('显式残差 MoE 教学绑定', '../../instances/explicit-residual-moe.md'),
     'history': ('MoE §4：本地激活计数', '../../instances/explicit-residual-moe.md#4-单独增加本地历史'),
     'hb': ('HB 实例 §2', '../../instances/hb-lattice-weighted-message.md#2-三层图上的分叉汇合与记忆'),

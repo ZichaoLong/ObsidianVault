@@ -20,10 +20,13 @@ const period=()=>['settle','timed-common'].includes(state.timing)?current.settle
 const edgeDelay=(l,m)=>isUnit()?1:m-l;
 const displayDelays=(u,detail=false)=>isUnit()?(detail?current.ordinary_delays[u]:current.delays[u]):
  ((detail?current.ordinary_delays[u]:current.delays[u]).length?[current.nodes[u][0]]:[]);
+const variantKey=(family,timing)=>`${family}-${timing==='settle'?'settle':'timed'}`;
+const validTiming=(c,mode)=>['timed','timed-common','settle'].includes(mode)&&(c.family==='multiscale'||mode==='settle');
 function profileLabel(c){return `${c.profile.includes('compact')?'窄图 · ':''}${c.depth} 层${c.profile.includes('two-inputs')?' · 双入口位置':''}${c.add_dd4?' + DD4':''}${c.family==='exchange'?` · m=${c.expansion}, R=${c.rounds}`:''} · ${c.ordinary}${c.hubs?'+4 / 独立 H 区':' / 无 hub'}`;}
-function mountCase(key){
- state.key=key;current=ATLAS.cases[key];state.timing=current.default_timing;
- $('#family-select').value=current.family;
+function mountCase(key,mode=ATLAS.cases[key].default_timing){
+ if(!validTiming(ATLAS.cases[key],mode))throw new RangeError('Unsupported timing for spatial graph: '+mode);
+ state.key=key;current=ATLAS.cases[key];state.timing=mode;
+ $('#family-select').value=variantKey(current.family,state.timing);
  $('#case-select').innerHTML=Object.values(ATLAS.cases).filter(c=>c.family===current.family).map(c=>option(c.key,profileLabel(c))).join('');
  $('#case-select').value=key;
  $('#timing-mode').value=state.timing;$('#timing-mode').disabled=current.family!=='multiscale';
@@ -52,8 +55,9 @@ function updateTimeLabels(){
  $$('#region-canvas .bundle').forEach(el=>{el.querySelector('title').textContent=el.querySelector('title').textContent.replace(/δ=\d+/,`δ=${isUnit()?1:el.dataset.span}`);});
 }
 function setTiming(mode){
- if(!['timed','timed-common','settle'].includes(mode))throw new RangeError('Unknown timing mode: '+mode);
- state.timing=mode;$('#timing-mode').value=mode;updateTimeLabels();renderNode();renderMatrix();paintRegion();
+ if(!validTiming(current,mode))throw new RangeError('Unsupported timing for spatial graph: '+mode);
+ state.timing=mode;$('#timing-mode').value=mode;$('#family-select').value=variantKey(current.family,mode);
+ updateTimeLabels();renderNode();renderMatrix();paintRegion();renderDepthTable();renderSettleTable();
 }
 function syncNodeControls(){
  $('#node-layer').innerHTML=current.widths.map((_,l)=>option(l)).join('');$('#node-layer').value=state.focus[0];
@@ -152,14 +156,18 @@ function renderSettleTable(){
  let s='<thead><tr><th>Settle 空间图（点击切换）</th><th>层 / 位置 / 节点</th><th>边数</th><th>D / 对齐路径时延</th><th>宽段轮数 / 覆盖源区域与节点</th></tr></thead><tbody>';
  for(const c of Object.values(ATLAS.cases).filter(c=>c.family!=='multiscale'||c.key==='9')){
   const m=c.expansion,R=c.rounds,cover=c.family==='exchange'?`${R} 轮 / ${2**Math.min(R,m)} 区、${2**(Math.min(R,m)+Math.min(R,Math.log2(c.ordinary)))} 节点`:'—';
-  s+=`<tr data-case="${c.key}" class="${c.key===state.key?'current':''}"><td>${{multiscale:'多跨度 Settle',lattice:'原 HB',exchange:'位交换'}[c.family]} · ${profileLabel(c)}</td><td>${c.depth} / ${c.stats.positions} / ${c.stats.nodes}</td><td>${c.stats.edges}</td><td>${c.settle_period} / ${c.depth-1}</td><td>${cover}</td></tr>`;
+  s+=`<tr data-case="${c.key}" class="${c.key===state.key&&state.timing==='settle'?'current':''}"><td>${{multiscale:'多跨度 Settle',lattice:'原 HB',exchange:'位交换'}[c.family]} · ${profileLabel(c)}</td><td>${c.depth} / ${c.stats.positions} / ${c.stats.nodes}</td><td>${c.stats.edges}</td><td>${c.settle_period} / ${c.depth-1}</td><td>${cover}</td></tr>`;
  }
  $('#settle-table').innerHTML=s+'</tbody>';
 }
-$('#family-select').addEventListener('change',e=>mountCase({multiscale:'9',lattice:'lattice-7',exchange:'exchange-10'}[e.target.value]));
+$('#family-select').addEventListener('change',e=>{
+ const {family,timing}=ATLAS.capacity.variants[e.target.value];
+ if(family===current.family)setTiming(timing);
+ else mountCase({multiscale:'9',lattice:'lattice-7',exchange:'exchange-10'}[family],timing);
+});
 $('#timing-mode').addEventListener('change',e=>setTiming(e.target.value));
-$('#settle-table').addEventListener('click',e=>{const row=e.target.closest('[data-case]');if(row){mountCase(row.dataset.case);setTiming('settle');$('#regions').scrollIntoView({behavior:'smooth'});}});
-$('#case-select').addEventListener('change',e=>{const mode=state.timing;mountCase(e.target.value);setTiming(mode);});
+$('#settle-table').addEventListener('click',e=>{const row=e.target.closest('[data-case]');if(row){mountCase(row.dataset.case,'settle');$('#regions').scrollIntoView({behavior:'smooth'});}});
+$('#case-select').addEventListener('change',e=>mountCase(e.target.value,state.timing));
 $('#scope').addEventListener('change',paintRegion);$('#zoom').addEventListener('change',paintRegion);
 $$('[data-family]').forEach(c=>c.addEventListener('change',paintRegion));
 for(const [id,predicate]of [['preset-detail',x=>x.startsWith('DD')],['preset-hub',x=>!x.startsWith('DD')],['preset-all',x=>true]])$('#'+id).addEventListener('click',()=>{$$('[data-family]').forEach(c=>c.checked=predicate(c.dataset.family));paintRegion();});

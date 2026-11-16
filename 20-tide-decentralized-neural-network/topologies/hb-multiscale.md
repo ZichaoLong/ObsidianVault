@@ -8,6 +8,8 @@ tags: [tide, hb, timed-dag, settlegraph]
 
 本图在展开、加工、收拢中反复交换局部细节和跨组背景。普通节点有独立的输入到输出子图；hub 是可选的附加通路。旧 [HB-Lattice](hb-lattice.md) 的定义与实例保留，称为原 HB 对齐基线。本文的新连接图分别绑定 HB-Timed 和 HB-Multiscale-Settle，便于保持端点不变比较时间；HB-Settle 单独使用时须说明指哪张图；另有为对齐计算设计的[分阶段位交换图](hb-exchange.md)。三个空间候选的[共同主绑定](../instances/hb-settle-weighted-message.md)可用于比较。
 
+相位覆盖、中途合作与可选 hub 怎样推动这些连接，以及 Settle 复用的取舍，见[主干候选的形成与取舍](../instances/backbone-design.md)。本文集中定义图与时间，局部函数由实例绑定。
+
 ## 1. 节点、位置与区域
 
 总层数 $M$ 包含首尾，$\ell=0,\ldots,M-1$；每层有 $W_\ell$ 个位置，$p=0,\ldots,W_\ell-1$。各 $W_\ell$ 为正的二次幂，允许 1、2；原宽图保持至少 4，窄图见 §5。每位置有 $n$ 个普通节点 $D_{\ell,p,i}$；启用 hub 的位置另有 $h$ 个 $H_{\ell,p,a}$，$h\mid n$。位置只是地址，不自动等于一个区域。
