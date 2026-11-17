@@ -170,11 +170,11 @@ $$
 
 ### 2.4 两条消息的计算与接收性质
 
-取两条同类消息 $(1,1),(1,-1)$，$d=d_A=H_A=d_h=1$，$\epsilon=1$，$e^{\mathrm{SA}}=0$，$W^Q=W^K=W^V=\sqrt2$，$W^O=1$。取 $\lambda_{\mathrm{SA}}=\alpha_{\mathrm{agg}}=1$，式 (4) 中 $A=B=1,e=0$。则 $p_1=p_2=1/2$，$Q_i=K_i=V_i=z_i$，读取份额为
+取两条同类消息 $(1,1),(1,-1)$，$d=d_A=H_A=d_h=1$，$\epsilon=1$，$e^{\mathrm{SA}}=0$，$W^Q=W^K=W^V=\sqrt2$，$W^O=1$。取 $\lambda_{\mathrm{SA}}=\alpha_{\mathrm{agg}}=1$，式 (4) 中 $A_{v,a}=B_{v,a}=1,e_{v,a}=0$。则 $p_1=p_2=1/2$，$Q_i=K_i=V_i=z_i$，读取份额为
 
 $$
-(A_{ij})=\frac1{e^2+1}
-\begin{pmatrix}e^2&1\\1&e^2\end{pmatrix}.
+(A_{ij})=\frac1{\exp(2)+1}
+\begin{pmatrix}\exp(2)&1\\1&\exp(2)\end{pmatrix}.
 $$
 
 记 $a=1+\tanh(1)$、$c=a/\sqrt{1+a^2}$。两条消息得到 $y_1=a,y_2=-a$，最终
