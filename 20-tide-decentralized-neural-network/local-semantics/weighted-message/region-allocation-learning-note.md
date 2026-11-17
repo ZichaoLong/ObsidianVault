@@ -993,7 +993,9 @@ $$
 
 ### 5.1 从所选函数得到完整返回
 
-指定总量和区域阈值使用 §2.3 的四元组描述；采用区域 Attention 评分时，按 §3.6.3 扩为六元组。角色分配使用 §4.1.5 的角色描述，其他发送规则使用 §4.1.3 的节点增益描述。局部评分、区域评分、key 与所需证据或增益分别选择，其输出按相应元组组装。
+采用 cat／match 局部评分时，指定总量和区域阈值使用 §2.3 的四元组描述；采用 att 区域评分时，按 §3.6.3 扩为六元组。两种角色分配使用 §4.1.5 的角色描述，其他发送规则使用 §4.1.3 的节点增益描述。
+
+采用 encoded 局部评分时，按 §3.7.4 改用 $(w_v,\mu_v,s_v^{\mathrm{loc}},z_v^E)$，区域评分选择 ind 或 self_attention。角色上下界与区域证据按所选发送规则追加，指定总量与区域阈值仍要求 $\mu_v=\mu_v^{\max}$。评分、key、证据与增益按附录 S.1、S.4—S.5 的兼容关系绑定，字段按相应描述空间组装。
 
 由此确定 $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v]$：一次求值使用 $(q,\theta,h)$，读取本节点记忆并返回所需描述。架构的 Read 将 $q$ 取为描述模式指定的 $q_v^{\mathrm{read}}$。SelStep 收齐描述后使用已绑定的评分与发送函数。
 
@@ -1007,12 +1009,15 @@ $$
 | 节点增益与固定阈值，quad／ent，$\alpha>1$ | $\mu_v$ | $[\min(1,M),\min(k,M)]$ | 可以精确稀疏 | $\lvert \mathcal R_j\rvert$ |
 | 节点增益与固定阈值，Shannon／bern | $\mu_v$ | 同上 | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 角色上下界二次分配 | $\overline c_v\le\mu_v$ | $[L,U]$ 或 $B$ | 正接收保底节点全正，其余可稀疏 | $\lvert\mathcal R_j\rvert$ |
+| 角色上下界 Shannon 分配 | $\overline c_v\le\mu_v$ | $[L,U]$ 或 $B$ | 有剩余可行预算时，正上界坐标全正 | $\lvert\mathcal R_j\rvert$ |
 | 直接 Attention，两种基权重 | $\mu_v$ | $(0,\max\mu]$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 固定总强度 Attention | $1$ | $1$ | 全部真实或全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 总量缩放 Attention | $1$ | $\min(1,M)$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 按比例分配 | $\mu_v$ | $\min(k,M)$ | 全部有效候选 | $\lvert \mathcal R_j\rvert$ |
 | 区域阈值的配对硬选择 | $\mu_v^{\max}$ | $\sum_{v\in\mathcal A}\mu_v^{\max}$ | $1$ 至 $k$ 个有效候选 | $k$ |
 | 节点增益与固定阈值的硬选择 | $\mu_v$ | $\sum_{v\in \mathcal A}\mu_v$ | $1$ 至 $k$ 个有效候选 | $k$ |
+
+角色 Shannon 的剩余可行预算条件在区间模式为 $U>\sum_v\underline c_v$，指定总量模式为 $B>\sum_v\underline c_v$；等号成立时只能返回 $c=\underline c$，普通坐标可能为零，见 §4.1.6。
 
 正典 $K_j$ 只声明允许的激活数量，$\mathcal A$ 仍由具体函数返回。训练或推理使用哪一种函数由配置给出。固定正温度的任一种函数均可持续使用。
 

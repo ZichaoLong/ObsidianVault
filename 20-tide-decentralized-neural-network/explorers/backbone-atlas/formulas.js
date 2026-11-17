@@ -32,7 +32,7 @@ function settleRegionFormulas(){
   s+=mathBlock(sub(mi('W'),mi('ℓ'))+mo('=')+sup(mn(2),textMath('min(ℓ,m,M−1−ℓ)')));
   s+=mathBlock(sub(mi('c'),mi('ℓ'))+mo('=')+mi('ℓ')+textMath(' mod log₂ n'));
   s+=mathBlock(mi('i')+mo('↦')+mo('{')+mi('i')+mo(',')+mi('i')+mo('⊕')+sup(mn(2),sub(mi('c'),mi('ℓ')))+mo('}'));
-  s+='<p>区域配对与节点配对取笛卡尔积。等宽处每节点入 / 出度为 4，宽度变化处至多 8。展开、宽段与收拢均使用本规则。</p>';
+  s+='<p>普通 DDX 边族由区域配对与节点配对取笛卡尔积。只计这一边族，等宽且宽度大于 1 时，每节点入 / 出度为 4；相邻宽度比为 2 时至多 8。Hub 的 DH、HH、HD 连线另计。展开、宽段与收拢均使用本规则。</p>';
  }else{
   s+=mathBlock(mi('L')+mo('=')+mn(2)+mi('h')+mo('+')+mn(1)+mo(',')+mi('D')+mo('=')+mi('L')+mo('+')+mn(2));
   s+=mathBlock(mi('i')+mo('↦')+mo('{')+mi('i')+mo(',')+par(mi('i')+mo('+')+mn(1))+textMath(' mod n')+mo('}'));
