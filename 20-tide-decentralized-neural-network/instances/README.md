@@ -30,6 +30,8 @@ HB 主候选采用严格区域分层，并在实例中核对局部块求值条�
 
 [三档整体参数绑定](parameter-profiles.md)说明 independent、region_shared、layer_shared 如何作用于 Agg、记忆、描述与评分、Full 和区域头。共享范围与局部算法是不同选择，两个共享档使用基座加节点适配，运行状态始终私有。原 FC／HB 教学实例保留各自参数定义，新比较实例使用统一的三档归属。
 
+接收另有 source_residual 与 incoming_self_attention 两个候选。[接收自注意力的完整替换](hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)给定宽度、头数、尺度与三档参数归属，可用于 FC、三类 HB 和 LH，分别与 K／S／X 组合。现有生成规模表沿用 source_residual；新增参数和准备阶段成本见[比较绑定 §5.1](backbone-comparison.md#51-接收自注意力的参数与准备成本)。候选目录按这些维度组织，不要求穷尽笛卡尔积。
+
 [主干比较绑定与尺寸阶梯](backbone-comparison.md)进一步规定内容维度、区内节点数、二次幂预算与 pool 对照，并给出参数计数口径。[交互面板](../explorers/backbone-atlas/README.md)展示三类 HB 的连接与时间，以及 FC／HB 的规模筛选。生成表覆盖已选组合，后续实验按需选取；LH、部分 Hub 放置与其他分区另有定义，未全部纳入规模表。
 
 ## 教学、比较与接续

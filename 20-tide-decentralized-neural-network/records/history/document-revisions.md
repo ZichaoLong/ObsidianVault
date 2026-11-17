@@ -1,7 +1,7 @@
 ---
 type: document-history
 status: reference
-as-of: 2026-11-15
+as-of: 2026-11-17
 tags:
   - tide
   - history
@@ -10,6 +10,14 @@ tags:
 # 文档修订记录
 
 本页保存编辑过程和历史章节线索。当前语义差异、配置迁移及采用信息见[版本记录](../semantic-versions-and-adoption.md)，旧文件的现行落点见[迁移索引](migration-map.md)。
+
+## 2026-11-17：同刻消息的局部自注意力接收
+
+[共同局部架构 §2.3—2.4](../../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)新增带强度先验的多头接收候选，保留逐条残差、来源非线性及最终强度汇聚；补入单头手算和零／弱消息、缩放、顺序性质的证明。原来源残差候选与公式编号保持；KV 和旧教学实例明确其原 Agg 选择，四份正典保持。
+
+新候选通过 [HB 完整替换](../../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)接到 FC、三类 HB 与 LH，参数范围进入[三档绑定](../../instances/parameter-profiles.md)。共同计数源增加独立／共享参数增量；现有 CSV、面板和范围表明确采用 source_residual，没有自动展开新轴。准备阶段按实际到达数及成对读取计量。
+
+[有限数值核对](../../examples/incoming_attention_checks.py)覆盖单／多头手算、关闭支路、消息顺序、强度缩放、零／弱消息、消息间依赖和参数增量，并接入 CI。图集的接收框、展示备注、接口索引、实现核对和设计解释同步。这些证据不包含整网训练、自动微分或设备性能。
 
 ## 2026-11-15：通读后的符号与文档整理
 

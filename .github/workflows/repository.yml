@@ -29,13 +29,14 @@ jobs:
         run: python3 tools/check_links.py
       - name: Check Tide documents
         run: python3 20-tide-decentralized-neural-network/tools/check_documents.py
-      - name: Check HB, LH and role allocation mathematics
+      - name: Check topology, allocation and incoming attention mathematics
         run: |
           python3 20-tide-decentralized-neural-network/examples/hb_lh_checks.py
           python3 20-tide-decentralized-neural-network/examples/hb_settle_checks.py
           python3 20-tide-decentralized-neural-network/examples/hb_compact_checks.py
           python3 20-tide-decentralized-neural-network/examples/backbone_capacity_checks.py
           python3 20-tide-decentralized-neural-network/examples/role_bounded_allocation_checks.py
+          python3 20-tide-decentralized-neural-network/examples/incoming_attention_checks.py
       - name: Test builds and native diagram export
         run: python3 -m unittest discover -s tools -p 'test_*.py'
 

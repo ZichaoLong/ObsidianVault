@@ -16,6 +16,7 @@ tags: [tide, lh, weighted-message]
 
 | 对象 | LH 绑定 |
 |---|---|
+| Agg | 默认 source_residual；incoming_self_attention 按 [HB §1.1](hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)替换，来源类别和参数分组取本表；同刻联合处理不读取在途或未来消息 |
 | 来源类别 | ext、hub 层次、hub 到卫星、卫星到 hub、网格邻域、I→O 桥、O→I 反馈；类别由静态边决定 |
 | 区域 | 默认底层 hub 与本组卫星混合，上层 hub 各自单区，两侧分别划分 |
 | 上层 hub | $k=K=1$，固定通过 $c_h=\mu_h$ |

@@ -26,6 +26,8 @@
 
 先由 Agg 形成接收，再执行 Upd。图中采用 Read$^+$，描述读取新状态；全部候选保留接收更新。区域给出正控制后，Full 计算完整内容，并在每条出边复制同一带权载荷。
 
+Agg 可选来源残差或[同刻局部自注意力](../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)，图中均表示为 $(r^{\mathrm{in}},u)$ 接口。自注意力先在到达消息间联合读取，再逐条加工与汇聚；下方原有数值算例继续采用来源残差。
+
 [PNG](weighted-message-flow.png) · [可编辑 SVG](weighted-message-flow.svg) · [定义：共同架构 §2—4](../local-semantics/weighted-message/architecture-learning-note.md#2-接收聚合)
 
 ![带权消息的一次处理](weighted-message-flow.png)

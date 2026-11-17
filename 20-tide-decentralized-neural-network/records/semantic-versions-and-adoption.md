@@ -2,7 +2,7 @@
 type: semantic-version-record
 status: active
 semantic-version: tide-core-5
-as-of: 2026-11-15
+as-of: 2026-11-17
 tags:
   - tide
   - semantic-version
@@ -89,6 +89,12 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 ## 2026-11-15：角色分配归入教材与三档参数绑定
 
 角色二次分配的定义、可行性、导数及配置已整合到[区域教材](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)，候选函数保持。实例共用的[参数绑定](../instances/parameter-profiles.md)迁到 instances/：旧 shared 改名 layer_shared，新增 region_shared，independent 保持。两个共享档的模块范围、适配规则及私有状态相同，区域档把共享组按实际区域拆分；HB 优先区域档，LH 默认沿用层级档。FC 两个共享档等价。计数、CSV、面板和检查同步；四份正典、旧教学绑定及 MoE 展示保持。本次不声明下游已实现或取得实验效果。
+
+## 2026-11-17：同刻消息的局部自注意力接收
+
+2026-11-17 新增[同刻局部自注意力接收](../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)，配置为 agg_mode=incoming_self_attention。原接收明确命名 source_residual，未另指定的旧绑定继续使用原函数。新候选按接收强度形成 Key／Value 先验和最终 Query 汇聚，逐条残差与来源非线性后返回 $(r^{\mathrm{in}},u)$；四个合并投影与新来源嵌入按三档参数绑定。四份正典及 tide-core-5 保持，接收候选由采用提交定位。
+
+新增候选可组合 K／S／X，完整参考尺寸及接口在 [HB §1.1](../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)，数值性质在共同架构附录 A.1。采用时核对零质量屏蔽、外层强度权重、全部正强度读取集、合并投影的适配粒度和准备阶段成本；改变 Agg 后须重新说明状态采用。现有 CSV 明确标记 source_residual，自注意力参数增量可另复算；此修订不声明下游实现或训练效果。
 
 ## 下游采用记录
 

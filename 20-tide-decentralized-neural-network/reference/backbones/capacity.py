@@ -179,3 +179,39 @@ def active(x, n, k):
     if k not in budgets(n):
         raise ValueError('budget must be a legal power of two or pool')
     return x['base'] + (1 if k=='pool' else k/n)*x['D'] + x['H']
+
+
+def incoming_attention_increment(profile, n, hubs, d, sharing='independent',
+                                 rank=8, attention_width=64):
+    """Extra parameters for one incoming_self_attention block on every node.
+
+    Q/K/V are three packed mathematical matrices; O is the fourth.
+    Original source residuals remain in count(). No memory or region heads
+    are added here. The atlas's existing rows continue to use source_residual.
+    """
+    if d not in DIMENSIONS:
+        raise ValueError('choose a registered content dimension')
+    if type(attention_width) is not int or attention_width <= 0:
+        raise ValueError('attention width must be a positive integer')
+    if sharing not in ('independent', 'region_shared', 'layer_shared'):
+        raise ValueError('unknown parameter binding')
+    if sharing != 'independent' and rank not in (4, 8, 16):
+        raise ValueError('adapter rank must be 4, 8 or 16')
+    groups, class_counts, class_groups = sharing_inventory(profile, n, hubs, sharing)
+    base, private, nodes = 0, Counter(), Counter()
+    matrix_size = 4*d*attention_width
+    adapter_size = 4*min(rank, d, attention_width)*(d+attention_width)
+    for group, number in groups.items():
+        role = group[-1]
+        nodes[role] += number
+        if sharing == 'independent':
+            private[role] += number*matrix_size
+        else:
+            base += matrix_size+len(class_groups[group])*d
+            private[role] += number*adapter_size
+    if sharing == 'independent':
+        for role, number in class_counts.items():
+            private[role] += number*d
+    return dict(total=base+sum(private.values()), base=base,
+                D=private['d'], H=private['h'],
+                nodes_D=nodes['d'], nodes_H=nodes['h'])

@@ -119,7 +119,7 @@ SLIDES = [
              notes='KV §4.2 的 x_v=u+αatt W^O[R] 与 G=x_v+αff SwiGLU(N(x_v)) 都在节点内容里。全连接 §2 取 αatt=1、αff=0；HB §2 两者都为零，两套实例另有外部残差。完整 Transformer 粗封装是直接起点，但确切等价还需核对完整绑定。本次新增例子不修改这些既有定义。'),
         step('residual-equivalence', '把 x 包进每个专家，何时数值等价？', '所有专家收到同一个 x，并且所选权重和为 1。',
              body='<div class="equivalence"><div>Σ aᵢ [x + Eᵢ(x)]</div><div class="muted">= (Σ aᵢ) x + Σ aᵢ Eᵢ(x)</div><div>= x + Σ aᵢ Eᵢ(x)</div></div>'+callout('主线保持专家单独占节点，同时把残差旁路显式画出，以保留贡献与基线的职责。')+'<p class="small">不同输入、权重和不为 1，或跨过 Norm／非线性移动加法，都要重新核对。带权均值也不能直接当作残差相加。</p>',
-             notes='这是一条有条件的等式，不要求将基线实际复制进每个 expert 的内容函数。比如带权聚合在关闭修正时，将 (1,x) 与 (1,F(x)) 聚合得到的是 (x+F(x))/2。若希望复用该分支，需要显式定义缩放或其他映射并核对语义；本次选的是另一套求和绑定。局部 Add 并不要求唯一全局残差流。')]),
+             notes='这是一条有条件的等式，不要求将基线实际复制进每个 expert 的内容函数。比如来源残差聚合 source_residual 在关闭来源修正时，将 (1,x) 与 (1,F(x)) 聚合得到的是 (x+F(x))/2。若希望复用该分支，需要显式定义缩放或其他映射并核对语义；本次选的是另一套求和绑定。局部 Add 并不要求唯一全局残差流。')]),
     dict(chapter='附页 B · HB 独立算例', status='已有绑定 · 与新 MoE 分开', sources=['hb','topology'], steps=[
         step('hb-detail', 'HB 留作拓扑与既有计算的备查', 'b = 2，h = 1，n = 3；这是另一套带权 KV 绑定。', 'illustration', figure='hb-output0',
              body='<div class="eyebrow">原实例的第一轮</div><p>h₀ = +1 → 图读出 O₀ = +1<br>图外 residual → y₀ = +2</p><p>候选 <b>10</b> · Full <b>4</b><br>内部消息 <b>8</b></p>'+callout('这里 G = u；<br>不承担专家贡献的演示。')+'<p class="small">第二轮、KV 参数与完整证明<br>通过备注中的原实例查阅。</p>',

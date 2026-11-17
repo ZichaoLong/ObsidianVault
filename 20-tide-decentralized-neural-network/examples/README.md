@@ -13,5 +13,6 @@
 | [hb_settle_checks.py](hb_settle_checks.py) | Lattice 字地址、Exchange 位覆盖、度数与 Settle 对齐 |
 | [hb_compact_checks.py](hb_compact_checks.py) | 紧凑图相位、来源覆盖、独立交换轮数及深度扩展 |
 | [backbone_capacity_checks.py](backbone_capacity_checks.py) | 二次幂预算、逐头适配器、独立参数闭式计数与活跃代理 |
+| [incoming_attention_checks.py](incoming_attention_checks.py) | 接收自注意力的单／多头手算、顺序与强度缩放、零／弱消息、逐消息相互作用及三档参数增量 |
 
 HB 构造和参数计数从[公共参考代码](../reference/backbones/README.md)导入；核对程序和[主干面板](../explorers/backbone-atlas/README.md)分别消费同一份构造。公式与实现的对应入口见[实现核对](../reference/weighted-message-implementation-checks.md)，文档、链接和产物检查工具位于 `tools/` 及仓库根目录的 `tools/`。

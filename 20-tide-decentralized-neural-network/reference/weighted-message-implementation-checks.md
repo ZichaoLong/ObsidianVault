@@ -15,7 +15,7 @@ tags:
 
 ### 1.1 采用范围与模型绑定
 
-实现记录不可变上游提交、核心语义版本、具体函数组合、图、时间、参数与状态表示。局部函数可以在同一核心版本下演进，定义由所采用的提交定位。列出支持的 memory_family、memory_read、read_mode、评分、region_key、region_evidence、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
+实现记录不可变上游提交、核心语义版本、具体函数组合、图、时间、参数与状态表示。局部函数可以在同一核心版本下演进，定义由所采用的提交定位。列出支持的 agg_mode、memory_family、memory_read、read_mode、评分、region_key、region_evidence、query_weight、allocation_base 和 selection_mode，检查各键的生效范围及类型。名称迁移与采用记录见[版本对应](../records/semantic-versions-and-adoption.md)。
 
 教材中的自由参数与函数选择确定模型族。一次核验固定具体绑定，保存可恢复参数、初态与输入的材料；维度、单位和参数共享关系也属于绑定。下游声明支持的组合及限制，可只实现其中一部分。数值约定另记录精度、容差、求根终止规则、下溢和裁剪，以及不可微边界的反向约定。
 
@@ -78,6 +78,7 @@ $$
 | 核对项 | 覆盖情形 |
 |---|---|
 | Agg | SrcClass 的带标签端口／入边定义域、完整纤维、来源、平行原子、空输入和零强度；同类别的不同原子各参与一次；同参数面对不同邻域仍分别求值 |
+| 接收自注意力 | agg_mode=incoming_self_attention；Key／Value 与最终 Query 汇聚两处强度权重、包含自身的完整正强度读取集、分头及拼接、逐条非线性后汇聚；不读取旧状态或增加输入序号位置编码 |
 | Read 与描述 | Describe 绑定所选 Mem 与 $p_v$；Read$^+$／$^-$／$^0$ 向 Describe 分别传入新状态、旧状态和初态，并保留当前时间与聚合；描述宽度与区域 SelStep 相容 |
 | Next | 所有候选保留接收更新；未激活也保留；不得读取或重算 Full |
 | SelStep | 空候选、全零接收、单候选；每候选都有控制；单点历史；$K$ 按所选函数绑定 |
@@ -87,6 +88,12 @@ $$
 采用节点增益描述时，增益检查 $1\le\gamma\le\gamma_{\max}$、$\mu=\min(1,\gamma (r^{\mathrm{in}})_+)$。query_weight=received 时，固定接收与记忆特征，改变增益不能改变 query；direct_attention 且 allocation_base=received 时，固定评分后只经外乘 $\mu$ 生效。query_weight=mu 的原依赖继续保留。
 
 相同参数与输入的共享求值只记一次工作，仍须恢复各节点的原始状态。前向移除依赖与 stop-gradient 的反向约定分别检查。
+
+采用[接收自注意力](../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)时，零总强度直接返回 $(0,0)$，零强度及填充位置精确屏蔽，不用固定 epsilon 将其变为正质量。覆盖单消息、同类不同原子、不等强度、多头、输入重排和整体强度缩放；单独检查弱消息内容不收敛但有界的极限。$\lambda_{\mathrm{SA}}=0$ 应恢复相同来源参数下的原 Agg，$\alpha_{\mathrm{agg}}=0$ 单独关闭来源非线性，不能误关 attention。
+
+单头及双头的独立手算、上述不变性和参数增量见[有限数值核对](../examples/incoming_attention_checks.py)。这些检查未验证下游自动微分或设备实现；实现反向时在正强度光滑点核对各消息内容、强度、四投影和两组来源参数的方向导数，零强度边界按数值约定记录。改变 Agg 后，旧记忆缓存不自动等于新模型从初态运行的缓存。
+
+四个接收投影按合并数学矩阵各适配一次；不能套用 KV 查询逐头适配的参数数目。来源嵌入按实际类别并集计数。接收计算归入候选准备，统计实际正消息数与成对读取量，不按 Full 支持比例推算。
 
 采用[三档参数绑定](../instances/parameter-profiles.md)时，核对 Agg、来源嵌入、KV/SSD、门／卷积／归一化、描述与评分、区域头和 Full 的全部归属。两个共享档中矩阵适配器只加一次，mixed 区 KV 基座只有一个值；independent 中 KV 取完整投影表示，不能仍受 rank-8 约束。region_shared 以实际区域再拆分共享组，区域头独立；layer_shared 按层级组去重，来源嵌入按各组实际类别并集计数。核对 FC 两个共享档相等、HB 新区域档的基座增长及原 independent／层级档计数保持。状态不因共享权重而别名。分布式训练核对各共享范围的梯度归约，比较时同时记录参数量和实际工作量。
 

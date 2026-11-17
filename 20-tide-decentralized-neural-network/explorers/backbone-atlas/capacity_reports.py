@@ -25,7 +25,7 @@ def millions(value):
 def build(out):
     """Write reproducible tables; the page uses the same compact row data."""
     rows = []
-    csv_fields = ['profile'] + PROFILE_FIELDS + FIELDS[1:9] + list(PARAMETER_COLUMNS.values())
+    csv_fields = ['profile', 'agg_mode'] + PROFILE_FIELDS + FIELDS[1:9] + list(PARAMETER_COLUMNS.values())
     csv_fields += ['within_256M'] + [f'active_k{k}_M' for k in BUDGETS] + ['active_pool_M']
     with (out/'capacity.csv').open('w',newline='',encoding='utf-8') as f:
         writer = csv.DictWriter(f,fieldnames=csv_fields)
@@ -45,6 +45,7 @@ def build(out):
                                     # Embedded JSON retains raw counts for exact filtering.
                                     rows.append([row[name] for name in FIELDS])
                                     exported = {name:row[name] for name in FIELDS if name not in PARAMETER_COLUMNS}
+                                    exported['agg_mode'] = 'source_residual'
                                     exported.update({name:binding.get(name,'') for name in PROFILE_FIELDS})
                                     exported['widths'] = ';'.join(map(str,binding['widths']))
                                     exported.update({column:millions(x[name]) for name,column in PARAMETER_COLUMNS.items()})
@@ -54,13 +55,14 @@ def build(out):
                                     writer.writerow(exported)
     write_summary(out)
     return dict(fields=FIELDS,rows=rows,profiles=BOUND_PROFILES,variants=VARIANTS,
-                parameter_unit='scalar',node_sizes=NODE_SIZES,
+                parameter_unit='scalar',agg_mode='source_residual',node_sizes=NODE_SIZES,
                 dimensions=DIMENSIONS,budgets=BUDGETS)
 
 
 def write_summary(out):
     lines = ['# 主干参数与尺寸阶梯（生成表）','',
              '维护定义：[统一比较绑定](../../../instances/backbone-comparison.md)。主干可训练参数；M=10^6，不计边界、任务头或状态。',
+             '全部行采用 agg_mode=source_residual。接收自注意力的额外参数与准备成本见[比较绑定 §5.1](../../../instances/backbone-comparison.md#51-接收自注意力的参数与准备成本)。',
              '', '完整 CSV 的参数列以 _M 结尾，单位同为百万参数；空的 active_k 列表示 k>n，不能作为配置使用。',
              'profile 同时标识空间轮廓与时间绑定；spatial_profile 保留同端点对照关系。多跨度 Timed／Settle 分别列出，参数计数相同。',
              'CSV 使用各候选主周期；Timed 与 Settle 同周期的设置可在面板中另选。候选取舍与新变体的参考见[主干记录](../../../instances/backbone-design.md)，跨层意图见[研究意图与探索路径](../../../memos/design/design-requirements-and-architecture.md)。',

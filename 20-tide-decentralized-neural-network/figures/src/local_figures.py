@@ -7,6 +7,7 @@ from catalog import REGISTRY, register, ARCH, ALLOC, KV, REC
           [ARCH+'#2-接收聚合', ARCH+'#3-状态与记忆描述', ARCH+'#4-分配完整计算与发送'],
           '把消息强度、内容、接收更新、描述、区域控制和同值广播接到同一次计算。',
           ['采用 Read+，Mem 与 Full 使用新状态；所有候选保留接收后的状态。',
+           'Agg 可选来源残差或同刻局部自注意力，两者均交付接收强度与内容。',
            '同值广播属于带权消息支线的 Full 绑定，正典的一般 Full 可逐边返回不同载荷。'])
 def weighted_message_flow():
     f = Figure('带权消息：接收、记忆、分工与发送',
@@ -17,7 +18,7 @@ def weighted_message_flow():
         f.text(207,y+30,'输入消息 '+str(i),26,BLUE)
         f.math(207,y+77,f'(m_{i}, z_{i})',31)
         f.arrow([(340,y+55),(405,y+55),(465,400+35*(i-1))],BLUE)
-    f.card(470,325,510,200,'接收聚合 Agg', ['按来源处理，汇聚消息'], 'blue',30)
+    f.card(470,325,510,200,'接收聚合 Agg', ['来源残差／同刻自注意力'], 'blue',30)
     f.math(725,487,'h = (r^{in}, u)',34,BLUE)
     f.card(470,700,510,190,'记忆更新 Upd',['正接收驱动，候选保留更新'],'green',29)
     f.math(725,855,'q → q̃',37,GREEN)

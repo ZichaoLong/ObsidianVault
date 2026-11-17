@@ -6,7 +6,7 @@ tags: [tide, hb, weighted-message]
 
 # HB 多跨度图的三组主绑定
 
-本文将[共同连接图](../topologies/hb-multiscale.md)与已有记忆、[角色分配](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)组成可实现的模型族。只保留三组主局部绑定；拓扑尺寸、hub 放置、分区及时间是单独的对照轴。任一行给定所列形状的全部有限参数后，就是完整模型，不再等待选择未定义的函数。
+本文将[共同连接图](../topologies/hb-multiscale.md)与已有记忆、[角色分配](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)组成可实现的模型族。主记忆绑定为 K／S／X 三组；接收候选、拓扑尺寸、hub 放置、分区及时间是单独的对照轴。任一行给定所列形状的全部有限参数后，就是完整模型，不再等待选择未定义的函数。
 
 三组记忆、Hub 分区和参数归属的选择理由见[主干候选的形成与取舍](backbone-design.md)；本页负责把这些选择组成可求值的模型。
 
@@ -18,7 +18,7 @@ tags: [tide, hb, weighted-message]
 
 | 接口 | 完整选择 |
 |---|---|
-| Agg | [来源分类聚合](../local-semantics/weighted-message/architecture-learning-note.md#2-接收聚合)，类别与共享见下文，$\alpha_{\mathrm{agg}}=1$ |
+| Agg | agg_mode=source_residual，[来源分类聚合](../local-semantics/weighted-message/architecture-learning-note.md#21-来源分类与聚合)，类别与共享见下文，$\alpha_{\mathrm{agg}}=1$；自注意力替换见 §1.1 |
 | $S_v,q_v^{\mathrm{init}}$, Upd, Mem, $p_v,G_v$ | D 取 KV 的相应函数，H 取 SSD；参数见 §2 |
 | Describe, Read | Read$^+$，cat 局部评分，att 区域评分，content_stats key，query_weight=received，$\alpha_{\mathrm{loc}}=\alpha_{\mathrm{sel}}=1$；描述增加角色上下界 |
 | SelStep | role_bounded_quad、区间模式、lower_base=mu、固定增益 $\gamma=\gamma_{\max}=2$、固定阈值 $\eta=0$、$\tau_{\mathrm{sel}}=1$，预算见 §3 |
@@ -30,6 +30,14 @@ tags: [tide, hb, weighted-message]
 来源类为 ext，以及各入边的 DD1、DD2、DD4、DH1、HH1/2/4、HD1/2/4；不存在的类无需计算。与旧 HB 的“每个父节点一个类别”相比，本实例按边族保留区别，避免参数随每条边增加。Agg 的 $A_v,B_v,e_{v,a}$ 按 §4 的整体参数配置绑定；原子仍逐条参与，不合并边身份。这种聚合在固定宽度内容中压缩信息，不保证无损保留全部来源。
 
 主配置的 hub 没有专门的新汇总算子：它使用同一 Agg 接口，区别在来源、参数、SSD 状态和分配边界。后续若另引入分来源槽、逐边载荷或回取机制，需要另定义，不能由 hub 名称推断。
+
+### 1.1 接收自注意力的完整替换
+
+取 agg_mode=incoming_self_attention，按[共同架构 §2.3](../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)替换所有节点的 Agg。参考尺寸为 $d=128,d_A=64,H_A=2,d_h=32$，一个 attention 块；$\lambda_{\mathrm{SA}}=\alpha_{\mathrm{agg}}=1$，$\epsilon=10^{-5}$。保留 $p_a=16$ 及共同架构式 (4) 的来源函数，在 attention 残差之后逐条使用；增宽对照取 $d_A=128,H_A=4,d_h=32$。
+
+来源分类沿用本节。所有 $W_v^Q,W_v^K,W_v^V,W_v^O,e^{\mathrm{SA}}_{v,a}$ 按[三档整体参数绑定](parameter-profiles.md)给定有限参数，四个投影不另加偏置。正强度原子相互读取并包含自身，最终 Query 汇聚也按接收强度加权；不添加输入序号位置编码、历史查询或硬来源掩码。输出仍为一个 $(r^{\mathrm{in}},u)$，其后记忆、Read、分配、Next 与 Full 采用已选的完整绑定。
+
+普通节点和 hub 都使用此函数，参数分组仍区分角色。Hub 消息可以在接收节点内改变细节消息的加工，其作用只及实际到达的纤维；没有收到 Hub 消息的节点不因此获得背景。候选准备按实际正消息数计量，较高入度的 Hub 不按 Full 预算比例折减接收成本。此替换可分别用于 K／S／X 及 Timed／Settle，不增加一种记忆族，也不要求穷尽全部组合。
 
 ## 2. 两类记忆与三个主候选
 

@@ -12,6 +12,8 @@
 
 `capacity.PROFILES` 登记空间轮廓，`BOUND_PROFILES` 将其接到主时间绑定；`count` 继续接收空间标识，返回精确标量计数。多跨度 Timed／Settle 共用计数，在生成表和面板中分别列出。导出的 CSV 由面板报表代码换算成 M，内嵌 JSON 保留原始计数。
 
+`count` 及现有生成表使用 `agg_mode=source_residual`。`incoming_attention_increment(profile, n, hubs, d, sharing, rank, attention_width)` 按[接收自注意力绑定](../../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)计算新增四个矩阵与来源嵌入；返回的 total／base／D／H 分别加到原计数，节点数保持原值。四个矩阵按合并投影分别适配，头数不改变参数数目；合法头数与宽度由局部定义核对。准备工作按实际到达数计算，不能由参数增量代替。
+
 [教学与核对程序](../../examples/README.md)检查构造及公式；[主干面板](../../explorers/backbone-atlas/README.md)负责视图、CSV 和 Markdown 范围表。FC 目前通过节点和来源类统计参与计数，尚未提供用于面板绘图的逐边构造；LH 的教学构造仍在 HB／LH 核对程序中。
 
 修改本目录后，从仓库根目录查影响并核对定义、例子和界面公式，再重建：
@@ -22,6 +24,7 @@ python3 20-tide-decentralized-neural-network/examples/hb_lh_checks.py
 python3 20-tide-decentralized-neural-network/examples/hb_settle_checks.py
 python3 20-tide-decentralized-neural-network/examples/hb_compact_checks.py
 python3 20-tide-decentralized-neural-network/examples/backbone_capacity_checks.py
+python3 20-tide-decentralized-neural-network/examples/incoming_attention_checks.py
 python3 tools/build.py --group backbone-atlas
 python3 tools/check_artifacts.py --require-built --group backbone-atlas
 ```

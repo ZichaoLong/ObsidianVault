@@ -61,6 +61,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | 符号或函数 | 含义与唯一的定义入口 |
 |---|---|
 | $(m,z),\pi_P,(r^{\mathrm{in}},u),\operatorname{Agg},\operatorname{SrcClass}_v$ | [共同架构 §1—2](../local-semantics/weighted-message/architecture-learning-note.md#1-消息输入与候选)：载荷、数值贡献、接收聚合及从带标签端口／入边到有限类别的映射 |
+| $d_A,H_A,\lambda_{\mathrm{SA}},e^{\mathrm{SA}}_{v,a},A^{(h)}_{ij}$ | [共同架构 §2.3](../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)：接收自注意力的内部宽度、头数、残差尺度、来源嵌入与读取份额；投影与历史 KV 分别给定 |
 | $p_v,\operatorname{Mem}_v$ | [共同架构 §3.2](../local-semantics/weighted-message/architecture-learning-note.md#32-从状态取得记忆描述)：当前内容特征与记忆描述接口，由各记忆模块实现 |
 | $\operatorname{Describe}_v[\operatorname{Mem}_v,p_v],d_v\in D_v$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：以 Mem 与当前特征为部件的描述函数；绑定后简记 Describe，具体构造由区域教材给出 |
 | $q_v^{\mathrm{read}}$ | [共同架构 §3.3](../local-semantics/weighted-message/architecture-learning-note.md#33-节点描述与状态快照)：描述模式指定的初态、旧状态或新状态 |

@@ -30,6 +30,7 @@ Exchange 可在非末层每位置启用 4 个 hub，分为 D 区与 H 区，成�
 
 | 对象 | 本页绑定 |
 |---|---|
+| Agg | 默认 source_residual；可按 [HB §1.1](hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)完整替换为 incoming_self_attention，使用本表来源类及相同三档参数归属 |
 | 来源类别 | Lattice：ext、DDL；Exchange：ext、DDX，以及启用时的 DH1、HH1、HD1；Multiscale：沿用原边族 |
 | 普通区 | $k_D=\max(1,\lceil n/32\rceil)$，$K=n$，普通边界 $(0,\mu_v)$ |
 | 增强图 H 区 | $h=4,k_H=2,K=4$，hub 边界 $(\mu_h/4,\mu_h)$；共同角色分配 |

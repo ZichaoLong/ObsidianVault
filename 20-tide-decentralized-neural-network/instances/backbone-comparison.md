@@ -25,7 +25,7 @@ HB 继承[多跨度主绑定](hb-multiscale-weighted-message.md)与 [Settle 共�
 
 **FC 的统一绑定。** 复用上述主绑定的载荷、KV／SSD 状态与零初态、Agg、Read$^+$、cat／att/content_stats 评分、received query、Next 和 Full；全图只有 D 角色，来源类为 ext、DD。每个首层节点有入口 $(1,E_Dx_t)$，末层全部节点有输出端口。时间、Pos、窗口、衰减与卷积步长按 Settle 规则，$P_{\mathrm{in}}=D=M+2$。参数按[三档整体绑定](parameter-profiles.md)的节点／区域／层级归属，区域为 D 类型。这是一份新的完整比较绑定；[旧 FC 教学实例](fully-connected-layered-weighted-message.md)的混合参数归属保留，不套用本页计数。
 
-三组记忆仍为 K（全部 KV/sum）、S（全部 SSD/state）、X（D 用 KV，H 用 SSD）；无 hub 时 X 与 K 重合，表中去重。没有增加第四组局部函数。
+三组记忆仍为 K（全部 KV/sum）、S（全部 SSD/state）、X（D 用 KV，H 用 SSD）；无 hub 时 X 与 K 重合，表中去重。接收机制由独立的 agg_mode 选择：现有主表为 source_residual；incoming_self_attention 的完整替换见 [HB §1.1](hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)，参数增量见本页 §5.1。FC 同样可以替换，来源类仍为 ext、DD。
 
 ## 2. 合理维度与参数归属
 
@@ -99,7 +99,7 @@ $S=\sum_\ell W_\ell$，普通节点数 $N_D=nS$；全位置可选 4 hub 时，$N
 
 总参数计 Agg、实际来源嵌入、记忆投影、描述／评分、区域头、Full／FFN，以及 SSD 的可训练向量和卷积抽头。仅计启用函数；固定增益、预算、阈值、时钟、初态不计。输入嵌入、入口投影、任务头、Pronounce、优化器与 KV／SSD 运行状态不计。
 
-独立 K 单节点不含来源嵌入与区域头的参数量为
+在 source_residual 下，独立 K 单节点不含来源嵌入与区域头的参数量为
 
 $$P_K(d)=17.375d^2+2.25d+1.$$
 
@@ -114,6 +114,20 @@ $$
 
 independent 中 $B$ 只有区域头；pool 用比例 1。估算假定各区均参与、有接收的 H 全部发送；来源嵌入按普通参数总数的相同比例估计。quad 的 k 不是硬支持上限；降低 k 不减总参数。准备阶段仍可能访问未选节点的参数，因此该代理不是实际触及参数、FLOPs 或每输出 token 工作量，Timed 也可能每输入产生多次作用。保持这一简明口径，真实活跃与系统性能由下游测量。
 
+### 5.1 接收自注意力的参数与准备成本
+
+incoming_self_attention 保留原来源函数，再增加四个投影和每个来源类的 $d$ 维嵌入，逐节点／共享组的完整增量见[三档参数绑定 §4](parameter-profiles.md#4-规模与通信含义)。全节点使用同一 $d_A$ 时，独立配置的增量为
+
+$$
+\Delta P=4Ndd_A+d\sum_v|\mathsf L_v|.
+$$
+
+这里 $N=N_D+N_H$。例如 $d=128,d_A=64$ 时，每节点四个投影增加 $0.032768$M，另计新来源嵌入；$d_A=128$ 时投影增加 $0.065536$M。尺寸阶梯中的其他 $d$ 可显式配 $d_A=64,H_A=2$ 或 $d_A=128,H_A=4$，每头均为 32；消息宽度不自动决定接收投影宽度。两档均采用一个块及固定尺度 1。
+
+[公共计数源](../reference/backbones/capacity.py)的 incoming_attention_increment 返回增量的 total／base／D／H，按实际来源类和三档共享范围去重。将这四项分别加到 count 的原结果即可得到替换后的参数数目；nodes_D／nodes_H 只是原节点数，不能再相加。原参数代理如继续使用，则增量为 $\Delta B+(k_D/n)\Delta P_D+\Delta P_H$，仍只是同一比例口径。
+
+这些新参数在候选准备中使用。实际工作须按每次正消息数 $n_+(v,\theta)$ 计四投影、$n_+^2$ 成对读取和逐条来源变换；Full 预算比例不能说明省去了多少接收工作。记录实际到达数分布、候选作用次数、准备与 Full 时间，才能评估 Hub 扇入及异时输出的物理成本。
+
 ## 6. 交互与复算
 
 [交互面板](../explorers/backbone-atlas/README.md)提供拓扑、数学公式和规模筛选；[完整参数 CSV](../explorers/backbone-atlas/generated/capacity.csv)保留全部尺寸、独立／共享、K/S/X 和二次幂预算的估算，[生成范围表](../explorers/backbone-atlas/generated/capacity-summary.md)便于逐图阅读。CSV 和页面的参数单位均为百万参数，$1\mathrm{M}=10^6$；内部计数与范围判断保留精确值。所有行由[计数源](../reference/backbones/capacity.py)重建。
@@ -122,6 +136,7 @@ profile 绑定空间轮廓与时间，例如 `multiscale-compact-9-timed` 和 `m
 
 | CSV 列 | 含义 |
 |---|---|
+| `agg_mode` | 当前生成的全部行均为 source_residual；incoming_self_attention 须另加 §5.1 的增量，不能直接使用此表总参 |
 | `profile`、`spatial_profile` | 含时间绑定的轮廓标识、共用的空间轮廓标识；完整参数配置还需结合 n/h/d、记忆、共享档及秩 |
 | `family`、`timing` | 空间图族 fc／lattice／exchange／multiscale；时间绑定 timed／settle |
 | `depth`、`widths` | 包含首尾的层数；各层位置数，以分号分隔 |
@@ -139,4 +154,4 @@ profile 绑定空间轮廓与时间，例如 `multiscale-compact-9-timed` 和 `m
 
 CSV 使用各候选主周期。面板另保留 Timed 与 Settle 同周期的对照设置，显示对应输入周期并在图与规模表之间双向传递；它属于 Timed 的另一输入日程。修改日程后的完整实验仍须按实例声明位置函数、衰减、窗口和卷积抽头。生成数据中的整数计数供计算使用，CSV 的 _M 列保存纯数字，便于直接筛选和统计。
 
-对应核对为[紧凑图的相位与合作](../examples/hb_compact_checks.py)和[参数形状与预算](../examples/backbone_capacity_checks.py)。这些证据不包含整网训练或吞吐结果。真正实现后还应按唯一 Parameter 对象核对主干总参。
+对应核对为[紧凑图的相位与合作](../examples/hb_compact_checks.py)、[参数形状与预算](../examples/backbone_capacity_checks.py)及[接收自注意力公式与增量](../examples/incoming_attention_checks.py)。当前 CSV／面板仍只展开来源残差候选，没有将新增 Agg 与全表维度相乘。上述证据不包含整网训练或吞吐结果。真正实现后还应按唯一 Parameter 对象核对主干总参。

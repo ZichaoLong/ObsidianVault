@@ -22,6 +22,7 @@
 
 正式语义入口：
 
+- 当前规模表和 CSV 明确使用 `agg_mode=source_residual`。新增[局部接收自注意力](../../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)可与这些图组合，参数增量和准备成本见[比较绑定 §5.1](../../instances/backbone-comparison.md#51-接收自注意力的参数与准备成本)；本表尚未展开该 Agg 轴。
 - [共同拓扑、全部尺寸、分区与 hub 放置](../../topologies/hb-multiscale.md)。其他配置已有构造定义，暂不都提供界面切换。
 - [位交换拓扑与覆盖证明](../../topologies/hb-exchange.md)、[Settle 三图共同绑定](../../instances/hb-settle-weighted-message.md)、[三档整体参数绑定](../../instances/parameter-profiles.md)。
 - [统一主干比较绑定与计数口径](../../instances/backbone-comparison.md)、[完整 CSV](generated/capacity.csv)、[生成范围表](generated/capacity-summary.md)。
@@ -82,6 +83,7 @@ python3 20-tide-decentralized-neural-network/examples/hb_lh_checks.py
 python3 20-tide-decentralized-neural-network/examples/hb_settle_checks.py
 python3 20-tide-decentralized-neural-network/examples/hb_compact_checks.py
 python3 20-tide-decentralized-neural-network/examples/backbone_capacity_checks.py
+python3 20-tide-decentralized-neural-network/examples/incoming_attention_checks.py
 python3 20-tide-decentralized-neural-network/examples/role_bounded_allocation_checks.py
 python3 20-tide-decentralized-neural-network/explorers/backbone-atlas/check_browser.py
 ```

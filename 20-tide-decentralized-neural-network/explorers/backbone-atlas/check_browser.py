@@ -44,6 +44,7 @@ def check_capacity_export():
             for field,column in (('total','total_M'),('base','base_M'),('D','private_D_M'),('H','private_H_M')):
                 assert Decimal(exported[column])*1_000_000 == row[field], (identity,column)
             assert exported['within_256M'] == str(row['total'] <= 256_000_000)
+            assert exported['agg_mode'] == data['agg_mode'] == 'source_residual'
             for k in data['budgets']:
                 value = exported[f'active_k{k}_M']
                 if k > row['n']:
