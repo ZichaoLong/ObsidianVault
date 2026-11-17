@@ -18,11 +18,13 @@
 
 规模筛选分别列出 FC-Settle、HB-Lattice-Settle、HB-Exchange-Settle、HB-Multiscale-Timed 和 HB-Multiscale-Settle，支持 n=8／16／32／64／128、d=64 至 768、K／S／X、independent／region_shared／layer_shared，以及两个共享档的适配秩 4／8／16。预算只选合法的 1、2、4、8、16、32、64 或 pool；显示总参、预算比例和活跃参数代理，超过 256M 的行也保留。规模筛选不修改上方连接图；有已绘制连线的行可点击“查看”。“按上方连接图筛选”和“查看”均传递空间轮廓与时间绑定，Timed 的同周期设置也随之保留。FC 每层一区，面板标注两个共享档等价；CSV 保留各档标识供筛选，实验无需重复。HB 默认筛选区域共享。
 
-完整 CSV 共 56,350 行。profile 带时间后缀，spatial_profile 标识共用的空间轮廓，另列层数、层宽、位置数和主输入周期；参数列以 _M 结尾，单位为百万参数。CSV 保存主周期，面板另可选择 Timed 的同周期对照。内嵌数据与范围判断保留精确计数。字段解释见[比较绑定 §6](../../instances/backbone-comparison.md#6-交互与复算)。候选覆盖不同需求组合；提出新配置或新构造时，可从[主干候选的形成与取舍](../../instances/backbone-design.md)接续。
+接收配置可选来源残差、两种轻量自注意力（$d_A=64$／128、$p_a=d/8$）和加宽自注意力（$d_A=p_a=d$），也可并列显示全部四档。界面展示所选尺寸公式，每行总参已计入该档全部接收参数；256M 筛选及活跃代理使用这一完整计数。连接图跳转保留接收选择，图的边与时间不由接收尺寸改变。
+
+完整 CSV 共 225,400 行。profile 带时间后缀，spatial_profile 标识共用的空间轮廓，另列层数、层宽、位置数和主输入周期；agg_profile 标识接收尺寸配置，另列 agg_mode、MLP 宽度及注意力宽度、头数、每头维度。参数列以 _M 结尾，单位为百万参数。CSV 保存主周期，面板另可选择 Timed 的同周期对照。内嵌数据与范围判断保留精确计数。字段解释见[比较绑定 §6](../../instances/backbone-comparison.md#6-交互与复算)。候选覆盖不同需求组合；提出新配置或新构造时，可从[主干候选的形成与取舍](../../instances/backbone-design.md)接续。
 
 正式语义入口：
 
-- 当前规模表和 CSV 明确使用 `agg_mode=source_residual`。新增[局部接收自注意力](../../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)可与这些图组合，参数增量和准备成本见[比较绑定 §5.1](../../instances/backbone-comparison.md#51-接收自注意力的参数与准备成本)；本表尚未展开该 Agg 轴。
+- [局部接收自注意力](../../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)及[四个接收配置](../../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)。轻量与加宽档使用相同函数，尺寸和准备成本的差异见[比较绑定 §5.1](../../instances/backbone-comparison.md#51-接收自注意力的参数与准备成本)。
 - [共同拓扑、全部尺寸、分区与 hub 放置](../../topologies/hb-multiscale.md)。其他配置已有构造定义，暂不都提供界面切换。
 - [位交换拓扑与覆盖证明](../../topologies/hb-exchange.md)、[Settle 三图共同绑定](../../instances/hb-settle-weighted-message.md)、[三档整体参数绑定](../../instances/parameter-profiles.md)。
 - [统一主干比较绑定与计数口径](../../instances/backbone-comparison.md)、[完整 CSV](generated/capacity.csv)、[生成范围表](generated/capacity-summary.md)。
@@ -90,7 +92,7 @@ python3 20-tide-decentralized-neural-network/explorers/backbone-atlas/check_brow
 
 构建使用 Python 标准库、系统 Python 及系统 librsvg、Cairo、GObject，字体采用 Noto Sans CJK 或本机已有的 Droid Sans Fallback；不依赖 Python 的 Pillow／CairoSVG。Debian／Ubuntu 可安装 `librsvg2-2 libcairo2 fonts-noto-cjk`，GObject 由依赖带入。浏览器核对另需 Firefox，通过隔离 profile 验证 58 个配置及参数预算筛选、区域跳转、公式映射、矩阵端点数量、末层角色与矩形矩阵、g=1 边界、时间同步及宽窄布局；报告和截图默认写入仓库外临时目录，不进入日常 Git 产物。仓库 CI 在 push／pull request 时构建本组并执行浏览器核对。
 
-核对也逐行比较 CSV 的 M 单位与页面精确计数，检查 Timed／Settle 成对配置、合法预算空值，以及连接图与参数筛选之间的时间绑定和输入日程传递。
+核对也逐行比较 CSV 的 M 单位、接收尺寸与页面精确计数，检查四档覆盖、Timed／Settle 成对配置、合法预算空值，以及连接图与参数筛选之间的时间绑定、输入日程和接收选择传递。浏览器另核对轻量／加宽的完整计数、维度公式、规模过滤与窄屏显示。
 
 两个带 hub 的构造器默认省去末层 H；`terminal_hubs=True` 可复现此前包含它们的图，面板展示默认图。删除对 group／singleton 保留节点与输出的影响，以及 mixed 的差异，见[共同拓扑 §1](../../topologies/hb-multiscale.md#1-节点位置与区域)。
 

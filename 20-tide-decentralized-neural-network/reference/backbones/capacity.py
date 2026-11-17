@@ -1,6 +1,6 @@
 """Backbone shape counts for instances/backbone-comparison.md.
 
-No neural execution, state allocation, embeddings or task heads are counted.
+No neural execution, state allocation, input embeddings or task heads are counted.
 The graph constructors supply actual source classes, including hub probes.
 """
 from collections import Counter, defaultdict
@@ -14,6 +14,28 @@ BUDGETS = (1, 2, 4, 8, 16, 32, 64)
 SHARING = (('independent', 0),
            ('region_shared', 8), ('region_shared', 4), ('region_shared', 16),
            ('layer_shared', 8), ('layer_shared', 4), ('layer_shared', 16))
+AGG_PROFILES = {
+    'source_residual': dict(label='来源残差', mode='source_residual',
+                            attention_width=0, hidden_divisor=8),
+    'incoming_light_64': dict(label='轻量自注意力 · 64', mode='incoming_self_attention',
+                              attention_width=64, hidden_divisor=8),
+    'incoming_light_128': dict(label='轻量自注意力 · 128', mode='incoming_self_attention',
+                               attention_width=128, hidden_divisor=8),
+    'incoming_wide': dict(label='加宽自注意力', mode='incoming_self_attention',
+                          attention_width='d', hidden_divisor=1),
+}
+
+
+def aggregation_config(d, agg_profile='source_residual'):
+    """Resolve instance dimensions; profiles do not introduce new Agg functions."""
+    if d not in DIMENSIONS or agg_profile not in AGG_PROFILES:
+        raise ValueError('choose a registered content dimension and Agg profile')
+    p = AGG_PROFILES[agg_profile]
+    width = d if p['attention_width'] == 'd' else p['attention_width']
+    return dict(agg_profile=agg_profile, agg_mode=p['mode'],
+                agg_hidden_width=d//p['hidden_divisor'],
+                agg_attention_width=width, agg_attention_heads=width//32,
+                agg_attention_head_dim=32 if width else 0)
 
 
 def budgets(n):
@@ -82,15 +104,21 @@ BOUND_PROFILES = make_bound_profiles()
 
 
 @lru_cache(None)
-def inventory(d, memory):
+def inventory(d, memory, agg_profile='source_residual'):
     """Each tuple names a mathematical matrix, not its packed implementation."""
     if d not in DIMENSIONS or memory not in ('K', 'S'):
         raise ValueError('choose a registered content dimension and K/S memory')
-    s, a, heads = d//4, d//8, d//32
+    agg = aggregation_config(d, agg_profile)
+    s, a, heads = d//4, agg['agg_hidden_width'], d//32
     matrices = [('Agg.A',a,d), ('Agg.B',d,a), ('feature',s,d),
                 ('score.cat',s,d+4*s+3), ('score.loc',s,d), ('score.mem',s,2*s+2)]
     vectors = [('score.hidden',s), ('score.out',s),
                ('score.loc_bias',s), ('score.mem_bias',s)]
+    width = agg['agg_attention_width']
+    if width:
+        # One adapter per packed mathematical projection, then split heads.
+        matrices += [('Agg.Q',width,d), ('Agg.K',width,d),
+                     ('Agg.V',width,d), ('Agg.O',d,width)]
     if memory == 'K':
         matrices += [('KV',2*d,d)]
         # W^Q_(v,h) is a separate adapter per mathematical head.
@@ -102,6 +130,15 @@ def inventory(d, memory):
     matrices += [('out',d,d), ('FFN.gate',4*d,d),
                  ('FFN.up',4*d,d), ('FFN.down',d,4*d)]
     return matrices, vectors
+
+
+@lru_cache(None)
+def node_parameter_sizes(d, memory, rank, agg_profile):
+    """Reuse the per-node shapes across all regions of a spatial profile."""
+    matrices, vectors = inventory(d, memory, agg_profile)
+    complete = sum(a*b for _,a,b in matrices)+sum(x for _,x in vectors)
+    adapters = sum(min(rank,a,b)*(a+b) for _,a,b in matrices)
+    return complete, adapters
 
 
 @lru_cache(None)
@@ -147,30 +184,32 @@ def sharing_inventory(profile, n, hubs, sharing):
     return groups, class_counts, class_groups
 
 
-def count(profile, n, hubs, d, memory='K', sharing='independent', rank=8):
+def count(profile, n, hubs, d, memory='K', sharing='independent', rank=8,
+          agg_profile='source_residual'):
     if memory not in ('K','S','X') or sharing not in ('independent','region_shared','layer_shared'):
         raise ValueError('unknown memory or parameter binding')
     if sharing != 'independent' and rank not in (4,8,16):
         raise ValueError('adapter rank must be 4, 8 or 16')
+    agg = aggregation_config(d, agg_profile)
+    source_width = agg['agg_hidden_width']+(d if agg['agg_attention_width'] else 0)
     groups, class_counts, class_groups = sharing_inventory(profile,n,hubs,sharing)
     base, private = 0, Counter()
     nodes = Counter()
     for group,number in groups.items():
         role = group[-1]
         kind = 'S' if memory=='S' or (memory=='X' and role=='h') else 'K'
-        matrices, vectors = inventory(d,kind)
+        complete, adapters = node_parameter_sizes(d,kind,rank,agg_profile)
         nodes[role] += number
         reg = 2*(d//4)**2+2*(d//4)
         if sharing != 'independent':
-            base += sum(a*b for _,a,b in matrices)+sum(x for _,x in vectors)
-            base += len(class_groups[group])*(d//8)+reg
-            private[role] += number*(sum(min(rank,a,b)*(a+b) for _,a,b in matrices)+1)
+            base += complete+len(class_groups[group])*source_width+reg
+            private[role] += number*(adapters+1)
         else:
             base += reg
-            private[role] += number*(sum(a*b for _,a,b in matrices)+sum(x for _,x in vectors)+1)
+            private[role] += number*(complete+1)
     if sharing == 'independent':
         for role,number in class_counts.items():
-            private[role] += number*(d//8)
+            private[role] += number*source_width
     return dict(total=base+sum(private.values()),base=base,D=private['d'],H=private['h'],
                 nodes_D=nodes['d'],nodes_H=nodes['h'])
 
@@ -186,8 +225,9 @@ def incoming_attention_increment(profile, n, hubs, d, sharing='independent',
     """Extra parameters for one incoming_self_attention block on every node.
 
     Q/K/V are three packed mathematical matrices; O is the fourth.
-    Original source residuals remain in count(). No memory or region heads
-    are added here. The atlas's existing rows continue to use source_residual.
+    This helper adds attention only, with the original source MLP unchanged.
+    Use count(..., agg_profile='incoming_wide') for the complete wider binding;
+    its source MLP matrices, embeddings and adapters must also be resized.
     """
     if d not in DIMENSIONS:
         raise ValueError('choose a registered content dimension')

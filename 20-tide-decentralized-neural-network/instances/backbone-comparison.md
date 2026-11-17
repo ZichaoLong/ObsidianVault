@@ -25,7 +25,7 @@ HB 继承[多跨度主绑定](hb-multiscale-weighted-message.md)与 [Settle 共�
 
 **FC 的统一绑定。** 复用上述主绑定的载荷、KV／SSD 状态与零初态、Agg、Read$^+$、cat／att/content_stats 评分、received query、Next 和 Full；全图只有 D 角色，来源类为 ext、DD。每个首层节点有入口 $(1,E_Dx_t)$，末层全部节点有输出端口。时间、Pos、窗口、衰减与卷积步长按 Settle 规则，$P_{\mathrm{in}}=D=M+2$。参数按[三档整体绑定](parameter-profiles.md)的节点／区域／层级归属，区域为 D 类型。这是一份新的完整比较绑定；[旧 FC 教学实例](fully-connected-layered-weighted-message.md)的混合参数归属保留，不套用本页计数。
 
-三组记忆仍为 K（全部 KV/sum）、S（全部 SSD/state）、X（D 用 KV，H 用 SSD）；无 hub 时 X 与 K 重合，表中去重。接收机制由独立的 agg_mode 选择：现有主表为 source_residual；incoming_self_attention 的完整替换见 [HB §1.1](hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)，参数增量见本页 §5.1。FC 同样可以替换，来源类仍为 ext、DD。
+三组记忆仍为 K（全部 KV/sum）、S（全部 SSD/state）、X（D 用 KV，H 用 SSD）；无 hub 时 X 与 K 重合，表中去重。接收机制由独立的 agg_mode 选择，agg_profile 进一步绑定尺寸规则：来源残差、两种轻量自注意力及加宽自注意力，完整替换见 [HB §1.1](hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)。主表分别列出四个配置并计入各自全部参数，计数见本页 §5.1。FC 同样可以替换，来源类仍为 ext、DD。
 
 ## 2. 合理维度与参数归属
 
@@ -33,8 +33,10 @@ HB 继承[多跨度主绑定](hb-multiscale-weighted-message.md)与 [Settle 共�
 
 $$
 d\in\{64,128,192,256,384,512,768\},\qquad
-d_s=d_r=d_{\mathrm{sel}}=d/4,\quad p_a=d/8,\quad d_f=4d.
+d_s=d_r=d_{\mathrm{sel}}=d/4,\qquad d_f=4d.
 $$
+
+接收尺寸按 agg_profile：来源残差及两种轻量自注意力取 $p_a=d/8$；加宽自注意力取 $d_A=p_a=d$。轻量自注意力的 $d_A$ 固定为 64 或 128。所有自注意力每头宽度 32，头数为 $d_A/32$。这些尺寸使用既有局部函数，无需新增语义；来源 MLP 的 $p_a$ 与 Full 的 $d_f$ 是不同阶段的宽度。
 
 KV 每头宽度 32，头数 $d/32$，旋转频率及零距离偏置沿用主绑定。SSD 内部宽度 $d$，$d/32$ 个头，每头内容与状态宽度均 32，1 组，conv_size=4。其余固定增益、温度、窗口、时钟换算、残差尺度与归一化 epsilon 沿用主绑定；SSD 的可训练 norm 尺度仍计参数。
 
@@ -78,7 +80,7 @@ $S=\sum_\ell W_\ell$，普通节点数 $N_D=nS$；全位置可选 4 hub 时，$N
 
 窄图的完整宽度与连线见拓扑定义。层宽缩到 1／2 不破坏严格区域分层；相位覆盖依赖时延分拆，不要求每层至少 4 个位置。固定 $T=4$、单位边时延时，基础普通子图从 7 层覆盖全部相位，15 层起每相位至少两种时延。5-dd4 需要新增普通 DD4 边。基础 5 层不作为完整四相位覆盖点。
 
-以下为部分 independent 点，普通 K、hub 为 S；参数单位 M=$10^6$：
+以下为来源残差接收的部分 independent 点，普通 K、hub 为 S；参数单位 M=$10^6$：
 
 | 空间候选 | $n,h$ | 总节点 | $d=64$ | $d=128$ |
 |---|---|---:|---:|---:|
@@ -116,28 +118,40 @@ independent 中 $B$ 只有区域头；pool 用比例 1。估算假定各区均�
 
 ### 5.1 接收自注意力的参数与准备成本
 
-incoming_self_attention 保留原来源函数，再增加四个投影和每个来源类的 $d$ 维嵌入，逐节点／共享组的完整增量见[三档参数绑定 §4](parameter-profiles.md#4-规模与通信含义)。全节点使用同一 $d_A$ 时，独立配置的增量为
+两种轻量 incoming_self_attention 保持原来源函数的 $p_a=d/8$，增加四个投影和每个来源类的 $d$ 维嵌入，逐节点／共享组的增量见[三档参数绑定 §4](parameter-profiles.md#4-规模与通信含义)。全节点使用同一 $d_A$ 时，独立配置的增量为
 
 $$
 \Delta P=4Ndd_A+d\sum_v|\mathsf L_v|.
 $$
 
-这里 $N=N_D+N_H$。例如 $d=128,d_A=64$ 时，每节点四个投影增加 $0.032768$M，另计新来源嵌入；$d_A=128$ 时投影增加 $0.065536$M。尺寸阶梯中的其他 $d$ 可显式配 $d_A=64,H_A=2$ 或 $d_A=128,H_A=4$，每头均为 32；消息宽度不自动决定接收投影宽度。两档均采用一个块及固定尺度 1。
+这里 $N=N_D+N_H$。例如 $d=128,d_A=64$ 时，每节点四个投影增加 $0.032768$M，另计新来源嵌入；$d_A=128$ 时投影增加 $0.065536$M。两个轻量配置保持 $p_a=16$；加宽配置则取 $d_A=p_a=128$。
 
-[公共计数源](../reference/backbones/capacity.py)的 incoming_attention_increment 返回增量的 total／base／D／H，按实际来源类和三档共享范围去重。将这四项分别加到 count 的原结果即可得到替换后的参数数目；nodes_D／nodes_H 只是原节点数，不能再相加。原参数代理如继续使用，则增量为 $\Delta B+(k_D/n)\Delta P_D+\Delta P_H$，仍只是同一比例口径。
+加宽配置还将来源 MLP 从 $p_0=d/8$ 改为 $p_a=d$。独立配置相对来源残差的完整增量为
 
-这些新参数在候选准备中使用。实际工作须按每次正消息数 $n_+(v,\theta)$ 计四投影、$n_+^2$ 成对读取和逐条来源变换；Full 预算比例不能说明省去了多少接收工作。记录实际到达数分布、候选作用次数、准备与 Full 时间，才能评估 Hub 扇入及异时输出的物理成本。
+$$
+\Delta P_{\mathrm{wide}}
+=N\bigl(4d^2+2d(d-p_0)\bigr)
+ +(2d-p_0)\sum_v|\mathsf L_v|.
+$$
+
+其中 $2d(d-p_0)$ 来自两个 MLP 矩阵，来源类项包括原嵌入的加宽与新增 attention 嵌入。两个共享档也同步扩大基座、来源嵌入和适配器；具体形状见参数绑定页。加宽 K 单节点不含来源嵌入与区域头的参数量为 $23.125d^2+2.25d+1$。例如 $d=128$ 时，相比来源残差每节点增加 $0.094208$M 矩阵参数，每个实际来源类另增 240 个参数。
+
+[公共计数源](../reference/backbones/capacity.py)的 count 接收 agg_profile，直接返回所选配置完整的 total／base／D／H 及节点数；CSV 和面板也使用这一结果，无需另加增量。保留的 incoming_attention_increment 只计算注意力新增的四个投影与来源嵌入，适用于来源 MLP 宽度不变的比较；不能用它代替加宽配置的完整计数。§5 的活跃代理沿用同一比例口径。
+
+这些参数在候选准备中使用。实际工作须按每次正消息数 $n_+(v,\theta)$ 计四投影、$n_+^2$ 成对读取和逐条来源变换；主要算术项分别为 $O(n_+dd_A)$、$O(n_+^2d_A)$、$O(n_+dp_a)$。Full 预算比例不能说明省去了多少接收工作。加宽增加的参数量也不能直接当作额外时延。记录实际到达数分布、候选作用次数、准备与 Full 时间，才能评估 Hub 扇入及异时输出的物理成本。
 
 ## 6. 交互与复算
 
 [交互面板](../explorers/backbone-atlas/README.md)提供拓扑、数学公式和规模筛选；[完整参数 CSV](../explorers/backbone-atlas/generated/capacity.csv)保留全部尺寸、独立／共享、K/S/X 和二次幂预算的估算，[生成范围表](../explorers/backbone-atlas/generated/capacity-summary.md)便于逐图阅读。CSV 和页面的参数单位均为百万参数，$1\mathrm{M}=10^6$；内部计数与范围判断保留精确值。所有行由[计数源](../reference/backbones/capacity.py)重建。
 
-profile 绑定空间轮廓与时间，例如 `multiscale-compact-9-timed` 和 `multiscale-compact-9-settle` 分别列行，二者的 `spatial_profile` 均为 `multiscale-compact-9`。它们参数量相同，消息汇合、状态写入和作用次数可以不同。当前 41 个空间轮廓展开为 55 个含时间绑定的轮廓，与合法尺寸、记忆和参数归属组合后共 56,350 行；预算阶梯仍是列。一行尚未选定预算，也不代表已经规定了下游训练与读出。
+profile 绑定空间轮廓与时间，例如 `multiscale-compact-9-timed` 和 `multiscale-compact-9-settle` 分别列行，二者的 `spatial_profile` 均为 `multiscale-compact-9`。同一接收配置下它们参数量相同，消息汇合、状态写入和作用次数可以不同。当前 41 个空间轮廓展开为 55 个含时间绑定的轮廓，与合法尺寸、记忆、参数归属和四个接收配置组合后共 225,400 行（原 56,350 行的四倍）；预算阶梯仍是列。一行尚未选定预算，也不代表已经规定了下游训练与读出。
 
 | CSV 列 | 含义 |
 |---|---|
-| `agg_mode` | 当前生成的全部行均为 source_residual；incoming_self_attention 须另加 §5.1 的增量，不能直接使用此表总参 |
-| `profile`、`spatial_profile` | 含时间绑定的轮廓标识、共用的空间轮廓标识；完整参数配置还需结合 n/h/d、记忆、共享档及秩 |
+| `agg_profile`、`agg_mode` | 接收尺寸配置标识、接收函数；四个配置见 HB §1.1，每行已计入其完整参数 |
+| `agg_hidden_width` | 来源 MLP 的隐藏宽度 $p_a$ |
+| `agg_attention_width`、`agg_attention_heads`、`agg_attention_head_dim` | 接收注意力的总宽度 $d_A$、头数 $H_A$、每头宽度 $d_h$；来源残差的三列均为 0，表示未启用注意力 |
+| `profile`、`spatial_profile` | 含时间绑定的轮廓标识、共用的空间轮廓标识；完整参数配置还需结合 n/h/d、记忆、共享档、秩及 agg_profile |
 | `family`、`timing` | 空间图族 fc／lattice／exchange／multiscale；时间绑定 timed／settle |
 | `depth`、`widths` | 包含首尾的层数；各层位置数，以分号分隔 |
 | `positions`、`max_width` | 全图位置总数、最宽层的位置数；位置内可有 D 区及 H 区 |
@@ -154,4 +168,4 @@ profile 绑定空间轮廓与时间，例如 `multiscale-compact-9-timed` 和 `m
 
 CSV 使用各候选主周期。面板另保留 Timed 与 Settle 同周期的对照设置，显示对应输入周期并在图与规模表之间双向传递；它属于 Timed 的另一输入日程。修改日程后的完整实验仍须按实例声明位置函数、衰减、窗口和卷积抽头。生成数据中的整数计数供计算使用，CSV 的 _M 列保存纯数字，便于直接筛选和统计。
 
-对应核对为[紧凑图的相位与合作](../examples/hb_compact_checks.py)、[参数形状与预算](../examples/backbone_capacity_checks.py)及[接收自注意力公式与增量](../examples/incoming_attention_checks.py)。当前 CSV／面板仍只展开来源残差候选，没有将新增 Agg 与全表维度相乘。上述证据不包含整网训练或吞吐结果。真正实现后还应按唯一 Parameter 对象核对主干总参。
+对应核对为[紧凑图的相位与合作](../examples/hb_compact_checks.py)、[参数形状与预算](../examples/backbone_capacity_checks.py)及[接收自注意力公式与增量](../examples/incoming_attention_checks.py)。面板可单选或并列比较四个接收配置，并显示注意力与 MLP 宽度；规模限制按完整总参筛选。上述证据不包含整网训练或吞吐结果。真正实现后还应按唯一 Parameter 对象核对主干总参。

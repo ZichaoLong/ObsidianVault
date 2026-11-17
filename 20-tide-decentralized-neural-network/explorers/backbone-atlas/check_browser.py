@@ -20,13 +20,14 @@ def check_capacity_export():
     data = json.loads((ROOT/'generated'/'data.json').read_text())['capacity']
     seen = set()
     spatial_rows = {}
+    reception_rows = {}
     count = 0
     with (ROOT/'generated'/'capacity.csv').open(encoding='utf-8', newline='') as f:
         for exported, values in zip_longest(csv.DictReader(f), data['rows']):
             assert exported is not None and values is not None, 'CSV/page row counts differ'
             row = dict(zip(data['fields'], values))
             p = data['profiles'][row['profile']]
-            identity = tuple(row[name] for name in ('profile','n','h','d','memory','sharing','rank'))
+            identity = tuple(row[name] for name in ('profile','n','h','d','memory','sharing','rank','agg_profile'))
             assert identity not in seen, identity
             seen.add(identity)
             assert exported['profile'] == row['profile']
@@ -44,7 +45,17 @@ def check_capacity_export():
             for field,column in (('total','total_M'),('base','base_M'),('D','private_D_M'),('H','private_H_M')):
                 assert Decimal(exported[column])*1_000_000 == row[field], (identity,column)
             assert exported['within_256M'] == str(row['total'] <= 256_000_000)
-            assert exported['agg_mode'] == data['agg_mode'] == 'source_residual'
+            a = data['agg_profiles'][row['agg_profile']]
+            assert exported['agg_profile'] == row['agg_profile']
+            assert exported['agg_mode'] == row['agg_mode'] == a['mode']
+            width = row['d'] if a['attention_width']=='d' else a['attention_width']
+            expected_sizes = dict(agg_hidden_width=row['d']//a['hidden_divisor'],
+                                  agg_attention_width=width,
+                                  agg_attention_heads=width//32,
+                                  agg_attention_head_dim=32 if width else 0)
+            for field, expected in expected_sizes.items():
+                assert int(exported[field]) == row[field] == expected, (identity,field)
+            reception_rows.setdefault(identity[:-1], set()).add(row['agg_profile'])
             for k in data['budgets']:
                 value = exported[f'active_k{k}_M']
                 if k > row['n']:
@@ -64,7 +75,11 @@ def check_capacity_export():
             assert bindings['timed'] == bindings['settle'], identity
         else:
             assert set(bindings) == {'settle'}
-    return dict(rows=count, spatial_configurations=len(spatial_rows), bound_profiles=len(data['profiles']))
+    assert set(data['agg_profiles']) == {'source_residual','incoming_light_64','incoming_light_128','incoming_wide'}
+    assert all(profiles == set(data['agg_profiles']) for profiles in reception_rows.values())
+    assert count == 225400 and len(reception_rows) == 56350
+    return dict(rows=count, spatial_configurations=len(spatial_rows),
+                bound_profiles=len(data['profiles']), reception_profiles=list(data['agg_profiles']))
 
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -378,6 +393,71 @@ try:
     assert capacity_checks['hbRegion']>capacity_checks['hbLayer'] and capacity_checks['regionRankEnabled'],capacity_checks
     assert '实际区域' in capacity_checks['regionScope'] and '跨区域共享' in capacity_checks['layerScope'],capacity_checks
     assert 'g(v)' in capacity_checks['regionFormula'] and not any(x in capacity_checks['regionFormula'] for x in ('NaN','undefined')),capacity_checks
+    capacity_reception=script('''
+      const choose=(s,v)=>{const el=document.querySelector(s);el.value=String(v);el.dispatchEvent(new Event('change',{bubbles:true}));};
+      const rows=()=>[...document.querySelectorAll('#capacity-table tbody tr')].map(r=>({
+        profile:r.dataset.aggProfile,total:+r.dataset.total,width:+r.dataset.aggWidth,hidden:+r.dataset.aggHidden}));
+      choose('#cap-family','fc-settle');choose('#cap-profile','fc-4-settle');
+      choose('#cap-n',8);choose('#cap-h',0);choose('#cap-d',128);choose('#cap-memory','K');
+      choose('#cap-sharing','independent');choose('#cap-limit','all');choose('#cap-agg','all');
+      const options=[...document.querySelector('#cap-agg').options].map(o=>o.value),comparison=rows();
+      const formulas=[];
+      for(const agg of options.filter(v=>v!=='all')){
+        choose('#cap-agg',agg);
+        formulas.push({profile:agg,rows:rows(),math:document.querySelectorAll('#capacity-agg-formula math').length,
+          text:document.querySelector('#capacity-agg-formula').textContent});
+      }
+      choose('#cap-d','all');
+      const symbolic=[];
+      for(const agg of options.filter(v=>v!=='all')){
+        choose('#cap-agg',agg);symbolic.push({profile:agg,text:document.querySelector('#capacity-agg-formula').textContent});
+      }
+      choose('#cap-d',64);choose('#cap-agg','incoming_wide');
+      const shared=[];
+      for(const sharing of ['region_shared','layer_shared']){
+        choose('#cap-sharing',sharing);
+        for(const rank of [4,16]){choose('#cap-rank',rank);shared.push({sharing,rank,total:rows()[0].total});}
+      }
+      choose('#cap-family','multiscale-timed');choose('#cap-profile','multiscale-compact-9-two-inputs-timed');
+      choose('#cap-n',32);choose('#cap-h',4);choose('#cap-d',128);choose('#cap-memory','X');choose('#cap-sharing','independent');
+      choose('#cap-agg','all');const unfiltered=rows();choose('#cap-limit','256');const filtered=rows();
+      choose('#cap-agg','incoming_wide');const hiddenWide=rows().length===0;
+      choose('#cap-limit','all');document.querySelector('#capacity-table [data-cap-case]').click();
+      const linked=window.atlasDebug.case.key;document.querySelector('#cap-use-graph').click();
+      const preserved=document.querySelector('#cap-agg').value;
+      choose('#cap-agg','all');document.querySelector('#capacity').scrollIntoView({behavior:'instant'});
+      return {options,comparison,formulas,symbolic,shared,unfiltered,filtered,hiddenWide,linked,preserved,errors:window.atlasErrors.slice()};
+    ''')
+    assert capacity_reception['options']==['all','source_residual','incoming_light_64','incoming_light_128','incoming_wide'],capacity_reception
+    # Independent FC-4, n=8, d=128: closed-form K nodes, one source class per
+    # node and one regional head per layer, independent of the CSV generator.
+    d,n,depth=128,8,4
+    baseline=n*depth*(17.375*d*d+2.25*d+1+d//8)+depth*(2*(d//4)**2+2*(d//4))
+    expected={
+        'source_residual':(baseline,0,16),
+        'incoming_light_64':(baseline+n*depth*(4*d*64+d),64,16),
+        'incoming_light_128':(baseline+n*depth*(4*d*128+d),128,16),
+        'incoming_wide':(baseline+n*depth*(23*d*d/4+15*d/8),128,128),
+    }
+    assert len(capacity_reception['comparison'])==4,capacity_reception
+    for row in capacity_reception['comparison']:
+        assert (row['total'],row['width'],row['hidden'])==expected[row['profile']],row
+    for formula in capacity_reception['formulas']:
+        assert len(formula['rows'])==1 and formula['rows'][0]['profile']==formula['profile'],formula
+        assert formula['math']==(1 if formula['profile']=='source_residual' else 2),formula
+        assert not any(x in formula['text'] for x in ('NaN','undefined','Infinity')),formula
+    for formula in capacity_reception['symbolic']:
+        assert 'd' in formula['text'] and not any(x in formula['text'] for x in ('NaN','undefined','Infinity')),formula
+    shared=capacity_reception['shared']
+    assert shared[0]['total']==shared[2]['total']<shared[1]['total']==shared[3]['total'],shared
+    assert len(capacity_reception['unfiltered'])==4,capacity_reception
+    assert {r['profile'] for r in capacity_reception['filtered']}=={'source_residual','incoming_light_64','incoming_light_128'},capacity_reception
+    assert all(r['total']<=256e6 for r in capacity_reception['filtered']),capacity_reception
+    assert capacity_reception['hiddenWide'] and capacity_reception['linked']=='compact-9-two-inputs-n32-h4',capacity_reception
+    assert capacity_reception['preserved']=='incoming_wide' and not capacity_reception['errors'],capacity_reception
+    shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
+    (OUT/'reception-comparison-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
+    script("const el=document.querySelector('#cap-agg');el.value='source_residual';el.dispatchEvent(new Event('change'));return true;")
     capacity_timing=script('''
       const choose=(s,v)=>{const el=document.querySelector(s);el.value=String(v);el.dispatchEvent(new Event('change',{bubbles:true}));};
       choose('#cap-family','multiscale-settle');choose('#cap-profile','multiscale-compact-9-settle');
@@ -472,7 +552,7 @@ try:
     script('document.querySelector("#regions").scrollIntoView({behavior:"instant"});return true;')
     shot=command('WebDriver:TakeScreenshot',{'id':None,'full':False,'hash':False,'scroll':False})
     (OUT/'formula-preview.png').write_bytes(base64.b64decode(shot['value'] if isinstance(shot,dict) else shot))
-    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'terminal':terminal_checks,'compact':compact_checks,'capacity':capacity_checks,'capacity_export':export_checks,'capacity_timing':capacity_timing,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'capacity_layout':capacity_layout,'embedded_image':image_status}
+    result={'initial':initial,'cases':records,'interactions':interactions,'formulas':formula_checks,'timing':timing_checks,'mixing':mixing_check,'settle':settle_checks,'terminal':terminal_checks,'compact':compact_checks,'capacity':capacity_checks,'capacity_reception':capacity_reception,'capacity_export':export_checks,'capacity_timing':capacity_timing,'timing_sync':timing_sync,'preserved_timing':preserved_timing,'small_layout':small_layout,'capacity_layout':capacity_layout,'embedded_image':image_status}
     (OUT/'browser-checks.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(result,ensure_ascii=False,indent=2))
     command('Marionette:Quit',{'flags':['eForceQuit']})

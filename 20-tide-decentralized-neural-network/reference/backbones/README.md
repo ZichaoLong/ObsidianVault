@@ -12,7 +12,9 @@
 
 `capacity.PROFILES` 登记空间轮廓，`BOUND_PROFILES` 将其接到主时间绑定；`count` 继续接收空间标识，返回精确标量计数。多跨度 Timed／Settle 共用计数，在生成表和面板中分别列出。导出的 CSV 由面板报表代码换算成 M，内嵌 JSON 保留原始计数。
 
-`count` 及现有生成表使用 `agg_mode=source_residual`。`incoming_attention_increment(profile, n, hubs, d, sharing, rank, attention_width)` 按[接收自注意力绑定](../../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)计算新增四个矩阵与来源嵌入；返回的 total／base／D／H 分别加到原计数，节点数保持原值。四个矩阵按合并投影分别适配，头数不改变参数数目；合法头数与宽度由局部定义核对。准备工作按实际到达数计算，不能由参数增量代替。
+`count(profile, n, hubs, d, memory, sharing, rank, agg_profile)` 直接返回所选接收配置的完整参数数目，默认 `agg_profile='source_residual'`，保留原调用及计数。`AGG_PROFILES` 登记来源残差、`incoming_light_64`、`incoming_light_128` 和 `incoming_wide`；`aggregation_config(d, agg_profile)` 解析具体的函数、MLP 隐藏宽度、注意力宽度及头数。完整尺寸规则见[接收自注意力绑定](../../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)。计数包括逐条 MLP、两种来源嵌入和适配器随形状变化的大小。生成表为每个已有组合分别列出四档。
+
+`incoming_attention_increment(profile, n, hubs, d, sharing, rank, attention_width)` 只计算新增四个注意力矩阵与来源嵌入，适用于来源 MLP 宽度不变的对照；不能仅将它加到来源残差计数来得到加宽档。四个矩阵按合并投影分别适配，头数不改变参数数目。准备工作按实际到达数计算，不能由参数增量代替。
 
 [教学与核对程序](../../examples/README.md)检查构造及公式；[主干面板](../../explorers/backbone-atlas/README.md)负责视图、CSV 和 Markdown 范围表。FC 目前通过节点和来源类统计参与计数，尚未提供用于面板绘图的逐边构造；LH 的教学构造仍在 HB／LH 核对程序中。
 

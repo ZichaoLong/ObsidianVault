@@ -33,7 +33,18 @@ tags: [tide, hb, weighted-message]
 
 ### 1.1 接收自注意力的完整替换
 
-取 agg_mode=incoming_self_attention，按[共同架构 §2.3](../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)替换所有节点的 Agg。参考尺寸为 $d=128,d_A=64,H_A=2,d_h=32$，一个 attention 块；$\lambda_{\mathrm{SA}}=\alpha_{\mathrm{agg}}=1$，$\epsilon=10^{-5}$。保留 $p_a=16$ 及共同架构式 (4) 的来源函数，在 attention 残差之后逐条使用；增宽对照取 $d_A=128,H_A=4,d_h=32$。
+取 agg_mode=incoming_self_attention，按[共同架构 §2.3](../local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)替换所有节点的 Agg。接收尺寸由 agg_profile 选定；它将函数选择与尺寸规则一起命名，区别于仅标识函数的 agg_mode。已有来源残差也列入同一表，便于比较。
+
+| agg_profile | agg_mode | 注意力总宽度 $d_A$ | 头数 $H_A$ | 来源 MLP 隐藏宽度 $p_a$ |
+|---|---|---:|---:|---:|
+| source_residual | source_residual | — | — | $d/8$ |
+| incoming_light_64 | incoming_self_attention | 64 | 2 | $d/8$ |
+| incoming_light_128 | incoming_self_attention | 128 | 4 | $d/8$ |
+| incoming_wide | incoming_self_attention | $d$ | $d/32$ | $d$ |
+
+三个自注意力配置均使用一个 attention 块、每头 $d_h=32$、$\lambda_{\mathrm{SA}}=\alpha_{\mathrm{agg}}=1$、$\epsilon=10^{-5}$；共同架构式 (4) 的来源函数在 attention 残差之后逐条使用。参考 $d=128$ 时，两种轻量配置分别为 $(d_A,p_a)=(64,16),(128,16)$，加宽配置为 $(128,128)$。其他已登记内容维度使用表中的规则；轻量配置的注意力宽度固定，加宽配置随 $d$ 增长。
+
+轻量配置保留较小的接收投影和逐条加工宽度；加宽配置同时增加消息间读取与汇聚前非线性加工的容量。$d_A$ 与 $p_a$ 分别控制这两部分，增加头数或宽度不保证取得更多有效信息，也不保证训练效果提高。特别地，$d=64$ 时加宽档的注意力比 incoming_light_128 窄，因此名称不表示所有维度下的参数量或能力排序。三档共享规则保持；加宽时按新形状重算矩阵、来源嵌入与适配器，计数见[比较绑定 §5.1](backbone-comparison.md#51-接收自注意力的参数与准备成本)。
 
 来源分类沿用本节。所有 $W_v^Q,W_v^K,W_v^V,W_v^O,e^{\mathrm{SA}}_{v,a}$ 按[三档整体参数绑定](parameter-profiles.md)给定有限参数，四个投影不另加偏置。正强度原子相互读取并包含自身，最终 Query 汇聚也按接收强度加权；不添加输入序号位置编码、历史查询或硬来源掩码。输出仍为一个 $(r^{\mathrm{in}},u)$，其后记忆、Read、分配、Next 与 Full 采用已选的完整绑定。
 

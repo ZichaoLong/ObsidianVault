@@ -96,6 +96,12 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 
 新增候选可组合 K／S／X，完整参考尺寸及接口在 [HB §1.1](../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)，数值性质在共同架构附录 A.1。采用时核对零质量屏蔽、外层强度权重、全部正强度读取集、合并投影的适配粒度和准备阶段成本；改变 Agg 后须重新说明状态采用。现有 CSV 明确标记 source_residual，自注意力参数增量可另复算；此修订不声明下游实现或训练效果。
 
+## 2026-11-17：接收尺寸的实例绑定
+
+[HB 接收配置](../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)明确区分 agg_mode 的函数选择与 agg_profile 的尺寸规则，增加 $d_A=p_a=d$ 的加宽档，保留来源残差及 $d_A=64$／128、$p_a=d/8$ 的轻量档。仅扩充实例绑定，四份正典、局部教材和核心版本保持；KV sum／qry 未变。
+
+FC／HB 规模表与面板分别列出四档，参数已包含 MLP、新旧来源嵌入和适配器随形状的变化。采用新 CSV 时以 agg_profile 参与行身份，并直接使用该行总参；原 incoming_attention_increment 仅用于 MLP 宽度不变的注意力增量比较。准备成本仍按实际消息数计量，不按 Full 的预算比例折减。
+
 ## 下游采用记录
 
 采用声明与符合性验证分别记录；本表保留有日期和来源的信息。
