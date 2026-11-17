@@ -11,7 +11,7 @@ tags:
 
 本文保存按需取用的问题、观测和训练目标。整体设计的阅读入口是[设计总览](../design/weighted-message-design.md)；函数以[局部架构](../../local-semantics/weighted-message/architecture-learning-note.md)、[区域分配](../../local-semantics/weighted-message/region-allocation-learning-note.md)及共同架构列出的记忆教材为准。实现与定义的对应见[实现核对](../../reference/weighted-message-implementation-checks.md)。
 
-当前主干对照从[K／S／X 三组记忆绑定](../../instances/hb-multiscale-weighted-message.md#2-两类记忆与三个主候选)出发，分别是全 KV／sum、全 SSD／state、普通节点 KV 与 hub SSD；采用[角色上下界二次分配](../../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配)，参数对照收在[independent／region_shared／layer_shared 三档](../../instances/parameter-profiles.md)。尺寸、预算与 pool 对照见[主干比较绑定](../../instances/backbone-comparison.md)。本页的更广目录供研究问题需要时选取。
+当前主干对照从[K／S／X 三组记忆绑定](../../instances/hb-multiscale-weighted-message.md#2-两类记忆与三个主候选)出发，分别是全 KV／sum、全 SSD／state、普通节点 KV 与 hub SSD；共同编码与区域 self_attention 形成评分，分配主对照为 quad、约束 Shannon 与 pool。参数对照收在[independent／region_shared／layer_shared 三档](../../instances/parameter-profiles.md)，尺寸和预算见[主干比较绑定](../../instances/backbone-comparison.md)。本页的更广目录供研究问题需要时选取。
 
 以下条目没有预设执行顺序，也不要求全部实施。研究者掌握设计空间后，根据当前问题、已有结果和资源选择优先级。一个配置失败、难以训练或过于昂贵，本身可成为缩小探索范围的依据；复杂耦合可能使某些机制判断长期只有间接支持。
 
@@ -21,6 +21,9 @@ tags:
 
 | 当前关心的问题 | 可选比较 | 有用观测与解释边界 |
 |---|---|---|
+| 候选之间的关系能否改善选择 | 固定 encoded 描述，比较 ind 与 self_attention；也可按问题比较旧 att 的完整绑定 | 重复与互补证据的利用、区域准备成本和端口质量；原 att 的表示也不同，不能只归因于头数 |
+| 传播保障是否过度强制放大 | 角色分配 received／mu 下界，固定其余绑定；按需比较 interval／fraction | 弱接收分支的可行余量、真实总量、路径持续性；旧 mu 下界可强制全上限，连续性并不要求它 |
+| 共同编码是否形成瓶颈 | 按当前问题调整描述宽度，或与原独立编码组合比较 | 局部判断、关系判断与可选总量证据的相互影响；增宽不等于增加可见信息 |
 | 区域适合直接决定总量还是调节阈值 | regional_total／regional_threshold，在相同节点上限、接收下界、评分和正则下比较；各自可选 fixed／context | 控制头与评分的梯度、总量范围、实际总和、饱和分支；两者的零温目标分别声明 |
 | 增益是否承担过多作用 | 区域 query 按 $\mu_v$ 或 $w_v$ 汇集；直接 Attention 的份额基权重分别取这两者 | 增益、query、评分和发送的梯度；移除依赖也移除了学习通路 |
 | 弱线索唤醒与噪声放大如何取舍 | 直接 Attention、固定总强度 Attention、总量缩放 Attention、约束 Shannon | 接收、写入、发送、旧记忆利用与错误输出；各函数的零边界不同 |

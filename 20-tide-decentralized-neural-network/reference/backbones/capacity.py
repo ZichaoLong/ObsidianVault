@@ -24,6 +24,36 @@ AGG_PROFILES = {
     'incoming_wide': dict(label='加宽自注意力', mode='incoming_self_attention',
                           attention_width='d', hidden_divisor=1),
 }
+ALLOCATION_PROFILES = {
+    'quad': dict(label='约束 quad', selection_mode_D='role_bounded_quad',
+                 selection_mode_H='role_bounded_quad', lower_base_D='received'),
+    'shannon': dict(label='约束 Shannon', selection_mode_D='role_bounded_shannon',
+                    selection_mode_H='role_bounded_quad', lower_base_D='received'),
+    'pool': dict(label='pool', selection_mode_D='pooled_attention',
+                 selection_mode_H='role_bounded_quad', lower_base_D=''),
+}
+
+
+def regional_config(d):
+    """One encoded descriptor and one regional block, for every main profile."""
+    if d not in DIMENSIONS:
+        raise ValueError('choose a registered content dimension')
+    return dict(region_profile='encoded_self_attention', local_score='encoded',
+                region_score='self_attention', descriptor_width=d//2,
+                region_attention_heads=d//64, region_attention_head_dim=32,
+                region_ffn_width=d)
+
+
+def regional_inventory(d):
+    z, f = d//2, d
+    return ([('region.'+name,z,z) for name in ('Q','K','V','O')] +
+            [('region.ff1',f,z), ('region.ff2',z,f)],
+            [('region.b1',f), ('region.b2',z), ('region.readout',z)])
+
+
+def regional_parameter_size(d):
+    matrices, vectors = regional_inventory(d)
+    return sum(a*b for _,a,b in matrices)+sum(x for _,x in vectors)
 
 
 def aggregation_config(d, agg_profile='source_residual'):
@@ -110,10 +140,10 @@ def inventory(d, memory, agg_profile='source_residual'):
         raise ValueError('choose a registered content dimension and K/S memory')
     agg = aggregation_config(d, agg_profile)
     s, a, heads = d//4, agg['agg_hidden_width'], d//32
+    z = regional_config(d)['descriptor_width']
     matrices = [('Agg.A',a,d), ('Agg.B',d,a), ('feature',s,d),
-                ('score.cat',s,d+4*s+3), ('score.loc',s,d), ('score.mem',s,2*s+2)]
-    vectors = [('score.hidden',s), ('score.out',s),
-               ('score.loc_bias',s), ('score.mem_bias',s)]
+                ('encode',z,d+4*s+3)]
+    vectors = [('encode.bias',z), ('encode.readout',z)]
     width = agg['agg_attention_width']
     if width:
         # One adapter per packed mathematical projection, then split heads.
@@ -200,7 +230,7 @@ def count(profile, n, hubs, d, memory='K', sharing='independent', rank=8,
         kind = 'S' if memory=='S' or (memory=='X' and role=='h') else 'K'
         complete, adapters = node_parameter_sizes(d,kind,rank,agg_profile)
         nodes[role] += number
-        reg = 2*(d//4)**2+2*(d//4)
+        reg = regional_parameter_size(d)
         if sharing != 'independent':
             base += complete+len(class_groups[group])*source_width+reg
             private[role] += number*(adapters+1)
@@ -214,9 +244,20 @@ def count(profile, n, hubs, d, memory='K', sharing='independent', rank=8,
                 nodes_D=nodes['d'],nodes_H=nodes['h'])
 
 
-def active(x, n, k):
+def active(x, n, k, allocation='quad'):
+    if allocation not in ALLOCATION_PROFILES:
+        raise ValueError('unknown allocation profile')
+    if allocation == 'pool':
+        if k != 'pool':
+            raise ValueError('pool has no numerical budget')
+        return x['total']
     if k not in budgets(n):
         raise ValueError('budget must be a legal power of two or pool')
+    if allocation == 'shannon':
+        if k == 'pool':
+            raise ValueError('Shannon uses a numerical budget')
+        return x['total']
+    # Keep the historical helper's active(..., 'pool') shorthand.
     return x['base'] + (1 if k=='pool' else k/n)*x['D'] + x['H']
 
 

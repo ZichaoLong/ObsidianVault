@@ -21,7 +21,7 @@ tags:
 | [分块求值](../timed-dag-chunk-prefill-learning-note.md) | 固定图语义并给出精确联合契约 | 状态块、输出批、契约相对阶段与整窗口求值 |
 | [共同局部架构](../local-semantics/weighted-message/architecture-learning-note.md) | 带权载荷、接收驱动状态、标量控制与广播 | 完整计算过程、模块组合、局部条件到整网性质的推导、精确继续与联合求值 |
 | [区域分配](../local-semantics/weighted-message/region-allocation-learning-note.md) | 选定评分、节点上限、区域控制与发送函数 | Describe 与 SelStep 的具体定义、求解与导数；指定总量的线性最优极限，区域阈值、节点增益与固定阈值的单位输入硬化 |
-| [角色上下界](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配) | $\underline c_v\le c_v\le\overline c_v$，可行总量 $[L,U]$ 与正温度二次目标 | hub 保底／固定通过、完整描述与选择、求解、连续性及分支导数；旧函数保持 |
+| [角色上下界](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配) | $\underline c_v\le c_v\le\overline c_v$，可行总量 $[L,U]$，quad／Shannon 目标 | hub 保底／固定通过、完整描述与选择、求解、连续性及分支导数；received／mu 下界分别绑定 |
 | [KV](../local-semantics/weighted-message/kv-memory-learning-note.md)、[基础循环](../local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md)、[Gated DeltaNet](../local-semantics/weighted-message/recurrent-memory/gated-delta-learning-note.md)、[SSD](../local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md) | 各自的状态、更新、描述与内容函数 | 完整局部绑定、状态性质及共同组合定理所需的假设 |
 | [固定时间短卷积](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 原始时间槽与带权投影历史 | Gated DeltaNet／SSD 共用的部件，弱事件与快照读取引理 |
 | [全连接拓扑](../topologies/fully-connected-layered.md)、[HB-Lattice 拓扑](../topologies/hb-lattice.md) | 节点、区域、边、端口与日程 | 独立图定义、时间对齐、单次结算与空间规模 |
@@ -78,6 +78,7 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | $E_v^{h,g}$ | [区域分配 §3.2](../local-semantics/weighted-message/region-allocation-learning-note.md#32-分组匹配评分)：当前内容、记忆、统计的分组编码；score、reg、key 用途默认参数独立，key 只使用 mem 组 |
 | $s_v^{\mathrm{cat}},s_v^{\mathrm{match}}$ | [区域分配 §3.1—3.3](../local-semantics/weighted-message/region-allocation-learning-note.md#33-所选局部评分)：$\operatorname{Score}_v$ 的两种具体构造所得评分；match 独立编码内容、记忆与统计量 |
 | $x_v^{\mathrm{sel}},K_v^{\mathrm{sel}}$ | [区域分配 §3.6](../local-semantics/weighted-message/region-allocation-learning-note.md#36-区域-attention-评分)：区域 Attention 评分所需的当前内容投影与记忆 key；后者选择 content_stats／content，宽度相同 |
+| $z_v^E,\widehat z_v$ | [区域分配 §3.7](../local-semantics/weighted-message/region-allocation-learning-note.md#37-共同编码与候选自注意力)：共同编码与候选自注意力的区域表示；后者仅用于修正评分，不传给 Full |
 | $\Phi_v,z_v^{\mathrm{reg}}$ | [区域分配 §2.2](../local-semantics/weighted-message/region-allocation-learning-note.md#22-由节点特征确定发送总量)：从当前接收、当前特征与记忆描述产生区域证据的函数及其输出；cat／grouped 的具体构造见[§3.4](../local-semantics/weighted-message/region-allocation-learning-note.md#34-区域证据)，固定控制取零证据 |
 | $D_v^{\mathrm{reg,ind}},D_v^{\mathrm{reg,att}}$ | [§2.3](../local-semantics/weighted-message/region-allocation-learning-note.md#23-节点评分与节点描述)的四元组与[§3.6.3](../local-semantics/weighted-message/region-allocation-learning-note.md#363-扩展节点描述)的六元组：供指定总量与区域阈值使用的节点描述 |
 | $\gamma_v,\mu_v,D_v^{\mathrm{ind}},D_v^{\mathrm{att}}$ | [区域分配 §4.1.3](../local-semantics/weighted-message/region-allocation-learning-note.md#413-节点增益与固定阈值分配)：固定或拼接上下文增益、接收相关发送量与三元组／五元组描述 |
@@ -122,7 +123,8 @@ SettleGraph 用 $\theta_{v,t}=Dt+r_v$ 与端口日程对齐；$q_v^{[t]}=q_v^{Dt
 | memory_read、记忆尺寸、窗口和位置 | 各记忆教材附录；memory_read 指定该模块的 Mem 读取函数 |
 | local_score、region_score、region_key、region_evidence | [区域分配附录 S.1](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)；分别选择局部评分、区域评分、记忆 key 与区域证据 |
 | selection_mode、区域控制、增益、温度与正则 | 同一[配置表](../local-semantics/weighted-message/region-allocation-learning-note.md#s1-配置名称)，同时列出配对函数、描述类型与容量 |
-| role_bounded_quad、bound_role、beta／alpha、total_mode | [区域分配 S.4](../local-semantics/weighted-message/region-allocation-learning-note.md#s4-角色分配的配置与边界)；普通、固定通过与有限保底，区间或指定总量 |
+| role_bounded_quad／role_bounded_shannon、bound_role、beta／alpha、total_mode、lower_base | [区域分配 S.4](../local-semantics/weighted-message/region-allocation-learning-note.md#s4-角色分配的配置与边界)；普通、固定通过与有限保底，区间或指定总量，接收／增益上限下界 |
+| encoded、self_attention 及描述／区域尺寸 | [区域分配 S.5](../local-semantics/weighted-message/region-allocation-learning-note.md#s5-编码与区域自注意力)；节点编码、局部读出与区域关系块 |
 | conv_stride 及其时间单位 | [短卷积附录 S](../local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md#附录-s配置表示与继续) |
 
 SettleGraph 的 $r_v$ 保持节点秩的含义；带权消息的接收强度统一记为 $r_v^{\mathrm{in}}$。边集沿用 $A$，激活集合沿用 $\mathcal A$。

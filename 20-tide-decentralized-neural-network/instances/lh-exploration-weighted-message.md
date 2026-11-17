@@ -12,7 +12,7 @@ tags: [tide, lh, weighted-message]
 
 ## 1. 完整替换项
 
-继承 HB 实例 §1—2 的载荷宽度、归一化、记忆尺寸、空／零初态、全部 Upd、Mem、$p_v,G_v$、Read$^+$、cat 与 att 评分、received query、角色二次分配、Next 和广播。局部时间取 $P_{\mathrm{in}}=4$、$\operatorname{Pos}_v(\theta)=(\theta-1)/4$、conv_stride=1，窗口、衰减和全部有限矩阵的范围依 HB 绑定。下表补全 LH 特有部分。
+继承 HB 实例 §1—2 的载荷宽度、归一化、记忆尺寸、空／零初态、全部 Upd、Mem、$p_v,G_v$、Read$^+$、encoded 与 self_attention 评分、received 下界的角色二次分配、Next 和广播。局部时间取 $P_{\mathrm{in}}=4$、$\operatorname{Pos}_v(\theta)=(\theta-1)/4$、conv_stride=1，窗口、衰减和全部有限矩阵的范围依 HB 绑定。下表补全 LH 特有部分。
 
 | 对象 | LH 绑定 |
 |---|---|
@@ -27,6 +27,8 @@ tags: [tide, lh, weighted-message]
 | 输出 | O 侧根的逐逻辑时间端口记录，无额外核心读出状态 |
 
 固定阈值为零、增益为 2、正温度为 1；所有区域历史单点。区域预算和角色界满足全输入可行条件。底层 hub 只有成为正接收候选时有保障；若只有卫星收到消息，该次选择没有 hub 描述，卫星在实际候选中分配。
+
+底层混合区可用同边界的 role_bounded_shannon 作稠密倾向的对照，此时卫星和 hub 的分配一起改变；固定通过的上层 hub 不配置评分网络。若要采用 pool 而保留 hub 待遇，则使用表中的拆区配置，仅将卫星区替换为 pooled_attention。三种选择均保留全部候选更新，不自动加入规模表或穷尽所有组合。
 
 这些替换项与被引用的共同函数一起构成完整模型族。有限参数值由实例配置给定；不需要历史公平计数、旧 selector、完整 token 来源标签或自主时钟驱动。
 

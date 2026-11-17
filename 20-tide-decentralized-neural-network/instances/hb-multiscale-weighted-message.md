@@ -14,14 +14,14 @@ tags: [tide, hb, weighted-message]
 
 主配置取 9 层宽度 $4,4,4,8,8,8,4,4,4$，$n=32,h=4$，三个探针数都为 1，非末层每位置有 hub，末层只有 D，group 分区；共 48 个位置、92 区、1712 节点。首先绑定 HB-Timed，输入间隔 $T=4$、入口 $4t+1$。
 
-所有节点采用共同架构的 $P=X_v=\mathbb R^{1+d}$，取 $d=128$、$d_s=d_{\mathrm{sel}}=32$、$d_r=32$、聚合隐藏宽度 $p_a=16$、Full 隐藏宽度 $d_f=512$，归一化 $\epsilon=10^{-5}$。普通节点用有限窗口 KV，hub 用 SSD。函数的归属如下。
+所有节点采用共同架构的 $P=X_v=\mathbb R^{1+d}$，取 $d=128$、记忆描述宽度 $d_s=32$、共同编码宽度 $d_z=64$、聚合隐藏宽度 $p_a=16$、Full 隐藏宽度 $d_f=512$，归一化 $\epsilon=10^{-5}$。普通节点用有限窗口 KV，hub 用 SSD。函数的归属如下。
 
 | 接口 | 完整选择 |
 |---|---|
 | Agg | agg_mode=source_residual，[来源分类聚合](../local-semantics/weighted-message/architecture-learning-note.md#21-来源分类与聚合)，类别与共享见下文，$\alpha_{\mathrm{agg}}=1$；自注意力替换见 §1.1 |
 | $S_v,q_v^{\mathrm{init}}$, Upd, Mem, $p_v,G_v$ | D 取 KV 的相应函数，H 取 SSD；参数见 §2 |
-| Describe, Read | Read$^+$，cat 局部评分，att 区域评分，content_stats key，query_weight=received，$\alpha_{\mathrm{loc}}=\alpha_{\mathrm{sel}}=1$；描述增加角色上下界 |
-| SelStep | role_bounded_quad、区间模式、lower_base=mu、固定增益 $\gamma=\gamma_{\max}=2$、固定阈值 $\eta=0$、$\tau_{\mathrm{sel}}=1$，预算见 §3 |
+| Describe, Read | Read$^+$，local_score=encoded、region_score=self_attention，使用 §1.2 的共同编码与区域块；角色分配向描述增加上下界 |
+| SelStep | 默认 role_bounded_quad、区间模式、lower_base=received、固定增益 $\gamma=\gamma_{\max}=2$、固定阈值 $\eta=0$、$\tau_{\mathrm{sel}}=1$；三种分配对照和预算见 §3 |
 | Next | 全部候选保留 Upd；$Y_j=\{*\}$，正典容量 $K_j=|\mathcal R_j|$ |
 | Full | 在本次新状态上求 $G_v$，向所有出边／输出端口广播 $(c_v,G_v)$；$c_v=0$ 不执行 Full |
 | 输入 | 每个首层现存节点的入口注入 $(1,E_{\mathrm{role}(v)}x_t)$，两个 $E\in\mathbb R^{d\times d_{\mathrm{in}}}$ 为共享有限矩阵 |
@@ -50,6 +50,21 @@ tags: [tide, hb, weighted-message]
 
 普通节点和 hub 都使用此函数，参数分组仍区分角色。Hub 消息可以在接收节点内改变细节消息的加工，其作用只及实际到达的纤维；没有收到 Hub 消息的节点不因此获得背景。候选准备按实际正消息数计量，较高入度的 Hub 不按 Full 预算比例折减接收成本。此替换可分别用于 K／S／X 及 Timed／Settle，不增加一种记忆族，也不要求穷尽全部组合。
 
+### 1.2 共同编码与区域候选关系
+
+采用[区域教材 §3.7](../local-semantics/weighted-message/region-allocation-learning-note.md#37-共同编码与候选自注意力)的完整编码与 self_attention。节点以当前接收、所选 Read 快照的记忆、统计和逐分量乘积组成 $f_v$，使用 $W_v^E,b_v^E$ 得到 $z_v^E$，再由 $a_v^E,b_v^{E,s}$ 读出局部分数。区域四个无偏置投影、两层 SiLU 网络与关系读出按该节公式修正评分。
+
+全图主尺寸为
+
+$$
+d_s=d/4,\qquad d_z=d/2,\qquad
+H_R=d/64,\qquad d_h^R=32,\qquad d_{\mathrm{rf}}=d.
+$$
+
+参考点为 $d_z=64,H_R=2,d_h^R=32,d_{\mathrm{rf}}=128$。区域块只有一层，归一化使用相同固定 $\epsilon$；无 dropout、持久区域缓存或额外位置编码。正接收候选互相读取并包含自身，Key 先验为 $w$，零接收精确屏蔽。所有节点编码参数与区域参数的形状和归属按[参数绑定](parameter-profiles.md)，不配置旧 cat、content_stats key、共同 query 或上下文控制头的闲置参数。
+
+两个 attention 的职责分别保持：Agg 在同刻到达的消息间加工内容，区域 self_attention 在本区候选描述间产生评分。区域中间向量不进入 Full，也不替代私有记忆。全部候选仍保留 Upd；区域评分没有新增逻辑步或历史依赖。全体节点固定通过的区域直接使用 $c=\mu$，省去无作用的评分网络。
+
 ## 2. 两类记忆与三个主候选
 
 以 $P_{\mathrm{in}}$ 表示当前输入周期：Timed 取 $P_{\mathrm{in}}=T$，Settle 取 $P_{\mathrm{in}}=D=M+1$。以下时钟规定在一次运行及所有 chunk 中保持。
@@ -68,11 +83,11 @@ tags: [tide, hb, weighted-message]
 | S | SSD、state | 同样 SSD、state | 固定状态与统一递归算子；历史被压缩，检索细节可能受限 |
 | X，优先建议 | 有限窗口 KV、sum | SSD、state | 普通节点保留细节历史，hub 持续压缩背景；需要两类算子分组 |
 
-三组全部使用 §1 的聚合、评分、分配、Next、输入与输出；只替换本表的记忆整组函数。无 hub 时 K 与 X 是同一个模型，只需保留 K／S 两个不同对照。Gated Delta、基础 affine／delta 及其他分配规则继续作为已有候选目录，不要求第一轮一并实现。排序是实现与设计建议，不是训练效果结论。
+三组全部使用 §1 的聚合、评分、Next、输入与输出，以及 §3 选定的分配；只替换本表的记忆整组函数。无 hub 时 K 与 X 是同一个模型，只需保留 K／S 两个不同对照。Gated Delta、基础 affine／delta 继续作为已有候选目录，不要求第一轮一并实现。排序是实现与设计建议，不是训练效果结论。
 
 ## 3. 三种分区及角色预算
 
-普通区取 $k_D=\max(1,\lceil n/32\rceil)$作为默认档；在已登记尺寸 $n=8,16,32,64,128$ 中，可改选 $\{1,2,4,8,16,32,64\}\cap[1,n]$ 或按[统一比较绑定](backbone-comparison.md)选择 pool。小区不必追求约 3%，实际活跃按运行统计。Hub 取有限保底 $\beta=1/4$，默认 $k_H=\max(1,h/2)$（本配置 $h=1,2,4$）；若 $h$ 为其他整数可取 $\max(1,\lceil h/2\rceil)$，并重算约束。
+普通区取 $k_D=\max(1,\lceil n/32\rceil)$作为默认档；在已登记尺寸 $n=8,16,32,64,128$ 中，可改选 $\{1,2,4,8,16,32,64\}\cap[1,n]$。主分配对照为 quad、Shannon、pool，完整替换见[统一比较绑定 §3](backbone-comparison.md#3-二次幂预算与稠密对照)：前两者使用同一角色边界、received 下界和区间模式，pool 不使用数值 k。小区不必追求约 3%，实际活跃按运行统计。Hub 取有限保底 $\beta=1/4$，默认 $k_H=\max(1,h/2)$（本配置 $h=1,2,4$）；若 $h$ 为其他整数可取 $\max(1,\lceil h/2\rceil)$，并重算约束。
 
 | 分区 | 预算与边界 |
 |---|---|
@@ -81,6 +96,8 @@ tags: [tide, hb, weighted-message]
 | mixed | 整区 $k=k_D+k_H$，普通边界不变，hub 取 $\beta=1/4,\alpha=1/k$ |
 
 这三个具体预算均满足角色分配的全输入可行条件。group 对四个 hub 保留共同权衡；singleton 将选择解耦，但固定通过也改变了发送待遇，因此它不是纯分区消融。若只比较分区，需要同时说明如何匹配预算、评分和通过规则；不能宣称两区总预算相等就会等价。
+
+对本次实际候选，角色分配取 $b=\min(1,\sum w)$、$U=\min(k,\sum\overline c)$、$L=\max(\sum\underline c,\min(b,U))$。固定阈值与评分共同确定 $[L,U]$ 内的总量，不另配置比例头。group 的三个主对照只替换 D 区分配，H 区始终使用 received 下界的 role_bounded_quad。mixed 仍默认角色 quad，也可完整替换为 role_bounded_shannon；后者同时改变两种角色的分配。pool 没有角色保底，不用于保持本表 hub 待遇的 mixed 对照。
 
 主配置的三种分区共用不含末层 H 的空间图。没有 hub 的位置（含末层）只设普通区，预算取 $k_D$；表中 mixed 的合并预算仅用于同时含 D/H 的位置。复现旧 mixed 配置时可按拓扑定义开启 `terminal_hubs`；这会恢复末层共同选择，属于另一个明确的图绑定。
 

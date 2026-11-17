@@ -297,7 +297,10 @@
         "20-tide-decentralized-neural-network/instances/backbone-comparison.md",
         "20-tide-decentralized-neural-network/local-semantics/weighted-message/architecture-learning-note.md",
         "20-tide-decentralized-neural-network/local-semantics/weighted-message/kv-memory-learning-note.md",
-        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md"
+        "20-tide-decentralized-neural-network/local-semantics/weighted-message/recurrent-memory/ssd-learning-note.md",
+        "20-tide-decentralized-neural-network/examples/backbone_capacity_checks.py",
+        "20-tide-decentralized-neural-network/examples/regional_attention_checks.py",
+        "20-tide-decentralized-neural-network/examples/role_bounded_allocation_checks.py"
       ]
     }
   ],

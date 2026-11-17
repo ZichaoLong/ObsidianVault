@@ -176,7 +176,17 @@ Attention 规则分别检查 $dp$、外乘幅度或区域总量的乘积法则�
 
 ### 3.7 角色上下界
 
-采用 [role_bounded_quad](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配) 时，记录每节点角色、全输入可行条件、L/U、总量模式、评分快照和边界反向；不把普通 quad 的硬化结论自动用于小数保底。描述须属于对应 $D_v$，上下界须等于所选角色函数在本次 $\mu_v$ 的值，不能只检查 $0\le\underline c_v\le\overline c_v\le\mu_v$。核对乘积定义域内各候选子集的可行性、零接收、缺席 hub、固定通过、预算冲突、未选中写入以及可微分支的上下界／温度／总量导数。[独立数值程序](../examples/role_bounded_allocation_checks.py)仅验证这里声明的有限算例。
+采用 [role_bounded_quad](../local-semantics/weighted-message/region-allocation-learning-note.md#415-带角色上下界的二次分配) 或 [role_bounded_shannon](../local-semantics/weighted-message/region-allocation-learning-note.md#416-带角色上下界的-shannon-分配) 时，记录每节点角色、全输入可行条件、L/U、lower_base、总量模式、评分快照和边界反向；不把普通 quad 的硬化结论自动用于小数保底。描述须属于对应 $D_v$，上下界须等于所选角色函数在本次 $\mu_v$ 的值，不能只检查 $0\le\underline c_v\le\overline c_v\le\mu_v$。
+
+核对乘积定义域内各候选子集的可行性、零接收、缺席 hub、固定通过、预算冲突、未选中写入以及可微分支的上下界／温度／总量导数。新主绑定显式取 received；旧 mu 在弱上限总量下强制全上限，不能沿用其结果。Shannon 的熵作用于 $c$，不平移为 $c-\underline c$；在对数域计算响应，区分精确正控制与浮点下溢。预算被保底耗尽时直接返回下界，不声称普通节点必正。[独立数值程序](../examples/role_bounded_allocation_checks.py)用活动面枚举核对两种正则，并验证有限光滑分支。
+
+### 3.8 共同编码与区域 self_attention
+
+按[区域教材 §3.7](../local-semantics/weighted-message/region-allocation-learning-note.md#37-共同编码与候选自注意力)逐项核对 $f_v$、编码归一化、局部读出、四个无偏置投影、分头、$w$ 先验、残差、逐候选 SiLU 与关系读出。零接收必须精确屏蔽，正接收包括自身；不按候选枚举添加位置。仅改变其他候选记忆应能改变本候选评分，完整检查继续经过所选分配。
+
+检查重排等变、增删零候选、弱候选对其他评分的消失、全部趋弱时的控制，以及 $a_j^R=0$ 恢复 encoded＋ind。[有限参考](../examples/regional_attention_checks.py)覆盖标量手算、多头加权读取和这些边界；它没有实现完整记忆网络或训练反向。设备实现另按所选自动微分及分配隐式反向核对梯度。
+
+Read 快照、私有状态与 Full 输入保持原定义。区域中间表示不传给 Full；全部候选保留 Upd。节点编码和区域矩阵分别按[参数绑定](../instances/parameter-profiles.md)归属，移除旧评分参数，区域块没有私有适配器。计数、CSV、面板及设备模型按同一绑定比较；quad 的预算代理不能折减区域成对读取工作。
 
 ## 4. 记忆模块
 

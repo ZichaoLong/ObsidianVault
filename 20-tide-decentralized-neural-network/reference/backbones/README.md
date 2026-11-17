@@ -12,7 +12,9 @@
 
 `capacity.PROFILES` 登记空间轮廓，`BOUND_PROFILES` 将其接到主时间绑定；`count` 继续接收空间标识，返回精确标量计数。多跨度 Timed／Settle 共用计数，在生成表和面板中分别列出。导出的 CSV 由面板报表代码换算成 M，内嵌 JSON 保留原始计数。
 
-`count(profile, n, hubs, d, memory, sharing, rank, agg_profile)` 直接返回所选接收配置的完整参数数目，默认 `agg_profile='source_residual'`，保留原调用及计数。`AGG_PROFILES` 登记来源残差、`incoming_light_64`、`incoming_light_128` 和 `incoming_wide`；`aggregation_config(d, agg_profile)` 解析具体的函数、MLP 隐藏宽度、注意力宽度及头数。完整尺寸规则见[接收自注意力绑定](../../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)。计数包括逐条 MLP、两种来源嵌入和适配器随形状变化的大小。生成表为每个已有组合分别列出四档。
+`count(profile, n, hubs, d, memory, sharing, rank, agg_profile)` 直接返回所选接收配置的完整参数数目，默认 `agg_profile='source_residual'`，保留调用签名；当前计数已迁移到 encoded/self_attention 主绑定。`AGG_PROFILES` 登记来源残差、`incoming_light_64`、`incoming_light_128` 和 `incoming_wide`；`aggregation_config(d, agg_profile)` 解析具体的函数、MLP 隐藏宽度、注意力宽度及头数。完整尺寸规则见[接收自注意力绑定](../../instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)。计数包括逐条 MLP、两种来源嵌入和适配器随形状变化的大小。生成表为每个已有组合分别列出四档。
+
+`regional_config(d)` 给出共同编码与区域尺寸，`regional_inventory(d)` 列出区域四投影、FFN 和读出参数；每份为 2d²+2d。节点清单只计新编码，不叠加旧 cat/key。`ALLOCATION_PROFILES` 为 quad／shannon／pool，分配不增加参数；CSV 分行，页面复用同一份参数数据。`active` 对 quad 使用 k/n，对 Shannon/pool 使用稠密代理，pool 没有数值 k。
 
 `incoming_attention_increment(profile, n, hubs, d, sharing, rank, attention_width)` 只计算新增四个注意力矩阵与来源嵌入，适用于来源 MLP 宽度不变的对照；不能仅将它加到来源残差计数来得到加宽档。四个矩阵按合并投影分别适配，头数不改变参数数目。准备工作按实际到达数计算，不能由参数增量代替。
 

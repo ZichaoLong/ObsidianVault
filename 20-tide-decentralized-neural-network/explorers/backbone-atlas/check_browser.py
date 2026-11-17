@@ -23,13 +23,17 @@ def check_capacity_export():
     reception_rows = {}
     count = 0
     with (ROOT/'generated'/'capacity.csv').open(encoding='utf-8', newline='') as f:
-        for exported, values in zip_longest(csv.DictReader(f), data['rows']):
-            assert exported is not None and values is not None, 'CSV/page row counts differ'
+        expanded = ((values, allocation) for values in data['rows']
+                    for allocation in ('quad','shannon','pool'))
+        for exported, expected_row in zip_longest(csv.DictReader(f), expanded):
+            assert exported is not None and expected_row is not None, 'CSV/page allocation expansion differs'
+            values, allocation = expected_row
             row = dict(zip(data['fields'], values))
             p = data['profiles'][row['profile']]
             identity = tuple(row[name] for name in ('profile','n','h','d','memory','sharing','rank','agg_profile'))
-            assert identity not in seen, identity
-            seen.add(identity)
+            full_identity = identity+(allocation,)
+            assert full_identity not in seen, full_identity
+            seen.add(full_identity)
             assert exported['profile'] == row['profile']
             assert exported['spatial_profile'] == p['spatial_profile']
             assert exported['timing'] == p['timing']
@@ -55,15 +59,32 @@ def check_capacity_export():
                                   agg_attention_head_dim=32 if width else 0)
             for field, expected in expected_sizes.items():
                 assert int(exported[field]) == row[field] == expected, (identity,field)
+            for field, expected in dict(descriptor_width=row['d']//2,
+                    region_attention_heads=row['d']//64,region_attention_head_dim=32,
+                    region_ffn_width=row['d']).items():
+                assert int(exported[field]) == row[field] == expected, (identity,field)
+            for field,expected in dict(region_profile='encoded_self_attention',
+                    local_score='encoded',region_score='self_attention').items():
+                assert exported[field] == row[field] == expected
+            assert exported['allocation_profile'] == allocation
+            assert exported['selection_mode_D'] == {
+                'quad':'role_bounded_quad','shannon':'role_bounded_shannon',
+                'pool':'pooled_attention'}[allocation]
+            assert exported['selection_mode_H'] == ('role_bounded_quad' if row['h'] else '')
+            assert exported['lower_base_D'] == ('received' if allocation!='pool' else '')
+            assert exported['total_mode_D'] == ('interval' if allocation!='pool' else '')
+            assert exported['lower_base_H'] == ('received' if row['h'] else '')
+            assert exported['total_mode_H'] == ('interval' if row['h'] else '')
             reception_rows.setdefault(identity[:-1], set()).add(row['agg_profile'])
             for k in data['budgets']:
                 value = exported[f'active_k{k}_M']
-                if k > row['n']:
+                if k > row['n'] or allocation == 'pool':
                     assert value == ''
                 else:
-                    expected = row['base']+Decimal(k)*row['D']/row['n']+row['H']
+                    expected = (row['base']+Decimal(k)*row['D']/row['n']+row['H']
+                                if allocation=='quad' else row['total'])
                     assert Decimal(value)*1_000_000 == expected, (identity,k)
-            assert exported['active_pool_M'] == exported['total_M']
+            assert exported['active_pool_M'] == (exported['total_M'] if allocation=='pool' else '')
             spatial_identity = (p['spatial_profile'],)+identity[1:]
             numeric = tuple(row[name] for name in ('nodes_D','nodes_H','total','base','D','H'))
             bindings = spatial_rows.setdefault(spatial_identity, {})
@@ -77,7 +98,7 @@ def check_capacity_export():
             assert set(bindings) == {'settle'}
     assert set(data['agg_profiles']) == {'source_residual','incoming_light_64','incoming_light_128','incoming_wide'}
     assert all(profiles == set(data['agg_profiles']) for profiles in reception_rows.values())
-    assert count == 225400 and len(reception_rows) == 56350
+    assert count == 676200 and len(data['rows']) == 225400 and len(reception_rows) == 56350
     return dict(rows=count, spatial_configurations=len(spatial_rows),
                 bound_profiles=len(data['profiles']), reception_profiles=list(data['agg_profiles']))
 
@@ -352,9 +373,17 @@ try:
       const smallBudgets=[...document.querySelector('#cap-k').options].map(o=>o.value);
       const row=document.querySelector('#capacity-table tbody tr'),total=+row.dataset.total;
       choose('#cap-k',8);const dense=+document.querySelector('#capacity-table tbody tr').dataset.active;
-      choose('#cap-k','pool');const pool=+document.querySelector('#capacity-table tbody tr').dataset.active;
+      choose('#cap-k',1);const sparse=+document.querySelector('#capacity-table tbody tr').dataset.active;
+      choose('#cap-allocation','shannon');const shannon=+document.querySelector('#capacity-table tbody tr').dataset.active;
+      const shannonBudget=!document.querySelector('#cap-k').disabled;
+      const regionMath=document.querySelector('#capacity-region-formula').textContent;
+      choose('#cap-allocation','pool');const pool=+document.querySelector('#capacity-table tbody tr').dataset.active;
+      const poolBudget=document.querySelector('#cap-k').disabled;
       const unchanged=window.atlasDebug.case.key===original;
       document.querySelector('#capacity-table [data-cap-case]').click();const linked=window.atlasDebug.case.key;
+      document.querySelector('#cap-use-graph').click();
+      const allocationPreserved=document.querySelector('#cap-allocation').value;
+      choose('#cap-allocation','quad');
       choose('#cap-n',128);const largeBudgets=[...document.querySelector('#cap-k').options].map(o=>o.value);
       choose('#cap-n',32);choose('#cap-h',4);choose('#cap-memory','X');choose('#cap-profile','multiscale-17-timed');choose('#cap-d',128);
       choose('#cap-limit','all');const large=+document.querySelector('#capacity-table tbody tr').dataset.total;
@@ -378,18 +407,20 @@ try:
       const regionScope=document.querySelector('#capacity-sharing-summary').textContent;
       const regionFormula=document.querySelector('#capacity-formula').textContent;
       const regionRankEnabled=!document.querySelector('#cap-rank').disabled;
-      return {smallBudgets,largeBudgets,total,dense,pool,unchanged,linked,large,hiddenLarge,noHub,p4,p16,layerP4,regionP16,sharingOptions,fcEquivalence,hbIndependent,hbLayer,hbRegion,layerScope,regionScope,regionFormula,regionRankEnabled,rankDisabled,errors:window.atlasErrors.slice()};
+      return {smallBudgets,largeBudgets,total,dense,pool,sparse,shannon,shannonBudget,poolBudget,regionMath,allocationPreserved,unchanged,linked,large,hiddenLarge,noHub,p4,p16,layerP4,regionP16,sharingOptions,fcEquivalence,hbIndependent,hbLayer,hbRegion,layerScope,regionScope,regionFormula,regionRankEnabled,rankDisabled,errors:window.atlasErrors.slice()};
     ''')
-    assert capacity_checks['smallBudgets']==['1','2','4','8','pool'],capacity_checks
-    assert capacity_checks['largeBudgets']==['1','2','4','8','16','32','64','pool'],capacity_checks
-    assert round(capacity_checks['total']/1e6,3)==9.139,capacity_checks
-    assert capacity_checks['dense']==capacity_checks['pool']==capacity_checks['total'],capacity_checks
+    assert capacity_checks['smallBudgets']==['1','2','4','8'],capacity_checks
+    assert capacity_checks['largeBudgets']==['1','2','4','8','16','32','64'],capacity_checks
+    assert round(capacity_checks['total']/1e6,3)==9.331,capacity_checks
+    assert capacity_checks['dense']==capacity_checks['pool']==capacity_checks['shannon']==capacity_checks['total'],capacity_checks
+    assert capacity_checks['sparse']<capacity_checks['total'] and capacity_checks['shannonBudget'] and capacity_checks['poolBudget'],capacity_checks
+    assert capacity_checks['allocationPreserved']=='pool' and '32' in capacity_checks['regionMath'],capacity_checks
     assert capacity_checks['unchanged'] and capacity_checks['linked']=='compact-9-n8-h0',capacity_checks
     assert capacity_checks['large']>256e6 and capacity_checks['hiddenLarge'] and capacity_checks['noHub'],capacity_checks
     assert capacity_checks['p4']<capacity_checks['p16'] and capacity_checks['rankDisabled'] and not capacity_checks['errors'],capacity_checks
     assert capacity_checks['sharingOptions']==['independent','region_shared','layer_shared'],capacity_checks
     assert capacity_checks['p4']==capacity_checks['layerP4'] and capacity_checks['p16']==capacity_checks['regionP16'] and capacity_checks['fcEquivalence'],capacity_checks
-    assert round(capacity_checks['hbIndependent']/1e6,3)==162.936,capacity_checks
+    assert round(capacity_checks['hbIndependent']/1e6,3)==165.084,capacity_checks
     assert capacity_checks['hbRegion']>capacity_checks['hbLayer'] and capacity_checks['regionRankEnabled'],capacity_checks
     assert '实际区域' in capacity_checks['regionScope'] and '跨区域共享' in capacity_checks['layerScope'],capacity_checks
     assert 'g(v)' in capacity_checks['regionFormula'] and not any(x in capacity_checks['regionFormula'] for x in ('NaN','undefined')),capacity_checks
@@ -432,7 +463,7 @@ try:
     # Independent FC-4, n=8, d=128: closed-form K nodes, one source class per
     # node and one regional head per layer, independent of the CSV generator.
     d,n,depth=128,8,4
-    baseline=n*depth*(17.375*d*d+2.25*d+1+d//8)+depth*(2*(d//4)**2+2*(d//4))
+    baseline=n*depth*(17.5*d*d+2.5*d+1+d//8)+depth*(2*d*d+2*d)
     expected={
         'source_residual':(baseline,0,16),
         'incoming_light_64':(baseline+n*depth*(4*d*64+d),64,16),

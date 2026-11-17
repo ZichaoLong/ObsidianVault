@@ -249,7 +249,7 @@ $$
 
 这些信息只来自本节点；区域随后同时使用所有候选的 $d_v$。绑定上述函数后，简记为 $\operatorname{Describe}_v(q,\theta,h)$。
 
-具体的 Describe 与区域选择须配套定义。节点可以先将当前内容与记忆变为局部评分，也可以同时提供区域匹配或区域控制所需的向量。当前特征与记忆描述是构造 $d_v$ 的依据，$D_v$ 规定传给区域的描述结构。
+具体的 Describe 与区域选择须配套定义。节点可以先将当前内容与记忆变为局部评分，也可以同时提供区域匹配或区域控制所需的向量。[共同编码](region-allocation-learning-note.md#37-共同编码与候选自注意力)将这些输入编码为有界描述，区域可从每个候选的视角读取其他描述并修正评分。当前特征与记忆描述是构造 $d_v$ 的依据，$D_v$ 规定传给区域的描述结构；区域中间表示不传给 Full。
 
 正典 Read 按描述模式 $\tau_j\in\{0,-,+\}$ 选取状态，再调用已绑定的 Describe：
 
@@ -590,6 +590,7 @@ $$
 | memory_read | 选择该记忆模块的 Mem 读取函数；两个通道的含义由模块定义 |
 | read_mode | 本文 §3.3 的正典描述模式 $\tau_j\in\{0,-,+\}$ |
 | local_score、region_score、region_key | 选择局部评分、区域评分与 att 所需的记忆 key，见[区域分配附录 S.1](region-allocation-learning-note.md#s1-配置名称) |
+| descriptor_width、region_attention_heads、region_attention_head_dim、region_ffn_width | encoded 描述及 self_attention 区域块的尺寸，见[区域分配 S.5](region-allocation-learning-note.md#s5-编码与区域自注意力)；不改变 Agg 或记忆尺寸 |
 | selection_mode | 选择完整发送函数及其描述绑定，见同一配置表 |
 | region_control_mode、region_evidence、region_control_width | 选择区域控制、其证据构造及宽度，见同一配置表 |
 | send_gain、query_weight、eta、total_fraction 等 | 所选区域函数的组成部件或参数；生效范围见同一配置表 |
@@ -617,3 +618,5 @@ $$
 局部自注意力在每个候选节点的 Agg 中执行。若本次正强度原子数为 $n_+$，四个投影与成对读取的主要工作为 $O(n_+dd_A+n_+^2d_A)$；式 (4) 的逐条来源变换另计 $O(\sum_{i\in I_+}dp_{a_i})$。显式保存全部读取矩阵需要 $O(H_A n_+^2)$ 个数；分块求值可减少中间存储，仍须恢复同一函数。没有正接收时直接返回零，单消息时只有单条变换。
 
 $n_+$ 是本次实际到达数，不是静态入度或区域节点数。接收自注意力的参数与工作属于准备阶段，不能按 Full 的预算比例直接折减。不同节点、时间纤维可批量求值；无效填充位置按零强度屏蔽，原子顺序不产生位置编码。给定完整驱动后的联合求值及严格区域分层前提继续按第 7 节核对，物理时延与吞吐另行计量。
+
+区域 self_attention 在本次候选描述之间计算。若正接收候选数为 $m$、描述宽度为 $d_z$、逐候选隐藏宽度为 $d_{\mathrm{rf}}$，区域块主要工作为 $O(md_z^2+md_zd_{\mathrm{rf}}+m^2d_z)$，计入 $\mathcal E_S$ 的选择工作。节点编码计入各节点准备；这两项均发生在 Full 选择之前。接收 attention 改变节点内容，区域 attention 改变评分，两者的参与集合、参数和工作分别统计。

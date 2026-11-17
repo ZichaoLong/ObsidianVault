@@ -1,6 +1,7 @@
 # 仓库维护约定
 
 - 开始工作先读 [ARTIFACTS.md 的维护地图](ARTIFACTS.md#各条工作线的维护地图)，定位当前研究线、维护源、构建组和需要人工核对的下游。全仓适用这份规则；各目录 README 说明具体编辑方式。
+- Tide 的意图、机制、语义、拓扑或主绑定变更使用[研究维护技能](20-tide-decentralized-neural-network/skills/tide-research-maintenance/SKILL.md)；数学正文使用[数学写作技能](20-tide-decentralized-neural-network/skills/tide-math-writing/SKILL.md)，讲述和展示使用[展示写作技能](20-tide-decentralized-neural-network/skills/tide-presentation-writing/SKILL.md)。按任务读取适用技能，仓库内文件不依赖全局安装。
 - Git 跟踪正文、维护源、原始素材和明确留存的证据。可重建的图片、HTML、PDF、备注和日常报告默认不跟踪；不要直接修改同名导出物作为持续成果。
 - 修改图形、展示或其上游定义后，使用 `python3 tools/check_artifacts.py --affected <仓库相对路径>` 查影响；区分 `REBUILD` 与 `REVIEW`，先核对受影响的定义、例子、图形源和展示内容，再运行 `python3 tools/build.py --group <组名>`。重新生成成功不代表语义同步已经完成。
 - 拉取、切换 Git 分支、合并或进入新 worktree 后检查产物状态。用 `--changed-from <同步前提交>` 查变动影响；忽略的本地产物不会随 Git 更新。所需组应为 `CURRENT`；静态展示交付前构建 `presentation-export`。同一 worktree 顺序构建。

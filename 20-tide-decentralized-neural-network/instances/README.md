@@ -28,11 +28,13 @@ HB 主候选采用严格区域分层，并在实例中核对局部块求值条�
 
 [三组主绑定](hb-multiscale-weighted-message.md#2-两类记忆与三个主候选)把当前实现范围收敛为 K（全 KV／sum）、S（全 SSD／state）、X（普通节点 KV、Hub SSD）。聚合、描述、评分、分配、状态采用和 Full 在该实例中一并绑定。无 Hub 时 X 与 K 重合；已有的其他局部候选仍可在具体问题需要时使用。
 
+描述与评分采用[共同编码和区域候选关系](hb-multiscale-weighted-message.md#12-共同编码与区域候选关系)，约束主绑定显式使用 received 下界；区域中间表示只用于评分。
+
 [三档整体参数绑定](parameter-profiles.md)说明 independent、region_shared、layer_shared 如何作用于 Agg、记忆、描述与评分、Full 和区域头。共享范围与局部算法是不同选择，两个共享档使用基座加节点适配，运行状态始终私有。原 FC／HB 教学实例保留各自参数定义，新比较实例使用统一的三档归属。
 
 接收另有 source_residual 与 incoming_self_attention 两个函数候选。[接收自注意力的完整替换](hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)给定来源残差、两种轻量自注意力和加宽自注意力四个尺寸配置，分别明确宽度、头数、尺度与三档参数归属，可用于 FC、三类 HB 和 LH，分别与 K／S／X 组合。FC／HB 生成规模表已展开这四个配置并计入完整参数；计数和准备阶段成本见[比较绑定 §5.1](backbone-comparison.md#51-接收自注意力的参数与准备成本)。候选目录按这些维度组织，实验无需穷尽笛卡尔积。
 
-[主干比较绑定与尺寸阶梯](backbone-comparison.md)进一步规定内容维度、区内节点数、二次幂预算与 pool 对照，并给出参数计数口径。[交互面板](../explorers/backbone-atlas/README.md)展示三类 HB 的连接与时间，以及 FC／HB 的规模筛选。生成表覆盖已选组合，后续实验按需选取；LH、部分 Hub 放置与其他分区另有定义，未全部纳入规模表。
+[主干比较绑定与尺寸阶梯](backbone-comparison.md)进一步规定内容维度、区内节点数、二次幂预算与 quad／Shannon／pool 对照，并给出参数计数口径。[交互面板](../explorers/backbone-atlas/README.md)展示三类 HB 的连接与时间，以及 FC／HB 的规模筛选。生成表覆盖已选组合，后续实验按需选取；LH、部分 Hub 放置与其他分区另有定义，未全部纳入规模表。
 
 ## 教学、比较与接续
 

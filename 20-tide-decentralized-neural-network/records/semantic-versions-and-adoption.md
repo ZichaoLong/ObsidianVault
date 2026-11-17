@@ -102,6 +102,16 @@ tide-core-5 保持 TimedDAG 与 PositiveDelayGraph 的局部函数、参数顺�
 
 FC／HB 规模表与面板分别列出四档，参数已包含 MLP、新旧来源嵌入和适配器随形状的变化。采用新 CSV 时以 agg_profile 参与行身份，并直接使用该行总参；原 incoming_attention_increment 仅用于 MLP 宽度不变的注意力增量比较。准备成本仍按实际消息数计量，不按 Full 的预算比例折减。
 
+## 2026-11-17：共同编码、区域关系与主分配迁移
+
+相对基线 [a7490fa](https://github.com/ZichaoLong/ObsidianVault/commit/a7490fa)，区域教材新增 local_score=encoded、region_score=self_attention、可选 region_evidence=encoded，以及 role_bounded_shannon。完整描述空间、参数形状、零／弱边界、Shannon 求解与分支导数均在[区域教材](../local-semantics/weighted-message/region-allocation-learning-note.md)；共同架构补充接口引用与选择工作。四份正典和 tide-core-5 保持，原函数名及默认含义保留。
+
+新 FC 比较、HB 多跨度／Settle 和 LH 主绑定从 cat＋att/content_stats 改为共同编码＋候选 self_attention，并显式从 lower_base=mu 改为 received，保留 interval、固定增益 2、阈值 0、温度 1。节点编码宽度为 d/2；区域块每头 32 维、FFN 宽度 d、一层。三个主分配为 quad、Shannon、pool；group 分区只替换 D 区，H 区保持角色 quad。LH 的 mixed Shannon 与拆区 pool 分别按实例绑定，固定通过区域省去评分网络。
+
+新主计数替换旧评分和 query 参数，沿用 independent／region_shared／layer_shared 的归属。CSV 按 allocation_profile 分为 676,200 行，页面去重保存 225,400 份参数配置；角色、区域尺寸和分配身份均可查询。Shannon/pool 在正接收假设下的代理为全部参数，quad 继续按 k/n 估算。旧 FC／HB 教学实例、记忆函数、四档接收尺寸、拓扑与时间绑定保持。
+
+这是新模型绑定，不能仅重命名字段后将旧权重和缓存视为等价状态。下游需采用新参数、重算或另行声明状态转换，并记录所用提交；这里未声明设备实现、训练质量或吞吐已验证。研究意图与机制取舍分别补入既有设计文档；[研究维护技能](../skills/tide-research-maintenance/SKILL.md)只组织后续同步职责，不把当前配置冻结为通用规则。
+
 ## 下游采用记录
 
 采用声明与符合性验证分别记录；本表保留有日期和来源的信息。

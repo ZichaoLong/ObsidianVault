@@ -43,7 +43,7 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 | 文档 | 定义与证明的分工 |
 |---|---|
 | [共同局部架构](local-semantics/weighted-message/architecture-learning-note.md) | 来源残差与同刻局部自注意力两种接收、完整计算过程、模块组合与数值性质，精确继续与联合求值 |
-| [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 描述与评分、指定总量、区域阈值、节点增益及角色上下界；可行性、求解、导数和各候选的温度极限 |
+| [区域评分与发送分配](local-semantics/weighted-message/region-allocation-learning-note.md) | 描述、共同编码与候选自注意力评分、指定总量、区域阈值、节点增益及角色 quad／Shannon；可行性、求解、导数和各候选的温度极限 |
 | [带权 KV](local-semantics/weighted-message/kv-memory-learning-note.md) | KV 写入、描述与内容读取、位置及局部状态性质 |
 | [基础循环记忆](local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md) | affine／delta 的完整局部定义，循环候选共用的仿射复合 |
 | [固定逻辑时间短卷积](local-semantics/weighted-message/recurrent-memory/causal-convolution-learning-note.md) | 带权历史槽、当前读取、空档与弱事件；供完整循环候选复用的部件 |
@@ -52,7 +52,7 @@ SettleGraph 与 TimedDAG 都可独立作为起点。读完 TimedDAG 后，按问
 
 recurrent-memory/ 汇集三份循环记忆候选教材及共用的短卷积部件。三份教材分别定义可独立绑定的状态与读取；接口和组合条件由共同架构给出，仿射复合的推导集中在[基础循环 §4.1](local-semantics/weighted-message/recurrent-memory/affine-delta-learning-note.md#41-仿射复合)。
 
-接收候选由 agg_mode 选择。[局部自注意力](local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)在同一节点的到达消息间进行带强度先验的多头读取，逐条加工后仍交付 $(r^{\mathrm{in}},u)$；它与历史 KV 读取和区域 Attention 评分分别定义。完整参考绑定见 [HB §1.1](instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)，现有规模表明确采用原来源残差候选。
+接收候选由 agg_mode 选择。[局部自注意力](local-semantics/weighted-message/architecture-learning-note.md#23-同刻消息的局部自注意力)在同一节点的到达消息间进行带强度先验的多头读取，逐条加工后仍交付 $(r^{\mathrm{in}},u)$；它与历史 KV 读取和区域 Attention 评分分别定义。完整参考绑定见 [HB §1.1](instances/hb-multiscale-weighted-message.md#11-接收自注意力的完整替换)，规模表分别计入来源残差、两种轻量与加宽配置。
 
 第一次阅读可先读共同架构 §1—5，理解一次接收到发送的过程；区域分配 §1—2 随后算出三个节点的发送强度，KV §1—5.1 继续完成同一例子的记忆与内容计算。走完这次计算后，可回到区域分配 §3—4 学习各部件的具体构造与替换。
 
@@ -105,6 +105,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 | [角色分配核对](examples/role_bounded_allocation_checks.py) | 独立活动集、全输入可行性、零／缺席与光滑分支导数 |
 | [紧凑图的相位与合作](examples/hb_compact_checks.py) | 窄图、首层节点覆盖、独立交换轮数和更深平台 |
 | [主干参数核对](examples/backbone_capacity_checks.py) | 二次幂预算、逐头适配器、独立参数闭式计数和活跃代理 |
+| [区域自注意力核对](examples/regional_attention_checks.py) | 编码到评分与控制、候选记忆间影响、重排及零／弱边界 |
 | [接收自注意力核对](examples/incoming_attention_checks.py) | 手算、多头、零／弱消息、消息间依赖和三档参数增量 |
 | [HB-Settle 构图与交换核对](examples/hb_settle_checks.py) | 原图字地址一致性、18 组交换配置、每轮位覆盖、度数与原周期条件 |
 | [HB／LH 构图与时间核对](examples/hb_lh_checks.py) | 深度与尺寸、分区前提、hub 删除、对齐时间、反馈有限继续 |
@@ -113,5 +114,7 @@ topologies/ 定义节点、区域、边、端口和时间。instances/ 引用拓
 reference/ 提供名称检索、实现核对及共用的主干参考计算；explorers/ 保存交互面板维护源；memos/ 提供研究参考；examples/ 保存教学与数学核对程序，resources/ 汇集学习材料。版本、下游采用和修订历史集中在 records/，入口为[版本与采用记录](records/semantic-versions-and-adoption.md)。
 
 ## 维护与生成
+
+仓库内的[研究维护技能](skills/tide-research-maintenance/SKILL.md)组织意图、机制、语义和实例变更；[数学写作技能](skills/tide-math-writing/SKILL.md)用于教材与数学正文，[展示写作技能](skills/tide-presentation-writing/SKILL.md)用于讲述、图示和展示。按任务读取相应文件，无需全局安装。具体意图与配置仍由上述设计文档、教材和实例维护。
 
 本线的教材、图集、实例和展示之间的同步职责见[全仓维护地图](../ARTIFACTS.md#各条工作线的维护地图)。定义变化后先核对受影响的图形与展示维护源，再按组构建；构建成功不能替代语义核对。图集与展示的具体编辑方式见各自 README。
